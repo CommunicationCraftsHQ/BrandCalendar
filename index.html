@@ -148,6 +148,15 @@ body{background:var(--bg);color:var(--text);margin:0;min-height:100vh;}
 .ev-row-btn:hover{background:var(--text);color:#fff;border-color:var(--text);}
 .detail-notes{background:var(--bg);border-left:3px solid var(--sc,var(--acc));padding:12px 14px;border-radius:0 8px 8px 0;font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px;}
 .brand-note-box{margin-top:8px;padding:12px 14px;background:rgba(214,40,40,.04);border:1px solid rgba(214,40,40,.18);border-radius:8px;}
+.note-row{display:flex;align-items:center;gap:8px;padding:8px 11px;border-radius:8px;cursor:pointer;font-size:12px;transition:background 100ms;border:1px dashed var(--div);color:var(--subtle);}
+.note-row:hover{background:var(--bg);}
+.note-row.has{border:1px solid var(--div);background:var(--surface2);color:var(--text);}
+.note-add{font-weight:600;}
+.note-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);flex-shrink:0;}
+.note-prev{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);}
+.note-chev{margin-left:auto;color:var(--subtle);font-size:14px;transition:transform 150ms;flex-shrink:0;}
+.note-row.open .note-chev{transform:rotate(180deg);}
+.note-edit{margin-top:8px;}
 /* Edit event mode tabs */
 .ee-tab{flex:1;height:34px;border:none;background:transparent;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--muted);transition:all 120ms;}
 .ee-tab.on{background:var(--text);color:#fff;}
@@ -219,7 +228,7 @@ body{background:var(--bg);color:var(--text);margin:0;min-height:100vh;}
 .bp-del{width:22px;height:22px;border-radius:4px;border:none;background:transparent;cursor:pointer;color:var(--muted);font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .bp-del:hover{background:#FEE2E2;color:var(--danger);}
 .brand-note-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
-.brand-note-ta{width:100%;border:none;background:transparent;font-size:13px;color:var(--text);font-family:inherit;resize:none;outline:none;line-height:1.6;min-height:52px;padding:2px 0;}
+.brand-note-ta{width:100%;border:1px solid var(--div);background:var(--surface);border-radius:8px;font-size:13px;color:var(--text);font-family:inherit;resize:vertical;outline:none;line-height:1.6;min-height:70px;padding:10px;box-sizing:border-box;}
 .arc-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(214,40,40,.12);}
 .arc-field{display:flex;flex-direction:column;gap:3px;}
 .arc-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);opacity:.8;}
@@ -466,6 +475,7 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
         <div class="ms-row staff-row" onclick="closeSetupMenu();openM('ind-mgr')">Industries</div>
         <div class="ms-row staff-row" onclick="closeSetupMenu();carryForward()">Carry forward to next year</div>
         <div class="ms-row staff-row" onclick="closeSetupMenu();openTrash()">Trash</div>
+        <div class="ms-row admin-row" onclick="closeSetupMenu();openPeople()">People &amp; access</div>
         <div class="staff-row" style="height:1px;background:var(--div);margin:4px 0;"></div>
         <div class="ms-row" onclick="closeSetupMenu();loadAll(true)">⟳ Refresh</div>
         <div class="ms-row" onclick="closeSetupMenu();showSetPass()">Change password</div>
@@ -793,6 +803,15 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
       <div class="field"><label class="fl">Password</label><input class="fi" id="auth-pass" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')signIn()"/></div>
       <button class="btn btn-p" style="width:100%;justify-content:center;" onclick="signIn()">Sign in</button>
       <button class="btn btn-g btn-sm" style="width:100%;justify-content:center;margin-top:8px;" onclick="forgotPass()">Forgot password?</button>
+      <div style="border-top:1px solid var(--div);margin:14px 0 10px;"></div>
+      <button class="btn btn-s btn-sm" style="width:100%;justify-content:center;" onclick="showSignup()">New here? Create your account</button>
+    </div>
+    <div id="auth-signup" style="display:none;">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6;">Use your <b>@communicationcrafts.com</b> email — team access is granted automatically.</div>
+      <div class="field"><label class="fl">Work email</label><input class="fi" id="su-email" type="email" autocomplete="username" placeholder="you@communicationcrafts.com"/></div>
+      <div class="field"><label class="fl">Choose a password</label><input class="fi" id="su-pass" type="password" autocomplete="new-password" onkeydown="if(event.key==='Enter')signUp()"/></div>
+      <button class="btn btn-p" style="width:100%;justify-content:center;" onclick="signUp()">Create account &amp; enter</button>
+      <button class="btn btn-g btn-sm" style="width:100%;justify-content:center;margin-top:8px;" onclick="showSignin()">Back to sign in</button>
     </div>
     <div id="auth-setpass" style="display:none;">
       <div class="field"><label class="fl">Choose a password</label><input class="fi" id="auth-newpass" type="password" autocomplete="new-password"/></div>
@@ -805,6 +824,21 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
     <p id="auth-msg" style="font-size:12px;color:var(--acc);margin-top:10px;min-height:16px;"></p>
   </div>
 </div>
+<!-- PEOPLE -->
+<div class="overlay" id="ov-people" onclick="if(event.target===this)closeM('people')">
+  <div class="modal wide">
+    <div class="modal-top">
+      <div><div class="modal-title">People &amp; access</div><div class="modal-sub">Grant team access, assign clients to a brand, or remove access</div></div>
+      <button class="modal-x" onclick="closeM('people')">✕</button>
+    </div>
+    <div class="modal-body" style="padding-bottom:0;">
+      <div id="people-list" style="max-height:440px;overflow-y:auto;border:1px solid var(--div);border-radius:var(--rc);"></div>
+      <p style="font-size:11px;color:var(--muted);margin-top:8px;">Team members with a @communicationcrafts.com email are approved automatically when they sign up. Use this only for clients or exceptions.</p>
+    </div>
+    <div class="modal-foot"><button class="btn btn-g" onclick="closeM('people')">Done</button></div>
+  </div>
+</div>
+
 <!-- TRASH -->
 <div class="overlay" id="ov-trash" onclick="if(event.target===this)closeM('trash')">
   <div class="modal wide">
@@ -1413,10 +1447,17 @@ function buildDayCard(ev,evM,day,expanded){
     if(brandActive&&canEdit()){
       const saved=(brands[activeBrand].notes||{})[ev.id];
       const noteVal=typeof saved==="string"?saved:(saved&&saved.note)||"";
-      html+=`<div class="brand-note-box" style="margin-top:6px;">
-        <div class="brand-note-lbl">Brand brief — ${brands[activeBrand].name}</div>
-        <textarea class="brand-note-ta" data-brief="${ev.id}" placeholder="Angle, content idea, do's & don'ts for this brand…">${noteVal.replace(/</g,"&lt;")}</textarea>
-        <div style="text-align:right;"><button class="btn btn-s btn-sm" onclick="saveBrandNoteCard('${ev.id}')">Save brief</button></div>
+      const hasNote=!!noteVal.trim();
+      const prev=noteVal.replace(/\s+/g," ").trim().replace(/</g,"&lt;");
+      const rowHtml=hasNote
+        ?`<div class="note-row has" onclick="toggleNote(this)"><span class="note-lbl">Notes</span><span class="note-prev">${prev}</span><span class="note-chev">⌄</span></div>`
+        :`<div class="note-row" onclick="toggleNote(this)"><span class="note-add">＋ Add a note</span></div>`;
+      html+=`<div class="note-wrap" style="margin-top:8px;">
+        ${rowHtml}
+        <div class="note-edit" style="display:none;">
+          <textarea class="brand-note-ta" data-brief="${ev.id}" placeholder="Add a note for this event…">${noteVal.replace(/</g,"&lt;")}</textarea>
+          <div style="text-align:right;margin-top:8px;"><button class="btn btn-s btn-sm" onclick="saveBrandNoteCard('${ev.id}')">Save note</button></div>
+        </div>
       </div>`;
     }
     // context-aware actions
@@ -1443,13 +1484,22 @@ function buildDayCard(ev,evM,day,expanded){
   return card;
 }
 
+function toggleNote(row){
+  const wrap=row.parentElement;
+  const edit=wrap.querySelector(".note-edit"); if(!edit) return;
+  const open=edit.style.display!=="none";
+  edit.style.display=open?"none":"block";
+  row.classList.toggle("open",!open);
+  if(!open){ const ta=edit.querySelector("textarea"); if(ta){ ta.focus(); } }
+}
+
 function saveBrandNoteCard(evId){
   if(!activeBrand||!brands[activeBrand]) return;
   const ta=document.querySelector(`textarea[data-brief="${evId}"]`); if(!ta) return;
   brands[activeBrand].notes=brands[activeBrand].notes||{};
   const prev=brands[activeBrand].notes[evId];
   brands[activeBrand].notes[evId]=(typeof prev==="object"&&prev)?{...prev,note:ta.value.trim()}:{note:ta.value.trim()};
-  saveBrLS(); toast("Brief saved");
+  saveBrLS(); toast("Note saved");
 }
 
 function setCat5Allowed(allowed){
@@ -2984,7 +3034,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v27.2 web — count pill labels";
+const TOOL_VERSION="v28 web — self-signup + People admin + compact notes";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -3047,6 +3097,19 @@ async function signIn(){
   if(error){authMsg(error.message);return;}
   authMsg(""); boot();
 }
+function showSignup(){document.getElementById("auth-form").style.display="none";document.getElementById("auth-signup").style.display="block";authMsg("");}
+function showSignin(){document.getElementById("auth-signup").style.display="none";document.getElementById("auth-form").style.display="block";authMsg("");}
+async function signUp(){
+  const email=document.getElementById("su-email").value.trim();
+  const pw=document.getElementById("su-pass").value;
+  if(!email){authMsg("Enter your work email.");return;}
+  if(!pw||pw.length<6){authMsg("Password must be at least 6 characters.");return;}
+  authMsg("Creating your account…");
+  const {data,error}=await sb.auth.signUp({email,password:pw});
+  if(error){authMsg(error.message);return;}
+  if(data.session){ authMsg(""); boot(); }
+  else authMsg("Account created. You can sign in now.");
+}
 async function forgotPass(){
   const email=document.getElementById("auth-email").value.trim();
   if(!email){authMsg("Type your email above first, then click this again.");return;}
@@ -3071,6 +3134,7 @@ function showSetPass(){
   document.getElementById("auth-screen").style.display="flex";
   document.getElementById("auth-form").style.display="none";
   document.getElementById("auth-pending").style.display="none";
+  const su=document.getElementById("auth-signup"); if(su) su.style.display="none";
   document.getElementById("auth-setpass").style.display="block";
   authMsg("");
 }
@@ -3214,6 +3278,49 @@ async function autoTagBrands(newEvs){
     const r=await sb.from("brand_tags").upsert(tagRows);
     if(r.error) dbErr(r); else toast("Added to "+new Set(tagRows.map(t=>t.brand_id)).size+" matching brand calendar(s)");
   }
+}
+
+// ── PEOPLE & ACCESS (admin) ────────────────────────────────
+async function openPeople(){
+  if(ME.role!=="admin"){toast("Admins only","err");return;}
+  document.getElementById("people-list").innerHTML='<div style="padding:20px;font-size:13px;color:var(--muted);">Loading…</div>';
+  openM("people");
+  const {data,error}=await sb.from("profiles").select("id,email,role,brand_id");
+  if(error){toast(error.message,"err");return;}
+  renderPeople(data||[]);
+}
+function renderPeople(rows){
+  const list=document.getElementById("people-list"); list.innerHTML="";
+  const order={admin:0,team:1,client:2,pending:3};
+  rows.sort((a,b)=>(order[a.role]??9)-(order[b.role]??9)||String(a.email).localeCompare(String(b.email)));
+  const brandOpts=Object.entries(brands).map(([id,b])=>`<option value="${id}">${b.name}</option>`).join("");
+  rows.forEach(p=>{
+    const row=document.createElement("div"); row.className="em-ev-row"; row.style.flexWrap="wrap";
+    const isMe=p.id===(ME.id||"");
+    const roleSel=`<select onchange="setPersonRole('${p.id}',this.value)" style="height:28px;border-radius:5px;border:1px solid var(--div);background:var(--surface);font-size:12px;font-family:inherit;padding:0 6px;">
+      ${["pending","team","client","admin"].map(r=>`<option value="${r}"${p.role===r?" selected":""}>${r}</option>`).join("")}
+    </select>`;
+    const brandSel=`<select id="pbrand-${p.id}" onchange="setPersonBrand('${p.id}',this.value)" style="height:28px;border-radius:5px;border:1px solid var(--div);background:var(--surface);font-size:12px;font-family:inherit;padding:0 6px;display:${p.role==="client"?"inline-block":"none"};">
+      <option value="">— pick brand —</option>${brandOpts}
+    </select>`;
+    row.innerHTML=`<div style="flex:1;min-width:160px;font-size:13px;">${p.email||p.id}${isMe?' <span style="font-size:10px;color:var(--muted);">(you)</span>':''}</div>
+      <div style="display:flex;gap:6px;align-items:center;">${roleSel}${brandSel}</div>`;
+    list.appendChild(row);
+    const bs=row.querySelector(`#pbrand-${p.id}`); if(bs&&p.brand_id) bs.value=p.brand_id;
+  });
+  if(!rows.length) list.innerHTML='<div style="padding:20px;text-align:center;font-size:13px;color:var(--muted);">No one yet.</div>';
+}
+async function setPersonRole(id,role){
+  const patch={role}; if(role!=="client") patch.brand_id=null;
+  const {error}=await sb.from("profiles").update(patch).eq("id",id);
+  if(error){toast(error.message,"err");return;}
+  const bs=document.getElementById("pbrand-"+id); if(bs) bs.style.display=role==="client"?"inline-block":"none";
+  toast("Updated to "+role);
+}
+async function setPersonBrand(id,brandId){
+  const {error}=await sb.from("profiles").update({brand_id:brandId||null}).eq("id",id);
+  if(error){toast(error.message,"err");return;}
+  toast(brandId?"Brand assigned":"Brand cleared");
 }
 
 // ── CARRY FORWARD: copy master events into the next year ───
@@ -3369,6 +3476,7 @@ function applyRoleUI(){
       if(b.id!=="setup-btn"&&!oc.includes("exportXLSX")) b.style.display="none";
     });
     document.querySelectorAll("#setup-drop .staff-row").forEach(r=>r.style.display="none");
+    document.querySelectorAll("#setup-drop .admin-row").forEach(r=>r.style.display="none");
   }
 }
 
@@ -3377,7 +3485,7 @@ async function boot(){
   if(!session){document.getElementById("auth-screen").style.display="flex";return;}
   const {data:prof,error}=await sb.from("profiles").select("role,brand_id,email").eq("id",session.user.id).single();
   if(error){authMsg(error.message);document.getElementById("auth-screen").style.display="flex";return;}
-  ME={role:prof.role,brand_id:prof.brand_id,email:prof.email||session.user.email};
+  ME={id:session.user.id,role:prof.role,brand_id:prof.brand_id,email:prof.email||session.user.email};
   if(ME.role==="pending"){
     document.getElementById("auth-form").style.display="none";
     document.getElementById("auth-pending").style.display="block";
@@ -3387,6 +3495,7 @@ async function boot(){
   if(RECOVERY_MODE) showSetPass();
   else document.getElementById("auth-screen").style.display="none";
   applyRoleUI();
+  document.querySelectorAll("#setup-drop .admin-row").forEach(r=>r.style.display=ME.role==="admin"?"":"none");
   const ae=document.getElementById("acct-email"); if(ae) ae.textContent=ME.email||"";
   await loadAll();
 }
