@@ -80,7 +80,7 @@ body{background:var(--bg);color:var(--text);margin:0;min-height:100vh;}
 .year-title{font-size:40px;font-weight:700;letter-spacing:-.04em;line-height:1;}
 .year-title span{color:var(--acc);}
 .year-sub{font-size:14px;color:var(--muted);margin-bottom:4px;}
-.months-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:0 32px 32px;}
+.months-grid{display:grid;grid-template-columns:repeat(auto-fill,300px);justify-content:start;gap:14px;padding:0 32px 32px;}
 
 /* month card */
 .month-card{background:var(--surface);border-radius:var(--rc);overflow:hidden;border:1px solid var(--div);transition:box-shadow 150ms;}
@@ -369,7 +369,7 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
   .nav{padding:0 18px;gap:10px;}
   .nav-brand{font-size:15px;}
   .nav-year{display:none;}
-  .months-grid{grid-template-columns:repeat(3,1fr);gap:10px;padding:0 18px 24px;}
+  .months-grid{gap:10px;padding:0 18px 24px;}
   .layout{grid-template-columns:180px 1fr;}
   .sidebar{padding:14px 10px;}
   .list-section{padding:0 18px 24px;}
@@ -383,7 +383,7 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 @media(max-width:768px){
   .nav{padding:0 14px;gap:8px;}
   .nav-brand .dot{display:none;}
-  .months-grid{grid-template-columns:repeat(2,1fr);gap:8px;padding:0 14px 20px;}
+  .months-grid{gap:8px;padding:0 14px 20px;}
   .layout{grid-template-columns:1fr;} /* hide sidebar in layout flow */
   .sidebar{display:none;} /* hidden by default — toggled via JS */
   .main{max-height:calc(100vh - 60px);}
@@ -407,7 +407,7 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 
 /* Mobile — ≤480px: single column */
 @media(max-width:480px){
-  .months-grid{grid-template-columns:1fr;gap:8px;padding:0 10px 18px;}
+  .months-grid{gap:8px;padding:0 10px 18px;}
   .nav{padding:0 10px;gap:6px;}
   .nav-brand{font-size:13px;}
   .year-head{padding:12px 10px 8px;}
@@ -1157,7 +1157,7 @@ function render(){
 }
 function toggleSocialLayer(){ socialLayer=!socialLayer; if(!socialLayer){ planningMode=false; if(view==="content"){ setView("year"); return; } } render(); }
 function togglePlanning(){ if(!socialLayer)socialLayer=true; planningMode=!planningMode; if(view!=="year")setView("year"); else render(); }
-function toggleContent(){ if(view==="content"){ setView("year"); } else { setView("content"); } }
+function toggleContent(){ if(view==="content"){ setView("year"); } else { socialLayer=true; planningMode=false; setView("content"); } }
 
 function buildSidebar(){
   if(view==="content"&&activeBrand&&brands[activeBrand]){ buildContentSidebar(); return; }
@@ -1320,13 +1320,16 @@ function brandHeaderHtml(){
   const seg=(active,dark,onclick,icon,label,first)=>`<span onclick="${onclick}" style="height:36px;box-sizing:border-box;padding:0 13px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;${first?"":"border-left:1px solid rgba(214,40,40,.22);"}background:${active?(dark?"#0D0D0D":"#D62828"):"#fff"};color:${active?"#fff":"var(--muted)"};"><i class="ti ${icon}"></i> ${label}</span>`;
   let group;
   if(socOn){
-    group=`<div style="display:flex;align-items:stretch;height:36px;box-sizing:border-box;border:1px solid #D62828;border-radius:8px;overflow:hidden;">${seg(true,false,"toggleSocialLayer()","ti-photo","Social",true)}${seg(planningMode&&view==="year",false,"togglePlanning()","ti-pencil-plus","Planning",false)}${seg(view==="content",true,"toggleContent()","ti-list-details","Content",false)}</div>`;
+    group=`<div style="display:flex;align-items:stretch;height:36px;box-sizing:border-box;border:1px solid #D62828;border-radius:8px;overflow:hidden;">${seg(true,false,"toggleSocialLayer()","ti-photo","Social",true)}${seg(planningMode&&view==="year",false,"togglePlanning()","ti-pencil-plus","Planning",false)}${seg(view==="content",false,"toggleContent()","ti-list-details","Content",false)}</div>`;
   } else {
     group=`<div style="display:flex;align-items:stretch;height:36px;box-sizing:border-box;border:1px solid var(--div);border-radius:8px;overflow:hidden;">${seg(false,false,"toggleSocialLayer()","ti-photo","Social",true)}</div>`;
   }
   const brief=`<button title="Brand brief — coming soon" onclick="toast('Brand brief is coming soon')" style="height:36px;box-sizing:border-box;padding:0 13px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid var(--div);background:var(--surface);color:var(--muted);font-family:inherit;display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap;"><i class="ti ti-file-text"></i> Brand brief <span style="font-size:9px;font-weight:700;background:var(--bg);color:var(--subtle);padding:1px 5px;border-radius:4px;">soon</span></button>`;
+  // planning hint lives INLINE in the header row (row height fixed at 36px by the buttons),
+  // so toggling planning never pushes the calendar down.
+  const hint=(socOn&&planningMode&&view==="year")?`<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:#E1F5EE;color:#0E8A8A;font-size:11px;font-weight:600;white-space:nowrap;"><i class="ti ti-pencil-plus"></i> Click any date to plan a post</span>`:"";
   return `<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
-    ${name}
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">${name}${hint}</div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">${group}${brief}</div>
   </div>`;
 }
@@ -1335,9 +1338,8 @@ function renderYear(){
   const b=activeBrand&&brands[activeBrand];
   let header;
   if(b){
-    const planHint=(planningMode&&canEdit())?`<div style="display:inline-flex;align-items:center;gap:7px;margin-top:10px;padding:6px 12px;border-radius:999px;background:#E1F5EE;color:#0E8A8A;font-size:12px;font-weight:600;"><i class="ti ti-pencil-plus"></i> Planning mode — click any date to plan a post</div>`:"";
     // match .year-head padding exactly so the brand name lands where "2026." does (and doesn't touch the nav)
-    header=`<div style="padding:28px 32px 20px;">${brandHeaderHtml()}${planHint}</div>`;
+    header=`<div style="padding:28px 32px 20px;">${brandHeaderHtml()}</div>`;
   } else {
     header=`<div class="year-head"><div class="year-title">${YEAR}<span>.</span></div><div class="year-sub">Click any date to view or add events</div></div>`;
   }
@@ -1520,7 +1522,11 @@ function buildContentSidebar(){
   posts.forEach(p=>{by[p.status]=(by[p.status]||0)+1;});
   document.getElementById("sb-stats").innerHTML=`<div class="s-lbl">${MN[m]} · content</div><div class="s-stat-num">${total}</div><div class="s-stat-lbl">post${total!==1?"s":""} planned</div>`;
   const rows=[["drafting","Drafting","#EF9F27"],["review","Review","#378ADD"],["approved","Approved","#639922"],["posted","Posted","#888780"]];
-  document.getElementById("sb-months").innerHTML=`<div class="s-divider"></div><div class="s-lbl">By status</div>`+
+  const monthGrid=`<div class="s-divider"></div><div class="s-lbl">Month</div>`+
+    `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:6px 0 2px;">`+
+    Array.from({length:12},(_,i)=>i+1).map(mm=>`<span onclick="setContentMonthTo(${mm})" style="text-align:center;font-size:11px;font-weight:700;padding:5px 0;border-radius:6px;cursor:pointer;${mm===m?"background:var(--text);color:#fff;":"background:var(--surface);border:1px solid var(--div);color:var(--muted);"}">${MN[mm].slice(0,3)}</span>`).join("")+
+    `</div>`;
+  document.getElementById("sb-months").innerHTML=monthGrid+`<div class="s-divider"></div><div class="s-lbl">By status</div>`+
     rows.map(([k,l,c])=>`<div onclick="setContentStatusFilter('${k}')" style="display:flex;align-items:center;gap:8px;font-size:13px;padding:6px 8px;border-radius:var(--r);cursor:pointer;${contentStatusFilter===k?"background:var(--bg);font-weight:600;":""}"><span style="width:8px;height:8px;border-radius:50%;background:${c};flex-shrink:0;"></span><span style="flex:1;">${l}</span><span style="color:var(--muted);">${by[k]||0}</span></div>`).join("")+
     (contentStatusFilter?`<div onclick="setContentStatusFilter('')" style="font-size:11px;color:var(--acc);cursor:pointer;padding:5px 8px;">Clear filter</div>`:"")+
     `<div class="s-divider"></div><div class="s-lbl">Platforms</div><div style="display:flex;gap:14px;font-size:13px;color:var(--muted);padding:2px 8px;"><span style="color:#D4537E;"><i class="ti ti-brand-instagram"></i> ${total}</span><span style="color:#185FA5;"><i class="ti ti-brand-facebook"></i> ${total}</span></div>`;
@@ -1535,21 +1541,19 @@ function renderSocial(){
   const monthTotal=posts.length;
   if(contentStatusFilter) posts=posts.filter(p=>p.status===contentStatusFilter);
   posts.sort((a,b2)=>a.date-b2.date||String(a.time||"").localeCompare(String(b2.time||"")));
-  const monthChips=Array.from({length:12},(_,i)=>i+1).map(mm=>`<span onclick="setContentMonthTo(${mm})" style="font-size:11px;font-weight:700;padding:4px 9px;border-radius:6px;cursor:pointer;${mm===contentMonth?"background:var(--text);color:#fff;":"background:var(--surface);border:1px solid var(--div);color:var(--muted);"}">${MN[mm].slice(0,3)}</span>`).join("");
   const modeSeg=(mm,icon,label)=>`<span onclick="setContentMode('${mm}')" style="height:28px;box-sizing:border-box;padding:0 12px;border-radius:6px;display:flex;align-items:center;gap:5px;font-size:12px;font-weight:${contentMode===mm?"700":"600"};cursor:pointer;${contentMode===mm?"background:#fff;color:#0D0D0D;box-shadow:0 1px 2px rgba(0,0,0,.08);":"color:var(--muted);"}"><i class="ti ${icon}" style="font-size:13px;"></i> ${label}</span>`;
   const modeToggle=`<div style="display:flex;align-items:center;background:#E7E6E1;border-radius:8px;padding:3px;gap:2px;height:34px;box-sizing:border-box;">${modeSeg("view","ti-eye","View")}${modeSeg("edit","ti-pencil","Edit")}</div>`;
   const nextM=contentMonth<12?contentMonth+1:0;
   mc.innerHTML=`
    <div style="padding:28px 32px 20px;">
    <div style="margin-bottom:16px;">${brandHeaderHtml()}</div>
-   <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px;">${monthChips}</div>
-   <div style="max-width:660px;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:stretch;">
+   <div class="months-grid" style="padding:0;">
      <div id="content-monthcard"></div>
      <div id="content-monthcard-next"${nextM?' style="opacity:.72;"':''}></div>
    </div>
-   <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:20px 0 12px;padding-top:14px;border-top:1px solid var(--div);">
-     <div style="font-size:15px;font-weight:700;">Posts <span style="font-weight:400;color:var(--subtle);">· ${MN[contentMonth]}</span></div>
+   <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:20px 0 12px;padding-top:14px;border-top:1px solid var(--div);">
      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${modeToggle}${canE?`<button class="btn btn-p" style="height:34px;padding:0 14px;font-size:12px;" onclick="addContentPost()"><i class="ti ti-plus"></i> Add post</button>`:""}</div>
+     <div style="font-size:15px;font-weight:700;">Posts <span style="font-weight:400;color:var(--subtle);">· ${MN[contentMonth]}</span></div>
    </div>
    <div id="content-list"></div>
    </div>`;
@@ -3357,7 +3361,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v32.2 web — brand header sits exactly where 2026 does (padding), nav gap";
+const TOOL_VERSION="v33 web — consistent red Social/Planning/Content, inline planning hint, fixed 300px calendar cards, sidebar month picker, content controls left";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
