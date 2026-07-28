@@ -258,6 +258,7 @@ body.planning .mc-day:hover{box-shadow:0 0 0 2px #0EA5A5 inset;border-radius:5px
 /* form elements */
 .field{margin-bottom:14px;}
 .fl{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+.fl2{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
 .fi{width:100%;height:38px;padding:0 12px;background:var(--bg);border:1.5px solid var(--div);border-radius:var(--r);font-size:14px;color:var(--text);font-family:inherit;outline:none;transition:all 120ms;}
 .fi:hover{border-color:#aaa;}
 .fi:focus{border-color:var(--acc);background:var(--surface);}
@@ -439,21 +440,18 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 <!-- NAV -->
 <nav class="nav">
   <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menu">☰</button>
-  <div class="nav-brand" id="nav-brand-txt">CC Marketing Calendar<span class="dot">.</span><span class="nav-year" id="nav-context">2026</span></div>
-  <div class="tab-pill" style="margin-left:8px;">
-    <button class="tab-item on" data-v="year" onclick="setView('year',this)">Year</button>
-    <button class="tab-item" data-v="list" onclick="setView('list',this)">List</button>
-  </div>
-  <select id="year-sel" onchange="setYear(this.value)" style="height:34px;padding:0 8px;border-radius:var(--r);font-size:13px;font-weight:700;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-family:inherit;cursor:pointer;">
+  <div class="nav-brand" id="nav-brand-txt">CC Marketing Calendar<span class="dot">.</span></div>
+  <select id="year-sel" onchange="setYear(this.value)" title="Year" style="height:34px;padding:0 8px;border-radius:var(--r);font-size:13px;font-weight:700;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-family:inherit;cursor:pointer;margin-left:4px;">
     <option value="2026">2026</option>
   </select>
+  <div class="tab-pill" style="margin-left:2px;">
+    <button class="tab-item on" data-v="year" onclick="setView('year',this)">Calendar</button>
+    <button class="tab-item" data-v="list" onclick="setView('list',this)">List</button>
+  </div>
   <div class="tab-pill" title="Show the whole year, or only this month onwards">
-    <button class="tab-item fn-item" data-f="0" onclick="setFromNow(false)">Full year</button>
+    <button class="tab-item fn-item" data-f="0" onclick="setFromNow(false)">Full</button>
     <button class="tab-item fn-item on" data-f="1" onclick="setFromNow(true)">Upcoming</button>
   </div>
-  <button class="nav-btn" id="social-toggle" onclick="toggleSocialLayer()" title="Show planned social posts on the calendar" style="display:none;"><i class="ti ti-photo"></i> Social</button>
-  <button class="nav-btn" id="planning-btn" onclick="togglePlanning()" title="Click dates to plan posts" style="display:none;"><i class="ti ti-pencil-plus"></i> Planning</button>
-  <button class="nav-btn" id="content-btn" onclick="toggleContent()" title="Write content for planned posts" style="display:none;"><i class="ti ti-list-details"></i> Content</button>
   <div class="nav-right">
     <!-- Industry multiselect -->
     <div class="ms-wrap" id="ind-ms-wrap">
@@ -1153,13 +1151,7 @@ function render(){
   if(brandEl) brandEl.innerHTML=`CC Marketing Calendar<span class="dot">.</span>`;
   const brandActive=!!(activeBrand&&brands[activeBrand]);
   if(view==="content"&&!brandActive){view="year";document.querySelectorAll(".tab-item").forEach(t=>t.classList.toggle("on",t.dataset.v==="year"));}
-  // Social controls: the toggle reveals Planning + Content, all brand-scoped
-  const stg=document.getElementById("social-toggle");
-  const plg=document.getElementById("planning-btn");
-  const cnt=document.getElementById("content-btn");
-  if(stg){ stg.style.display=(brandActive&&(view==="year"||view==="content"))?"":"none"; stg.classList.toggle("red",socialLayer); }
-  if(plg){ plg.style.display=(brandActive&&socialLayer)?"":"none"; plg.classList.toggle("red",planningMode); }
-  if(cnt){ cnt.style.display=(brandActive&&socialLayer)?"":"none"; cnt.classList.toggle("red",view==="content"); }
+  // Social/Planning/Content buttons now live in the brand header (rendered by renderYear/renderSocial)
   document.body.classList.toggle("planning",planningMode&&view==="year"&&brandActive);
   view==="content"?renderSocial():(view==="year"?renderYear():renderList());
 }
@@ -1318,15 +1310,38 @@ function eeSetEndDate(d,m){
   else document.getElementById("ee-end-date-native").value="";
 }
 
+// Shared BRAND HEADER (Variation 2) — constant across calendar + content views
+function brandHeaderHtml(){
+  const b=brands[activeBrand]; if(!b) return "";
+  const name=`<div class="year-title" style="font-size:34px;color:var(--acc);">${escAttr(b.name)}<span style="color:var(--text);">.</span></div>`;
+  if(!canEdit()) return `<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">${name}</div>`;
+  const socOn=socialLayer;
+  const soc=`<span onclick="toggleSocialLayer()" style="padding:8px 14px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;background:${socOn?"#D62828":"transparent"};color:${socOn?"#fff":"var(--muted)"};"><i class="ti ti-photo"></i> Social</span>`;
+  let group;
+  if(socOn){
+    const plan=`<span onclick="togglePlanning()" style="padding:8px 12px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;cursor:pointer;border-left:1px solid #F0C9C9;background:${planningMode?"#D62828":"#fff"};color:${planningMode?"#fff":"var(--muted)"};"><i class="ti ti-pencil-plus"></i> Planning</span>`;
+    const cont=`<span onclick="toggleContent()" style="padding:8px 12px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;cursor:pointer;border-left:1px solid ${view==="content"?"#0D0D0D":"#F0C9C9"};background:${view==="content"?"#0D0D0D":"#fff"};color:${view==="content"?"#fff":"var(--muted)"};"><i class="ti ti-list-details"></i> Content</span>`;
+    group=`<div style="display:flex;align-items:center;border:1px solid #D62828;border-radius:8px;overflow:hidden;">${soc}${plan}${cont}</div>`;
+  } else {
+    group=`<div style="display:flex;align-items:center;border:1px solid var(--div);border-radius:8px;overflow:hidden;background:var(--surface);">${soc}</div>`;
+  }
+  const brief=`<button title="Brand brief — coming soon" onclick="toast('Brand brief is coming soon')" style="height:37px;padding:0 13px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid var(--div);background:var(--surface);color:var(--muted);font-family:inherit;display:inline-flex;align-items:center;gap:6px;cursor:pointer;"><i class="ti ti-file-text"></i> Brand brief <span style="font-size:9px;font-weight:700;background:var(--bg);color:var(--subtle);padding:1px 5px;border-radius:4px;">soon</span></button>`;
+  return `<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+    ${name}
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">${group}${brief}</div>
+  </div>`;
+}
 function renderYear(){
   const mc=document.getElementById("main");
   const b=activeBrand&&brands[activeBrand];
-  const title=b
-    ?`<div class="year-title">${YEAR}<span>.</span>&nbsp;<span style="color:var(--acc);">${b.name}</span></div>`
-    :`<div class="year-title">${YEAR}<span>.</span></div>`;
-  const sub=b?`Brand calendar — ${(b.evIds||[]).length} tagged events`:"Click any date to view or add events";
-  const planHint=(planningMode&&b)?`<div style="display:inline-flex;align-items:center;gap:7px;margin-top:8px;padding:6px 12px;border-radius:999px;background:#E1F5EE;color:#0E8A8A;font-size:12px;font-weight:600;"><i class="ti ti-pencil-plus"></i> Planning mode — click any date to plan a post</div>`:"";
-  mc.innerHTML=`<div class="year-head">${title}<div class="year-sub">${sub}</div>${planHint}</div><div class="months-grid" id="yr-grid"></div>`;
+  let header;
+  if(b){
+    const planHint=(planningMode&&canEdit())?`<div style="display:inline-flex;align-items:center;gap:7px;margin-top:10px;padding:6px 12px;border-radius:999px;background:#E1F5EE;color:#0E8A8A;font-size:12px;font-weight:600;"><i class="ti ti-pencil-plus"></i> Planning mode — click any date to plan a post</div>`:"";
+    header=`<div style="margin-bottom:18px;">${brandHeaderHtml()}${planHint}</div>`;
+  } else {
+    header=`<div class="year-head"><div class="year-title">${YEAR}<span>.</span></div><div class="year-sub">Click any date to view or add events</div></div>`;
+  }
+  mc.innerHTML=`${header}<div class="months-grid" id="yr-grid"></div>`;
   const g=document.getElementById("yr-grid");
   for(const m of visibleMonths()) g.appendChild(buildMini(m));
 }
@@ -1356,6 +1371,11 @@ function socialFieldEdit(id,field,value,platform){
   socialSaveTimers[id]=setTimeout(()=>{dbSaveSocialPost(p);showSavedCue(id);},600);
 }
 function showSavedCue(id){const el=document.getElementById("sv-"+id);if(!el)return;el.style.opacity="1";clearTimeout(el._t);el._t=setTimeout(()=>{el.style.opacity="0";},1200);}
+function socialStatusEdit(id,value){
+  socialFieldEdit(id,"status",value);
+  const dot=document.getElementById("stdot-"+id); if(dot) dot.style.background=(SOCIAL_STATUS[value]||["","#888"])[1];
+  if(view==="content"&&activeBrand) buildContentSidebar();
+}
 function socialToggleSyncInline(id){
   const b=brands[activeBrand]; const p=(b.social||[]).find(x=>x.id===id); if(!p)return;
   if(p.synced){ p.synced=false; }
@@ -1407,44 +1427,60 @@ function variantFields(p,platform){
     <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Image</div>
     <div style="height:30px;border:1px dashed var(--div);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--subtle);font-size:11px;gap:5px;"><i class="ti ti-photo"></i> soon</div>`;
 }
+function statusChipEditable(p){
+  const st=SOCIAL_STATUS[p.status]||["","#888"];
+  return `<div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 4px 0 10px;border-radius:7px;border:1px solid var(--div);background:var(--surface);">
+    <span id="stdot-${p.id}" style="width:7px;height:7px;border-radius:50%;background:${st[1]};flex-shrink:0;"></span>
+    <select onchange="socialStatusEdit('${p.id}',this.value)" style="border:none;background:transparent;font-size:12px;font-weight:700;color:var(--text);font-family:inherit;cursor:pointer;outline:none;">${Object.entries(SOCIAL_STATUS).map(([k,v])=>`<option value="${k}" ${p.status===k?"selected":""}>${v[0]}</option>`).join("")}</select>
+  </div>`;
+}
+function designBriefBlock(p,withImage){
+  return `<div style="border:1px solid #EDE9DF;background:#FBFAF6;border-radius:10px;padding:11px;margin-top:12px;">
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#8A6D00;margin-bottom:7px;display:flex;align-items:center;gap:5px;"><i class="ti ti-photo-cog"></i> Visuals for the design team</div>
+    <div style="display:flex;gap:11px;">
+      ${withImage?`<div style="flex-shrink:0;"><div style="width:88px;height:88px;border:1px dashed #D6CBB0;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#B5A47A;gap:3px;background:#fff;"><i class="ti ti-upload" style="font-size:18px;"></i><span style="font-size:9px;">Image</span></div><div style="font-size:8px;color:#B5A47A;text-align:center;margin-top:3px;">upload soon</div></div>`:""}
+      <div style="flex:1;min-width:0;">
+        <div class="fl2" style="color:#8A6D00;">Design brief</div>
+        <textarea class="fi ta" style="min-height:${withImage?"64":"46"}px;font-size:12px;background:#fff;" placeholder="e.g. bright flat-lay, 3 product shots, logo bottom-right, warm tone…" oninput="socialFieldEdit('${p.id}','notes',this.value)">${seEsc(p.notes||"")}</textarea>
+      </div>
+    </div>
+  </div>`;
+}
 function socialEditForm(p){
   const synced=p.synced!==false;
-  const sharedRow=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px;">
-    <div><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Format</div>${fmtSelect(p.id,p.format)}</div>
-    <div><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Time</div><input class="fi" type="time" style="height:30px;font-size:11px;" value="${escAttr(p.time)}" onchange="socialFieldEdit('${p.id}','time',this.value)"/></div>
-    <div><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Status</div>${stSelect(p.id,p.status)}</div>
-  </div>`;
-  let bodyInner;
+  let body;
   if(synced){
     const v=p.content.instagram;
-    bodyInner=`<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Caption</div>
-      <textarea class="fi ta" style="min-height:46px;font-size:12px;margin-bottom:8px;" placeholder="Write a caption…" oninput="socialFieldEdit('${p.id}','caption',this.value)">${seEsc(v.caption)}</textarea>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <div><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Hashtags</div><input class="fi" style="height:30px;font-size:12px;color:#185FA5;" placeholder="#hashtags" value="${escAttr(v.hashtags)}" oninput="socialFieldEdit('${p.id}','hashtags',this.value)"/></div>
-        <div><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Image</div><div style="height:30px;border:1px dashed var(--div);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--subtle);font-size:11px;gap:5px;"><i class="ti ti-photo"></i> upload soon</div></div>
-      </div>${sharedRow}`;
+    body=`<div class="fl2">Caption</div>
+      <textarea class="fi ta" style="min-height:52px;font-size:12px;margin-bottom:11px;" placeholder="Write a caption…" oninput="socialFieldEdit('${p.id}','caption',this.value)">${seEsc(v.caption)}</textarea>
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:9px;">
+        <div><div class="fl2">Hashtags</div><input class="fi" style="height:32px;font-size:12px;color:#185FA5;" placeholder="#hashtags" value="${escAttr(v.hashtags)}" oninput="socialFieldEdit('${p.id}','hashtags',this.value)"/></div>
+        <div><div class="fl2">Format</div>${fmtSelect(p.id,p.format)}</div>
+        <div><div class="fl2">Time</div><input class="fi" type="time" style="height:32px;font-size:12px;" value="${escAttr(p.time)}" onchange="socialFieldEdit('${p.id}','time',this.value)"/></div>
+      </div>
+      ${designBriefBlock(p,true)}`;
   } else {
-    bodyInner=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    body=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div style="border:1px solid var(--div);border-radius:10px;overflow:hidden;"><div style="background:#D4537E;color:#fff;font-size:10px;font-weight:700;padding:6px 9px;"><i class="ti ti-brand-instagram"></i> INSTAGRAM</div><div style="padding:9px;">${variantFields(p,"instagram")}</div></div>
       <div style="border:1px solid var(--div);border-radius:10px;overflow:hidden;"><div style="background:#185FA5;color:#fff;font-size:10px;font-weight:700;padding:6px 9px;"><i class="ti ti-brand-facebook"></i> FACEBOOK</div><div style="padding:9px;">${variantFields(p,"facebook")}</div></div>
-    </div>${sharedRow}`;
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px;">
+      <div><div class="fl2">Format</div>${fmtSelect(p.id,p.format)}</div>
+      <div><div class="fl2">Time</div><input class="fi" type="time" style="height:32px;font-size:12px;" value="${escAttr(p.time)}" onchange="socialFieldEdit('${p.id}','time',this.value)"/></div>
+    </div>${designBriefBlock(p,false)}`;
   }
-  return `<div style="background:var(--surface);border:1.5px solid #0EA5A5;border-radius:12px;overflow:hidden;margin-bottom:10px;">
+  return `<div style="background:var(--surface);border:1.5px solid #0EA5A5;border-radius:12px;overflow:hidden;">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 14px;background:var(--surface2);border-bottom:1px solid var(--div);">
       <span style="font-size:13px;font-weight:700;">${shortDate(p.month,p.date)} ${(MN[p.month]||"").slice(0,3)}</span>
       <label style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;cursor:pointer;" onclick="socialToggleSyncInline('${p.id}')"><span style="width:26px;height:15px;border-radius:999px;background:${synced?"var(--acc)":"#C9C7BF"};position:relative;flex-shrink:0;"><span style="width:11px;height:11px;border-radius:50%;background:#fff;position:absolute;top:2px;${synced?"right:2px;":"left:2px;"}"></span></span> Same for both</label>
       <span id="sv-${p.id}" style="font-size:10px;color:#0E8A8A;font-weight:700;opacity:0;transition:opacity 200ms;">Saved</span>
-      <span style="margin-left:auto;display:flex;align-items:center;gap:12px;">
+      <span style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+        ${statusChipEditable(p)}
         <span style="font-size:11px;font-weight:700;color:#0E8A8A;cursor:pointer;" onclick="openPreview('${p.id}')"><i class="ti ti-eye"></i> Preview</span>
         <i class="ti ti-trash" style="font-size:14px;color:#C62828;cursor:pointer;" onclick="deleteContentPost('${p.id}')"></i>
       </span>
     </div>
-    <div style="padding:11px 14px;">${bodyInner}
-      <div style="margin-top:10px;">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px;display:flex;align-items:center;gap:4px;"><i class="ti ti-photo-cog"></i> Design brief <span style="font-weight:400;text-transform:none;color:var(--subtle);">— image / video notes for the design team</span></div>
-        <textarea class="fi ta" style="min-height:38px;font-size:12px;" placeholder="e.g. bright flat-lay, 3 product shots, logo bottom-right…" oninput="socialFieldEdit('${p.id}','notes',this.value)">${seEsc(p.notes||"")}</textarea>
-      </div>
-    </div>
+    <div style="padding:12px 14px;">${body}</div>
   </div>`;
 }
 function previewCard(platform,p,bn){
@@ -1506,14 +1542,15 @@ function renderSocial(){
   </div>`;
   const nextM=contentMonth<12?contentMonth+1:0;
   mc.innerHTML=`
-   <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
-     <div class="year-title" style="font-size:28px;">Content<span>.</span>&nbsp;<span style="color:var(--acc);">${escAttr(b.name)}</span></div>
-     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${modeToggle}${canE?`<button class="btn btn-p btn-sm" onclick="addContentPost()"><i class="ti ti-plus"></i> Add post</button>`:""}</div>
-   </div>
+   <div style="margin-bottom:18px;">${brandHeaderHtml()}</div>
    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px;">${monthChips}</div>
-   <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start;margin-bottom:18px;">
-     <div id="content-monthcard" style="flex:1;min-width:240px;max-width:320px;"></div>
-     ${nextM?`<div id="content-monthcard-next" style="flex:1;min-width:240px;max-width:320px;opacity:.72;"></div>`:""}
+   <div style="max-width:660px;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:stretch;">
+     <div id="content-monthcard"></div>
+     <div id="content-monthcard-next"${nextM?' style="opacity:.72;"':''}></div>
+   </div>
+   <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:20px 0 12px;padding-top:14px;border-top:1px solid var(--div);">
+     <div style="font-size:15px;font-weight:700;">Posts <span style="font-weight:400;color:var(--subtle);">· ${MN[contentMonth]}</span></div>
+     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${modeToggle}${canE?`<button class="btn btn-p btn-sm" onclick="addContentPost()"><i class="ti ti-plus"></i> Add post</button>`:""}</div>
    </div>
    <div id="content-list"></div>`;
   document.getElementById("content-monthcard").appendChild(buildMini(contentMonth));
@@ -1523,7 +1560,7 @@ function renderSocial(){
     list.innerHTML=`<div style="text-align:center;padding:40px 20px;color:var(--muted);"><div style="font-size:28px;margin-bottom:8px;color:var(--subtle);"><i class="ti ti-photo-plus"></i></div><div style="font-size:14px;">${monthTotal?"No posts match this filter.":"No posts planned for "+MN[contentMonth]+"."}</div><div style="font-size:12px;margin-top:4px;">Click any date on the calendar above to plan a post.</div></div>`;
     return;
   }
-  list.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(${contentMode==="edit"?"360px":"300px"},1fr));gap:10px;align-items:start;">`+
+  list.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));gap:12px;align-items:start;">`+
     posts.map(p=>contentMode==="edit"?socialEditForm(p):socialViewCard(p)).join("")+`</div>`;
 }
 
@@ -1612,6 +1649,7 @@ function buildMini(m){
         const tipAttr=tipLines.length?` data-tip="${escAttr(tipLines.join("\n"))}"`:"";
         return `<div class="${cellClass}"${campStyle?` style="${campStyle}"`:""} onclick="dayClick(${m},${day})"${tipAttr}>${dateEl}${strips}${campBadge}</div>`;
       }).join("")}
+      ${Array(Math.max(0,42-FD[m]-DIM[m])).fill('<div class="mc-empty"></div>').join("")}
     </div>`;
   return card;
 }
@@ -3317,7 +3355,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v31.1 web — fix Export in brand view (arc fields)";
+const TOOL_VERSION="v32 web — brand header hub, nav rework, wider content cards";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
