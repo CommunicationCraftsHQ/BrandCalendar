@@ -1365,7 +1365,8 @@ let socialSaveTimers={};
 function socialFieldEdit(id,field,value,platform){
   const b=brands[activeBrand]; if(!b)return;
   const p=(b.social||[]).find(x=>x.id===id); if(!p)return;
-  if(field==="caption"||field==="hashtags"||field==="image_ref"){
+  if(field==="concept"){ p.content.concept=value; }
+  else if(field==="caption"||field==="hashtags"||field==="image_ref"){
     if(p.synced){p.content.facebook[field]=value;p.content.instagram[field]=value;}
     else p.content[platform||"instagram"][field]=value;
   } else if(field==="format"||field==="status"||field==="time"||field==="notes"){ p[field]=value; }
@@ -1423,6 +1424,7 @@ function socialViewCard(p){
     <div style="display:flex;gap:12px;padding:12px 14px;">
       <div style="width:72px;height:72px;flex-shrink:0;border-radius:8px;background:#FAFAFA;border:1px solid #EFEFEF;display:flex;align-items:center;justify-content:center;color:#CFCFCF;"><i class="ti ti-photo" style="font-size:22px;"></i></div>
       <div style="flex:1;min-width:0;">
+        ${(p.content.concept||"").trim()?`<div style="font-size:11px;font-weight:600;color:#0E8A8A;margin-bottom:5px;display:flex;align-items:center;gap:5px;"><i class="ti ti-bulb" style="font-size:12px;"></i> ${escAttr(p.content.concept)}</div>`:""}
         <div style="font-size:13px;line-height:1.55;margin-bottom:5px;${cap?"":"color:var(--subtle);font-style:italic;"}">${cap?escAttr(cap):"No caption yet"}</div>
         ${tags?`<div style="font-size:12px;line-height:1.5;color:#185FA5;">${escAttr(tags)}</div>`:""}
       </div>
@@ -1461,10 +1463,12 @@ function designBriefBlock(p,withImage){
 }
 function socialEditForm(p){
   const synced=p.synced!==false;
+  const conceptField=`<div class="fl2">Concept <span style="font-weight:400;color:var(--subtle);">· one-line idea</span></div>
+    <input class="fi" style="height:32px;font-size:12px;margin-bottom:11px;color:#0E8A8A;font-weight:600;" placeholder="What's this post about?" value="${escAttr((p.content&&p.content.concept)||"")}" oninput="socialFieldEdit('${p.id}','concept',this.value)"/>`;
   let body;
   if(synced){
     const v=p.content.instagram;
-    body=`<div class="fl2">Caption</div>
+    body=`${conceptField}<div class="fl2">Caption</div>
       <textarea class="fi ta" style="min-height:52px;font-size:12px;margin-bottom:11px;" placeholder="Write a caption…" oninput="socialFieldEdit('${p.id}','caption',this.value)">${seEsc(v.caption)}</textarea>
       <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:9px;">
         <div><div class="fl2">Hashtags</div><input class="fi" style="height:32px;font-size:12px;color:#185FA5;" placeholder="#hashtags" value="${escAttr(v.hashtags)}" oninput="socialFieldEdit('${p.id}','hashtags',this.value)"/></div>
@@ -1473,7 +1477,7 @@ function socialEditForm(p){
       </div>
       ${designBriefBlock(p,true)}`;
   } else {
-    body=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    body=`${conceptField}<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div style="border:1px solid var(--div);border-radius:10px;overflow:hidden;"><div style="background:#D4537E;color:#fff;font-size:10px;font-weight:700;padding:6px 9px;"><i class="ti ti-brand-instagram"></i> INSTAGRAM</div><div style="padding:9px;">${variantFields(p,"instagram")}</div></div>
       <div style="border:1px solid var(--div);border-radius:10px;overflow:hidden;"><div style="background:#185FA5;color:#fff;font-size:10px;font-weight:700;padding:6px 9px;"><i class="ti ti-brand-facebook"></i> FACEBOOK</div><div style="padding:9px;">${variantFields(p,"facebook")}</div></div>
     </div>
@@ -3372,7 +3376,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v33.2 web — inline date picker to reschedule a post (Edit mode); Social red / Planning+Content black, flexible cards, stacked mc-head, sidebar month fix";
+const TOOL_VERSION="v34 web — planning popover: pick format + one-line Concept per post; concept shown/editable in Content; plus v33.x fixes";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -3604,7 +3608,7 @@ function normalizeSocial(p){
   const ig={...emptyVariant(),...(c.instagram||{})};
   return {id:p.id,brand_id:p.brand_id,event_id:p.event_id||"",year:p.year||2026,month:p.month,date:p.date,
     time:p.time||"",format:p.format||"static",status:p.status||"drafting",synced:p.synced!==false,
-    content:{facebook:fb,instagram:ig},notes:p.notes||""};
+    content:{facebook:fb,instagram:ig,concept:c.concept||""},notes:p.notes||""};
 }
 function newSocialId(){return "sp"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function socialForBrandYear(brandId,year){
@@ -3615,7 +3619,7 @@ async function dbSaveSocialPost(p){
   if(!canEdit()) return;
   const row={id:p.id,brand_id:p.brand_id,event_id:p.event_id||null,year:p.year||YEAR,month:p.month,date:p.date,
     time:p.time||"",format:p.format||"static",status:p.status||"drafting",synced:p.synced!==false,
-    content:{facebook:p.content.facebook,instagram:p.content.instagram},notes:p.notes||"",updated_at:new Date().toISOString()};
+    content:{facebook:p.content.facebook,instagram:p.content.instagram,concept:(p.content&&p.content.concept)||""},notes:p.notes||"",updated_at:new Date().toISOString()};
   dbErr(await sb.from("social_posts").upsert(row));
 }
 async function dbTrashSocialPost(id){ if(canEdit()) dbErr(await sb.from("social_posts").update({deleted_at:new Date().toISOString()}).eq("id",id)); }
@@ -3643,13 +3647,13 @@ function openSocialEditor(brandId,post,ctx){
     SE={brandId,id:post.id,isNew:false,readOnly:ro,tab:"instagram",
       year:post.year||YEAR,month:post.month,date:post.date,time:post.time||"",
       format:post.format||"static",status:post.status||"drafting",synced:post.synced!==false,event_id:post.event_id||"",
-      content:{facebook:{...emptyVariant(),...(post.content.facebook||{})},instagram:{...emptyVariant(),...(post.content.instagram||{})}}};
+      content:{facebook:{...emptyVariant(),...(post.content.facebook||{})},instagram:{...emptyVariant(),...(post.content.instagram||{})},concept:(post.content&&post.content.concept)||""}};
   } else {
     const t=new Date();
     SE={brandId,id:null,isNew:true,readOnly:ro,tab:"instagram",
       year:YEAR,month:(ctx&&ctx.month)||curMonth||t.getMonth()+1,date:(ctx&&ctx.date)||t.getDate(),
       time:"",format:"static",status:"drafting",synced:true,event_id:"",
-      content:{facebook:emptyVariant(),instagram:emptyVariant()}};
+      content:{facebook:emptyVariant(),instagram:emptyVariant(),concept:""}};
   }
   renderSocialEditor(); openM("social-edit");
 }
@@ -3770,24 +3774,24 @@ function postHasContent(p){
   const c=p.content||{}; const f=c.facebook||{}, i=c.instagram||{};
   return !!((f.caption||"")+(f.hashtags||"")+(f.image_ref||"")+(i.caption||"")+(i.hashtags||"")).trim();
 }
-function createSocialPlaceholder(m,day){
+function createSocialPlaceholder(m,day,opts){
+  opts=opts||{};
   const p=normalizeSocial({id:newSocialId(),brand_id:activeBrand,event_id:"",year:YEAR,month:m,date:day,
-    time:"",format:"static",status:"drafting",synced:true,content:{facebook:emptyVariant(),instagram:emptyVariant()},notes:""});
+    time:opts.time||"",format:opts.format||"static",status:"drafting",synced:true,
+    content:{facebook:emptyVariant(),instagram:emptyVariant(),concept:opts.concept||""},notes:""});
   brands[activeBrand].social=brands[activeBrand].social||[];
   brands[activeBrand].social.push(p); dbSaveSocialPost(p); render(); return p;
 }
-function planningDayClick(m,day){
-  const posts=socialForBrandYear(activeBrand,YEAR).filter(p=>p.month===m&&p.date===day);
-  // Fast toggle: empty day → drop a post (no popup); lone empty placeholder → remove (no popup)
-  if(posts.length===0){ createSocialPlaceholder(m,day); toast("Post planned"); return; }
-  if(posts.length===1 && !postHasContent(posts[0])){
-    const b=brands[activeBrand]; b.social=(b.social||[]).filter(x=>x.id!==posts[0].id);
-    dbTrashSocialPost(posts[0].id); render(); toast("Post removed"); return;
-  }
-  // Content or multiple posts → open the planner so nothing is lost by accident
-  openPlanner(m,day);
+// Planning-mode day click always opens the planner, where you pick format + a one-line concept.
+function planningDayClick(m,day){ openPlanner(m,day); }
+let PLANF={format:"static",concept:"",time:""};
+function openPlanner(m,day){ PLAN={m,day}; PLANF={format:"static",concept:"",time:""}; renderPlanner(); openM("planner"); }
+function setPlanFormat(f){ PLANF.format=f; document.querySelectorAll('#plan-fmt [data-f]').forEach(el=>{const on=el.dataset.f===f; el.style.background=on?'#0D0D0D':'#fff'; el.style.color=on?'#fff':'var(--muted)'; el.style.borderColor=on?'#0D0D0D':'var(--div)';}); }
+function planCreate(){
+  const cEl=document.getElementById('plan-concept'), tEl=document.getElementById('plan-time');
+  createSocialPlaceholder(PLAN.m,PLAN.day,{format:PLANF.format,concept:(cEl?cEl.value:"").trim(),time:tEl?tEl.value:""});
+  PLANF={format:"static",concept:"",time:""}; renderPlanner(); toast("Post planned");
 }
-function openPlanner(m,day){ PLAN={m,day}; renderPlanner(); openM("planner"); }
 function addPlannerPost(){ createSocialPlaceholder(PLAN.m,PLAN.day); renderPlanner(); }
 function deletePlannerPost(id){
   const b=brands[activeBrand]; if(!b)return;
@@ -3816,17 +3820,32 @@ function renderPlanner(){
       `</div><div style="height:1px;background:var(--div);margin:8px 16px;"></div>`;
   }
   const postRows=posts.map(p=>{
+    const concept=(p.content.concept||"").trim();
     const cap=p.content.instagram.caption||p.content.facebook.caption||"";
-    const empty=!cap.trim(); const st=SOCIAL_STATUS[p.status]||["",""];
+    const label=concept||cap; const empty=!label.trim(); const st=SOCIAL_STATUS[p.status]||["",""];
+    const fmt=(p.format||"static"); const fmtLbl=fmt.charAt(0).toUpperCase()+fmt.slice(1);
     return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bg);">
       <span onclick="closeM('planner');openSocialEditorById('${p.id}')" style="flex:1;min-width:0;cursor:pointer;display:flex;align-items:center;gap:8px;">
         <span style="color:#D4537E;"><i class="ti ti-brand-instagram" style="font-size:13px;"></i></span><span style="color:#185FA5;"><i class="ti ti-brand-facebook" style="font-size:13px;"></i></span>
-        <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;${empty?"color:var(--subtle);font-style:italic;":""}">${empty?"Empty":escAttr(cap)}</span>
+        <span style="font-size:9px;font-weight:700;color:#5F5E5A;background:#F1EFE8;padding:1px 6px;border-radius:999px;flex-shrink:0;">${fmtLbl}</span>
+        <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;${empty?"color:var(--subtle);font-style:italic;":""}">${empty?"No concept yet":escAttr(label)}</span>
         <span style="width:6px;height:6px;border-radius:50%;background:${st[1]};flex-shrink:0;"></span>
       </span>
       <i class="ti ti-${empty?"x":"trash"}" style="cursor:pointer;color:${empty?"#999":"#C62828"};font-size:14px;flex-shrink:0;" onclick="deletePlannerPost('${p.id}')"></i>
     </div>`;
   }).join("");
+  const fmtChips=SOCIAL_FORMATS.map(f=>`<span data-f="${f}" onclick="setPlanFormat('${f}')" style="padding:4px 11px;border-radius:999px;border:1px solid ${f===PLANF.format?'#0D0D0D':'var(--div)'};background:${f===PLANF.format?'#0D0D0D':'#fff'};color:${f===PLANF.format?'#fff':'var(--muted)'};font-size:11px;font-weight:600;cursor:pointer;">${f.charAt(0).toUpperCase()+f.slice(1)}</span>`).join("");
+  const planForm=`<div style="border:1px dashed #0EA5A5;background:#F3FBF9;border-radius:10px;padding:11px 12px;margin-top:12px;">
+     <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#0E8A8A;margin-bottom:8px;">Plan a new post</div>
+     <div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:5px;">Format</div>
+     <div id="plan-fmt" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px;">${fmtChips}</div>
+     <div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:5px;">Concept <span style="font-weight:400;">· one-line idea</span></div>
+     <input id="plan-concept" class="fi" style="height:32px;font-size:12px;margin-bottom:9px;" placeholder="What's this post about? e.g. Diwali offer teaser" value="${escAttr(PLANF.concept)}" onkeydown="if(event.key==='Enter')planCreate()"/>
+     <div style="display:flex;gap:8px;align-items:center;">
+       <span style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:var(--muted);"><i class="ti ti-clock" style="font-size:12px;"></i><input id="plan-time" type="time" class="fi" style="height:32px;font-size:12px;width:118px;" value="${escAttr(PLANF.time)}"/></span>
+       <button class="btn btn-p btn-sm" style="margin-left:auto;height:32px;" onclick="planCreate()"><i class="ti ti-plus"></i> Plan post</button>
+     </div>
+   </div>`;
   document.getElementById("planner-body").innerHTML=`
    <div class="modal-top" style="padding:16px 16px 12px;">
      <div class="modal-title" style="font-size:16px;">${day} ${MN[m]} ${YEAR}</div>
@@ -3835,8 +3854,8 @@ function renderPlanner(){
    ${ctxHtml}
    <div style="padding:${ctx.length?"2px":"12px"} 16px 16px;">
      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#0E8A8A;margin-bottom:6px;display:flex;align-items:center;gap:5px;"><i class="ti ti-photo" style="font-size:11px;"></i> Posts</div>
-     ${postRows||'<div style="font-size:12px;color:var(--muted);padding:4px 0 8px;">No posts yet.</div>'}
-     <button class="btn btn-sm" style="width:100%;margin-top:10px;border:1px dashed #0EA5A5;background:#E1F5EE;color:#0E8A8A;justify-content:center;" onclick="addPlannerPost()"><i class="ti ti-plus"></i> Add post</button>
+     ${postRows||'<div style="font-size:12px;color:var(--muted);padding:4px 0 2px;">No posts yet.</div>'}
+     ${planForm}
    </div>`;
 }
 
