@@ -1313,19 +1313,18 @@ function eeSetEndDate(d,m){
 // Shared BRAND HEADER (Variation 2) — constant across calendar + content views
 function brandHeaderHtml(){
   const b=brands[activeBrand]; if(!b) return "";
-  const name=`<div class="year-title" style="font-size:34px;color:var(--acc);">${escAttr(b.name)}<span style="color:var(--text);">.</span></div>`;
+  const name=`<div class="year-title" style="font-size:34px;color:var(--acc);line-height:1;">${escAttr(b.name)}<span style="color:var(--text);">.</span></div>`;
   if(!canEdit()) return `<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">${name}</div>`;
   const socOn=socialLayer;
-  const soc=`<span onclick="toggleSocialLayer()" style="padding:8px 14px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;background:${socOn?"#D62828":"transparent"};color:${socOn?"#fff":"var(--muted)"};"><i class="ti ti-photo"></i> Social</span>`;
+  // one crisp segmented control; every segment fixed 36px tall
+  const seg=(active,dark,onclick,icon,label,first)=>`<span onclick="${onclick}" style="height:36px;box-sizing:border-box;padding:0 13px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;${first?"":"border-left:1px solid rgba(214,40,40,.22);"}background:${active?(dark?"#0D0D0D":"#D62828"):"#fff"};color:${active?"#fff":"var(--muted)"};"><i class="ti ${icon}"></i> ${label}</span>`;
   let group;
   if(socOn){
-    const plan=`<span onclick="togglePlanning()" style="padding:8px 12px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;cursor:pointer;border-left:1px solid #F0C9C9;background:${planningMode?"#D62828":"#fff"};color:${planningMode?"#fff":"var(--muted)"};"><i class="ti ti-pencil-plus"></i> Planning</span>`;
-    const cont=`<span onclick="toggleContent()" style="padding:8px 12px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;cursor:pointer;border-left:1px solid ${view==="content"?"#0D0D0D":"#F0C9C9"};background:${view==="content"?"#0D0D0D":"#fff"};color:${view==="content"?"#fff":"var(--muted)"};"><i class="ti ti-list-details"></i> Content</span>`;
-    group=`<div style="display:flex;align-items:center;border:1px solid #D62828;border-radius:8px;overflow:hidden;">${soc}${plan}${cont}</div>`;
+    group=`<div style="display:flex;align-items:stretch;height:36px;box-sizing:border-box;border:1px solid #D62828;border-radius:8px;overflow:hidden;">${seg(true,false,"toggleSocialLayer()","ti-photo","Social",true)}${seg(planningMode&&view==="year",false,"togglePlanning()","ti-pencil-plus","Planning",false)}${seg(view==="content",true,"toggleContent()","ti-list-details","Content",false)}</div>`;
   } else {
-    group=`<div style="display:flex;align-items:center;border:1px solid var(--div);border-radius:8px;overflow:hidden;background:var(--surface);">${soc}</div>`;
+    group=`<div style="display:flex;align-items:stretch;height:36px;box-sizing:border-box;border:1px solid var(--div);border-radius:8px;overflow:hidden;">${seg(false,false,"toggleSocialLayer()","ti-photo","Social",true)}</div>`;
   }
-  const brief=`<button title="Brand brief — coming soon" onclick="toast('Brand brief is coming soon')" style="height:37px;padding:0 13px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid var(--div);background:var(--surface);color:var(--muted);font-family:inherit;display:inline-flex;align-items:center;gap:6px;cursor:pointer;"><i class="ti ti-file-text"></i> Brand brief <span style="font-size:9px;font-weight:700;background:var(--bg);color:var(--subtle);padding:1px 5px;border-radius:4px;">soon</span></button>`;
+  const brief=`<button title="Brand brief — coming soon" onclick="toast('Brand brief is coming soon')" style="height:36px;box-sizing:border-box;padding:0 13px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid var(--div);background:var(--surface);color:var(--muted);font-family:inherit;display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap;"><i class="ti ti-file-text"></i> Brand brief <span style="font-size:9px;font-weight:700;background:var(--bg);color:var(--subtle);padding:1px 5px;border-radius:4px;">soon</span></button>`;
   return `<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
     ${name}
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">${group}${brief}</div>
@@ -1536,10 +1535,8 @@ function renderSocial(){
   if(contentStatusFilter) posts=posts.filter(p=>p.status===contentStatusFilter);
   posts.sort((a,b2)=>a.date-b2.date||String(a.time||"").localeCompare(String(b2.time||"")));
   const monthChips=Array.from({length:12},(_,i)=>i+1).map(mm=>`<span onclick="setContentMonthTo(${mm})" style="font-size:11px;font-weight:700;padding:4px 9px;border-radius:6px;cursor:pointer;${mm===contentMonth?"background:var(--text);color:#fff;":"background:var(--surface);border:1px solid var(--div);color:var(--muted);"}">${MN[mm].slice(0,3)}</span>`).join("");
-  const modeToggle=`<div style="display:flex;background:#E7E6E1;border-radius:8px;padding:3px;gap:2px;">
-    <span onclick="setContentMode('view')" style="padding:5px 12px;border-radius:6px;font-size:12px;font-weight:${contentMode==="view"?"700":"600"};cursor:pointer;display:flex;align-items:center;gap:5px;${contentMode==="view"?"background:#fff;color:#0D0D0D;box-shadow:0 1px 2px rgba(0,0,0,.08);":"color:var(--muted);"}"><i class="ti ti-eye" style="font-size:13px;"></i> View</span>
-    <span onclick="setContentMode('edit')" style="padding:5px 12px;border-radius:6px;font-size:12px;font-weight:${contentMode==="edit"?"700":"600"};cursor:pointer;display:flex;align-items:center;gap:5px;${contentMode==="edit"?"background:#fff;color:#0D0D0D;box-shadow:0 1px 2px rgba(0,0,0,.08);":"color:var(--muted);"}"><i class="ti ti-pencil" style="font-size:13px;"></i> Edit</span>
-  </div>`;
+  const modeSeg=(mm,icon,label)=>`<span onclick="setContentMode('${mm}')" style="height:28px;box-sizing:border-box;padding:0 12px;border-radius:6px;display:flex;align-items:center;gap:5px;font-size:12px;font-weight:${contentMode===mm?"700":"600"};cursor:pointer;${contentMode===mm?"background:#fff;color:#0D0D0D;box-shadow:0 1px 2px rgba(0,0,0,.08);":"color:var(--muted);"}"><i class="ti ${icon}" style="font-size:13px;"></i> ${label}</span>`;
+  const modeToggle=`<div style="display:flex;align-items:center;background:#E7E6E1;border-radius:8px;padding:3px;gap:2px;height:34px;box-sizing:border-box;">${modeSeg("view","ti-eye","View")}${modeSeg("edit","ti-pencil","Edit")}</div>`;
   const nextM=contentMonth<12?contentMonth+1:0;
   mc.innerHTML=`
    <div style="margin-bottom:18px;">${brandHeaderHtml()}</div>
@@ -1550,7 +1547,7 @@ function renderSocial(){
    </div>
    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:20px 0 12px;padding-top:14px;border-top:1px solid var(--div);">
      <div style="font-size:15px;font-weight:700;">Posts <span style="font-weight:400;color:var(--subtle);">· ${MN[contentMonth]}</span></div>
-     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${modeToggle}${canE?`<button class="btn btn-p btn-sm" onclick="addContentPost()"><i class="ti ti-plus"></i> Add post</button>`:""}</div>
+     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${modeToggle}${canE?`<button class="btn btn-p" style="height:34px;padding:0 14px;font-size:12px;" onclick="addContentPost()"><i class="ti ti-plus"></i> Add post</button>`:""}</div>
    </div>
    <div id="content-list"></div>`;
   document.getElementById("content-monthcard").appendChild(buildMini(contentMonth));
@@ -1584,11 +1581,12 @@ function buildMini(m){
   const card=document.createElement("div"); card.className="month-card";
   const mMaster=fevs.filter(e=>!e._isPost&&gc(e)!=="cat5").length;
   const mCamp=fevs.filter(e=>!e._isPost&&gc(e)==="cat5").length;
-  const mPosts=Object.values(socByD).reduce((a,b)=>a+b.length,0);
+  // posts count shown consistently for a brand (like events/campaigns), independent of the layer toggle
+  const mPosts=(activeBrand&&brands[activeBrand])?socialForBrandYear(activeBrand,YEAR).filter(p=>p.month===m).length:0;
   const pills=[];
-  if(mMaster) pills.push(`<span class="mc-count">${mMaster} events</span>`);
-  if(mCamp) pills.push(`<span class="mc-count camp">${mCamp} camp</span>`);
-  if(mPosts) pills.push(`<span class="mc-count" style="background:#E1F5EE;color:#0E8A8A;">${mPosts} posts</span>`);
+  if(mMaster) pills.push(`<span class="mc-count">${mMaster} event${mMaster!==1?"s":""}</span>`);
+  if(mCamp) pills.push(`<span class="mc-count camp">${mCamp} camp${mCamp!==1?"s":""}</span>`);
+  if(mPosts) pills.push(`<span class="mc-count" style="background:#E1F5EE;color:#0E8A8A;">${mPosts} post${mPosts!==1?"s":""}</span>`);
   if(!pills.length) pills.push(`<span class="mc-count" style="opacity:.4;">0 events</span>`);
   const countPills=pills.join("");
   card.innerHTML=`<div class="mc-head"><div class="mc-name">${MN[m]}</div><div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;">${countPills}</div></div>
@@ -1872,6 +1870,7 @@ function openNewEvDay(m,day){
 // ── LIST VIEW ──────────────────────────────────────────────
 function renderList(){
   const mc=document.getElementById("main"); mc.innerHTML="";
+  if(activeBrand&&brands[activeBrand]){ const bh=document.createElement("div"); bh.style.cssText="margin:0 0 14px;"; bh.innerHTML=brandHeaderHtml(); mc.appendChild(bh); }
   const strip=document.createElement("div"); strip.className="list-month-strip";
   for(const m of visibleMonths()){
     const n=filtered(m).length; const b=document.createElement("button");
@@ -3355,7 +3354,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v32 web — brand header hub, nav rework, wider content cards";
+const TOOL_VERSION="v32.1 web — QA: alignment, grammar, planning state, list header";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
