@@ -1373,6 +1373,17 @@ function socialFieldEdit(id,field,value,platform){
   socialSaveTimers[id]=setTimeout(()=>{dbSaveSocialPost(p);showSavedCue(id);},600);
 }
 function showSavedCue(id){const el=document.getElementById("sv-"+id);if(!el)return;el.style.opacity="1";clearTimeout(el._t);el._t=setTimeout(()=>{el.style.opacity="0";},1200);}
+// Reschedule a post to a different date (inline, Edit mode). Stays within the selected year.
+function socialDateEdit(id,value){
+  const b=brands[activeBrand]; if(!b)return;
+  const p=(b.social||[]).find(x=>x.id===id); if(!p||!value)return;
+  const [y,mo,d]=value.split("-").map(Number);
+  if(!mo||!d)return;
+  p.year=y||YEAR; p.month=mo; p.date=d;
+  dbSaveSocialPost(p);
+  if(mo!==contentMonth){ contentMonth=mo; if(typeof toast==="function") toast(`Moved to ${d} ${(MN[mo]||"").slice(0,3)}`); }
+  renderSocial(); buildContentSidebar();
+}
 function socialStatusEdit(id,value){
   socialFieldEdit(id,"status",value);
   const dot=document.getElementById("stdot-"+id); if(dot) dot.style.background=(SOCIAL_STATUS[value]||["","#888"])[1];
@@ -1473,7 +1484,7 @@ function socialEditForm(p){
   }
   return `<div style="background:var(--surface);border:1.5px solid #0EA5A5;border-radius:12px;overflow:hidden;">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 14px;background:var(--surface2);border-bottom:1px solid var(--div);">
-      <span style="font-size:13px;font-weight:700;">${shortDate(p.month,p.date)} ${(MN[p.month]||"").slice(0,3)}</span>
+      <label title="Move this post to another date" style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;"><i class="ti ti-calendar-event" style="font-size:14px;color:#0E8A8A;"></i><input class="fi" type="date" style="height:28px;font-size:12px;font-weight:600;width:152px;padding:0 8px;" min="${YEAR}-01-01" max="${YEAR}-12-31" value="${YEAR}-${String(p.month).padStart(2,"0")}-${String(p.date).padStart(2,"0")}" onchange="socialDateEdit('${p.id}',this.value)"/></label>
       <label style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;cursor:pointer;" onclick="socialToggleSyncInline('${p.id}')"><span style="width:26px;height:15px;border-radius:999px;background:${synced?"var(--acc)":"#C9C7BF"};position:relative;flex-shrink:0;"><span style="width:11px;height:11px;border-radius:50%;background:#fff;position:absolute;top:2px;${synced?"right:2px;":"left:2px;"}"></span></span> Same for both</label>
       <span id="sv-${p.id}" style="font-size:10px;color:#0E8A8A;font-weight:700;opacity:0;transition:opacity 200ms;">Saved</span>
       <span style="margin-left:auto;display:flex;align-items:center;gap:10px;">
@@ -3361,7 +3372,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v33.1 web — Social red / Planning+Content black subsets, flexible calendar cards, stacked mc-head, sidebar month highlight fix, Posts label before controls";
+const TOOL_VERSION="v33.2 web — inline date picker to reschedule a post (Edit mode); Social red / Planning+Content black, flexible cards, stacked mc-head, sidebar month fix";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
