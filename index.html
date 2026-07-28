@@ -853,7 +853,7 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 
 <!-- PLANNING DAY PLANNER -->
 <div class="overlay" id="ov-planner" onclick="if(event.target===this)closeM('planner')">
-  <div class="modal" style="max-width:360px;"><div id="planner-body"></div></div>
+  <div class="modal" style="max-width:500px;width:100%;"><div id="planner-body"></div></div>
 </div>
 
 <!-- POST PREVIEW -->
@@ -3376,7 +3376,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v34 web — planning popover: pick format + one-line Concept per post; concept shown/editable in Content; plus v33.x fixes";
+const TOOL_VERSION="v34.1 web — planner redesign: minimal, wider (500px) responsive, one-line-idea + format per row, add-another-post multi-plan, no time";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -3784,13 +3784,17 @@ function createSocialPlaceholder(m,day,opts){
 }
 // Planning-mode day click always opens the planner, where you pick format + a one-line concept.
 function planningDayClick(m,day){ openPlanner(m,day); }
-let PLANF={format:"static",concept:"",time:""};
-function openPlanner(m,day){ PLAN={m,day}; PLANF={format:"static",concept:"",time:""}; renderPlanner(); openM("planner"); }
-function setPlanFormat(f){ PLANF.format=f; document.querySelectorAll('#plan-fmt [data-f]').forEach(el=>{const on=el.dataset.f===f; el.style.background=on?'#0D0D0D':'#fff'; el.style.color=on?'#fff':'var(--muted)'; el.style.borderColor=on?'#0D0D0D':'var(--div)';}); }
+// Each planner row = one post to plan (a format + a one-line idea). Plan several at once.
+let PLANROWS=[{format:"static",idea:""}];
+function openPlanner(m,day){ PLAN={m,day}; PLANROWS=[{format:"static",idea:""}]; renderPlanner(); openM("planner"); }
+function syncPlanRows(){ PLANROWS.forEach((r,i)=>{const el=document.getElementById("plan-idea-"+i); if(el) r.idea=el.value;}); }
+function setPlanRowFormat(i,f){ syncPlanRows(); if(PLANROWS[i]) PLANROWS[i].format=f; renderPlanner(); }
+function planAddRow(){ syncPlanRows(); PLANROWS.push({format:"static",idea:""}); renderPlanner(); const el=document.getElementById("plan-idea-"+(PLANROWS.length-1)); if(el) el.focus(); }
+function planRemoveRow(i){ syncPlanRows(); PLANROWS.splice(i,1); if(!PLANROWS.length) PLANROWS=[{format:"static",idea:""}]; renderPlanner(); }
 function planCreate(){
-  const cEl=document.getElementById('plan-concept'), tEl=document.getElementById('plan-time');
-  createSocialPlaceholder(PLAN.m,PLAN.day,{format:PLANF.format,concept:(cEl?cEl.value:"").trim(),time:tEl?tEl.value:""});
-  PLANF={format:"static",concept:"",time:""}; renderPlanner(); toast("Post planned");
+  syncPlanRows();
+  let n=0; PLANROWS.forEach(r=>{ createSocialPlaceholder(PLAN.m,PLAN.day,{format:r.format,concept:(r.idea||"").trim()}); n++; });
+  closeM("planner"); toast(n+" post"+(n!==1?"s":"")+" planned");
 }
 function addPlannerPost(){ createSocialPlaceholder(PLAN.m,PLAN.day); renderPlanner(); }
 function deletePlannerPost(id){
@@ -3812,12 +3816,12 @@ function renderPlanner(){
     .sort((a,b)=>String(a.time||"").localeCompare(String(b.time||"")));
   let ctxHtml="";
   if(ctx.length){
-    ctxHtml=`<div style="padding:12px 16px 4px;">
+    ctxHtml=`<div style="padding:12px 18px 4px;">
       <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9D174D;margin-bottom:7px;">On this day</div>`+
       ctx.map(c=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">${c.camp
         ?`<span style="width:12px;height:8px;background:${c.color};border-radius:2px;flex-shrink:0;"></span>`
         :`<span style="width:8px;height:8px;background:${c.color};border-radius:50%;flex-shrink:0;"></span>`}<span style="font-size:12px;">${escAttr(c.name)}<span style="color:var(--subtle);"> · ${c.camp?"campaign":"event"}</span></span></div>`).join("")+
-      `</div><div style="height:1px;background:var(--div);margin:8px 16px;"></div>`;
+      `</div><div style="height:1px;background:var(--div);margin:8px 18px;"></div>`;
   }
   const postRows=posts.map(p=>{
     const concept=(p.content.concept||"").trim();
@@ -3834,28 +3838,28 @@ function renderPlanner(){
       <i class="ti ti-${empty?"x":"trash"}" style="cursor:pointer;color:${empty?"#999":"#C62828"};font-size:14px;flex-shrink:0;" onclick="deletePlannerPost('${p.id}')"></i>
     </div>`;
   }).join("");
-  const fmtChips=SOCIAL_FORMATS.map(f=>`<span data-f="${f}" onclick="setPlanFormat('${f}')" style="padding:4px 11px;border-radius:999px;border:1px solid ${f===PLANF.format?'#0D0D0D':'var(--div)'};background:${f===PLANF.format?'#0D0D0D':'#fff'};color:${f===PLANF.format?'#fff':'var(--muted)'};font-size:11px;font-weight:600;cursor:pointer;">${f.charAt(0).toUpperCase()+f.slice(1)}</span>`).join("");
-  const planForm=`<div style="border:1px dashed #0EA5A5;background:#F3FBF9;border-radius:10px;padding:11px 12px;margin-top:12px;">
-     <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#0E8A8A;margin-bottom:8px;">Plan a new post</div>
-     <div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:5px;">Format</div>
-     <div id="plan-fmt" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px;">${fmtChips}</div>
-     <div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:5px;">Concept <span style="font-weight:400;">· one-line idea</span></div>
-     <input id="plan-concept" class="fi" style="height:32px;font-size:12px;margin-bottom:9px;" placeholder="What's this post about? e.g. Diwali offer teaser" value="${escAttr(PLANF.concept)}" onkeydown="if(event.key==='Enter')planCreate()"/>
-     <div style="display:flex;gap:8px;align-items:center;">
-       <span style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:var(--muted);"><i class="ti ti-clock" style="font-size:12px;"></i><input id="plan-time" type="time" class="fi" style="height:32px;font-size:12px;width:118px;" value="${escAttr(PLANF.time)}"/></span>
-       <button class="btn btn-p btn-sm" style="margin-left:auto;height:32px;" onclick="planCreate()"><i class="ti ti-plus"></i> Plan post</button>
-     </div>
-   </div>`;
+  const builder=PLANROWS.map((r,i)=>{
+    const chips=SOCIAL_FORMATS.map(f=>`<span onclick="setPlanRowFormat(${i},'${f}')" style="padding:5px 13px;border-radius:999px;border:1px solid ${r.format===f?'#0D0D0D':'var(--div)'};background:${r.format===f?'#0D0D0D':'#fff'};color:${r.format===f?'#fff':'var(--muted)'};font-size:11px;font-weight:600;cursor:pointer;">${f.charAt(0).toUpperCase()+f.slice(1)}</span>`).join("");
+    return `<div style="position:relative;border:1px solid var(--div);border-radius:11px;padding:12px;margin-bottom:10px;">
+      ${i>0?`<i class="ti ti-x" title="Remove" onclick="planRemoveRow(${i})" style="position:absolute;top:9px;right:10px;font-size:14px;color:var(--subtle);cursor:pointer;"></i>`:""}
+      <input id="plan-idea-${i}" class="fi" style="height:34px;font-size:12.5px;margin-bottom:10px;" placeholder="One line idea — what's this post about?" value="${escAttr(r.idea)}" onkeydown="if(event.key==='Enter'){event.preventDefault();planCreate();}"/>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">${chips}</div>
+    </div>`;
+  }).join("");
+  const n=PLANROWS.length; const planLbl=n>1?`Plan ${n} posts`:`Plan post`;
   document.getElementById("planner-body").innerHTML=`
-   <div class="modal-top" style="padding:16px 16px 12px;">
+   <div class="modal-top" style="padding:16px 18px 12px;">
      <div class="modal-title" style="font-size:16px;">${day} ${MN[m]} ${YEAR}</div>
      <button class="modal-x" onclick="closeM('planner')">✕</button>
    </div>
    ${ctxHtml}
-   <div style="padding:${ctx.length?"2px":"12px"} 16px 16px;">
-     <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#0E8A8A;margin-bottom:6px;display:flex;align-items:center;gap:5px;"><i class="ti ti-photo" style="font-size:11px;"></i> Posts</div>
-     ${postRows||'<div style="font-size:12px;color:var(--muted);padding:4px 0 2px;">No posts yet.</div>'}
-     ${planForm}
+   <div style="padding:${ctx.length?"4px":"12px"} 18px 18px;">
+     ${posts.length?`<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#0E8A8A;margin-bottom:6px;display:flex;align-items:center;gap:5px;"><i class="ti ti-photo" style="font-size:11px;"></i> Posts</div>${postRows}<div style="height:1px;background:var(--div);margin:12px 0;"></div>`:""}
+     ${builder}
+     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:2px;">
+       <span onclick="planAddRow()" style="display:inline-flex;align-items:center;gap:6px;color:#0E8A8A;font-size:12px;font-weight:600;cursor:pointer;"><i class="ti ti-plus" style="font-size:14px;"></i> Add another post</span>
+       <button class="btn btn-p btn-sm" style="height:36px;padding:0 16px;" onclick="planCreate()"><i class="ti ti-check"></i> ${planLbl}</button>
+     </div>
    </div>`;
 }
 
