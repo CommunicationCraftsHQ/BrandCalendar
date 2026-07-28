@@ -1336,7 +1336,8 @@ function renderYear(){
   let header;
   if(b){
     const planHint=(planningMode&&canEdit())?`<div style="display:inline-flex;align-items:center;gap:7px;margin-top:10px;padding:6px 12px;border-radius:999px;background:#E1F5EE;color:#0E8A8A;font-size:12px;font-weight:600;"><i class="ti ti-pencil-plus"></i> Planning mode — click any date to plan a post</div>`:"";
-    header=`<div style="margin-bottom:18px;">${brandHeaderHtml()}${planHint}</div>`;
+    // match .year-head padding exactly so the brand name lands where "2026." does (and doesn't touch the nav)
+    header=`<div style="padding:28px 32px 20px;">${brandHeaderHtml()}${planHint}</div>`;
   } else {
     header=`<div class="year-head"><div class="year-title">${YEAR}<span>.</span></div><div class="year-sub">Click any date to view or add events</div></div>`;
   }
@@ -1539,7 +1540,8 @@ function renderSocial(){
   const modeToggle=`<div style="display:flex;align-items:center;background:#E7E6E1;border-radius:8px;padding:3px;gap:2px;height:34px;box-sizing:border-box;">${modeSeg("view","ti-eye","View")}${modeSeg("edit","ti-pencil","Edit")}</div>`;
   const nextM=contentMonth<12?contentMonth+1:0;
   mc.innerHTML=`
-   <div style="margin-bottom:18px;">${brandHeaderHtml()}</div>
+   <div style="padding:28px 32px 20px;">
+   <div style="margin-bottom:16px;">${brandHeaderHtml()}</div>
    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px;">${monthChips}</div>
    <div style="max-width:660px;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:stretch;">
      <div id="content-monthcard"></div>
@@ -1549,7 +1551,8 @@ function renderSocial(){
      <div style="font-size:15px;font-weight:700;">Posts <span style="font-weight:400;color:var(--subtle);">· ${MN[contentMonth]}</span></div>
      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${modeToggle}${canE?`<button class="btn btn-p" style="height:34px;padding:0 14px;font-size:12px;" onclick="addContentPost()"><i class="ti ti-plus"></i> Add post</button>`:""}</div>
    </div>
-   <div id="content-list"></div>`;
+   <div id="content-list"></div>
+   </div>`;
   document.getElementById("content-monthcard").appendChild(buildMini(contentMonth));
   if(nextM) document.getElementById("content-monthcard-next").appendChild(buildMini(nextM));
   const list=document.getElementById("content-list");
@@ -1870,7 +1873,7 @@ function openNewEvDay(m,day){
 // ── LIST VIEW ──────────────────────────────────────────────
 function renderList(){
   const mc=document.getElementById("main"); mc.innerHTML="";
-  if(activeBrand&&brands[activeBrand]){ const bh=document.createElement("div"); bh.style.cssText="margin:0 0 14px;"; bh.innerHTML=brandHeaderHtml(); mc.appendChild(bh); }
+  if(activeBrand&&brands[activeBrand]){ const bh=document.createElement("div"); bh.style.cssText="padding:28px 32px 4px;"; bh.innerHTML=brandHeaderHtml(); mc.appendChild(bh); }
   const strip=document.createElement("div"); strip.className="list-month-strip";
   for(const m of visibleMonths()){
     const n=filtered(m).length; const b=document.createElement("button");
@@ -3354,7 +3357,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v32.1 web — QA: alignment, grammar, planning state, list header";
+const TOOL_VERSION="v32.2 web — brand header sits exactly where 2026 does (padding), nav gap";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
