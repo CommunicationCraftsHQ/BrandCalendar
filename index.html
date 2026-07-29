@@ -85,9 +85,9 @@ body{background:var(--bg);color:var(--text);margin:0;min-height:100vh;}
 /* month card */
 .month-card{background:var(--surface);border-radius:var(--rc);overflow:hidden;border:1px solid var(--div);transition:box-shadow 150ms;}
 .month-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);}
-.mc-head{padding:12px 14px 10px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;border-bottom:1px solid var(--div);}
-.mc-name{font-size:13px;font-weight:700;letter-spacing:-.01em;}
-.mc-count{font-size:11px;font-weight:700;color:#5F5E5A;background:#F1EFE8;padding:2px 8px;border-radius:999px;display:inline-flex;align-items:center;gap:4px;}
+.mc-head{padding:12px 14px 10px;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:8px;flex-wrap:nowrap;border-bottom:1px solid var(--div);}
+.mc-name{font-size:13px;font-weight:700;letter-spacing:-.01em;min-width:0;flex-shrink:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mc-count{font-size:10px;font-weight:700;color:#5F5E5A;background:#F1EFE8;padding:2px 7px;border-radius:999px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
 .mc-count.camp{color:#993556;background:#FBEAF0;}
 .mc-count.camp::before{content:"";width:6px;height:6px;border-radius:2px;background:#D4537E;display:inline-block;}
 .mc-grid{display:grid;grid-template-columns:repeat(7,1fr);padding:8px 10px 10px;gap:1px;}
@@ -1624,7 +1624,7 @@ function buildMini(m){
   if(mPosts) pills.push(`<span class="mc-count" style="background:#E1F5EE;color:#0E8A8A;">${mPosts} post${mPosts!==1?"s":""}</span>`);
   if(!pills.length) pills.push(`<span class="mc-count" style="opacity:.4;">0 events</span>`);
   const countPills=pills.join("");
-  card.innerHTML=`<div class="mc-head"><div class="mc-name">${MN[m]}</div><div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-start;">${countPills}</div></div>
+  card.innerHTML=`<div class="mc-head"><div class="mc-name">${MN[m]}</div><div style="display:flex;gap:4px;flex-wrap:nowrap;flex-shrink:0;">${countPills}</div></div>
     <div class="mc-grid">
       ${["M","T","W","T","F","S","S"].map(d=>`<div class="mc-dow">${d}</div>`).join("")}
       ${Array(FD[m]).fill('<div class="mc-empty"></div>').join("")}
@@ -3389,7 +3389,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v34.2 web — tooltip 3-col (format·idea·status), planner rows format+idea+status (no logos, no divider), format moved right on content card, 3 statuses (no Posted)";
+const TOOL_VERSION="v34.3 web — month-card header back to a single row (name truncates, compact pills never wrap); plus v34.2 tooltip/status work";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
