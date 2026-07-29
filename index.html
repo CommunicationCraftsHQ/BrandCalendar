@@ -835,12 +835,25 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 <div class="overlay" id="ov-people" onclick="if(event.target===this)closeM('people')">
   <div class="modal wide">
     <div class="modal-top">
-      <div><div class="modal-title">People &amp; access</div><div class="modal-sub">Grant team access, assign clients to a brand, or remove access</div></div>
+      <div><div class="modal-title">People &amp; access</div><div class="modal-sub">Invite someone, grant team access, assign clients to a brand, or remove access</div></div>
       <button class="modal-x" onclick="closeM('people')">✕</button>
     </div>
     <div class="modal-body" style="padding-bottom:0;">
-      <div id="people-list" style="max-height:440px;overflow-y:auto;border:1px solid var(--div);border-radius:var(--rc);"></div>
-      <p style="font-size:11px;color:var(--muted);margin-top:8px;">Team members with a @communicationcrafts.com email are approved automatically when they sign up. Use this only for clients or exceptions.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+        <input class="fi" id="inv-email" type="email" placeholder="email@company.com" style="flex:1;min-width:180px;" onkeydown="if(event.key==='Enter')inviteAdd()"/>
+        <select class="fi" id="inv-role" style="min-width:100px;" onchange="document.getElementById('inv-brand').style.display=this.value==='client'?'inline-block':'none';">
+          <option value="team">team</option>
+          <option value="client">client</option>
+          <option value="admin">admin</option>
+        </select>
+        <select class="fi" id="inv-brand" style="min-width:150px;display:none;">
+          <option value="">— pick brand —</option>
+        </select>
+        <button class="btn btn-p" onclick="inviteAdd()">Invite</button>
+      </div>
+      <div id="invite-list"></div>
+      <div id="people-list" style="max-height:380px;overflow-y:auto;border:1px solid var(--div);border-radius:var(--rc);"></div>
+      <p style="font-size:11px;color:var(--muted);margin-top:8px;">Team members with a @communicationcrafts.com email are approved automatically when they sign up. Inviting an email above pre-approves it with the role (and brand) you choose, so it's not stuck on "pending" once they sign up.</p>
     </div>
     <div class="modal-foot"><button class="btn btn-g" onclick="closeM('people')">Done</button></div>
   </div>
@@ -3903,10 +3916,51 @@ async function autoTagBrands(newEvs){
 async function openPeople(){
   if(ME.role!=="admin"){toast("Admins only","err");return;}
   document.getElementById("people-list").innerHTML='<div style="padding:20px;font-size:13px;color:var(--muted);">Loading…</div>';
+  document.getElementById("invite-list").innerHTML="";
+  document.getElementById("inv-brand").innerHTML='<option value="">— pick brand —</option>'+
+    Object.entries(brands).map(([id,b])=>`<option value="${id}">${b.name}</option>`).join("");
   openM("people");
-  const {data,error}=await sb.from("profiles").select("id,email,role,brand_id");
+  const [profRes,invRes]=await Promise.all([
+    sb.from("profiles").select("id,email,role,brand_id"),
+    sb.from("pending_invites").select("email,role,brand_id,invited_at")
+  ]);
+  if(profRes.error){toast(profRes.error.message,"err");return;}
+  renderPeople(profRes.data||[]);
+  if(invRes.error) console.error(invRes.error); else renderInvites(invRes.data||[]);
+}
+function renderInvites(rows){
+  const list=document.getElementById("invite-list");
+  if(!rows||!rows.length){list.innerHTML="";return;}
+  const order={admin:0,team:1,client:2};
+  rows.sort((a,b)=>(order[a.role]??9)-(order[b.role]??9)||String(a.email).localeCompare(String(b.email)));
+  const brandName=id=>(brands[id]&&brands[id].name)||"";
+  list.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:2px 0 6px;">Invited — waiting to sign up</div>`+
+    rows.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border:1px dashed var(--div);border-radius:6px;margin-bottom:6px;font-size:13px;">
+      <span>${escAttr(r.email)} <span style="font-size:10px;color:var(--muted);">will join as ${r.role}${r.role==="client"&&r.brand_id?" · "+escAttr(brandName(r.brand_id)):""}</span></span>
+      <button class="btn btn-g btn-sm" onclick="cancelInvite('${escAttr(r.email)}')">Cancel</button>
+    </div>`).join("");
+}
+async function inviteAdd(){
+  const emailEl=document.getElementById("inv-email");
+  const email=(emailEl.value||"").trim().toLowerCase();
+  if(!email||!email.includes("@")){toast("Enter a valid email","err");return;}
+  const role=document.getElementById("inv-role").value;
+  const brandSel=document.getElementById("inv-brand");
+  const brand_id=role==="client"?(brandSel.value||null):null;
+  if(role==="client"&&!brand_id){toast("Pick a brand for this client","err");return;}
+  await sb.from("pending_invites").delete().eq("email",email);
+  const {error}=await sb.from("pending_invites").insert({email,role,brand_id,invited_by:ME.email||null});
   if(error){toast(error.message,"err");return;}
-  renderPeople(data||[]);
+  emailEl.value="";
+  toast("Invited "+email);
+  openPeople();
+}
+async function cancelInvite(email){
+  if(!confirm("Cancel this invite?"))return;
+  const {error}=await sb.from("pending_invites").delete().eq("email",email);
+  if(error){toast(error.message,"err");return;}
+  toast("Invite cancelled");
+  openPeople();
 }
 function renderPeople(rows){
   const list=document.getElementById("people-list"); list.innerHTML="";
