@@ -32,7 +32,8 @@ body{background:var(--bg);color:var(--text);margin:0;min-height:100vh;}
 .nav-brand .dot{color:var(--acc);font-size:22px;line-height:1;}
 .nav-year{font-size:13px;color:rgba(255,255,255,.35);font-weight:400;letter-spacing:.02em;}
 .nav-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
-.nav-btn{height:34px;padding:0 14px;border-radius:var(--r);font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:rgba(255,255,255,.8);font-family:inherit;transition:all 120ms;display:flex;align-items:center;gap:6px;white-space:nowrap;letter-spacing:.01em;}
+/* Atlas: aligned to the shared .btn metrics (36px / 13px / 8px radius) for cross-view continuity */
+.nav-btn{height:36px;padding:0 16px;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:rgba(255,255,255,.8);font-family:inherit;transition:all 120ms;display:flex;align-items:center;gap:6px;white-space:nowrap;letter-spacing:.01em;}
 .nav-btn:hover{background:rgba(255,255,255,.16);color:#fff;}
 .nav-btn.red{background:var(--acc);border-color:var(--acc);color:#fff;}
 .nav-btn.red:hover{background:#BF2424;}
@@ -77,7 +78,9 @@ body{background:var(--bg);color:var(--text);margin:0;min-height:100vh;}
 .s-divider{height:1px;background:var(--div);margin:14px 0;}
 .s-stat-num{font-size:28px;font-weight:700;letter-spacing:-.03em;color:var(--text);line-height:1;}
 .s-stat-lbl{font-size:11px;color:var(--muted);margin-top:2px;}
-.main{overflow-y:auto;max-height:calc(100vh - 60px);}
+/* Atlas: scrollbar-gutter keeps the calendar pixel-stable when switching
+   modes (a scrollbar appearing/vanishing used to shift content a few px) */
+.main{overflow-y:auto;max-height:calc(100vh - 60px);scrollbar-gutter:stable;}
 
 /* YEAR VIEW */
 .year-head{padding:28px 32px 20px;display:flex;align-items:flex-end;gap:16px;}
@@ -1455,14 +1458,14 @@ function brandHeaderHtml(){
   if(!canEdit()) return `<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">${name}</div>`;
   const socOn=socialLayer;
   // one crisp segmented control; every segment fixed 36px tall
-  const seg=(active,dark,onclick,icon,label,first)=>`<span onclick="${onclick}" style="height:36px;box-sizing:border-box;padding:0 13px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;${first?"":"border-left:1px solid rgba(214,40,40,.22);"}background:${active?(dark?"#0D0D0D":"#D62828"):"#fff"};color:${active?"#fff":"var(--muted)"};"><i class="ti ${icon}"></i> ${label}</span>`;
+  const seg=(active,dark,onclick,icon,label,first)=>`<span onclick="${onclick}" style="height:36px;box-sizing:border-box;padding:0 14px;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;${first?"":"border-left:1px solid rgba(214,40,40,.22);"}background:${active?(dark?"#0D0D0D":"#D62828"):"#fff"};color:${active?"#fff":"var(--muted)"};"><i class="ti ${icon}"></i> ${label}</span>`;
   let group;
   if(socOn){
     group=`<div style="display:flex;align-items:stretch;height:36px;box-sizing:border-box;border:1px solid #D62828;border-radius:8px;overflow:hidden;">${seg(true,false,"toggleSocialLayer()","ti-photo","Social",true)}${seg(planningMode&&view==="year",true,"togglePlanning()","ti-pencil-plus","Planning",false)}${seg(view==="content",true,"toggleContent()","ti-list-details","Content",false)}</div>`;
   } else {
     group=`<div style="display:flex;align-items:stretch;height:36px;box-sizing:border-box;border:1px solid var(--div);border-radius:8px;overflow:hidden;">${seg(false,false,"toggleSocialLayer()","ti-photo","Social",true)}</div>`;
   }
-  const brief=`<button title="Brand brief" onclick="openBrief()" style="height:36px;box-sizing:border-box;padding:0 13px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid var(--div);background:var(--surface);color:var(--text);font-family:inherit;display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap;"><i class="ti ti-file-text"></i> Brand brief</button>`;
+  const brief=`<button title="Brand brief" class="btn btn-s" onclick="openBrief()" style="background:var(--surface);"><i class="ti ti-file-text"></i> Brand brief</button>`;
   // planning hint lives INLINE in the header row (row height fixed at 36px by the buttons),
   // so toggling planning never pushes the calendar down.
   const hint=(socOn&&planningMode&&view==="year")?`<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:#E1F5EE;color:#0E8A8A;font-size:11px;font-weight:600;white-space:nowrap;"><i class="ti ti-pencil-plus"></i> Click any date to plan a post</span>`:"";
@@ -1509,7 +1512,12 @@ function socialFieldEdit(id,field,value,platform){
     else p.content[platform||"instagram"][field]=value;
   } else if(field==="format"||field==="status"||field==="time"||field==="notes"){ p[field]=value; }
   clearTimeout(socialSaveTimers[id]);
-  socialSaveTimers[id]=setTimeout(()=>{dbSaveSocialPost(p);showSavedCue(id);},600);
+  socialSaveTimers[id]=setTimeout(()=>{
+    dbSaveSocialPost(p);showSavedCue(id);
+    if(field==="caption") logActivity(id,"edited the caption");
+    else if(field==="hashtags") logActivity(id,"edited the hashtags");
+    else if(field==="notes") logActivity(id,"updated the design brief");
+  },600);
 }
 function showSavedCue(id){const el=document.getElementById("sv-"+id);if(!el)return;el.style.opacity="1";clearTimeout(el._t);el._t=setTimeout(()=>{el.style.opacity="0";},1200);}
 // Reschedule a post to a different date (inline, Edit mode). Stays within the selected year.
@@ -1520,12 +1528,14 @@ function socialDateEdit(id,value){
   if(!mo||!d)return;
   p.year=y||YEAR; p.month=mo; p.date=d;
   dbSaveSocialPost(p);
+  logActivity(id,`moved the post to ${d} ${(MN[mo]||"").slice(0,3)}`);
   if(mo!==contentMonth){ contentMonth=mo; if(typeof toast==="function") toast(`Moved to ${d} ${(MN[mo]||"").slice(0,3)}`); }
   renderSocial(); buildContentSidebar();
 }
 function socialStatusEdit(id,value){
   socialFieldEdit(id,"status",value);
   const dot=document.getElementById("stdot-"+id); if(dot) dot.style.background=(SOCIAL_STATUS[value]||["","#888"])[1];
+  logActivity(id,"changed status to "+((SOCIAL_STATUS[value]||[value])[0]));
   if(view==="content"&&activeBrand) buildContentSidebar();
 }
 function socialToggleSyncInline(id){
@@ -1548,6 +1558,14 @@ function socialViewCard(p){
   const cap=p.content.instagram.caption||p.content.facebook.caption||"";
   const tags=p.content.instagram.hashtags||p.content.facebook.hashtags||"";
   const varied=p.synced===false; const fmtIcon=(p.format==="reel"||p.format==="video")?"ti-video":"ti-photo";
+  // Atlas: feedback toggle (count + unresolved dot) + per-card Edit button
+  const cCount=fbCommentsFor(p.id).length;
+  const openN=fbOpenCount(p.id);
+  const isOpen=!!fbOpen[p.id];
+  const fbToggleHtml=FB_AVAILABLE?`<span onclick="fbTogglePanel('${p.id}')" title="Feedback &amp; activity" style="display:flex;align-items:center;gap:5px;cursor:pointer;padding:3px 9px;border-radius:999px;border:1px solid ${isOpen?"#0D0D0D":"var(--div)"};background:${isOpen?"#0D0D0D":"var(--surface)"};color:${isOpen?"#fff":"var(--muted)"};">
+      <i class="ti ti-message-circle" style="font-size:12px;"></i><span id="fbcount-${p.id}" style="font-size:11px;font-weight:700;">${cCount}</span>${openN?`<span style="width:5px;height:5px;border-radius:50%;background:var(--acc);"></span>`:""}
+    </span>`:"";
+  const editBtnHtml=canEdit()?`<span style="display:flex;align-items:center;gap:3px;color:var(--muted);font-weight:700;cursor:pointer;" onclick="openSocialEditorById('${p.id}')" title="Edit post"><i class="ti ti-pencil" style="font-size:12px;"></i> Edit</span>`:"";
   return `<div style="background:var(--surface);border:1px solid var(--div);border-radius:12px;overflow:hidden;margin-bottom:10px;">
     <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--surface2);border-bottom:1px solid var(--div);font-size:11px;color:var(--muted);flex-wrap:wrap;">
       <span style="font-weight:700;color:var(--text);">${shortDate(p.month,p.date)}</span>
@@ -1557,7 +1575,9 @@ function socialViewCard(p){
       ${p.notes?`<span title="Design brief: ${escAttr(p.notes)}" style="color:#8A6D00;cursor:help;"><i class="ti ti-photo-cog" style="font-size:13px;"></i></span>`:""}
       <span style="margin-left:auto;display:flex;align-items:center;gap:10px;color:var(--muted);">
         <span style="display:flex;align-items:center;gap:4px;"><i class="ti ${fmtIcon}" style="font-size:12px;"></i> ${p.format.charAt(0).toUpperCase()+p.format.slice(1)}</span>
+        ${fbToggleHtml}
         <span style="display:flex;align-items:center;gap:3px;color:#0E8A8A;font-weight:700;cursor:pointer;" onclick="openPreview('${p.id}')" title="Preview post"><i class="ti ti-eye" style="font-size:12px;"></i> Preview</span>
+        ${editBtnHtml}
         ${statusChipSm(p)}
       </span>
     </div>
@@ -1569,6 +1589,72 @@ function socialViewCard(p){
         ${tags?`<div style="font-size:12px;line-height:1.5;color:#185FA5;">${escAttr(tags)}</div>`:""}
       </div>
     </div>
+    ${isOpen?fbPanelHtml(p):""}
+  </div>`;
+}
+// ── ATLAS: feedback & activity panel (locked mockup) ─────────
+function fbPanelHtml(p){
+  const threads=fbThreadsFor(p.id);
+  const acts=POSTFB.activity[p.id]||[];
+  const openN=threads.filter(t=>!t.top.resolved).length;
+  const doneN=threads.length-openN;
+  const avatar=(name,kind)=>`<span style="width:24px;height:24px;border-radius:50%;background:${kind==="client"?"#378ADD":"#0D0D0D"};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${escAttr((name||"?").slice(0,2).toUpperCase())}</span>`;
+  const roleTag=kind=>kind==="client"
+    ?`<span style="font-size:10px;font-weight:700;color:#378ADD;background:#E6F1FB;padding:1px 6px;border-radius:999px;">Client</span>`
+    :`<span style="font-size:10px;font-weight:700;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:999px;">Team</span>`;
+  const commentRow=(c,isReply)=>`<div style="${isReply?"margin-top:8px;padding-top:8px;border-top:1px solid var(--div);":""}display:flex;gap:9px;align-items:flex-start;">
+      ${avatar(c.author_name,c.author_kind)}
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:2px;flex-wrap:wrap;">
+          <span style="font-size:12.5px;font-weight:700;">${escAttr(c.author_name)}</span>${roleTag(c.author_kind)}
+          <span style="font-size:11px;color:var(--subtle);margin-left:auto;">${fbTimeLabel(c.created_at)}</span>
+        </div>
+        <div style="font-size:13px;line-height:1.5;">${escAttr(c.body)}</div>
+      </div>
+    </div>`;
+  const threadHtml=t=>{
+    const c=t.top;
+    const replyBox=fbReplyOpen[c.id]?`<div style="display:flex;gap:7px;margin-top:9px;">
+        <input id="fb-reply-${c.id}" class="fi" style="height:32px;font-size:12px;flex:1;" placeholder="Reply…" onkeydown="if(event.key==='Enter')fbAddComment('${p.id}','${c.id}')"/>
+        <button class="btn btn-sm" style="background:#0D0D0D;color:#fff;border-color:#0D0D0D;" onclick="fbAddComment('${p.id}','${c.id}')">Reply</button>
+      </div>`:"";
+    return `<div style="background:var(--surface);border:1px solid var(--div);border-radius:9px;padding:11px 12px;margin-bottom:8px;${c.resolved?"opacity:.6;":""}">
+      ${commentRow(c,false)}
+      ${t.replies.map(r=>commentRow(r,true)).join("")}
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:9px;padding-top:9px;border-top:1px solid var(--div);">
+        ${c.resolved
+          ?`<span style="font-size:11px;font-weight:700;color:#4F7942;display:flex;align-items:center;gap:5px;"><i class="ti ti-check" style="font-size:13px;"></i> Resolved${c.resolved_by?" by "+escAttr(c.resolved_by):""}</span>
+            ${canComment()?`<span style="font-size:11.5px;font-weight:600;color:var(--subtle);cursor:pointer;" onclick="fbToggleResolve('${p.id}','${c.id}')">Reopen</span>`:""}`
+          :`${canComment()?`<span style="font-size:11.5px;font-weight:600;color:var(--subtle);cursor:pointer;" onclick="fbToggleReply('${p.id}','${c.id}')">Reply</span>`:"<span></span>"}
+            ${canComment()?`<span style="font-size:11.5px;font-weight:700;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:5px;" onclick="fbToggleResolve('${p.id}','${c.id}')"><i class="ti ti-circle" style="font-size:13px;"></i> Mark resolved</span>`:""}`}
+      </div>
+      ${replyBox}
+    </div>`;
+  };
+  const actLine=a=>`<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);padding:6px 2px;">
+      <span style="width:5px;height:5px;border-radius:50%;background:var(--subtle);flex-shrink:0;"></span>
+      <span><b style="color:var(--text);font-weight:600;">${escAttr(a.actor_name)}</b> ${escAttr(a.action)}</span>
+      <span style="margin-left:auto;color:var(--subtle);font-size:11px;">${fbTimeLabel(a.created_at)}</span>
+    </div>`;
+  // one chronological feed: threads (by top-comment time) interleaved with activity
+  const feed=[
+    ...threads.map(t=>({at:t.top.created_at,html:threadHtml(t)})),
+    ...acts.map(a=>({at:a.created_at,html:actLine(a)}))
+  ].sort((x,y)=>new Date(x.at)-new Date(y.at)).map(x=>x.html).join("");
+  const composer=canComment()?`<div style="display:flex;gap:9px;align-items:flex-start;margin-top:10px;">
+      ${avatar(actorName(),actorKind())}
+      <div style="flex:1;display:flex;gap:7px;">
+        <input id="fb-new-${p.id}" class="fi" style="height:34px;font-size:13px;flex:1;" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')fbAddComment('${p.id}',null)"/>
+        <button class="btn btn-sm" style="background:#0D0D0D;color:#fff;border-color:#0D0D0D;" onclick="fbAddComment('${p.id}',null)">Post</button>
+      </div>
+    </div>`:"";
+  return `<div style="border-top:1px solid var(--div);background:var(--surface2);padding:13px 14px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px;">
+      <span style="font-size:12px;font-weight:700;color:var(--muted);">Feedback &amp; activity</span>
+      <span style="font-size:11px;color:var(--subtle);">${openN} open · ${doneN} resolved</span>
+    </div>
+    ${feed||`<div style="font-size:12px;color:var(--subtle);padding:2px 0 4px;">No feedback yet.</div>`}
+    ${composer}
   </div>`;
 }
 function fmtSelect(id,val){return `<select class="fi" style="height:30px;font-size:11px;padding:0 6px;" onchange="socialFieldEdit('${id}','format',this.value)">`+SOCIAL_FORMATS.map(f=>`<option value="${f}" ${val===f?"selected":""}>${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join("")+`</select>`;}
@@ -1687,7 +1773,9 @@ function openMonthPlan(month){
 }
 function closeMonthPlanModal(){
   closeM("month-plan");
-  if(view==="content") buildContentSidebar(); else buildSidebar();
+  // Atlas: the Month Plan card lives in the main area now — refresh it too
+  if(view==="content"){ renderSocial(); buildContentSidebar(); }
+  else { render(); buildSidebar(); }
 }
 function mpPlan(){ return MP?monthPlanFor(MP.brandId,MP.year,MP.month):{items:[]}; }
 function mpSetTheme(v){
@@ -1730,13 +1818,30 @@ function mpGoalRow(it){
     <button class="btn btn-g btn-sm" style="padding:0 8px;color:var(--subtle);" onclick="mpDeleteItem('${it.id}')"><i class="ti ti-trash"></i></button>
   </div>`;
 }
-function mpStageRow(it,stages){
+function mpSetTarget(v){
+  const p=mpPlan(); p.influencer_target=Math.max(0,parseInt(v,10)||0);
+  if(!p.id){ p.id=newMonthPlanId(); }
+  dbSaveMonthPlan(MP.brandId,MP.year,MP.month);
+}
+function mpSetLink(id,field,val){
+  const p=mpPlan(); const it=(p.items||[]).find(i=>i.id===id);
+  if(it){ it[field]=(val||"").trim(); dbSaveMonthItem(it,MP.brandId,MP.year,MP.month); }
+}
+function mpStageRow(it,stages,withLinks){
   const opts=Object.entries(stages).map(([k,v])=>`<option value="${k}" ${it.status===k?"selected":""}>${v[0]}</option>`).join("");
+  // Atlas: per-influencer IG / FB / YT link inputs (icons hide in the
+  // plan card when a link is empty)
+  const linkInput=(field,icon,color,ph)=>`<span style="display:flex;align-items:center;gap:4px;flex:1;min-width:0;"><i class="ti ${icon}" style="font-size:14px;color:${color};flex-shrink:0;"></i><input class="fi" style="height:26px;font-size:11px;flex:1;min-width:0;" placeholder="${ph}" value="${escAttr(it[field]||"")}" onchange="mpSetLink('${it.id}','${field}',this.value)"/></span>`;
+  const links=withLinks?`<div style="display:flex;gap:8px;padding:0 0 5px 2px;">
+      ${linkInput("link_instagram","ti-brand-instagram","#D4537E","Instagram link")}
+      ${linkInput("link_facebook","ti-brand-facebook","#185FA5","Facebook link")}
+      ${linkInput("link_youtube","ti-brand-youtube","#C4302B","YouTube link")}
+    </div>`:"";
   return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;">
     <input id="mpi-${it.id}" class="fi" style="height:32px;font-size:13px;flex:1;" value="${escAttr(it.label)}" placeholder="Name…" onchange="mpUpdateLabel('${it.id}',this.value)"/>
     <select class="fi" style="height:32px;font-size:11px;width:150px;flex-shrink:0;" onchange="mpSetStatus('${it.id}',this.value)">${opts}</select>
     <button class="btn btn-g btn-sm" style="padding:0 8px;color:var(--subtle);" onclick="mpDeleteItem('${it.id}')"><i class="ti ti-trash"></i></button>
-  </div>`;
+  </div>${links}`;
 }
 function renderMonthPlanModal(){
   if(!MP) return;
@@ -1766,7 +1871,11 @@ function renderMonthPlanModal(){
        <div class="fl2" style="margin:0;">Influencer marketing</div>
        ${canE?`<span style="cursor:pointer;color:var(--acc);font-size:11px;font-weight:700;" onclick="mpAddItem('influencer')"><i class="ti ti-plus"></i> Add</span>`:""}
      </div>
-     ${infl.length?infl.map(it=>mpStageRow(it,INFLUENCER_STAGES)).join(""):`<div style="font-size:12px;color:var(--subtle);padding:4px 0 8px;">No influencers planned yet.</div>`}
+     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+       <span style="font-size:12px;color:var(--muted);">Number targeted this month</span>
+       <input type="number" min="0" class="fi" style="height:30px;font-size:13px;font-weight:700;width:70px;" value="${p.influencer_target||0}" ${canE?"":"disabled"} onchange="mpSetTarget(this.value)"/>
+     </div>
+     ${infl.length?infl.map(it=>mpStageRow(it,INFLUENCER_STAGES,canE)).join(""):`<div style="font-size:12px;color:var(--subtle);padding:4px 0 8px;">No influencers planned yet.</div>`}
 
      <div class="s-divider"></div>
      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
@@ -1801,21 +1910,71 @@ function buildContentSidebar(){
     `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:6px 0 2px;">`+
     Array.from({length:12},(_,i)=>i+1).map(mm=>`<span onclick="setContentMonthTo(${mm})" style="text-align:center;font-size:11px;font-weight:700;padding:5px 0;border-radius:6px;cursor:pointer;${mm===m?"background:var(--text);color:#fff;":"background:var(--surface);border:1px solid var(--div);color:var(--muted);"}">${MN[mm].slice(0,3)}</span>`).join("")+
     `</div>`;
-  const themeGoalsBlock=`<div class="s-divider"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-      <div class="s-lbl" style="margin:0;">Key theme &amp; goals</div>
-      <span onclick="openMonthPlan(${m})" style="cursor:pointer;color:var(--acc);font-size:11px;"><i class="ti ti-pencil"></i></span>
-    </div>
-    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;line-height:1.4;">${mp.key_theme?escAttr(mp.key_theme):'<span style="color:var(--subtle);font-weight:500;">No theme set</span>'}</div>
-    ${goals.length?goals.map(g=>`<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:3px 0;color:${g.status==="done"?"var(--subtle)":"var(--text)"};${g.status==="done"?"text-decoration:line-through;":""}"><i class="ti ${g.status==="done"?"ti-square-check":"ti-square"}" style="font-size:14px;color:${g.status==="done"?"#639922":"var(--subtle)"};flex-shrink:0;"></i><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escAttr(g.label||"(untitled)")}</span></div>`).join(""):`<div style="font-size:12px;color:var(--subtle);">No goals yet</div>`}`;
+  // Atlas: theme/goals/influencer/production blocks moved out of the sidebar
+  // into the Month Plan card beside the calendar (locked v3) — no longer squeezed here.
   document.getElementById("sb-months").innerHTML=monthGrid+
-    themeGoalsBlock+
-    sbTrackerBlock("Influencer marketing","influencer",mp.items,INFLUENCER_STAGES)+
-    sbTrackerBlock("Production","production",mp.items,PRODUCTION_STAGES)+
     `<div class="s-divider"></div><div class="s-lbl">By status</div>`+
     rows.map(([k,l,c])=>`<div onclick="setContentStatusFilter('${k}')" style="display:flex;align-items:center;gap:8px;font-size:13px;padding:6px 8px;border-radius:var(--r);cursor:pointer;${contentStatusFilter===k?"background:var(--bg);font-weight:600;":""}"><span style="width:8px;height:8px;border-radius:50%;background:${c};flex-shrink:0;"></span><span style="flex:1;">${l}</span><span style="color:var(--muted);">${by[k]||0}</span></div>`).join("")+
     (contentStatusFilter?`<div onclick="setContentStatusFilter('')" style="font-size:11px;color:var(--acc);cursor:pointer;padding:5px 8px;">Clear filter</div>`:"")+
     `<div class="s-divider"></div><div class="s-lbl">Platforms</div><div style="display:flex;gap:14px;font-size:13px;color:var(--muted);padding:2px 8px;"><span style="color:#D4537E;"><i class="ti ti-brand-instagram"></i> ${total}</span><span style="color:#185FA5;"><i class="ti ti-brand-facebook"></i> ${total}</span></div>`;
+}
+// ── ATLAS: Month Plan card (locked v3) — sits beside the calendar ──
+function mpCardSetStatus(val){
+  if(!canEdit()) return;
+  const mp=monthPlanFor(activeBrand,YEAR,contentMonth||curMonth||1);
+  mp.status=val;
+  if(!mp.id) mp.id=newMonthPlanId();
+  dbSaveMonthPlan(activeBrand,YEAR,contentMonth||curMonth||1);
+  renderSocial();
+}
+function mpInflLinkIcons(it){
+  const links=[["link_instagram","ti-brand-instagram","#D4537E","Instagram"],["link_facebook","ti-brand-facebook","#185FA5","Facebook"],["link_youtube","ti-brand-youtube","#C4302B","YouTube"]];
+  return links.filter(([k])=>(it[k]||"").trim())
+    .map(([k,ic,c,t])=>`<a href="${escAttr(it[k])}" target="_blank" rel="noreferrer" title="${t}" onclick="event.stopPropagation();" style="color:${c};text-decoration:none;line-height:1;"><i class="ti ${ic}" style="font-size:14px;"></i></a>`).join("");
+}
+function monthPlanCardHtml(m){
+  const mp=monthPlanFor(activeBrand,YEAR,m);
+  const canE=canEdit();
+  const goals=(mp.items||[]).filter(i=>i.category==="goal"&&(i.label||"").trim()).sort((a,c)=>(a.sort_order||0)-(c.sort_order||0));
+  const infl=(mp.items||[]).filter(i=>i.category==="influencer"&&(i.label||"").trim()).sort((a,c)=>(a.sort_order||0)-(c.sort_order||0));
+  const prod=(mp.items||[]).filter(i=>i.category==="production"&&(i.label||"").trim()).sort((a,c)=>(a.sort_order||0)-(c.sort_order||0));
+  const st=mp.status==="approved";
+  const statusCtl=canE
+    ?`<select onchange="mpCardSetStatus(this.value)" style="appearance:none;-webkit-appearance:none;border:none;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border-radius:999px;padding:5px 24px 5px 10px;color:${st?"#791F1F":"#854F0B"};background-color:${st?"#FCEBEB":"#FAEEDA"};background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${st?"%23791F1F":"%23854F0B"}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 9px center;">
+        <option value="drafted"${st?"":" selected"}>Drafted</option><option value="approved"${st?" selected":""}>Approved</option></select>`
+    :`<span style="font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px;color:${st?"#791F1F":"#854F0B"};background:${st?"#FCEBEB":"#FAEEDA"};">${st?"Approved":"Drafted"}</span>`;
+  const editBtn=canE?`<span onclick="openMonthPlan(${m})" title="Edit month plan" style="width:26px;height:26px;border-radius:50%;border:1px solid var(--div);background:var(--surface);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;"><i class="ti ti-pencil" style="font-size:13px;"></i></span>`:"";
+  const lbl=t=>`<div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);margin-bottom:6px;">${t}</div>`;
+  const empty=!monthPlanHasData(activeBrand,YEAR,m)&&!infl.length&&!prod.length&&!(mp.influencer_target>0);
+  let body;
+  if(empty){
+    body=`${lbl("Theme &amp; goals")}<div style="font-size:13px;color:var(--subtle);">No plan for ${MN[m]} yet.${canE?" Use the pencil to start one.":""}</div>`;
+  } else {
+    const goalsHtml=goals.length?`<div style="display:flex;gap:14px;flex-wrap:wrap;">${goals.map(g=>`<span style="font-size:13px;font-weight:${g.status==="done"?"500":"600"};${g.status==="done"?"color:var(--subtle);text-decoration:line-through;":""}">${escAttr(g.label)}</span>`).join("")}</div>`:"";
+    const shown=infl.slice(0,5);
+    const inflRows=shown.map(it=>{
+      const stg=INFLUENCER_STAGES[it.status]||["",""];
+      return `<div style="font-size:13px;font-weight:600;padding:3px 0;display:flex;align-items:center;gap:7px;min-width:0;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escAttr(it.label)}</span>${mpInflLinkIcons(it)}<span style="font-size:10px;color:${stg[1]};font-weight:700;white-space:nowrap;margin-left:auto;">${stg[0]}</span></div>`;
+    }).join("");
+    const more=infl.length>5?`<div style="font-size:12px;font-weight:600;color:var(--muted);padding:3px 0;">+ ${infl.length-5} more</div>`:"";
+    const target=mp.influencer_target>0?`<div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px;"><span style="font-size:22px;font-weight:700;line-height:1;">${mp.influencer_target}</span><span style="font-size:12px;font-weight:600;color:var(--muted);">targeted</span></div>`:"";
+    const prodRows=prod.length?prod.map(it=>{
+      const stg=PRODUCTION_STAGES[it.status]||["",""];
+      return `<div style="font-size:13px;font-weight:600;padding:3px 0;">${escAttr(it.label)}</div><div style="font-size:12px;color:${stg[1]};font-weight:700;padding:0 0 3px;">${stg[0]}</div>`;
+    }).join(""):`<div style="font-size:12px;color:var(--subtle);">Nothing planned</div>`;
+    body=`${lbl("Theme &amp; goals")}
+      <div style="font-size:15px;font-weight:700;margin-bottom:${goalsHtml?"8px":"0"};${(mp.key_theme||"").trim()?"":"color:var(--subtle);font-weight:500;"}">${(mp.key_theme||"").trim()?escAttr(mp.key_theme):"No theme set"}</div>
+      ${goalsHtml}
+      <div style="height:1px;background:var(--div);margin:14px 0;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+        <div style="min-width:0;">${lbl("Influencers")}${target}${inflRows||(mp.influencer_target>0?"":`<div style="font-size:12px;color:var(--subtle);">None planned</div>`)}${more}</div>
+        <div style="min-width:0;">${lbl("Production")}${prodRows}</div>
+      </div>`;
+  }
+  return `<div class="month-card" style="position:relative;padding:16px ${canE?"84px":"70px"} 16px 18px;overflow:visible;">
+    <div style="position:absolute;top:13px;right:13px;display:flex;align-items:center;gap:6px;">${statusCtl}${editBtn}</div>
+    ${body}
+  </div>`;
 }
 function renderSocial(){
   const mc=document.getElementById("main");
@@ -1827,24 +1986,22 @@ function renderSocial(){
   const monthTotal=posts.length;
   if(contentStatusFilter) posts=posts.filter(p=>p.status===contentStatusFilter);
   posts.sort((a,b2)=>a.date-b2.date||String(a.time||"").localeCompare(String(b2.time||"")));
-  const modeSeg=(mm,icon,label)=>`<span onclick="setContentMode('${mm}')" style="height:28px;box-sizing:border-box;padding:0 12px;border-radius:6px;display:flex;align-items:center;gap:5px;font-size:12px;font-weight:${contentMode===mm?"700":"600"};cursor:pointer;${contentMode===mm?"background:#fff;color:#0D0D0D;box-shadow:0 1px 2px rgba(0,0,0,.08);":"color:var(--muted);"}"><i class="ti ${icon}" style="font-size:13px;"></i> ${label}</span>`;
-  const modeToggle=`<div style="display:flex;align-items:center;background:#E7E6E1;border-radius:8px;padding:3px;gap:2px;height:34px;box-sizing:border-box;">${modeSeg("view","ti-eye","View")}${modeSeg("edit","ti-pencil","Edit")}</div>`;
-  const nextM=contentMonth<12?contentMonth+1:0;
+  const modeSeg=(mm,icon,label)=>`<span onclick="setContentMode('${mm}')" style="height:30px;box-sizing:border-box;padding:0 12px;border-radius:6px;display:flex;align-items:center;gap:5px;font-size:13px;font-weight:${contentMode===mm?"700":"600"};cursor:pointer;${contentMode===mm?"background:#fff;color:#0D0D0D;box-shadow:0 1px 2px rgba(0,0,0,.08);":"color:var(--muted);"}"><i class="ti ${icon}" style="font-size:13px;"></i> ${label}</span>`;
+  const modeToggle=`<div style="display:flex;align-items:center;background:#E7E6E1;border-radius:8px;padding:3px;gap:2px;height:36px;box-sizing:border-box;">${modeSeg("view","ti-eye","View")}${modeSeg("edit","ti-pencil","Edit")}</div>`;
   mc.innerHTML=`
    <div style="padding:28px 32px 20px;">
-   <div style="margin-bottom:16px;">${brandHeaderHtml()}</div>
-   <div class="months-grid" style="padding:0;">
+   <div style="margin-bottom:20px;">${brandHeaderHtml()}</div>
+   <div style="display:grid;grid-template-columns:minmax(280px,340px) minmax(0,1fr);gap:14px;align-items:start;">
      <div id="content-monthcard"></div>
-     <div id="content-monthcard-next"${nextM?' style="opacity:.72;"':''}></div>
+     <div id="content-plancard">${monthPlanCardHtml(contentMonth)}</div>
    </div>
    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap;margin:20px 0 12px;padding-top:14px;border-top:1px solid var(--div);">
      <div style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${monthTotal} Post${monthTotal!==1?"s":""} <span style="font-weight:400;color:var(--subtle);">· ${MN[contentMonth]}</span></div>
-     <div style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;flex-shrink:0;">${modeToggle}${canE?`<button class="btn btn-p" style="height:34px;padding:0 14px;font-size:12px;white-space:nowrap;" onclick="addContentPost()"><i class="ti ti-plus"></i> Add post</button>`:""}</div>
+     <div style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;flex-shrink:0;">${modeToggle}${canE?`<button class="btn btn-p" style="white-space:nowrap;" onclick="addContentPost()"><i class="ti ti-plus"></i> Add post</button>`:""}</div>
    </div>
    <div id="content-list"></div>
    </div>`;
   document.getElementById("content-monthcard").appendChild(buildMini(contentMonth));
-  if(nextM) document.getElementById("content-monthcard-next").appendChild(buildMini(nextM));
   const list=document.getElementById("content-list");
   if(!posts.length){
     list.innerHTML=`<div style="text-align:center;padding:40px 20px;color:var(--muted);"><div style="font-size:28px;margin-bottom:8px;color:var(--subtle);"><i class="ti ti-photo-plus"></i></div><div style="font-size:14px;">${monthTotal?"No posts match this filter.":"No posts planned for "+MN[contentMonth]+"."}</div><div style="font-size:12px;margin-top:4px;">Click any date on the calendar above to plan a post.</div></div>`;
@@ -1883,8 +2040,12 @@ function buildMini(m){
   if(!pills.length) pills.push(`<span class="mc-count" style="opacity:.4;">0 events</span>`);
   const countPills=pills.join("");
   const planClickable=(socialLayer||view==="content")&&activeBrand&&brands[activeBrand];
+  // Atlas: the red dot only appears when the month plan actually has
+  // Key Theme & Goals data — not merely because the name is clickable.
+  const planDot=planClickable&&monthPlanHasData(activeBrand,YEAR,m)
+    ?`<span style="width:6px;height:6px;border-radius:50%;background:#D62828;flex-shrink:0;"></span>`:"";
   const mcNameHtml=planClickable
-    ?`<div class="mc-name" style="cursor:pointer;display:flex;align-items:center;gap:5px;" onclick="event.stopPropagation();openMonthPlan(${m})" data-tip="Click to edit this month's theme, goals &amp; trackers">${MN[m]}<span style="width:6px;height:6px;border-radius:50%;background:#D62828;flex-shrink:0;"></span></div>`
+    ?`<div class="mc-name" style="cursor:pointer;display:flex;align-items:center;gap:5px;" onclick="event.stopPropagation();openMonthPlan(${m})" data-tip="Click to edit this month's theme, goals &amp; trackers">${MN[m]}${planDot}</div>`
     :`<div class="mc-name">${MN[m]}</div>`;
   card.innerHTML=`<div class="mc-head">${mcNameHtml}<div style="display:flex;gap:4px;flex-wrap:nowrap;flex-shrink:0;">${countPills}</div></div>
     <div class="mc-grid">
@@ -3652,7 +3813,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v34.8 web — HELD: approved-day filled ring; month plan (theme/goals/influencer/production); Brand Brief dashboard";
+const TOOL_VERSION="v35 Atlas — HELD: month-plan card (status/target/links), feedback+activity, red-dot gating, button continuity, pixel-stable modes";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -3797,6 +3958,7 @@ async function loadAll(showToast){
   const err=[inds,evts,brs,bevs,tags,posts,briefs,social,monthPlans,monthItems].find(r=>r.error);
   if(err){toast(err.error.message,"err");return;}
   G={inds:inds.data,evts:evts.data,brs:brs.data,bevs:bevs.data,tags:tags.data,posts:posts.data,briefs:briefs.data,social:social.data,monthPlans:monthPlans.data,monthItems:monthItems.data};
+  await loadPostFeedback(); // Atlas: non-fatal — panel hides if tables absent
   buildYearView();
   if(ME.role==="client"&&ME.brand_id&&brands[ME.brand_id]) activeBrand=ME.brand_id;
   rebuildBrSel(); buildIndDropdown(); rebuildYearSel();
@@ -3828,8 +3990,8 @@ function buildYearView(){
   G.posts.forEach(p=>{if(brands[p.brand_id])brands[p.brand_id].posts.push({id:p.id,month:p.month,date:p.date,type:p.type,notes:p.notes,year:p.year||2026});});
   G.briefs.forEach(b2=>{if(brands[b2.brand_id])brands[b2.brand_id].notes[b2.event_id]={note:b2.note,arcStart:b2.arc_start,arcEnd:b2.arc_end,arcFreq:b2.arc_freq};});
   (G.social||[]).forEach(p=>{if(brands[p.brand_id])brands[p.brand_id].social.push(normalizeSocial(p));});
-  (G.monthPlans||[]).forEach(r=>{const b=brands[r.brand_id]; if(!b) return; b.monthPlans[r.year+"_"+r.month]={id:r.id,key_theme:r.key_theme||"",items:[]};});
-  (G.monthItems||[]).forEach(r=>{const b=brands[r.brand_id]; if(!b) return; const key=r.year+"_"+r.month; if(!b.monthPlans[key]) b.monthPlans[key]={id:null,key_theme:"",items:[]}; b.monthPlans[key].items.push({id:r.id,category:r.category,label:r.label||"",status:r.status||"",sort_order:r.sort_order||0});});
+  (G.monthPlans||[]).forEach(r=>{const b=brands[r.brand_id]; if(!b) return; b.monthPlans[r.year+"_"+r.month]={id:r.id,key_theme:r.key_theme||"",status:r.status||"drafted",influencer_target:r.influencer_target||0,items:[]};});
+  (G.monthItems||[]).forEach(r=>{const b=brands[r.brand_id]; if(!b) return; const key=r.year+"_"+r.month; if(!b.monthPlans[key]) b.monthPlans[key]={id:null,key_theme:"",status:"drafted",influencer_target:0,items:[]}; b.monthPlans[key].items.push({id:r.id,category:r.category,label:r.label||"",status:r.status||"",sort_order:r.sort_order||0,link_instagram:r.link_instagram||"",link_facebook:r.link_facebook||"",link_youtube:r.link_youtube||""});});
   initEvs(); mergeCustom(); sanitizeBrands();
 }
 
@@ -3927,11 +4089,16 @@ async function dbTrashSocialPost(id){ if(canEdit()) dbErr(await sb.from("social_
 const INFLUENCER_STAGES={pending:["Pending","#AAAAAA"],approved:["Approved","#378ADD"],briefed:["Briefed","#8B5CF6"],content_approved:["Content OK","#0E8A8A"],published:["Published","#639922"]};
 const PRODUCTION_STAGES={pending:["Pending","#AAAAAA"],moodboard_shared:["Moodboard shared","#378ADD"],complete:["Complete","#639922"]};
 function monthPlanFor(brandId,year,month){
-  const b=brands[brandId]; if(!b) return {id:null,key_theme:"",items:[]};
+  const b=brands[brandId]; if(!b) return {id:null,key_theme:"",status:"drafted",influencer_target:0,items:[]};
   b.monthPlans=b.monthPlans||{};
   const key=year+"_"+month;
-  if(!b.monthPlans[key]) b.monthPlans[key]={id:null,key_theme:"",items:[]};
+  if(!b.monthPlans[key]) b.monthPlans[key]={id:null,key_theme:"",status:"drafted",influencer_target:0,items:[]};
   return b.monthPlans[key];
+}
+// Atlas: plan has data if theme text OR at least one named goal exists.
+function monthPlanHasData(brandId,year,month){
+  const mp=monthPlanFor(brandId,year,month);
+  return !!((mp.key_theme||"").trim()||(mp.items||[]).some(i=>i.category==="goal"&&(i.label||"").trim()));
 }
 function newMonthPlanId(){return "mp"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function newMonthItemId(){return "mi"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
@@ -3939,13 +4106,90 @@ async function dbSaveMonthPlan(brandId,year,month){
   if(!canEdit())return;
   const mp=monthPlanFor(brandId,year,month);
   if(!mp.id) mp.id=newMonthPlanId();
-  dbErr(await sb.from("social_month_plan").upsert({id:mp.id,brand_id:brandId,year,month,key_theme:mp.key_theme||"",updated_at:new Date().toISOString()}));
+  dbErr(await sb.from("social_month_plan").upsert({id:mp.id,brand_id:brandId,year,month,key_theme:mp.key_theme||"",status:mp.status||"drafted",influencer_target:mp.influencer_target||0,updated_at:new Date().toISOString()}));
 }
 async function dbSaveMonthItem(item,brandId,year,month){
   if(!canEdit())return;
-  dbErr(await sb.from("social_month_items").upsert({id:item.id,brand_id:brandId,year,month,category:item.category,label:item.label||"",status:item.status,sort_order:item.sort_order||0,updated_at:new Date().toISOString()}));
+  dbErr(await sb.from("social_month_items").upsert({id:item.id,brand_id:brandId,year,month,category:item.category,label:item.label||"",status:item.status,sort_order:item.sort_order||0,link_instagram:item.link_instagram||"",link_facebook:item.link_facebook||"",link_youtube:item.link_youtube||"",updated_at:new Date().toISOString()}));
 }
 async function dbDeleteMonthItem(id){ if(canEdit()) dbErr(await sb.from("social_month_items").delete().eq("id",id)); }
+
+// ── ATLAS: POST FEEDBACK (comments) + ACTIVITY ──────────────
+// Feature-detected: if the Atlas migration hasn't been applied yet the
+// tables don't exist — the app must keep working with the panel hidden.
+let FB_AVAILABLE=false;
+const POSTFB={comments:{},activity:{}};
+let fbOpen={}; // postId -> bool (panel expanded)
+function canComment(){ return ["admin","team","client"].includes(ME.role); }
+function actorName(){ return (ME.email||"").split("@")[0]||"someone"; }
+function actorKind(){ return ME.role==="client"?"client":"team"; }
+async function loadPostFeedback(){
+  try{
+    const [c,a]=await Promise.all([
+      sb.from("post_comments").select("*").order("created_at"),
+      sb.from("post_activity").select("*").order("created_at")
+    ]);
+    if(c.error||a.error){ FB_AVAILABLE=false; return; }
+    FB_AVAILABLE=true;
+    POSTFB.comments={}; POSTFB.activity={};
+    (c.data||[]).forEach(r=>{(POSTFB.comments[r.post_id]=POSTFB.comments[r.post_id]||[]).push(r);});
+    (a.data||[]).forEach(r=>{(POSTFB.activity[r.post_id]=POSTFB.activity[r.post_id]||[]).push(r);});
+  }catch(e){ FB_AVAILABLE=false; }
+}
+function newFbId(pre){ return pre+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function fbCommentsFor(postId){ return POSTFB.comments[postId]||[]; }
+function fbThreadsFor(postId){
+  const all=fbCommentsFor(postId);
+  return all.filter(x=>!x.parent_id).map(t=>({top:t,replies:all.filter(r=>r.parent_id===t.id)}));
+}
+function fbOpenCount(postId){ return fbThreadsFor(postId).filter(t=>!t.top.resolved).length; }
+async function fbAddComment(postId,parentId){
+  if(!FB_AVAILABLE||!canComment()) return;
+  const inputId=parentId?("fb-reply-"+parentId):("fb-new-"+postId);
+  const el=document.getElementById(inputId); if(!el) return;
+  const body=(el.value||"").trim(); if(!body) return;
+  const b=brands[activeBrand]; const p=b&&(b.social||[]).find(x=>x.id===postId); if(!p) return;
+  const row={id:newFbId("pc"),post_id:postId,brand_id:p.brand_id||activeBrand,parent_id:parentId||null,
+    author_id:null,author_name:actorName(),author_kind:actorKind(),body,
+    resolved:false,resolved_by:"",resolved_at:null,created_at:new Date().toISOString()};
+  (POSTFB.comments[postId]=POSTFB.comments[postId]||[]).push(row);
+  dbErr(await sb.from("post_comments").insert([row]));
+  renderSocial();
+}
+async function fbToggleResolve(postId,commentId){
+  if(!FB_AVAILABLE||!canComment()) return;
+  const c=fbCommentsFor(postId).find(x=>x.id===commentId); if(!c) return;
+  c.resolved=!c.resolved;
+  c.resolved_by=c.resolved?actorName():"";
+  c.resolved_at=c.resolved?new Date().toISOString():null;
+  dbErr(await sb.from("post_comments").update({resolved:c.resolved,resolved_by:c.resolved_by,resolved_at:c.resolved_at}).eq("id",commentId));
+  renderSocial();
+}
+function fbTogglePanel(postId){ fbOpen[postId]=!fbOpen[postId]; renderSocial(); }
+let fbReplyOpen={}; // commentId -> bool
+function fbToggleReply(postId,commentId){ fbReplyOpen[commentId]=!fbReplyOpen[commentId]; renderSocial(); }
+// Activity: short factual lines, auto-logged. Dedupe repeats within 10 min
+// so debounced typing doesn't spam the trail.
+async function logActivity(postId,action){
+  if(!FB_AVAILABLE) return;
+  const b=brands[activeBrand]; const p=b&&(b.social||[]).find(x=>x.id===postId); if(!p) return;
+  const list=POSTFB.activity[postId]=POSTFB.activity[postId]||[];
+  const last=list[list.length-1];
+  if(last&&last.action===action&&last.actor_name===actorName()&&(Date.now()-new Date(last.created_at).getTime())<600000) return;
+  const row={id:newFbId("pa"),post_id:postId,brand_id:p.brand_id||activeBrand,actor_name:actorName(),action,created_at:new Date().toISOString()};
+  list.push(row);
+  dbErr(await sb.from("post_activity").insert([row]));
+  const badge=document.getElementById("fbcount-"+postId); if(badge&&fbOpen[postId]) renderSocial();
+}
+function fbTimeLabel(iso){
+  const d=new Date(iso); const now=new Date();
+  const sameDay=d.toDateString()===now.toDateString();
+  const yd=new Date(now); yd.setDate(now.getDate()-1);
+  const t=d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+  if(sameDay) return "Today, "+t;
+  if(d.toDateString()===yd.toDateString()) return "Yesterday, "+t;
+  return `${(MN[d.getMonth()+1]||"").slice(0,3)} ${d.getDate()}, ${t}`;
+}
 
 // ── BRAND BRIEF (per-brand marketing dashboard, staff only) ─────
 // Data lives in brands[activeBrand].brief (one jsonb object).
