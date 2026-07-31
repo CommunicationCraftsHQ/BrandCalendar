@@ -1988,6 +1988,13 @@ function renderSocial(){
   posts.sort((a,b2)=>a.date-b2.date||String(a.time||"").localeCompare(String(b2.time||"")));
   const modeSeg=(mm,icon,label)=>`<span onclick="setContentMode('${mm}')" style="height:30px;box-sizing:border-box;padding:0 12px;border-radius:6px;display:flex;align-items:center;gap:5px;font-size:13px;font-weight:${contentMode===mm?"700":"600"};cursor:pointer;${contentMode===mm?"background:#fff;color:#0D0D0D;box-shadow:0 1px 2px rgba(0,0,0,.08);":"color:var(--muted);"}"><i class="ti ${icon}" style="font-size:13px;"></i> ${label}</span>`;
   const modeToggle=`<div style="display:flex;align-items:center;background:#E7E6E1;border-radius:8px;padding:3px;gap:2px;height:36px;box-sizing:border-box;">${modeSeg("view","ti-eye","View")}${modeSeg("edit","ti-pencil","Edit")}</div>`;
+  // Tokyo: Export (Word / Excel / PowerPoint) for the visible brand + month
+  const exportCtl=`<div style="position:relative;">
+    <button class="btn btn-s" style="background:var(--surface);" onclick="toggleExportMenu(event)"><i class="ti ti-download"></i> Export</button>
+    <div id="export-menu" style="display:none;position:absolute;top:42px;right:0;background:var(--surface);border:1px solid var(--div);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:60;min-width:186px;padding:5px;" onclick="event.stopPropagation()">
+      ${[["word","ti-file-text","Word document"],["excel","ti-table","Excel sheet"],["ppt","ti-presentation","PowerPoint deck"]].map(([k,ic,l])=>`<div onclick="doExport('${k}')" style="padding:8px 11px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''"><i class="ti ${ic}" style="color:var(--muted);font-size:15px;"></i> ${l}</div>`).join("")}
+    </div>
+  </div>`;
   mc.innerHTML=`
    <div style="padding:28px 32px 20px;">
    <div style="margin-bottom:20px;">${brandHeaderHtml()}</div>
@@ -1997,7 +2004,7 @@ function renderSocial(){
    </div>
    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap;margin:20px 0 12px;padding-top:14px;border-top:1px solid var(--div);">
      <div style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${monthTotal} Post${monthTotal!==1?"s":""} <span style="font-weight:400;color:var(--subtle);">· ${MN[contentMonth]}</span></div>
-     <div style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;flex-shrink:0;">${modeToggle}${canE?`<button class="btn btn-p" style="white-space:nowrap;" onclick="addContentPost()"><i class="ti ti-plus"></i> Add post</button>`:""}</div>
+     <div style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;flex-shrink:0;">${exportCtl}${modeToggle}${canE?`<button class="btn btn-p" style="white-space:nowrap;" onclick="addContentPost()"><i class="ti ti-plus"></i> Add post</button>`:""}</div>
    </div>
    <div id="content-list"></div>
    </div>`;
@@ -3813,7 +3820,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v35 Atlas — month-plan card (status/target/links), feedback+activity, red-dot gating, button continuity, pixel-stable modes";
+const TOOL_VERSION="v36 Tokyo — Content exports: Word / Excel / PowerPoint";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -4190,6 +4197,129 @@ function fbTimeLabel(iso){
   if(d.toDateString()===yd.toDateString()) return "Yesterday, "+t;
   return `${(MN[d.getMonth()+1]||"").slice(0,3)} ${d.getDate()}, ${t}`;
 }
+
+// ── TOKYO: Content exports (Word / Excel / PowerPoint) ───────
+// Client-side generation from live post data; libraries load lazily
+// from CDN on first use. Formats mirror the approved design examples.
+const EXPORT_LIBS={
+  docx:{url:"https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js",global:"docx"},
+  exceljs:{url:"https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js",global:"ExcelJS"},
+  pptxgenjs:{url:"https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js",global:"PptxGenJS"}
+};
+function loadExportLib(key){
+  return new Promise((res,rej)=>{
+    const l=EXPORT_LIBS[key];
+    if(window[l.global]) return res(window[l.global]);
+    const s=document.createElement("script"); s.src=l.url;
+    s.onload=()=>window[l.global]?res(window[l.global]):rej(new Error(key+" did not initialise"));
+    s.onerror=()=>rej(new Error("could not load "+key+" library"));
+    document.head.appendChild(s);
+  });
+}
+const DAY_FULL=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+// Pure: normalized month rows for the active brand (testable without libs)
+function exportRows(brandId,year,month){
+  const b=brands[brandId]; if(!b) return [];
+  return socialForBrandYear(brandId,year).filter(p=>p.month===month)
+    .sort((a,c)=>a.date-c.date||String(a.time||"").localeCompare(String(c.time||"")))
+    .map((p,i)=>{
+      const v=(p.content.instagram.caption||"").trim()?p.content.instagram:p.content.facebook;
+      const dt=new Date(year,month-1,p.date);
+      return {n:i+1,dayName:DAY_FULL[dt.getDay()],dateLabel:`${(MN[month]||"").slice(0,3)} ${p.date}, ${year}`,
+        time:p.time||"",platforms:"Instagram + Facebook",
+        format:(p.format||"static").charAt(0).toUpperCase()+(p.format||"static").slice(1),
+        focus:((p.content&&p.content.concept)||"").trim(),
+        caption:(v.caption||"").trim(),hashtags:(v.hashtags||"").trim(),
+        status:(SOCIAL_STATUS[p.status]||[p.status||""])[0],approved:p.status==="approved",
+        brief:(p.notes||"").trim()};
+    });
+}
+function exportFileBase(){
+  const b=brands[activeBrand];
+  return `${(b?b.name:"brand").replace(/[^\w]+/g,"-")}-${MN[contentMonth]}-${YEAR}`;
+}
+function dlBlob(blob,name){
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+function toggleExportMenu(ev){
+  if(ev) ev.stopPropagation();
+  const m=document.getElementById("export-menu"); if(!m) return;
+  m.style.display=m.style.display==="none"?"block":"none";
+}
+document.addEventListener("click",()=>{const m=document.getElementById("export-menu"); if(m) m.style.display="none";});
+let exportBusy=false;
+async function doExport(kind){
+  if(exportBusy) return; exportBusy=true;
+  const m=document.getElementById("export-menu"); if(m) m.style.display="none";
+  try{
+    const rows=exportRows(activeBrand,YEAR,contentMonth);
+    if(!rows.length){ toast("No posts to export for "+MN[contentMonth],"err"); exportBusy=false; return; }
+    toast("Preparing "+({word:"Word document",excel:"Excel sheet",ppt:"PowerPoint deck"})[kind]+"…");
+    if(kind==="word") await exportWord(rows);
+    else if(kind==="excel") await exportExcel(rows);
+    else await exportPpt(rows);
+  }catch(e){ toast("Export failed: "+e.message,"err"); }
+  exportBusy=false;
+}
+// Word — per-post review document (approved example format)
+async function exportWordBlob(rows){
+  const D=await loadExportLib("docx");
+  const {Document,Packer,Paragraph,TextRun}=D;
+  const b=brands[activeBrand];
+  const children=[
+    new Paragraph({children:[new TextRun({text:`${MN[contentMonth]} ${YEAR}`,bold:true,size:56})],spacing:{after:80}}),
+    new Paragraph({children:[new TextRun({text:b.name,bold:true,size:28,color:"D62828"})],spacing:{after:420}})
+  ];
+  rows.forEach(r=>{
+    children.push(new Paragraph({children:[new TextRun({text:`Post ${r.n} — ${r.dateLabel} (${r.dayName})${r.time?" · "+r.time:""}`,bold:true,size:26})],spacing:{before:320,after:60}}));
+    children.push(new Paragraph({children:[new TextRun({text:`${r.platforms}  ·  Format: ${r.format}`,size:20,color:"6B6B6B"})],spacing:{after:130}}));
+    if(r.focus) children.push(new Paragraph({children:[new TextRun({text:"Focus: ",bold:true,size:22}),new TextRun({text:r.focus,size:22})],spacing:{after:130}}));
+    children.push(new Paragraph({children:[new TextRun({text:r.caption||"(caption to come)",size:22,italics:!r.caption})],spacing:{after:130}}));
+    if(r.hashtags) children.push(new Paragraph({children:[new TextRun({text:r.hashtags,size:20,color:"185FA5"})],spacing:{after:130}}));
+    children.push(new Paragraph({children:[new TextRun({text:"Visual: "+(r.brief||"[reference image / creative to be attached]"),size:20,color:"8A6D00",italics:!r.brief})],spacing:{after:220}}));
+  });
+  return Packer.toBlob(new Document({sections:[{children}]}));
+}
+async function exportWord(rows){ dlBlob(await exportWordBlob(rows),exportFileBase()+"-content.docx"); }
+// Excel — one-row-per-post grid (approved example: 9 columns, dark header,
+// frozen top row, autofilter, Approved? = Y)
+async function exportExcelBlob(rows){
+  const EJ=await loadExportLib("exceljs");
+  const wb=new EJ.Workbook();
+  const ws=wb.addWorksheet(`${MN[contentMonth]} ${YEAR}`,{views:[{state:"frozen",ySplit:1}]});
+  ws.columns=[{header:"Date",width:13},{header:"Day",width:11},{header:"Platforms",width:20},{header:"Format",width:10},
+    {header:"Focus",width:28},{header:"Caption",width:60},{header:"Hashtags",width:34},{header:"Comments",width:30},{header:"Approved?",width:10}];
+  rows.forEach(r=>ws.addRow([r.dateLabel,r.dayName,r.platforms,r.format,r.focus,r.caption,r.hashtags,"",r.approved?"Y":""]));
+  ws.getRow(1).eachCell(c=>{c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF1A1A1A"}};c.font={color:{argb:"FFFFFFFF"},bold:true};});
+  ws.autoFilter="A1:I1";
+  ws.eachRow((r,i)=>{ if(i>1) r.alignment={vertical:"top",wrapText:true}; });
+  const buf=await wb.xlsx.writeBuffer();
+  return new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+async function exportExcel(rows){ dlBlob(await exportExcelBlob(rows),exportFileBase()+"-content.xlsx"); }
+// PowerPoint — dark title slide + one slide per post (approved example)
+async function exportPptBlob(rows){
+  const P=await loadExportLib("pptxgenjs");
+  const pptx=new P();
+  pptx.defineLayout({name:"CC169",width:13.33,height:7.5}); pptx.layout="CC169";
+  const b=brands[activeBrand];
+  const t=pptx.addSlide(); t.background={color:"0D0D0D"};
+  t.addText(b.name.toUpperCase(),{x:0.7,y:2.6,w:10,h:0.5,fontSize:16,color:"D62828",bold:true,charSpacing:3});
+  t.addText([{text:`${MN[contentMonth]} ${YEAR}`,options:{breakLine:true}},{text:"Content Plan",options:{color:"AAAAAA"}}],
+    {x:0.7,y:3.1,w:11,h:2.2,fontSize:44,color:"FFFFFF",bold:true});
+  rows.forEach(r=>{
+    const s=pptx.addSlide(); s.background={color:"FFFFFF"};
+    s.addShape("rect",{x:0,y:0,w:6.3,h:7.5,fill:{color:"F4F4F2"}});
+    s.addText(r.format.toUpperCase(),{x:0,y:0,w:6.3,h:7.5,align:"center",valign:"middle",fontSize:26,color:"AAAAAA",bold:true,charSpacing:4});
+    s.addText(r.caption||"(caption to come)",{x:7,y:1.5,w:5.7,h:2.7,fontSize:16,color:"0D0D0D",valign:"top",italic:!r.caption});
+    if(r.hashtags) s.addText(r.hashtags,{x:7,y:4.3,w:5.7,h:0.6,fontSize:12,color:"185FA5"});
+    s.addText(`Post ${r.n}   ·   ${r.dateLabel} · ${r.dayName}`,{x:7,y:6.8,w:5.7,h:0.4,fontSize:11,color:"6B6B6B"});
+  });
+  return pptx.write("blob");
+}
+async function exportPpt(rows){ dlBlob(await exportPptBlob(rows),exportFileBase()+"-content.pptx"); }
 
 // ── BRAND BRIEF (per-brand marketing dashboard, staff only) ─────
 // Data lives in brands[activeBrand].brief (one jsonb object).
