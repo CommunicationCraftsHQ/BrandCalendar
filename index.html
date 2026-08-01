@@ -552,6 +552,143 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
   color:#fff;cursor:pointer;align-items:center;justify-content:center;
   flex-shrink:0;font-size:18px;
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   ISTANBUL — v38 glass reskin.  STYLE VALUES ONLY.
+   Locked by Chirag 2026-08-02, view by view: list=L3, year=Y3,
+   content+post cards=C3, modals=M2, performance=LITE.
+
+   HARD RULES for anyone editing below:
+   1. Colours, backgrounds, shadows, radii, opacity ONLY.
+      No width/height/padding/margin/position/display/order changes,
+      except the two spacing values Chirag explicitly approved
+      (.months-grid gap 14→20px, .ev-row margin-bottom 6→12px).
+   2. LITE: no backdrop-filter on persistent surfaces (cards, rows,
+      sidebar). Measured: that was 13 blurred layers over 102% of the
+      viewport, permanently. Blur survives ONLY where it sits over
+      detailed or moving content — modal panel, modal backdrop,
+      dropdown, sticky month strip. Four transient layers, not thirteen.
+   3. Cards sit on a smooth gradient, so blur had nothing to frost;
+      higher opacity gives the same look for free.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ---- canvas ---- */
+body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixed;}
+.sidebar{background:rgba(255,255,255,.66);border-right-color:rgba(255,255,255,.7);}
+.s-month:hover{background:rgba(255,255,255,.6);}
+
+/* ---- YEAR VIEW (Y3) ---- */
+.months-grid{gap:20px;}                                   /* approved spacing change */
+.month-card{
+  background:rgba(255,255,255,.92);
+  border-color:rgba(255,255,255,.95);
+  border-radius:20px;
+  box-shadow:0 10px 30px rgba(13,13,13,.09), inset 0 1px 0 #fff;
+}
+.month-card:hover{box-shadow:0 16px 40px rgba(13,13,13,.13), inset 0 1px 0 #fff;}
+.mc-head{border-bottom-color:rgba(13,13,13,.05);}
+/* inset shadow, NOT border: v37 has no border here and adding one would
+   inflate the pill by 2px and push the whole month grid down. */
+.mc-count{background:rgba(255,255,255,.6);color:#8A8880;box-shadow:inset 0 0 0 1px rgba(255,255,255,.9);}
+.mc-count.camp{background:rgba(251,234,240,.85);color:#993556;}
+.mc-day{border-radius:50%;}
+.mc-day.has-ev:hover{background:rgba(13,13,13,.05);}
+.mc-day.today{box-shadow:0 5px 14px rgba(13,13,13,.25);}
+.ev-strip-seg{border-radius:2px;}
+/* current month is the hero — follows today, absent in other years */
+.months-grid>.month-card:has(.mc-day.today){
+  background:linear-gradient(140deg,rgba(255,240,235,.85),rgba(240,238,252,.85));
+  border-color:rgba(255,255,255,.95);
+  box-shadow:0 16px 44px rgba(120,90,110,.16), inset 0 1px 0 #fff;
+}
+.months-grid>.month-card:has(.mc-day.today) .mc-head{border-bottom-color:rgba(255,255,255,.8);}
+.months-grid>.month-card:has(.mc-day.today) .mc-count{background:rgba(255,255,255,.75);box-shadow:inset 0 0 0 1px rgba(255,255,255,.95);}
+
+/* ---- LIST VIEW (L3) ---- */
+.list-month-strip{
+  background:transparent;
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);   /* sticky: rows scroll beneath */
+  border-bottom-color:rgba(255,255,255,.65);
+}
+.lm-btn{background:rgba(255,255,255,.72);border-color:rgba(255,255,255,.9);box-shadow:0 2px 8px rgba(13,13,13,.05);}
+.lm-btn.on{background:var(--text);border-color:var(--text);box-shadow:0 6px 16px rgba(13,13,13,.22);}
+.ev-row{
+  margin-bottom:12px;                                     /* approved spacing change */
+  border-radius:16px;
+  background:rgba(255,255,255,.92);
+  border-color:rgba(255,255,255,.95);
+  box-shadow:0 10px 30px rgba(13,13,13,.09), inset 0 1px 0 #fff;
+}
+.ev-row-date{background:transparent;border-right-color:rgba(13,13,13,.05);}
+.ev-row-actions{border-left-color:transparent;}
+.ev-row.campaign-row{background:linear-gradient(140deg,rgba(253,242,248,.95),rgba(252,231,243,.85));border-color:rgba(255,255,255,.9);}
+.ev-row.campaign-row .ev-row-date{background:transparent;border-right-color:rgba(219,39,119,.10);}
+.ev-row.post-row{background:linear-gradient(140deg,rgba(250,250,254,.95),rgba(243,240,255,.85));border-color:rgba(255,255,255,.9);}
+.ev-row.post-row .ev-row-date{background:transparent;}
+.ev-row-key{background:rgba(255,255,255,.6);color:#9A8A5E;box-shadow:inset 0 0 0 1px rgba(255,255,255,.85);}
+/* industry chips quiet down; !important because the colours are inline per relevance */
+/* colour only — bumping font-weight here widened the chips and rewrapped
+   the row, which is a layout change. Weight stays at v37's 500. */
+.ev-row-ind{background:rgba(255,255,255,.55)!important;border-color:rgba(255,255,255,.85)!important;color:#8A8880!important;}
+.ev-row-btn{border-color:transparent;background:transparent;color:#A9A7A2;font-weight:600;}
+.ev-row-btn:hover{background:rgba(13,13,13,.06);color:var(--text);border-color:transparent;}
+/* decoration rests, wakes on hover — nothing hidden, nothing moved */
+.ev-row-inds{opacity:.5;transition:opacity 140ms;}
+.ev-row:hover .ev-row-inds{opacity:1;}
+.ev-row-actions{opacity:.18;transition:opacity 140ms;}
+.ev-row:hover .ev-row-actions,.ev-row:focus-within .ev-row-actions{opacity:1;}
+
+/* ---- CONTENT VIEW + POST CARDS (C3) ---- */
+.pc{
+  background:rgba(255,255,255,.92)!important;
+  border-color:rgba(255,255,255,.95)!important;
+  border-radius:16px!important;
+  box-shadow:0 10px 30px rgba(13,13,13,.08), inset 0 1px 0 #fff;
+}
+.pc-head{background:rgba(255,255,255,.45)!important;border-bottom-color:rgba(13,13,13,.05)!important;}
+.pc-thumb{background:rgba(255,255,255,.5)!important;border-color:rgba(255,255,255,.9)!important;border-radius:12px!important;}
+/* hierarchy: caption + hashtags lead, everything else takes a back seat */
+.pc-bulb{display:none;}
+.pc-focus{color:#9B9995!important;font-weight:500!important;}
+.pc-eye{display:none;}
+.pc-prev,.pc-edit{color:#9B9995!important;font-weight:600!important;}
+.pc-fbtoggle:not(.on){border-color:transparent!important;background:transparent!important;}
+/* platform glyphs become small flat dots — information, not attention */
+.pc-ig i,.pc-fb i{display:none;}
+.pc-ig::before,.pc-fb::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.42;}
+/* Month Plan card is the sole hero of the content view */
+.mp-hero{
+  background:linear-gradient(140deg,rgba(255,240,235,.85),rgba(240,238,252,.85))!important;
+  border-color:rgba(255,255,255,.95)!important;
+  box-shadow:0 16px 44px rgba(120,90,110,.16), inset 0 1px 0 #fff!important;
+}
+.mp-hero .mp-hr{background:rgba(255,255,255,.85)!important;}
+.mp-hero .mp-status{background-color:rgba(255,255,255,.8)!important;}
+.mp-hero .mp-edit{background:rgba(255,255,255,.8)!important;border-color:rgba(255,255,255,.95)!important;}
+
+/* ---- MODALS + DROPDOWNS (M2) ---- */
+.overlay{background:rgba(13,13,13,.30);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);}
+.modal,.dp-modal,.day-popup{
+  background:rgba(255,255,255,.78);
+  -webkit-backdrop-filter:blur(26px);backdrop-filter:blur(26px);
+  border-radius:20px;
+  /* rim via inset shadow — a real border would widen the dialog by 2px */
+  box-shadow:0 28px 70px rgba(13,13,13,.22), inset 0 0 0 1px rgba(255,255,255,.95), inset 0 1px 0 #fff;
+}
+.modal-top,.modal-foot,.dp-header,.dp-controls,.dp-footer{border-color:rgba(13,13,13,.06);}
+.modal-x{background:rgba(255,255,255,.6);box-shadow:inset 0 0 0 1px rgba(255,255,255,.9);}
+.modal-x:hover{background:var(--text);color:#fff;border-color:var(--text);}
+.fi,.bd-in,.bd-ta,.brand-note-ta{background:rgba(255,255,255,.55);border-color:rgba(255,255,255,.9);border-radius:10px;}
+.fi:focus,.bd-in:focus,.bd-ta:focus{background:#fff;border-color:var(--acc);}
+.ms-drop{
+  background:rgba(255,255,255,.88);
+  -webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);
+  border-color:rgba(255,255,255,.95);border-radius:16px;
+  box-shadow:0 18px 46px rgba(13,13,13,.16);
+}
+.ms-row:hover{background:rgba(13,13,13,.05);}
+.ms-row .count-badge{background:rgba(255,255,255,.65);}
+/* ── end Istanbul ────────────────────────────────────────────────── */
 </style>
 </head>
 <body>
@@ -1562,29 +1699,29 @@ function socialViewCard(p){
   const cCount=fbCommentsFor(p.id).length;
   const openN=fbOpenCount(p.id);
   const isOpen=!!fbOpen[p.id];
-  const fbToggleHtml=FB_AVAILABLE?`<span onclick="fbTogglePanel('${p.id}')" title="Feedback &amp; activity" style="display:flex;align-items:center;gap:5px;cursor:pointer;padding:3px 9px;border-radius:999px;border:1px solid ${isOpen?"#0D0D0D":"var(--div)"};background:${isOpen?"#0D0D0D":"var(--surface)"};color:${isOpen?"#fff":"var(--muted)"};">
+  const fbToggleHtml=FB_AVAILABLE?`<span class="pc-fbtoggle${isOpen?" on":""}" onclick="fbTogglePanel('${p.id}')" title="Feedback &amp; activity" style="display:flex;align-items:center;gap:5px;cursor:pointer;padding:3px 9px;border-radius:999px;border:1px solid ${isOpen?"#0D0D0D":"var(--div)"};background:${isOpen?"#0D0D0D":"var(--surface)"};color:${isOpen?"#fff":"var(--muted)"};">
       <i class="ti ti-message-circle" style="font-size:12px;"></i><span id="fbcount-${p.id}" style="font-size:11px;font-weight:700;">${cCount}</span>${openN?`<span style="width:5px;height:5px;border-radius:50%;background:var(--acc);"></span>`:""}
     </span>`:"";
-  const editBtnHtml=canEdit()?`<span style="display:flex;align-items:center;gap:3px;color:var(--muted);font-weight:700;cursor:pointer;" onclick="openSocialEditorById('${p.id}')" title="Edit post"><i class="ti ti-pencil" style="font-size:12px;"></i> Edit</span>`:"";
-  return `<div style="background:var(--surface);border:1px solid var(--div);border-radius:12px;overflow:hidden;margin-bottom:10px;">
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--surface2);border-bottom:1px solid var(--div);font-size:11px;color:var(--muted);flex-wrap:wrap;">
+  const editBtnHtml=canEdit()?`<span class="pc-edit" style="display:flex;align-items:center;gap:3px;color:var(--muted);font-weight:700;cursor:pointer;" onclick="openSocialEditorById('${p.id}')" title="Edit post"><i class="ti ti-pencil" style="font-size:12px;"></i> Edit</span>`:"";
+  return `<div class="pc" style="background:var(--surface);border:1px solid var(--div);border-radius:12px;overflow:hidden;margin-bottom:10px;">
+    <div class="pc-head" style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--surface2);border-bottom:1px solid var(--div);font-size:11px;color:var(--muted);flex-wrap:wrap;">
       <span style="font-weight:700;color:var(--text);">${shortDate(p.month,p.date)}</span>
       ${p.time?`<span style="display:flex;align-items:center;gap:4px;"><i class="ti ti-clock" style="font-size:12px;"></i> ${escAttr(p.time)}</span>`:""}
-      <span style="color:#D4537E;"><i class="ti ti-brand-instagram" style="font-size:13px;"></i></span><span style="color:#185FA5;margin-left:-4px;"><i class="ti ti-brand-facebook" style="font-size:13px;"></i></span>
+      <span class="pc-ig" style="color:#D4537E;"><i class="ti ti-brand-instagram" style="font-size:13px;"></i></span><span class="pc-fb" style="color:#185FA5;margin-left:-4px;"><i class="ti ti-brand-facebook" style="font-size:13px;"></i></span>
       ${varied?`<span style="font-size:9px;color:#993C1D;background:#FAECE7;padding:1px 6px;border-radius:999px;font-weight:700;">varied</span>`:""}
       ${p.notes?`<span title="Design brief: ${escAttr(p.notes)}" style="color:#8A6D00;cursor:help;"><i class="ti ti-photo-cog" style="font-size:13px;"></i></span>`:""}
       <span style="margin-left:auto;display:flex;align-items:center;gap:10px;color:var(--muted);">
         <span style="display:flex;align-items:center;gap:4px;"><i class="ti ${fmtIcon}" style="font-size:12px;"></i> ${p.format.charAt(0).toUpperCase()+p.format.slice(1)}</span>
         ${fbToggleHtml}
-        <span style="display:flex;align-items:center;gap:3px;color:#0E8A8A;font-weight:700;cursor:pointer;" onclick="openPreview('${p.id}')" title="Preview post"><i class="ti ti-eye" style="font-size:12px;"></i> Preview</span>
+        <span class="pc-prev" style="display:flex;align-items:center;gap:3px;color:#0E8A8A;font-weight:700;cursor:pointer;" onclick="openPreview('${p.id}')" title="Preview post"><i class="ti ti-eye pc-eye" style="font-size:12px;"></i> Preview</span>
         ${editBtnHtml}
         ${statusChipSm(p)}
       </span>
     </div>
     <div style="display:flex;gap:12px;padding:12px 14px;">
-      <div style="width:72px;height:72px;flex-shrink:0;border-radius:8px;background:#FAFAFA;border:1px solid #EFEFEF;display:flex;align-items:center;justify-content:center;color:#CFCFCF;"><i class="ti ti-photo" style="font-size:22px;"></i></div>
+      <div class="pc-thumb" style="width:72px;height:72px;flex-shrink:0;border-radius:8px;background:#FAFAFA;border:1px solid #EFEFEF;display:flex;align-items:center;justify-content:center;color:#CFCFCF;"><i class="ti ti-photo" style="font-size:22px;"></i></div>
       <div style="flex:1;min-width:0;">
-        ${(p.content.concept||"").trim()?`<div style="font-size:11px;font-weight:600;color:#0E8A8A;margin-bottom:5px;display:flex;align-items:center;gap:5px;"><i class="ti ti-bulb" style="font-size:12px;"></i> ${escAttr(p.content.concept)}</div>`:""}
+        ${(p.content.concept||"").trim()?`<div class="pc-focus" style="font-size:11px;font-weight:600;color:#0E8A8A;margin-bottom:5px;display:flex;align-items:center;gap:5px;"><i class="ti ti-bulb pc-bulb" style="font-size:12px;"></i> ${escAttr(p.content.concept)}</div>`:""}
         <div style="font-size:13px;line-height:1.55;margin-bottom:5px;${cap?"":"color:var(--subtle);font-style:italic;"}">${cap?escAttr(cap):"No caption yet"}</div>
         ${tags?`<div style="font-size:12px;line-height:1.5;color:#185FA5;">${escAttr(tags)}</div>`:""}
       </div>
@@ -1940,10 +2077,10 @@ function monthPlanCardHtml(m){
   const prod=(mp.items||[]).filter(i=>i.category==="production"&&(i.label||"").trim()).sort((a,c)=>(a.sort_order||0)-(c.sort_order||0));
   const st=mp.status==="approved";
   const statusCtl=canE
-    ?`<select onchange="mpCardSetStatus(this.value)" style="appearance:none;-webkit-appearance:none;border:none;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border-radius:999px;padding:5px 24px 5px 10px;color:${st?"#791F1F":"#854F0B"};background-color:${st?"#FCEBEB":"#FAEEDA"};background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${st?"%23791F1F":"%23854F0B"}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 9px center;">
+    ?`<select class="mp-status" onchange="mpCardSetStatus(this.value)" style="appearance:none;-webkit-appearance:none;border:none;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border-radius:999px;padding:5px 24px 5px 10px;color:${st?"#791F1F":"#854F0B"};background-color:${st?"#FCEBEB":"#FAEEDA"};background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${st?"%23791F1F":"%23854F0B"}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 9px center;">
         <option value="drafted"${st?"":" selected"}>Drafted</option><option value="approved"${st?" selected":""}>Approved</option></select>`
-    :`<span style="font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px;color:${st?"#791F1F":"#854F0B"};background:${st?"#FCEBEB":"#FAEEDA"};">${st?"Approved":"Drafted"}</span>`;
-  const editBtn=canE?`<span onclick="openMonthPlan(${m})" title="Edit month plan" style="width:26px;height:26px;border-radius:50%;border:1px solid var(--div);background:var(--surface);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;"><i class="ti ti-pencil" style="font-size:13px;"></i></span>`:"";
+    :`<span class="mp-status" style="font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px;color:${st?"#791F1F":"#854F0B"};background:${st?"#FCEBEB":"#FAEEDA"};">${st?"Approved":"Drafted"}</span>`;
+  const editBtn=canE?`<span class="mp-edit" onclick="openMonthPlan(${m})" title="Edit month plan" style="width:26px;height:26px;border-radius:50%;border:1px solid var(--div);background:var(--surface);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;"><i class="ti ti-pencil" style="font-size:13px;"></i></span>`:"";
   const lbl=t=>`<div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);margin-bottom:6px;">${t}</div>`;
   const empty=!monthPlanHasData(activeBrand,YEAR,m)&&!infl.length&&!prod.length&&!(mp.influencer_target>0);
   let body;
@@ -1965,13 +2102,13 @@ function monthPlanCardHtml(m){
     body=`${lbl("Theme &amp; goals")}
       <div style="font-size:15px;font-weight:700;margin-bottom:${goalsHtml?"8px":"0"};${(mp.key_theme||"").trim()?"":"color:var(--subtle);font-weight:500;"}">${(mp.key_theme||"").trim()?escAttr(mp.key_theme):"No theme set"}</div>
       ${goalsHtml}
-      <div style="height:1px;background:var(--div);margin:14px 0;"></div>
+      <div class="mp-hr" style="height:1px;background:var(--div);margin:14px 0;"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
         <div style="min-width:0;">${lbl("Influencers")}${target}${inflRows||(mp.influencer_target>0?"":`<div style="font-size:12px;color:var(--subtle);">None planned</div>`)}${more}</div>
         <div style="min-width:0;">${lbl("Production")}${prodRows}</div>
       </div>`;
   }
-  return `<div class="month-card" style="position:relative;padding:16px ${canE?"84px":"70px"} 16px 18px;overflow:visible;">
+  return `<div class="month-card mp-hero" style="position:relative;padding:16px ${canE?"84px":"70px"} 16px 18px;overflow:visible;">
     <div style="position:absolute;top:13px;right:13px;display:flex;align-items:center;gap:6px;">${statusCtl}${editBtn}</div>
     ${body}
   </div>`;
@@ -3820,7 +3957,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v37 Sydney — live team updates + overwrite protection";
+const TOOL_VERSION="v38 Istanbul — glass reskin (styling only, zero layout change)";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
