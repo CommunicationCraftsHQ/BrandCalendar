@@ -3820,7 +3820,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v36 Tokyo — Content exports: Word / Excel / PowerPoint";
+const TOOL_VERSION="v37 Sydney — live team updates + overwrite protection";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -3971,6 +3971,7 @@ async function loadAll(showToast){
   rebuildBrSel(); buildIndDropdown(); rebuildYearSel();
   if(activeBrand) document.getElementById("brand-sel").value=activeBrand;
   render();
+  startRealtime(); // Sydney: live updates from teammates (safe no-op if sockets unavailable)
   if(showToast) toast("Refreshed");
 }
 
@@ -3980,7 +3981,7 @@ function buildYearView(){
   RAW={};
   G.evts.forEach(r=>{
     if((r.year||2026)!==YEAR) return;
-    (RAW[r.month]=RAW[r.month]||[]).push({id:r.id,date:r.date,name:r.name,cat:r.cat,notes:r.notes,relevance:r.relevance,mega:r.mega});
+    (RAW[r.month]=RAW[r.month]||[]).push({id:r.id,date:r.date,name:r.name,cat:r.cat,notes:r.notes,relevance:r.relevance,mega:r.mega,_uat:r.updated_at||null});
   });
   CUSTOM={};
   G.bevs.forEach(r=>{
@@ -3988,7 +3989,7 @@ function buildYearView(){
     (CUSTOM[r.month]=CUSTOM[r.month]||[]).push({id:r.id,date:r.date,name:r.name,cat:r.cat,notes:r.notes,
       relevance:r.relevance,industries:Object.entries(r.relevance||{}).filter(([,v])=>v==="high"||v==="medium").map(([k])=>k),
       mega:r.mega,_brandOnly:r.brand_only,endMonth:r.end_month||undefined,endDate:r.end_date||undefined,
-      type:"custom",_custom:true,_brandId:r.brand_id});
+      type:"custom",_custom:true,_brandId:r.brand_id,_uat:r.updated_at||null});
   });
   brands={};
   G.brs.forEach(r=>{brands[r.id]={name:r.name,inds:r.inds||[],audience:r.audience||[],brief:r.brief||{},evIds:[],notes:{},posts:[],social:[],monthPlans:{}};});
@@ -3997,8 +3998,8 @@ function buildYearView(){
   G.posts.forEach(p=>{if(brands[p.brand_id])brands[p.brand_id].posts.push({id:p.id,month:p.month,date:p.date,type:p.type,notes:p.notes,year:p.year||2026});});
   G.briefs.forEach(b2=>{if(brands[b2.brand_id])brands[b2.brand_id].notes[b2.event_id]={note:b2.note,arcStart:b2.arc_start,arcEnd:b2.arc_end,arcFreq:b2.arc_freq};});
   (G.social||[]).forEach(p=>{if(brands[p.brand_id])brands[p.brand_id].social.push(normalizeSocial(p));});
-  (G.monthPlans||[]).forEach(r=>{const b=brands[r.brand_id]; if(!b) return; b.monthPlans[r.year+"_"+r.month]={id:r.id,key_theme:r.key_theme||"",status:r.status||"drafted",influencer_target:r.influencer_target||0,items:[]};});
-  (G.monthItems||[]).forEach(r=>{const b=brands[r.brand_id]; if(!b) return; const key=r.year+"_"+r.month; if(!b.monthPlans[key]) b.monthPlans[key]={id:null,key_theme:"",status:"drafted",influencer_target:0,items:[]}; b.monthPlans[key].items.push({id:r.id,category:r.category,label:r.label||"",status:r.status||"",sort_order:r.sort_order||0,link_instagram:r.link_instagram||"",link_facebook:r.link_facebook||"",link_youtube:r.link_youtube||""});});
+  (G.monthPlans||[]).forEach(r=>{const b=brands[r.brand_id]; if(!b) return; b.monthPlans[r.year+"_"+r.month]={id:r.id,key_theme:r.key_theme||"",status:r.status||"drafted",influencer_target:r.influencer_target||0,items:[],_uat:r.updated_at||null};});
+  (G.monthItems||[]).forEach(r=>{const b=brands[r.brand_id]; if(!b) return; const key=r.year+"_"+r.month; if(!b.monthPlans[key]) b.monthPlans[key]={id:null,key_theme:"",status:"drafted",influencer_target:0,items:[]}; b.monthPlans[key].items.push({id:r.id,category:r.category,label:r.label||"",status:r.status||"",sort_order:r.sort_order||0,link_instagram:r.link_instagram||"",link_facebook:r.link_facebook||"",link_youtube:r.link_youtube||"",_uat:r.updated_at||null});});
   initEvs(); mergeCustom(); sanitizeBrands();
 }
 
@@ -4076,7 +4077,7 @@ function normalizeSocial(p){
   const ig={...emptyVariant(),...(c.instagram||{})};
   return {id:p.id,brand_id:p.brand_id,event_id:p.event_id||"",year:p.year||2026,month:p.month,date:p.date,
     time:p.time||"",format:p.format||"static",status:p.status||"drafting",synced:p.synced!==false,
-    content:{facebook:fb,instagram:ig,concept:c.concept||""},notes:p.notes||""};
+    content:{facebook:fb,instagram:ig,concept:c.concept||""},notes:p.notes||"",_uat:p.updated_at||null};
 }
 function newSocialId(){return "sp"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function socialForBrandYear(brandId,year){
@@ -4085,12 +4086,25 @@ function socialForBrandYear(brandId,year){
 }
 async function dbSaveSocialPost(p){
   if(!canEdit()) return;
-  const row={id:p.id,brand_id:p.brand_id,event_id:p.event_id||null,year:p.year||YEAR,month:p.month,date:p.date,
-    time:p.time||"",format:p.format||"static",status:p.status||"drafting",synced:p.synced!==false,
-    content:{facebook:p.content.facebook,instagram:p.content.instagram,concept:(p.content&&p.content.concept)||""},notes:p.notes||"",updated_at:new Date().toISOString()};
-  dbErr(await sb.from("social_posts").upsert(row));
+  return rtChain("social_posts:"+p.id,async()=>{
+    const row={id:p.id,brand_id:p.brand_id,event_id:p.event_id||null,year:p.year||YEAR,month:p.month,date:p.date,
+      time:p.time||"",format:p.format||"static",status:p.status||"drafting",synced:p.synced!==false,
+      content:{facebook:p.content.facebook,instagram:p.content.instagram,concept:(p.content&&p.content.concept)||""},notes:p.notes||"",updated_at:new Date().toISOString()};
+    // Sydney: rows we hold a known server version of get a conflict-guarded
+    // update — the write only lands if nobody changed the row since we loaded it.
+    if(p._uat){
+      const r=await sb.from("social_posts").update(row).eq("id",row.id).eq("updated_at",p._uat).select();
+      if(r&&r.error){ dbErr(r); return; }
+      if(!r||!r.data||!r.data.length){ await rtAdoptRemote("social_posts",row.id,rtApplySocialRow); return; }
+      p._uat=row.updated_at; rememberOwnWrite("social_posts",row.id,row.updated_at); rtGUpsert("social",row);
+      return;
+    }
+    const r=await sb.from("social_posts").upsert(row);
+    dbErr(r);
+    if(!r||!r.error){ p._uat=row.updated_at; rememberOwnWrite("social_posts",row.id,row.updated_at); rtGUpsert("social",row); }
+  });
 }
-async function dbTrashSocialPost(id){ if(canEdit()) dbErr(await sb.from("social_posts").update({deleted_at:new Date().toISOString()}).eq("id",id)); }
+async function dbTrashSocialPost(id){ if(!canEdit()) return; rtGRemove("social",id); dbErr(await sb.from("social_posts").update({deleted_at:new Date().toISOString()}).eq("id",id)); }
 
 // ── MONTH PLAN: Key Theme, Goals, Influencer Marketing, Production ──
 const INFLUENCER_STAGES={pending:["Pending","#AAAAAA"],approved:["Approved","#378ADD"],briefed:["Briefed","#8B5CF6"],content_approved:["Content OK","#0E8A8A"],published:["Published","#639922"]};
@@ -4113,13 +4127,37 @@ async function dbSaveMonthPlan(brandId,year,month){
   if(!canEdit())return;
   const mp=monthPlanFor(brandId,year,month);
   if(!mp.id) mp.id=newMonthPlanId();
-  dbErr(await sb.from("social_month_plan").upsert({id:mp.id,brand_id:brandId,year,month,key_theme:mp.key_theme||"",status:mp.status||"drafted",influencer_target:mp.influencer_target||0,updated_at:new Date().toISOString()}));
+  return rtChain("social_month_plan:"+mp.id,async()=>{
+    const row={id:mp.id,brand_id:brandId,year,month,key_theme:mp.key_theme||"",status:mp.status||"drafted",influencer_target:mp.influencer_target||0,updated_at:new Date().toISOString()};
+    if(mp._uat){
+      const r=await sb.from("social_month_plan").update(row).eq("id",row.id).eq("updated_at",mp._uat).select();
+      if(r&&r.error){ dbErr(r); return; }
+      if(!r||!r.data||!r.data.length){ await rtAdoptRemote("social_month_plan",row.id,rtApplyMonthPlanRow); return; }
+      mp._uat=row.updated_at; rememberOwnWrite("social_month_plan",row.id,row.updated_at); rtGUpsert("monthPlans",row);
+      return;
+    }
+    const r=await sb.from("social_month_plan").upsert(row);
+    dbErr(r);
+    if(!r||!r.error){ mp._uat=row.updated_at; rememberOwnWrite("social_month_plan",row.id,row.updated_at); rtGUpsert("monthPlans",row); }
+  });
 }
 async function dbSaveMonthItem(item,brandId,year,month){
   if(!canEdit())return;
-  dbErr(await sb.from("social_month_items").upsert({id:item.id,brand_id:brandId,year,month,category:item.category,label:item.label||"",status:item.status,sort_order:item.sort_order||0,link_instagram:item.link_instagram||"",link_facebook:item.link_facebook||"",link_youtube:item.link_youtube||"",updated_at:new Date().toISOString()}));
+  return rtChain("social_month_items:"+item.id,async()=>{
+    const row={id:item.id,brand_id:brandId,year,month,category:item.category,label:item.label||"",status:item.status,sort_order:item.sort_order||0,link_instagram:item.link_instagram||"",link_facebook:item.link_facebook||"",link_youtube:item.link_youtube||"",updated_at:new Date().toISOString()};
+    if(item._uat){
+      const r=await sb.from("social_month_items").update(row).eq("id",row.id).eq("updated_at",item._uat).select();
+      if(r&&r.error){ dbErr(r); return; }
+      if(!r||!r.data||!r.data.length){ await rtAdoptRemote("social_month_items",row.id,rtApplyMonthItemRow); return; }
+      item._uat=row.updated_at; rememberOwnWrite("social_month_items",row.id,row.updated_at); rtGUpsert("monthItems",row);
+      return;
+    }
+    const r=await sb.from("social_month_items").upsert(row);
+    dbErr(r);
+    if(!r||!r.error){ item._uat=row.updated_at; rememberOwnWrite("social_month_items",row.id,row.updated_at); rtGUpsert("monthItems",row); }
+  });
 }
-async function dbDeleteMonthItem(id){ if(canEdit()) dbErr(await sb.from("social_month_items").delete().eq("id",id)); }
+async function dbDeleteMonthItem(id){ if(!canEdit()) return; rtGRemove("monthItems",id); dbErr(await sb.from("social_month_items").delete().eq("id",id)); }
 
 // ── ATLAS: POST FEEDBACK (comments) + ACTIVITY ──────────────
 // Feature-detected: if the Atlas migration hasn't been applied yet the
@@ -4196,6 +4234,244 @@ function fbTimeLabel(iso){
   if(sameDay) return "Today, "+t;
   if(d.toDateString()===yd.toDateString()) return "Yesterday, "+t;
   return `${(MN[d.getMonth()+1]||"").slice(0,3)} ${d.getDate()}, ${t}`;
+}
+
+// ── SYDNEY: live team updates + overwrite protection ─────────
+// Invisible plumbing only — realtime state merges, echo suppression for
+// our own writes, typing-safe re-renders, conflict-guarded saves.
+// Zero UI change; messages go through the existing toast() system.
+const OWN_WRITES=new Map(); // "table:id" -> the updated_at we last wrote
+function rememberOwnWrite(table,id,uat){ if(id&&uat) OWN_WRITES.set(table+":"+id,uat); }
+function isOwnEcho(table,row){ return !!(row&&row.id&&row.updated_at&&OWN_WRITES.get(table+":"+row.id)===row.updated_at); }
+
+// Per-row save chain: two rapid saves of the same row must run in order,
+// each reading the fresh _uat — otherwise our own second save would start
+// with a stale version stamp and falsely lose to our own first save.
+const RT_SAVES=new Map();
+function rtChain(key,fn){
+  const prev=RT_SAVES.get(key);
+  const next=prev?prev.then(fn,fn):fn(); // idle row → start immediately
+  const tail=Promise.resolve(next).catch(()=>{});
+  RT_SAVES.set(key,tail);
+  tail.then(()=>{ if(RT_SAVES.get(key)===tail) RT_SAVES.delete(key); });
+  return next;
+}
+
+// Typing protection: state merges land immediately; a re-render waits
+// while the user is inside an input (top-nav brand/year selects excluded).
+let rtQueued=null, rtToastAt=0;
+function rtUserTyping(){
+  const el=document.activeElement;
+  if(!el||!/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName||"")) return false;
+  if(el.id==="brand-sel"||el.id==="year-sel") return false;
+  return true;
+}
+function rtDoRender(kind){
+  try{
+    if(kind==="full"){ render(); return; }
+    if(view==="content"&&activeBrand&&brands[activeBrand]){ renderSocial(); buildContentSidebar(); }
+    else render();
+  }catch(e){}
+}
+function rtRender(kind){
+  if(rtUserTyping()){
+    rtQueued=(rtQueued==="full"||kind==="full")?"full":kind;
+    const now=Date.now();
+    if(now-rtToastAt>60000){ rtToastAt=now; toast("Live update received — will appear when you finish editing"); }
+    return;
+  }
+  rtDoRender(kind);
+}
+function rtFlushQueued(){
+  if(!rtQueued) return;
+  // small delay: let focus settle (and any in-flight click complete) first
+  setTimeout(()=>{ if(rtQueued&&!rtUserTyping()){ const k=rtQueued; rtQueued=null; rtDoRender(k); } },250);
+}
+try{ document.addEventListener("blur",rtFlushQueued,true); }catch(e){}
+
+// Keep the raw G arrays in step with merges/saves so buildYearView()
+// (which rebuilds brands{} from G) never resurrects stale rows.
+function rtGUpsert(listName,row){
+  if(!G) return; const list=G[listName]=G[listName]||[];
+  const i=list.findIndex(r=>r.id===row.id);
+  if(i>-1) list[i]=Object.assign({},list[i],row); else list.push(row);
+}
+function rtGRemove(listName,id){
+  if(!G||!G[listName]) return;
+  G[listName]=G[listName].filter(r=>r.id!==id);
+}
+
+// Row appliers — shared by realtime payloads and conflict refetches.
+function rtApplySocialRow(row){
+  if(row.deleted_at) rtGRemove("social",row.id); else rtGUpsert("social",row);
+  const b=brands[row.brand_id]; if(!b) return;
+  b.social=b.social||[];
+  const i=b.social.findIndex(p=>p.id===row.id);
+  if(row.deleted_at){ if(i>-1) b.social.splice(i,1); }
+  else{ const np=normalizeSocial(row); if(i>-1) b.social[i]=np; else b.social.push(np); }
+}
+function rtRemoveSocialById(id){
+  rtGRemove("social",id);
+  let touched=null;
+  Object.entries(brands).forEach(([bid,b])=>{
+    const n=(b.social||[]).length;
+    b.social=(b.social||[]).filter(p=>p.id!==id);
+    if(b.social.length!==n) touched=bid;
+  });
+  return touched;
+}
+function rtApplyMonthPlanRow(row){
+  rtGUpsert("monthPlans",row);
+  const b=brands[row.brand_id]; if(!b) return;
+  b.monthPlans=b.monthPlans||{};
+  const key=row.year+"_"+row.month;
+  const mp=b.monthPlans[key]=b.monthPlans[key]||{id:null,key_theme:"",status:"drafted",influencer_target:0,items:[]};
+  mp.id=row.id; mp.key_theme=row.key_theme||""; mp.status=row.status||"drafted"; mp.influencer_target=row.influencer_target||0; mp._uat=row.updated_at||null;
+}
+function rtApplyMonthItemRow(row){
+  rtGUpsert("monthItems",row);
+  const b=brands[row.brand_id]; if(!b) return;
+  b.monthPlans=b.monthPlans||{};
+  const key=row.year+"_"+row.month;
+  const mp=b.monthPlans[key]=b.monthPlans[key]||{id:null,key_theme:"",status:"drafted",influencer_target:0,items:[]};
+  const it={id:row.id,category:row.category,label:row.label||"",status:row.status||"",sort_order:row.sort_order||0,link_instagram:row.link_instagram||"",link_facebook:row.link_facebook||"",link_youtube:row.link_youtube||"",_uat:row.updated_at||null};
+  mp.items=mp.items||[];
+  const i=mp.items.findIndex(x=>x.id===it.id);
+  if(i>-1) mp.items[i]=it; else mp.items.push(it);
+}
+function rtRemoveMonthItemById(id){
+  rtGRemove("monthItems",id);
+  let touched=null;
+  Object.entries(brands).forEach(([bid,b])=>{
+    Object.values(b.monthPlans||{}).forEach(mp=>{
+      const n=(mp.items||[]).length;
+      mp.items=(mp.items||[]).filter(x=>x.id!==id);
+      if(mp.items.length!==n) touched=bid;
+    });
+  });
+  return touched;
+}
+function rtApplyEventRow(row){
+  if(!G) return;
+  if(row.deleted_at) rtGRemove("evts",row.id); else rtGUpsert("evts",row);
+  buildYearView();
+}
+
+// A save lost the race — fetch the winning row, adopt it, tell the user.
+async function rtAdoptRemote(table,id,apply){
+  try{
+    const r=await sb.from(table).select("*").eq("id",id).single();
+    if(r&&!r.error&&r.data) apply(r.data);
+    toast("This was just changed by someone else — showing their version");
+    rtRender(table==="events"?"full":"social");
+  }catch(e){}
+}
+
+// Realtime payload handlers ─ merge state first, then re-render only the
+// active brand's current view (state-only for background brands).
+function rtSocialPost(pl){
+  const row=pl&&pl.new&&pl.new.id?pl.new:null;
+  if(row&&isOwnEcho("social_posts",row)) return;
+  if((pl&&pl.eventType==="DELETE")||!row){
+    const id=(row&&row.id)||(pl&&pl.old&&pl.old.id); if(!id) return;
+    if(rtRemoveSocialById(id)===activeBrand) rtRender("social");
+    return;
+  }
+  rtApplySocialRow(row);
+  if(row.brand_id===activeBrand) rtRender("social");
+}
+function rtMonthPlan(pl){
+  const row=pl&&pl.new&&pl.new.id?pl.new:null;
+  if(!row||(pl&&pl.eventType==="DELETE")) return; // plans are never hard-deleted by the app
+  if(isOwnEcho("social_month_plan",row)) return;
+  rtApplyMonthPlanRow(row);
+  if(row.brand_id===activeBrand) rtRender("social");
+}
+function rtMonthItem(pl){
+  const row=pl&&pl.new&&pl.new.id?pl.new:null;
+  if(row&&isOwnEcho("social_month_items",row)) return;
+  if((pl&&pl.eventType==="DELETE")||!row){
+    const id=(row&&row.id)||(pl&&pl.old&&pl.old.id); if(!id) return;
+    if(rtRemoveMonthItemById(id)===activeBrand) rtRender("social");
+    return;
+  }
+  rtApplyMonthItemRow(row);
+  if(row.brand_id===activeBrand) rtRender("social");
+}
+function rtComment(pl){
+  if(!FB_AVAILABLE) return;
+  const row=pl&&pl.new&&pl.new.id?pl.new:null;
+  if(pl&&pl.eventType==="DELETE"){
+    const id=pl.old&&pl.old.id; if(!id) return;
+    Object.keys(POSTFB.comments).forEach(k=>{POSTFB.comments[k]=(POSTFB.comments[k]||[]).filter(c=>c.id!==id);});
+    if(view==="content") rtRender("social");
+    return;
+  }
+  if(!row) return;
+  const list=POSTFB.comments[row.post_id]=POSTFB.comments[row.post_id]||[];
+  const i=list.findIndex(c=>c.id===row.id);
+  if(i>-1){
+    const cur=list[i];
+    if(cur.body===row.body&&cur.resolved===row.resolved&&cur.resolved_by===row.resolved_by) return; // our own echo
+    list[i]=row;
+  } else list.push(row);
+  if(view==="content"&&row.brand_id===activeBrand) rtRender("social");
+}
+function rtActivity(pl){
+  if(!FB_AVAILABLE) return;
+  const row=pl&&pl.new&&pl.new.id?pl.new:null;
+  if(!row||(pl&&pl.eventType==="DELETE")) return;
+  const list=POSTFB.activity[row.post_id]=POSTFB.activity[row.post_id]||[];
+  if(list.some(a=>a.id===row.id)) return; // our own echo
+  list.push(row);
+  if(view==="content"&&row.brand_id===activeBrand&&fbOpen[row.post_id]) rtRender("social");
+}
+// Calendar-side tables (events/brands/brand_events/brand_tags) feed complex
+// derived structures — don't merge row-by-row; debounce and refetch the four.
+let rtCalTimer=null;
+function rtCalendarChange(pl){
+  const row=pl&&pl.new, table=pl&&pl.table;
+  if(row&&table&&isOwnEcho(table,row)) return;
+  clearTimeout(rtCalTimer);
+  rtCalTimer=setTimeout(rtRefetchCalendar,800);
+}
+async function rtRefetchCalendar(){
+  try{
+    const [evts,brs,bevs,tags]=await Promise.all([
+      sb.from("events").select("*").is("deleted_at",null),
+      sb.from("brands").select("*").is("deleted_at",null),
+      sb.from("brand_events").select("*").is("deleted_at",null),
+      sb.from("brand_tags").select("*"),
+    ]);
+    if(!G||evts.error||brs.error||bevs.error||tags.error) return;
+    G.evts=evts.data; G.brs=brs.data; G.bevs=bevs.data; G.tags=tags.data;
+    buildYearView();
+    rtRender("full");
+  }catch(e){}
+}
+
+// One channel over all nine tables. Fully guarded: environments without
+// .channel (tests) or with a failed socket must never break the app —
+// and tables not yet in the publication simply never send events.
+let RT_CHANNEL=null;
+function startRealtime(){
+  try{
+    if(!sb||typeof sb.channel!=="function") return;
+    if(RT_CHANNEL){ try{ if(typeof sb.removeChannel==="function") sb.removeChannel(RT_CHANNEL); else if(RT_CHANNEL.unsubscribe) RT_CHANNEL.unsubscribe(); }catch(e){} RT_CHANNEL=null; }
+    let ch=sb.channel("cc-live-"+Date.now().toString(36));
+    const on=(t,fn)=>{ch=ch.on("postgres_changes",{event:"*",schema:"public",table:t},p=>{try{fn(p);}catch(e){}});};
+    on("social_posts",rtSocialPost);
+    on("social_month_plan",rtMonthPlan);
+    on("social_month_items",rtMonthItem);
+    on("post_comments",rtComment);
+    on("post_activity",rtActivity);
+    on("brand_events",rtCalendarChange);
+    on("events",rtCalendarChange);
+    on("brands",rtCalendarChange);
+    on("brand_tags",rtCalendarChange);
+    ch.subscribe();
+    RT_CHANNEL=ch;
+  }catch(e){}
 }
 
 // ── TOKYO: Content exports (Word / Excel / PowerPoint) ───────
@@ -4953,6 +5229,7 @@ function saveSocialEditor(){
     time:SE.time,format:SE.format,status:SE.status,synced:SE.synced,content:SE.content,notes:""});
   b.social=b.social||[];
   const i=b.social.findIndex(p=>p.id===post.id);
+  if(i>-1&&b.social[i]&&b.social[i]._uat&&!post._uat) post._uat=b.social[i]._uat; // Sydney: keep the known server version for the conflict guard
   if(i>-1)b.social[i]=post; else b.social.push(post);
   dbSaveSocialPost(post);
   const wasNew=SE.isNew; closeM("social-edit"); toast(wasNew?"Post created":"Post saved"); render();
@@ -5314,7 +5591,23 @@ function saveIndRate(){
   closeM("ind-rate"); sanitizeBrands(); render(); toast("Ratings saved for "+(INDS.find(i=>i.id===irInd)||{}).label);
   irInd=null; irStage={};
 }
-async function dbPushMasterEvent(m,e){ if(canEdit()) dbErr(await sb.from("events").upsert({id:e.id,year:YEAR,month:m,date:e.date,name:e.name,cat:e.cat||"cat1",notes:e.notes||"",relevance:e.relevance||{},mega:!!e.mega})); }
+async function dbPushMasterEvent(m,e){
+  if(!canEdit()) return;
+  return rtChain("events:"+e.id,async()=>{
+    const row={id:e.id,year:YEAR,month:m,date:e.date,name:e.name,cat:e.cat||"cat1",notes:e.notes||"",relevance:e.relevance||{},mega:!!e.mega};
+    // Sydney: single-event edits are conflict-guarded (bulk import/carry-forward
+    // paths stay as whole-file upserts — they replace by design and reload after).
+    if(e._uat){
+      const r=await sb.from("events").update(row).eq("id",row.id).eq("updated_at",e._uat).select();
+      if(r&&r.error){ dbErr(r); return; }
+      if(!r||!r.data||!r.data.length){ await rtAdoptRemote("events",row.id,rtApplyEventRow); return; }
+      const w=r.data[0]||{};
+      if(w.updated_at){ e._uat=w.updated_at; rememberOwnWrite("events",row.id,w.updated_at); if(G){const gr=G.evts.find(x=>x.id===row.id); if(gr) gr.updated_at=w.updated_at;} }
+      return;
+    }
+    dbErr(await sb.from("events").upsert(row));
+  });
+}
 async function dbDeleteMasterEvent(id){ if(canEdit()) dbErr(await sb.from("events").update({deleted_at:new Date().toISOString()}).eq("id",id)); }
 
 function applyRoleUI(){
