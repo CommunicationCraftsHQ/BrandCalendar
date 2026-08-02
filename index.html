@@ -84,7 +84,11 @@ body{background:var(--bg);color:var(--text);margin:0;min-height:100vh;}
 
 /* YEAR VIEW */
 .year-head{padding:28px 32px 20px;display:flex;align-items:flex-end;gap:16px;}
-.bd-headrow{flex-direction:row;align-items:baseline;flex-wrap:wrap;gap:6px 14px;}
+.bd-headrow{flex-direction:row;align-items:center;flex-wrap:wrap;gap:6px 14px;}
+/* Shanghai: brief header now matches the calendar's — title centred,
+   actions grouped immediately beside it rather than pushed far right. */
+.bd-head{align-items:center;gap:14px;}
+.bd-head .bd-acts{justify-content:flex-start;margin-left:0;}
 .bd-acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
 .year-title{font-size:40px;font-weight:700;letter-spacing:-.04em;line-height:1;}
 .year-title span{color:var(--acc);}
@@ -97,7 +101,7 @@ body{background:var(--bg);color:var(--text);margin:0;min-height:100vh;}
 .mc-head{padding:12px 14px 10px;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:8px;flex-wrap:nowrap;border-bottom:1px solid var(--div);}
 .mc-name{font-size:13px;font-weight:700;letter-spacing:-.01em;min-width:0;flex-shrink:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .mc-count{font-size:10px;font-weight:700;color:#5F5E5A;background:#F1EFE8;padding:2px 7px;border-radius:999px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
-.mc-count.camp{color:#993556;background:#FBEAF0;}
+.mc-count.camp{color:#993556;background:#F9DCE7;}
 .mc-count.camp::before{content:"";width:6px;height:6px;border-radius:2px;background:#D4537E;display:inline-block;}
 .mc-grid{display:grid;grid-template-columns:repeat(7,1fr);padding:8px 10px 10px;gap:1px;}
 .mc-dow{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--subtle);text-align:center;padding:2px 0 4px;}
@@ -134,16 +138,16 @@ body.planning .mc-day:hover{box-shadow:0 0 0 2px #0EA5A5 inset;border-radius:5px
 /* event row — horizontal, proportional */
 .ev-row{background:var(--surface);border:1px solid var(--div);border-radius:var(--rc);margin-bottom:6px;cursor:pointer;transition:all 120ms;display:flex;align-items:stretch;overflow:hidden;}
 /* Brand campaign row — pink tint */
-.ev-row.campaign-row{background:#FDF2F8;border-color:#FBCFE8;}
+.ev-row.campaign-row{background:#FCE9F2;border-color:#F6BEDA;}
 .ev-row.campaign-row:hover{border-color:#DB2777;box-shadow:0 2px 10px rgba(219,39,119,.08);}
-.ev-row.campaign-row .ev-row-date{background:#FCE7F3;border-right-color:#FBCFE8;}
+.ev-row.campaign-row .ev-row-date{background:#FAD2E7;border-right-color:#F6BEDA;}
 .ev-row.campaign-row .ev-row-day{color:#9D174D;}
 .ev-row.campaign-row .ev-row-mon{color:#BE185D;}
 /* Year grid: campaign tint on day cell */
-.mc-day.in-campaign{background:#FCE7F3 !important;border-radius:0;}
-.mc-day.camp-start{background:#FCE7F3 !important;border-radius:5px 0 0 5px;}
-.mc-day.camp-end{background:#FCE7F3 !important;border-radius:0 5px 5px 0;}
-.mc-day.camp-solo{background:#FCE7F3 !important;border-radius:5px;}
+.mc-day.in-campaign{background:#FAD2E7 !important;border-radius:0;}
+.mc-day.camp-start{background:#FAD2E7 !important;border-radius:5px 0 0 5px;}
+.mc-day.camp-end{background:#FAD2E7 !important;border-radius:0 5px 5px 0;}
+.mc-day.camp-solo{background:#FAD2E7 !important;border-radius:5px;}
 /* Festival circle on campaign day */
 .mc-day-circle{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;}
 .ev-row:hover{border-color:#999;box-shadow:0 2px 10px rgba(0,0,0,.06);}
@@ -689,6 +693,178 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
 .ms-row:hover{background:rgba(13,13,13,.05);}
 .ms-row .count-badge{background:rgba(255,255,255,.65);}
 /* ── end Istanbul ────────────────────────────────────────────────── */
+
+/* ══ SHANGHAI ══════════════════════════════════════════════════════
+   Sticky bars: these painted a flat var(--bg) (#F2F2F0), which matched
+   the canvas exactly until Istanbul made the canvas a gradient — after
+   which they read as grey slabs floating over the content. A flat
+   colour can never match a gradient that changes down the page, so
+   they frost what passes underneath instead. (Sanctioned blur: sticky
+   over moving content, same case as .list-month-strip.)
+   ══════════════════════════════════════════════════════════════════ */
+.bd-sec{background:transparent;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);}
+.em-month-head{background:transparent;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  border-bottom-color:rgba(255,255,255,.65);}
+
+/* Rounded panels scroll inside a square track, so the bar cut across
+   the corner curve. Insetting the track keeps it clear of the radius. */
+.ms-drop::-webkit-scrollbar,.modal::-webkit-scrollbar,.dp-modal::-webkit-scrollbar,
+.day-popup::-webkit-scrollbar,.fest-grid::-webkit-scrollbar{width:6px;}
+.ms-drop::-webkit-scrollbar-track,.modal::-webkit-scrollbar-track,.dp-modal::-webkit-scrollbar-track,
+.day-popup::-webkit-scrollbar-track,.fest-grid::-webkit-scrollbar-track{background:transparent;margin:14px 0;}
+.ms-drop::-webkit-scrollbar-thumb,.modal::-webkit-scrollbar-thumb,.dp-modal::-webkit-scrollbar-thumb,
+.day-popup::-webkit-scrollbar-thumb,.fest-grid::-webkit-scrollbar-thumb{background:rgba(13,13,13,.18);border-radius:999px;}
+/* ── end Shanghai style fixes ─────────────────────────────────────── */
+
+/* ══ SHANGHAI · header B3 + side panel A2 ═════════════════════════════
+   The old header presented two different jobs as one group — a brand
+   PICKER and a brand MANAGER sitting side by side — which is why the
+   team never knew which to click. One switcher now does both, and it
+   moves left because it sets the context for everything else on screen.
+   Red survives in exactly one place: the notification badge.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* popovers must escape the nav. .nav was overflow-x:auto + overflow-y:visible,
+   and once ONE axis scrolls the other cannot stay visible — so the nav was
+   clipping every dropdown at its own bottom edge. Same trap as the sidebar. */
+.nav{overflow:visible;}
+.sidebar{overflow:visible;}
+
+.nav-sep{width:1px;height:22px;background:rgba(255,255,255,.16);flex:none;}
+
+/* brand switcher */
+.bsw{position:relative;}
+.bstrig{display:flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:var(--r);
+  border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.13);color:#fff;
+  font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;max-width:230px;}
+.bstrig:hover{background:rgba(255,255,255,.2);}
+.bstrig .bnm{overflow:hidden;text-overflow:ellipsis;}
+.bstrig .bdot{width:8px;height:8px;border-radius:50%;flex:none;box-shadow:0 0 0 2px rgba(255,255,255,.25);}
+
+.bpanel{position:absolute;top:44px;left:0;min-width:280px;max-height:70vh;overflow-y:auto;
+  background:rgba(255,255,255,.9);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);
+  border:1px solid rgba(255,255,255,.95);border-radius:16px;
+  box-shadow:0 18px 46px rgba(13,13,13,.18);z-index:650;display:none;padding:6px;}
+.bpanel.open{display:block;} .bpanel.right{left:auto;right:0;}
+.bpanel::-webkit-scrollbar{width:6px;}
+.bpanel::-webkit-scrollbar-track{background:transparent;margin:14px 0;}
+.bpanel::-webkit-scrollbar-thumb{background:rgba(13,13,13,.18);border-radius:999px;}
+.bphead{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--subtle);padding:7px 10px 5px;}
+.bpsep{height:1px;background:rgba(13,13,13,.07);margin:5px 6px;}
+.brow{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;cursor:pointer;font-size:13px;color:var(--text);}
+.brow:hover{background:rgba(13,13,13,.05);}
+.brow.on{background:var(--text);color:#fff;font-weight:600;}
+.brow.act{font-weight:600;color:var(--acc);}
+.brow .bdot{width:9px;height:9px;border-radius:50%;flex:none;}
+.brow .bnm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.brow .bct{font-size:11px;color:var(--muted);} .brow.on .bct{color:rgba(255,255,255,.7);}
+
+/* year stepper */
+.ystep{display:flex;align-items:center;gap:2px;height:36px;padding:0 4px;border-radius:var(--r);
+  border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);}
+.ystep button{width:26px;height:28px;border:none;background:transparent;color:rgba(255,255,255,.7);
+  font-size:15px;cursor:pointer;font-family:inherit;border-radius:6px;}
+.ystep button:hover{background:rgba(255,255,255,.16);color:#fff;}
+.ystep .yv{font-size:13px;font-weight:700;color:#fff;padding:0 6px;min-width:42px;text-align:center;}
+
+/* "Past months" — one quiet switch replacing the Full/Upcoming pair,
+   which looked identical to the view switcher but answered a different
+   question ("how much time", not "what shape"). */
+.qtog{display:flex;align-items:center;gap:7px;height:36px;padding:0 12px;border-radius:var(--r);
+  border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:rgba(255,255,255,.8);
+  font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;}
+.qtog:hover{background:rgba(255,255,255,.16);color:#fff;}
+.qtog i.sw{width:28px;height:16px;border-radius:999px;background:rgba(255,255,255,.22);position:relative;flex:none;transition:background 140ms;}
+.qtog i.sw::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:transform 140ms;}
+.qtog.on i.sw{background:var(--acc);} .qtog.on i.sw::after{transform:translateX(12px);} .qtog.on{color:#fff;}
+
+.tab-item.off{opacity:.35;cursor:not-allowed;}
+.tab-item.off:hover{color:rgba(255,255,255,.55);}
+
+/* export tells you what it will export before it does it */
+.exscope{padding:9px 11px;border-radius:9px;background:rgba(13,13,13,.04);margin-bottom:5px;font-size:12.5px;line-height:1.5;}
+.exscope b{display:block;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--subtle);margin-bottom:3px;}
+.exscope .dim{color:var(--muted);font-size:11.5px;}
+
+/* the one red left in the header */
+.bell{position:relative;width:36px;height:36px;border-radius:var(--r);border:1px solid rgba(255,255,255,.15);
+  background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);cursor:pointer;display:flex;
+  align-items:center;justify-content:center;font-size:16px;font-family:inherit;}
+.bell:hover{background:rgba(255,255,255,.16);color:#fff;}
+.bell .badge{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;
+  background:var(--acc);color:#fff;font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center;
+  border:2px solid #0D0D0D;box-shadow:0 0 0 3px rgba(214,40,40,.28);}
+.bell .badge.zero{display:none;}
+.npanel{position:absolute;top:46px;right:0;width:372px;max-height:70vh;overflow-y:auto;
+  background:rgba(255,255,255,.9);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);
+  border:1px solid rgba(255,255,255,.95);border-radius:16px;box-shadow:0 18px 46px rgba(13,13,13,.18);
+  z-index:650;display:none;}
+.npanel.open{display:block;}
+.npanel::-webkit-scrollbar{width:6px;}
+.npanel::-webkit-scrollbar-track{background:transparent;margin:14px 0;}
+.npanel::-webkit-scrollbar-thumb{background:rgba(13,13,13,.18);border-radius:999px;}
+.nphead{padding:12px 14px;border-bottom:1px solid rgba(13,13,13,.06);display:flex;align-items:center;gap:8px;}
+.nphead b{font-size:13px;} .nphead .mark{margin-left:auto;font-size:11px;font-weight:700;color:var(--acc);cursor:pointer;}
+.ngh{display:flex;align-items:center;gap:8px;padding:9px 14px 5px;font-size:11.5px;font-weight:700;color:var(--text);
+  background:rgba(13,13,13,.03);border-bottom:1px solid rgba(13,13,13,.05);}
+.ngh .ngn{margin-left:auto;font-size:10px;font-weight:800;background:var(--acc);color:#fff;border-radius:999px;padding:1px 7px;}
+.nrow{display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid rgba(13,13,13,.05);cursor:pointer;}
+.nrow:hover{background:rgba(13,13,13,.04);} .nrow.unread{background:rgba(214,40,40,.045);}
+.nav-av{width:24px;height:24px;border-radius:50%;background:#0D0D0D;color:#fff;font-size:10px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex:none;}
+.nav-av.client{background:#378ADD;}
+.nbody{min-width:0;flex:1;}
+/* message first — the comment is the headline, everything else is one quiet line */
+.nbody .msg{font-size:14px;font-weight:500;line-height:1.45;color:var(--text);margin:0 0 5px;}
+.nbody .attr{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.nbody .attr .who{font-weight:700;color:var(--text);}
+.nbody .attr .when{margin-left:auto;color:var(--subtle);}
+.npempty{padding:26px 16px;text-align:center;font-size:12.5px;color:var(--muted);}
+.npfoot{padding:9px 14px;text-align:center;font-size:12px;font-weight:600;color:var(--acc);cursor:pointer;}
+
+/* ── side panel A2 ── */
+.sidebar{display:flex;flex-direction:column;}
+.side-scroll{flex:1;overflow-y:auto;min-height:0;padding-right:2px;}
+.side-scroll::-webkit-scrollbar{width:3px;}
+.fgrp{margin-bottom:6px;}
+.fghead{display:flex;align-items:center;gap:6px;padding:7px 6px;border-radius:var(--r);cursor:pointer;
+  font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--subtle);white-space:nowrap;}
+.fghead:hover{background:rgba(13,13,13,.055);color:var(--text);}
+.fghead:hover .chev{color:var(--text);}
+.fghead .chev{margin-left:auto;transition:transform 160ms;font-size:12px;}
+.fgrp.closed .chev{transform:rotate(-90deg);} .fgrp.closed .fgbody{display:none;}
+.fghead .n{flex:none;font-size:10px;font-weight:800;color:#fff;background:var(--acc);border-radius:999px;padding:1px 6px;letter-spacing:0;}
+.fsearch{width:100%;height:30px;padding:0 10px;margin-bottom:6px;font-size:12px;border-radius:8px;
+  border:1.5px solid var(--div);background:rgba(255,255,255,.6);font-family:inherit;outline:none;color:var(--text);}
+.fsearch:focus{border-color:var(--acc);background:#fff;}
+.fbox{width:13px;height:13px;border-radius:4px;border:1.5px solid var(--div);background:var(--surface);flex:none;
+  display:flex;align-items:center;justify-content:center;}
+.s-month.on .fbox{background:var(--acc);border-color:var(--acc);}
+.s-month.on .fbox::after{content:"\2713";color:#fff;font-size:9px;font-weight:900;}
+
+/* filters hidden in a panel get forgotten, and then the numbers get
+   distrusted — so the active count is always visible by the title */
+.fsum{display:none;align-items:center;gap:8px;font-size:12px;font-weight:600;color:#854D0E;
+  background:#FEF9C3;border-radius:999px;padding:5px 12px;margin-bottom:4px;}
+.fsum.on{display:inline-flex;}
+.fsum .clr{opacity:.7;cursor:pointer;font-weight:800;}
+
+/* account block — everything that hid behind a gear now has a name on it */
+.acct{margin-top:auto;padding-top:10px;border-top:1px solid var(--div);position:relative;}
+.acctrig{display:flex;align-items:center;gap:8px;width:100%;padding:8px 6px;border-radius:10px;border:none;
+  background:transparent;cursor:pointer;font-family:inherit;text-align:left;}
+.acctrig:hover{background:rgba(255,255,255,.65);}
+.acav{width:28px;height:28px;border-radius:50%;background:var(--text);color:#fff;font-size:11px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex:none;}
+.actxt{display:flex;flex-direction:column;justify-content:center;flex:1;min-width:0;}
+.acnm{font-size:13px;font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.acrole{font-size:11px;color:var(--muted);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.acmenu{position:absolute;bottom:52px;left:0;width:246px;background:rgba(255,255,255,.92);
+  -webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);border:1px solid rgba(255,255,255,.95);
+  border-radius:14px;box-shadow:0 18px 46px rgba(13,13,13,.2);padding:6px;display:none;z-index:700;}
+.acmenu.open{display:block;}
+.acmail{font-size:11px;color:var(--subtle);padding:6px 10px 8px;word-break:break-all;line-height:1.5;}
+/* ── end Shanghai header + side panel ─────────────────────────────── */
 </style>
 </head>
 <body>
@@ -697,56 +873,62 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
 <nav class="nav">
   <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menu">☰</button>
   <div class="nav-brand" id="nav-brand-txt">CC Marketing Calendar<span class="dot">.</span></div>
-  <select id="year-sel" onchange="setYear(this.value)" title="Year" style="height:34px;padding:0 8px;border-radius:var(--r);font-size:13px;font-weight:700;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-family:inherit;cursor:pointer;margin-left:4px;">
-    <option value="2026">2026</option>
-  </select>
+  <span class="nav-sep"></span>
+
+  <!-- ONE brand control. It used to be a picker (a select) next to a
+       manager (a button) — two jobs that looked like one, which is why
+       nobody knew which to click. It sits left because it decides the
+       context for every other control on this bar. -->
+  <div class="bsw" id="brand-sw">
+    <button class="bstrig" id="brand-trig" onclick="toggleBrandSw(event)">
+      <span class="bdot" id="brand-trig-dot" style="background:var(--text)"></span>
+      <span class="bnm" id="brand-trig-nm">All brands</span>
+      <i class="ti ti-chevron-down" style="font-size:13px;opacity:.7;"></i>
+    </button>
+    <div class="bpanel" id="brand-panel"></div>
+  </div>
+
   <div class="tab-pill" style="margin-left:2px;">
     <button class="tab-item on" data-v="year" onclick="setView('year',this)">Calendar</button>
     <button class="tab-item" data-v="list" onclick="setView('list',this)">List</button>
+    <button class="tab-item" data-v="content" id="tab-content" onclick="navContent(this)"
+            title="Pick a brand to open Content">Content</button>
   </div>
-  <div class="tab-pill" title="Show the whole year, or only this month onwards">
-    <button class="tab-item fn-item" data-f="0" onclick="setFromNow(false)">Full</button>
-    <button class="tab-item fn-item on" data-f="1" onclick="setFromNow(true)">Upcoming</button>
+
+  <div class="ystep">
+    <button onclick="stepYear(-1)" title="Previous year">‹</button>
+    <span class="yv" id="year-val">2026</span>
+    <button onclick="stepYear(1)" title="Next year">›</button>
   </div>
+
+  <!-- was "Full | Upcoming": two pills identical to the view switcher but
+       answering a different question. One switch, and it says what it does. -->
+  <button class="qtog" id="past-tog" onclick="setFromNow(!fromNow)" title="Show months before this one">
+    <i class="sw"></i> Past months
+  </button>
+  <span class="nav-year" id="range-lbl"></span>
+
   <div class="nav-right">
-    <!-- Industry multiselect -->
-    <div class="ms-wrap" id="ind-ms-wrap">
-      <button class="ms-trigger" id="ind-ms-btn" onclick="toggleMS()">
-        <span id="ind-ms-lbl">All Industries</span>
-        <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="bsw">
+      <button class="nav-btn" id="export-btn" onclick="toggleExportSw(event)">
+        <i class="ti ti-download"></i> Export <i class="ti ti-chevron-down" style="font-size:11px;opacity:.6;"></i>
       </button>
-      <div class="ms-drop" id="ind-ms-drop">
-        <div class="ms-actions">
-          <button class="ms-act" onclick="selAllInd()">All</button>
-          <button class="ms-act" onclick="clrInd()">Clear</button>
-        </div>
-        <div id="ind-ms-items"></div>
-      </div>
+      <div class="bpanel right" id="export-panel"></div>
     </div>
-
-    <select id="brand-sel" onchange="setBrand(this.value)" style="height:34px;padding:0 10px;border-radius:var(--r);font-size:12px;font-weight:600;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);font-family:inherit;cursor:pointer;min-width:150px;">
-      <option value="">★ Master Calendar</option>
-    </select>
-    <button class="nav-btn" onclick="openM('brand-mgr')">Brands</button>
-
-    <button class="nav-btn red" onclick="exportXLSX()">↓ Export current view</button>
-    <div class="ms-wrap">
-      <button class="nav-btn" id="setup-btn" onclick="toggleSetupMenu(event)" title="Menu">⚙</button>
-      <div class="ms-drop" id="setup-drop" style="top:44px;right:0;left:auto;min-width:230px;">
-        <div style="padding:7px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--div);margin-bottom:4px;" id="acct-email"></div>
-        <div class="ms-row staff-row" onclick="closeSetupMenu();openM('ev-mgr')">Events database</div>
-        <div class="ms-row staff-row" onclick="closeSetupMenu();openM('ind-mgr')">Industries</div>
-        <div class="ms-row staff-row" onclick="closeSetupMenu();carryForward()">Carry forward to next year</div>
-        <div class="ms-row staff-row" onclick="closeSetupMenu();openTrash()">Trash</div>
-        <div class="ms-row admin-row" onclick="closeSetupMenu();openPeople()">People &amp; access</div>
-        <div class="ms-row admin-row" onclick="closeSetupMenu();window.open('app.html','_blank')" title="Roles &amp; permissions for the new platform (Social module coming)">CC Platform ↗</div>
-        <div class="staff-row" style="height:1px;background:var(--div);margin:4px 0;"></div>
-        <div class="ms-row" onclick="closeSetupMenu();loadAll(true)">⟳ Refresh</div>
-        <div class="ms-row" onclick="closeSetupMenu();showSetPass()">Change password</div>
-        <div class="ms-row" onclick="signOut()">Sign out</div>
-      </div>
+    <div class="bsw">
+      <button class="bell" id="bell-btn" onclick="toggleBell(event)" title="Notifications">
+        <i class="ti ti-bell"></i><span class="badge zero" id="bell-badge">0</span>
+      </button>
+      <div class="npanel" id="notif-panel"></div>
     </div>
   </div>
+
+  <!-- kept as the model for brand selection so every existing code path
+       (rebuildBrSel, client lock, edit-guard) keeps working untouched -->
+  <select id="brand-sel" onchange="setBrand(this.value)" style="display:none;">
+    <option value="">All brands</option>
+  </select>
+  <select id="year-sel" onchange="setYear(this.value)" style="display:none;"></select>
 </nav>
 
 
@@ -754,8 +936,35 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
 <!-- APP -->
 <div class="layout">
   <aside class="sidebar">
-    <div id="sb-stats" style="margin-bottom:4px;"></div>
-    <div id="sb-months"></div>
+    <!-- Shanghai: the panel scrolls internally so the account menu at the
+         bottom can escape it. The sidebar itself must NOT scroll, or it
+         clips the popover exactly as the nav used to. -->
+    <div class="side-scroll">
+      <div id="sb-stats" style="margin-bottom:4px;"></div>
+      <div id="sb-months"></div>
+    </div>
+    <!-- everything that used to hide behind a ⚙ now has a name on it -->
+    <div class="acct" id="acct-block">
+      <button class="acctrig" onclick="popOpen('acct-menu',event)">
+        <span class="acav" id="acct-av">·</span>
+        <span class="actxt"><span class="acnm" id="acct-name">…</span><span class="acrole" id="acct-role"></span></span>
+        <i class="ti ti-chevron-up" style="color:var(--subtle);font-size:14px;flex:none;"></i>
+      </button>
+      <div class="acmenu" id="acct-menu">
+        <div class="acmail" id="acct-email"></div>
+        <div class="bpsep"></div>
+        <div class="brow staff-row" onclick="closeAllPops();openM('ev-mgr')"><i class="ti ti-calendar-cog"></i><span class="bnm">Events database</span></div>
+        <div class="brow staff-row" onclick="closeAllPops();openM('ind-mgr')"><i class="ti ti-tags"></i><span class="bnm">Industries</span></div>
+        <div class="brow staff-row" onclick="closeAllPops();carryForward()"><i class="ti ti-arrow-forward"></i><span class="bnm">Carry forward to next year</span></div>
+        <div class="brow staff-row" onclick="closeAllPops();openTrash()"><i class="ti ti-trash"></i><span class="bnm">Trash</span></div>
+        <div class="brow admin-row" onclick="closeAllPops();openPeople()"><i class="ti ti-users"></i><span class="bnm">People &amp; access</span></div>
+        <div class="brow admin-row" onclick="closeAllPops();window.open('app.html','_blank')"><i class="ti ti-external-link"></i><span class="bnm">CC Platform</span></div>
+        <div class="bpsep"></div>
+        <div class="brow" onclick="closeAllPops();loadAll(true)"><i class="ti ti-refresh"></i><span class="bnm">Refresh</span></div>
+        <div class="brow" onclick="closeAllPops();showSetPass()"><i class="ti ti-key"></i><span class="bnm">Change password</span></div>
+        <div class="brow" onclick="signOut()"><i class="ti ti-logout"></i><span class="bnm">Sign out</span></div>
+      </div>
+    </div>
   </aside>
   <main class="main" id="main"></main>
 </div>
@@ -885,8 +1094,24 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
     <div class="modal-body" style="max-height:72vh;overflow-y:auto;">
       <div id="bm-list" style="margin-bottom:12px;"></div>
       <button class="btn btn-s btn-dash" onclick="startNewBrand()">+ Add new brand</button>
-      <div id="bm-form" style="display:none;margin-top:18px;padding-top:18px;border-top:1px solid var(--div);">
-        <div style="font-size:16px;font-weight:700;margin-bottom:16px;" id="bm-form-title">New brand</div>
+    </div>
+  </div>
+</div>
+
+<!-- BRAND FORM — Shanghai: its own dialog. It used to be injected below
+     the brand list inside the manager, off-screen, with no scroll and no
+     indication it had appeared, so people never found it. Every other
+     "create" in the app is a dialog; this one now matches. -->
+<div class="overlay" id="ov-brand-form" style="z-index:620;" onclick="if(event.target===this)cancelBrand()">
+  <div class="modal wide">
+    <div class="modal-top">
+      <div><div class="modal-title" id="bm-form-title">New brand</div>
+        <div class="modal-sub" id="bm-form-sub">Name it, pick its industries, and the calendar fills in automatically</div></div>
+      <button class="modal-x" onclick="cancelBrand()">✕</button>
+    </div>
+    <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+<div id="bm-form">
+        
         <div class="field"><label class="fl">Brand name *</label>
           <input class="fi" id="bf-name" type="text" placeholder="e.g. your client's brand name"/>
         </div>
@@ -925,7 +1150,7 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
         </div>
       </div>
     </div>
-    <div class="modal-foot" id="bm-foot" style="display:none;">
+<div class="modal-foot" id="bm-foot" >
       <button class="btn btn-g" onclick="cancelBrand()">Cancel</button>
       <button class="btn btn-p" onclick="saveBrand()">Save brand</button>
     </div>
@@ -1243,7 +1468,6 @@ function visibleMonths(){
 }
 function setFromNow(v){
   fromNow=v;
-  document.querySelectorAll(".fn-item").forEach(b=>b.classList.toggle("on",(b.dataset.f==="1")===v));
   const vm=visibleMonths(); if(!vm.includes(curMonth)) curMonth=vm[0];
   render();
 }
@@ -1253,8 +1477,10 @@ function placeDrop(dropId,btn){
   d.style.left="auto"; d.style.right=Math.max(8,window.innerWidth-r.right)+"px";
   d.style.zIndex="9000";
 }
-function toggleSetupMenu(e){e.stopPropagation();placeDrop("setup-drop",e.currentTarget);document.getElementById("setup-drop").classList.toggle("open");}
-function closeSetupMenu(){document.getElementById("setup-drop").classList.remove("open");}
+/* the ⚙ menu became the named account block at the foot of the side panel */
+function toggleSetupMenu(e){const d=document.getElementById("setup-drop"); if(!d) return;
+  e.stopPropagation();placeDrop("setup-drop",e.currentTarget);d.classList.toggle("open");}
+function closeSetupMenu(){const d=document.getElementById("setup-drop"); if(d) d.classList.remove("open");}
 document.addEventListener("click",()=>{closeSetupMenu();const a=document.getElementById("acct-drop");if(a)a.classList.remove("open");});
 
 // All multi-day campaigns (with home month, so Edit works from any covered day)
@@ -1267,7 +1493,9 @@ function allCampaigns(){
 }
 const campCovers=(c,m,day)=>(m>c.sM||(m===c.sM&&day>=c.sD))&&(m<c.eM||(m===c.eM&&day<=c.eD));
 // One pink for campaigns; a deeper pink means "more than one campaign today" (badge shows the count)
-const CAMP_PINK="#FCE7F3", CAMP_PINK_DEEP="#F5BAD9";
+// Shanghai: deepened so campaign runs read clearly on the Istanbul
+// hero card (blush-lavender) as well as on plain white month cards.
+const CAMP_PINK="#FAD2E7", CAMP_PINK_DEEP="#F0A3CC";
 const campSort=(a,b)=>(a.sM-b.sM)||(a.sD-b.sD)||(a.eM-b.eM)||(a.eD-b.eD)||String(a.e.id).localeCompare(String(b.e.id));
 function campaignsCovering(m,day){return allCampaigns().filter(c=>campCovers(c,m,day));}
 const escAttr=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
@@ -1421,7 +1649,7 @@ function allFiltered(){let a=[];for(let m=1;m<=12;m++) a=a.concat(filtered(m).ma
 
 // ── RENDER ─────────────────────────────────────────────────
 function render(){
-  buildSidebar(); buildIndDropdown();
+  buildSidebar(); syncHeaderState();
   // Update nav brand: show brand name when active
   const brandEl=document.getElementById("nav-brand-txt");
   if(brandEl) brandEl.innerHTML=`CC Marketing Calendar<span class="dot">.</span>`;
@@ -1429,12 +1657,108 @@ function render(){
   if(view==="content"&&!brandActive){view="year";document.querySelectorAll(".tab-item").forEach(t=>t.classList.toggle("on",t.dataset.v==="year"));}
   if(view==="brief"&&!(brandActive&&canEdit())){view="year";document.querySelectorAll(".tab-item").forEach(t=>t.classList.toggle("on",t.dataset.v==="year"));}
   // Social/Planning/Content buttons now live in the brand header (rendered by renderYear/renderSocial)
-  document.body.classList.toggle("planning",planningMode&&view==="year"&&brandActive);
+  // Shanghai: Planning is no longer a mode. With the Social layer on and
+  // edit rights, every day is clickable to plan a post.
+  document.body.classList.toggle("planning",socialLayer&&view==="year"&&brandActive&&canEdit());
   view==="brief"?renderBrief():(view==="content"?renderSocial():(view==="year"?renderYear():renderList()));
 }
-function toggleSocialLayer(){ socialLayer=!socialLayer; if(!socialLayer){ planningMode=false; if(view==="content"){ setView("year"); return; } } render(); }
-function togglePlanning(){ if(!socialLayer)socialLayer=true; planningMode=!planningMode; if(view!=="year")setView("year"); else render(); }
-function toggleContent(){ if(view==="content"){ setView("year"); } else { socialLayer=true; planningMode=false; setView("content"); } }
+function toggleSocialLayer(){ socialLayer=!socialLayer; if(!socialLayer&&view==="content"){ setView("year"); return; } render(); }
+// Shanghai: Planning removed as a mode. Kept as a no-op shim so any
+// stale call site cannot throw; planningMode stays false forever.
+function togglePlanning(){ if(!socialLayer)socialLayer=true; if(view!=="year")setView("year"); else render(); }
+function toggleContent(){ if(view==="content"){ setView("year"); } else { socialLayer=true; setView("content"); } }
+
+
+/* ══ SHANGHAI · side panel A2 ═════════════════════════════════════════
+   Two filters used to live in two places — categories in the panel,
+   industries in the header — both filtering the same calendar. They are
+   one job, so they share one region. The risk of hiding filters is that
+   people forget they are on and stop trusting the numbers, so the active
+   count is always visible next to the year title.
+   ══════════════════════════════════════════════════════════════════ */
+let fgOpen={cat:true,ind:false};      // industries collapsed: 16 rows is too many to sit open
+function toggleFGrp(k){ fgOpen[k]=!fgOpen[k]; buildSidebar(); }
+
+function indCounts(){
+  const out={};
+  INDS.forEach(ind=>{
+    let n=0;
+    for(let m=1;m<=12;m++) (evs[m]||[]).forEach(e=>{ if(((e.relevance||{})[ind.id])==="high") n++; });
+    out[ind.id]=n;
+  });
+  return out;
+}
+function buildFilterGroups(){
+  const wrap=document.createElement("div");
+  const cats=Object.entries(CATS).filter(([k])=>k!=="post");
+  const catBody=cats.map(([k,c])=>{
+    const prev=[...selCats]; selCats=[k];
+    let cnt=0; for(const m of visibleMonths()) cnt+=filtered(m).filter(e=>!e._isPost).length;
+    selCats=prev;
+    const on=selCats.length===1&&selCats[0]===k;
+    return `<div class="s-month${on?" on":""}" style="margin-bottom:2px;" onclick="selCats=${on?"[]":"['"+k+"']"};render();">
+      <span style="display:flex;align-items:center;gap:7px;min-width:0;">
+        <span style="width:8px;height:8px;border-radius:50%;background:${c.color};flex:none;"></span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">${c.short}</span>
+      </span><span class="s-month-count">${cnt}</span></div>`;
+  }).join("");
+  const cnts=indCounts();
+  const indBody=INDS.map(ind=>{
+    const on=selInds.includes(ind.id);
+    return `<div class="s-month ind-row${on?" on":""}" data-nm="${escAttr(String(ind.label).toLowerCase())}" style="margin-bottom:2px;"
+                 onclick="toggleInd('${ind.id}')">
+      <span style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <span class="fbox"></span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">${escAttr(ind.label)}</span>
+      </span><span class="s-month-count">${cnts[ind.id]||0}</span></div>`;
+  }).join("");
+  wrap.innerHTML=`
+    <div class="fgrp${fgOpen.cat?"":" closed"}">
+      <div class="fghead" onclick="toggleFGrp('cat')">Categories
+        ${selCats.length?`<span class="n">${selCats.length}</span>`:""}<i class="ti ti-chevron-down chev"></i></div>
+      <div class="fgbody">
+        <div class="s-month${selCats.length?"":" on"}" style="margin-bottom:2px;" onclick="selCats=[];render();">
+          <span>All categories</span></div>
+        ${catBody}
+      </div>
+    </div>
+    <div class="fgrp${fgOpen.ind?"":" closed"}">
+      <div class="fghead" onclick="toggleFGrp('ind')">Industries
+        ${selInds.length?`<span class="n">${selInds.length}</span>`:""}<i class="ti ti-chevron-down chev"></i></div>
+      <div class="fgbody">
+        <input class="fsearch" id="ind-q" placeholder="Find an industry…" oninput="filterIndRows(this.value)"/>
+        <div id="ind-rows">${indBody}</div>
+        ${selInds.length?`<div style="font-size:11.5px;font-weight:700;color:var(--acc);cursor:pointer;padding:6px 8px;" onclick="selInds=[];render();">Clear industries</div>`:""}
+      </div>
+    </div>`;
+  return wrap;
+}
+function toggleInd(id){
+  if(selInds.includes(id)) selInds=selInds.filter(i=>i!==id); else selInds.push(id);
+  render();
+}
+function filterIndRows(q){
+  q=(q||"").toLowerCase();
+  document.querySelectorAll("#ind-rows .ind-row").forEach(r=>{
+    r.style.display=(!q||r.dataset.nm.includes(q))?"":"none";
+  });
+}
+/* the chip that stops filters being silently on */
+function filterSummaryHtml(){
+  const n=selCats.length+selInds.length;
+  if(!n) return "";
+  return `<span class="fsum on"><span>${n} filter${n===1?"":"s"} active</span>
+          <span class="clr" onclick="selCats=[];selInds=[];render();">clear</span></span>`;
+}
+/* account block */
+function syncAccount(){
+  const nm=(ME.email||"").split("@")[0].replace(/[._-]+/g," ").replace(/\b\w/g,c=>c.toUpperCase());
+  const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
+  set("acct-name",nm||"Signed in");
+  set("acct-role",{admin:"Admin",team:"Team",client:"Client",pending:"Awaiting access"}[ME.role]||ME.role||"");
+  set("acct-av",(nm||"?").slice(0,1).toUpperCase());
+  set("acct-email",ME.email||"");
+}
 
 function buildSidebar(){
   if(view==="brief"&&activeBrand&&brands[activeBrand]&&canEdit()){ buildBriefSidebar(); return; }
@@ -1458,42 +1782,9 @@ function buildSidebar(){
     ${postTot?`<div style="font-size:13px;font-weight:700;color:#5B21B6;margin-top:6px;">${postTot}</div><div style="font-size:11px;color:#7C3AED;margin-top:1px;">regular posts</div>`:""}
   `;
 
-  // Event categories with counts — use filtered() so counts respect active industry filter
-  const catSection=document.createElement("div");
-  catSection.innerHTML=`<div class="s-lbl" style="margin-top:16px;">Event Categories</div>`;
-  // "All" option — total of ALL filtered events (ignore cat filter for the all-count)
-  const allActive=selCats.length===0;
-  const allRow=document.createElement("div");
-  allRow.className="s-month"+(allActive?" on":"");
-  allRow.style.cssText="margin-bottom:2px;";
-  // Count with industry filter but no cat filter
-  const savedCats=[...selCats]; selCats=[];
-  let allCount=0; for(const m of visibleMonths()) allCount+=filtered(m).filter(e=>!e._isPost).length;
-  selCats=savedCats;
-  allRow.innerHTML=`<span>All categories</span><span class="s-month-count">${allCount}</span>`;
-  allRow.onclick=()=>{selCats=[];render();};
-  catSection.appendChild(allRow);
-  // Each category — count respects current industry filter
-  Object.entries(CATS).forEach(([k,c])=>{
-    // Count: apply industry filter but only this cat
-    const prevCats=[...selCats]; selCats=[k];
-    let cnt=0; for(const m of visibleMonths()) cnt+=filtered(m).filter(e=>!e._isPost).length;
-    selCats=prevCats;
-    if(k==="post") return; // skip post category in sidebar
-    const isOn=selCats.length===1&&selCats[0]===k;
-    const row=document.createElement("div");
-    row.className="s-month"; row.style.cssText="margin-bottom:2px;";
-    if(isOn) row.style.cssText+="background:var(--text);color:#fff;font-weight:600;";
-    row.innerHTML=`
-      <div style="display:flex;align-items:center;gap:7px;min-width:0;">
-        <span style="width:8px;height:8px;border-radius:50%;background:${c.color};flex-shrink:0;display:inline-block;"></span>
-        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">${c.short}</span>
-      </div>
-      <span class="s-month-count">${cnt}</span>`;
-    row.onclick=()=>{selCats=isOn?[]:[k];render();};
-    catSection.appendChild(row);
-  });
-  sm.appendChild(catSection);
+  // Shanghai: one Filters region — categories AND industries together,
+  // since both filter the same calendar. Industries came out of the header.
+  sm.appendChild(buildFilterGroups());
 
   // Brand info if active
   if(activeBrand&&brands[activeBrand]){
@@ -1589,23 +1880,33 @@ function eeSetEndDate(d,m){
 }
 
 // Shared BRAND HEADER (Variation 2) — constant across calendar + content views
+// Shanghai: ONE definition of the brand title, used by the calendar,
+// the content view AND both brand-brief screens. They drifted apart
+// (34px vs 40px, dot vs no dot, centred vs baseline) precisely because
+// each screen wrote its own copy.
+function brandTitleHtml(name){
+  return `<div class="year-title brand-title" style="font-size:34px;color:var(--acc);line-height:1;">${escAttr(name)}<span style="color:var(--text);">.</span></div>`;
+}
 function brandHeaderHtml(){
   const b=brands[activeBrand]; if(!b) return "";
-  const name=`<div class="year-title" style="font-size:34px;color:var(--acc);line-height:1;">${escAttr(b.name)}<span style="color:var(--text);">.</span></div>`;
+  const name=brandTitleHtml(b.name);
   if(!canEdit()) return `<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">${name}</div>`;
   const socOn=socialLayer;
   // one crisp segmented control; every segment fixed 36px tall
   const seg=(active,dark,onclick,icon,label,first)=>`<span onclick="${onclick}" style="height:36px;box-sizing:border-box;padding:0 14px;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;${first?"":"border-left:1px solid rgba(214,40,40,.22);"}background:${active?(dark?"#0D0D0D":"#D62828"):"#fff"};color:${active?"#fff":"var(--muted)"};"><i class="ti ${icon}"></i> ${label}</span>`;
   let group;
   if(socOn){
-    group=`<div style="display:flex;align-items:stretch;height:36px;box-sizing:border-box;border:1px solid #D62828;border-radius:8px;overflow:hidden;">${seg(true,false,"toggleSocialLayer()","ti-photo","Social",true)}${seg(planningMode&&view==="year",true,"togglePlanning()","ti-pencil-plus","Planning",false)}${seg(view==="content",true,"toggleContent()","ti-list-details","Content",false)}</div>`;
+    // Shanghai: Planning is gone (the calendar is always plannable) and
+    // Content moved up into the nav's view switcher, so the brand header
+    // carries only the Social layer toggle.
+    group=`<div style="display:flex;align-items:stretch;height:36px;box-sizing:border-box;border:1px solid #D62828;border-radius:8px;overflow:hidden;">${seg(true,false,"toggleSocialLayer()","ti-photo","Social",true)}</div>`;
   } else {
     group=`<div style="display:flex;align-items:stretch;height:36px;box-sizing:border-box;border:1px solid var(--div);border-radius:8px;overflow:hidden;">${seg(false,false,"toggleSocialLayer()","ti-photo","Social",true)}</div>`;
   }
   const brief=`<button title="Brand brief" class="btn btn-s" onclick="openBrief()" style="background:var(--surface);"><i class="ti ti-file-text"></i> Brand brief</button>`;
   // planning hint lives INLINE in the header row (row height fixed at 36px by the buttons),
   // so toggling planning never pushes the calendar down.
-  const hint=(socOn&&planningMode&&view==="year")?`<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:#E1F5EE;color:#0E8A8A;font-size:11px;font-weight:600;white-space:nowrap;"><i class="ti ti-pencil-plus"></i> Click any date to plan a post</span>`:"";
+  const hint=(socOn&&view==="year"&&canEdit())?`<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:#E1F5EE;color:#0E8A8A;font-size:11px;font-weight:600;white-space:nowrap;"><i class="ti ti-pencil-plus"></i> Click any date to plan a post</span>`:"";
   return `<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">${name}${hint}</div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">${group}${brief}</div>
@@ -1617,9 +1918,11 @@ function renderYear(){
   let header;
   if(b){
     // match .year-head padding exactly so the brand name lands where "2026." does (and doesn't touch the nav)
-    header=`<div style="padding:28px 32px 20px;">${brandHeaderHtml()}</div>`;
+    header=`<div style="padding:28px 32px 20px;">${brandHeaderHtml()}
+      <div style="margin-top:10px;">${filterSummaryHtml()}</div></div>`;
   } else {
-    header=`<div class="year-head"><div class="year-title">${YEAR}<span>.</span></div><div class="year-sub">Click any date to view or add events</div></div>`;
+    header=`<div class="year-head"><div class="year-title">${YEAR}<span>.</span></div>
+      <div class="year-sub">Click any date to view or add events</div>${filterSummaryHtml()}</div>`;
   }
   mc.innerHTML=`${header}<div class="months-grid" id="yr-grid"></div>`;
   const g=document.getElementById("yr-grid");
@@ -1673,7 +1976,23 @@ function socialStatusEdit(id,value){
   socialFieldEdit(id,"status",value);
   const dot=document.getElementById("stdot-"+id); if(dot) dot.style.background=(SOCIAL_STATUS[value]||["","#888"])[1];
   logActivity(id,"changed status to "+((SOCIAL_STATUS[value]||[value])[0]));
-  if(view==="content"&&activeBrand) buildContentSidebar();
+  if(view==="content"&&activeBrand){
+    buildContentSidebar();
+    // Shanghai: the chip's PILL was painted once at render time from
+    // SOCIAL_CHIP, so only the 5px dot used to update — the pill kept the
+    // old status colour until something forced a re-render.
+    const chip=SOCIAL_CHIP[value]||["#F1EFE8","#5F5E5A"];
+    if(dot&&dot.parentElement){
+      dot.parentElement.style.background=chip[0];
+      const sel=dot.parentElement.querySelector("select"); if(sel) sel.style.color=chip[1];
+    }
+    // …and the ring on the calendar above is drawn by buildMini(), which
+    // only ever ran inside renderSocial(). Re-mount just that card:
+    // calling renderSocial() here would rebuild the whole post list,
+    // closing any open feedback panel and losing the scroll position.
+    const holder=document.getElementById("content-monthcard");
+    if(holder){ holder.innerHTML=""; holder.appendChild(buildMini(contentMonth)); }
+  }
 }
 function socialToggleSyncInline(id){
   const b=brands[activeBrand]; const p=(b.social||[]).find(x=>x.id===id); if(!p)return;
@@ -1698,9 +2017,11 @@ function socialViewCard(p){
   // Atlas: feedback toggle (count + unresolved dot) + per-card Edit button
   const cCount=fbCommentsFor(p.id).length;
   const openN=fbOpenCount(p.id);
+  // unread ≠ unresolved: one is "have I seen it", the other "is it settled"
+  const unreadN=fbUnreadFor(p.id).length;
   const isOpen=!!fbOpen[p.id];
   const fbToggleHtml=FB_AVAILABLE?`<span class="pc-fbtoggle${isOpen?" on":""}" onclick="fbTogglePanel('${p.id}')" title="Feedback &amp; activity" style="display:flex;align-items:center;gap:5px;cursor:pointer;padding:3px 9px;border-radius:999px;border:1px solid ${isOpen?"#0D0D0D":"var(--div)"};background:${isOpen?"#0D0D0D":"var(--surface)"};color:${isOpen?"#fff":"var(--muted)"};">
-      <i class="ti ti-message-circle" style="font-size:12px;"></i><span id="fbcount-${p.id}" style="font-size:11px;font-weight:700;">${cCount}</span>${openN?`<span style="width:5px;height:5px;border-radius:50%;background:var(--acc);"></span>`:""}
+      <i class="ti ti-message-circle" style="font-size:12px;"></i><span id="fbcount-${p.id}" style="font-size:11px;font-weight:700;">${cCount}</span>${unreadN?`<span title="${unreadN} new since you last looked" style="min-width:15px;height:15px;padding:0 4px;border-radius:999px;background:var(--acc);color:#fff;font-size:9.5px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;">${unreadN}</span>`:(openN?`<span title="${openN} unresolved" style="width:5px;height:5px;border-radius:50%;background:var(--subtle);"></span>`:"")}
     </span>`:"";
   const editBtnHtml=canEdit()?`<span class="pc-edit" style="display:flex;align-items:center;gap:3px;color:var(--muted);font-weight:700;cursor:pointer;" onclick="openSocialEditorById('${p.id}')" title="Edit post"><i class="ti ti-pencil" style="font-size:12px;"></i> Edit</span>`:"";
   return `<div class="pc" style="background:var(--surface);border:1px solid var(--div);border-radius:12px;overflow:hidden;margin-bottom:10px;">
@@ -1739,20 +2060,58 @@ function fbPanelHtml(p){
   const roleTag=kind=>kind==="client"
     ?`<span style="font-size:10px;font-weight:700;color:#378ADD;background:#E6F1FB;padding:1px 6px;border-radius:999px;">Client</span>`
     :`<span style="font-size:10px;font-weight:700;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:999px;">Team</span>`;
-  const commentRow=(c,isReply)=>`<div style="${isReply?"margin-top:8px;padding-top:8px;border-top:1px solid var(--div);":""}display:flex;gap:9px;align-items:flex-start;">
+  const reactionBar=c=>{
+    const mine=fbReactionsFor(c.id);
+    const counts={}; mine.forEach(r=>counts[r.emoji]=(counts[r.emoji]||0)+1);
+    const shown=REACTIONS.filter(e=>counts[e]).map(e=>
+      `<span onclick="fbToggleReaction('${p.id}','${c.id}','${e}')" title="${mine.filter(r=>r.emoji===e).map(r=>escAttr(r.actor_name)).join(", ")}"
+         style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;cursor:pointer;
+         background:${fbMyReaction(c.id,e)?"rgba(214,40,40,.10)":"var(--surface2)"};color:${fbMyReaction(c.id,e)?"var(--acc)":"var(--muted)"};">
+         ${e} ${counts[e]}</span>`).join("");
+    const picker=canComment()?`<span class="fb-addrx" style="position:relative;">
+        <span onclick="this.nextElementSibling.classList.toggle('open')" title="React"
+              style="font-size:12px;color:var(--subtle);cursor:pointer;padding:2px 6px;border-radius:999px;">☺+</span>
+        <span class="ms-drop" style="min-width:auto;padding:4px;display:none;">${REACTIONS.map(e=>
+          `<span onclick="fbToggleReaction('${p.id}','${c.id}','${e}')" style="font-size:15px;padding:3px 5px;cursor:pointer;">${e}</span>`).join("")}</span>
+      </span>`:"";
+    return (shown||picker)?`<div style="display:flex;align-items:center;gap:5px;margin-top:6px;flex-wrap:wrap;">${shown}${picker}</div>`:"";
+  };
+  const commentRow=(c,isReply)=>{
+    const editing=(fbEditing===c.id);
+    const body = editing
+      ? `<div style="margin-top:4px;"><textarea id="fb-edit-${c.id}" class="fi ta" style="min-height:56px;font-size:13px;">${escAttr(c.body)}</textarea>
+           <div style="display:flex;gap:6px;margin-top:6px;">
+             <button class="btn btn-p btn-sm" onclick="fbSaveEdit('${p.id}','${c.id}')">Save</button>
+             <button class="btn btn-g btn-sm" onclick="fbCancelEdit()">Cancel</button></div></div>`
+      : `<div style="font-size:13px;line-height:1.5;">${fbRich(c.body)}</div>${reactionBar(c)}`;
+    const own = fbIsMine(c)&&!editing
+      ? `<span style="font-size:11px;color:var(--subtle);cursor:pointer;" onclick="fbStartEdit('${c.id}')">Edit</span>
+         <span style="font-size:11px;color:var(--subtle);cursor:pointer;" onclick="fbDeleteComment('${p.id}','${c.id}')">Delete</span>`
+      : "";
+    return `<div style="${isReply?"margin-top:8px;padding-top:8px;border-top:1px solid var(--div);":""}display:flex;gap:9px;align-items:flex-start;">
       ${avatar(c.author_name,c.author_kind)}
       <div style="flex:1;min-width:0;">
         <div style="display:flex;align-items:center;gap:7px;margin-bottom:2px;flex-wrap:wrap;">
           <span style="font-size:12.5px;font-weight:700;">${escAttr(c.author_name)}</span>${roleTag(c.author_kind)}
-          <span style="font-size:11px;color:var(--subtle);margin-left:auto;">${fbTimeLabel(c.created_at)}</span>
+          ${c.edited_at?`<span style="font-size:10.5px;color:var(--subtle);">edited</span>`:""}
+          <span style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+            ${own}
+            <span style="font-size:11px;color:var(--subtle);cursor:pointer;" title="Copy a link to this comment"
+                  onclick="fbCopyLink('${p.id}','${c.id}')">Link</span>
+            <span style="font-size:11px;color:var(--subtle);">${fbTimeLabel(c.created_at)}</span>
+          </span>
         </div>
-        <div style="font-size:13px;line-height:1.5;">${escAttr(c.body)}</div>
+        ${body}
       </div>
     </div>`;
+  };
   const threadHtml=t=>{
     const c=t.top;
     const replyBox=fbReplyOpen[c.id]?`<div style="display:flex;gap:7px;margin-top:9px;">
-        <input id="fb-reply-${c.id}" class="fi" style="height:32px;font-size:12px;flex:1;" placeholder="Reply…" onkeydown="if(event.key==='Enter')fbAddComment('${p.id}','${c.id}')"/>
+        <input id="fb-reply-${c.id}" class="fi" style="height:32px;font-size:12px;flex:1;" placeholder="Reply…  @ to mention"
+        onkeydown="if(event.key==='Enter'){closeMentionBox();fbAddComment('${p.id}','${c.id}');}"
+        oninput="fbMentionKey(event,'fb-reply-${c.id}','${p.brand_id||activeBrand}')"
+        onblur="setTimeout(closeMentionBox,150)"/>
         <button class="btn btn-sm" style="background:#0D0D0D;color:#fff;border-color:#0D0D0D;" onclick="fbAddComment('${p.id}','${c.id}')">Reply</button>
       </div>`:"";
     return `<div style="background:var(--surface);border:1px solid var(--div);border-radius:9px;padding:11px 12px;margin-bottom:8px;${c.resolved?"opacity:.6;":""}">
@@ -1774,14 +2133,23 @@ function fbPanelHtml(p){
       <span style="margin-left:auto;color:var(--subtle);font-size:11px;">${fbTimeLabel(a.created_at)}</span>
     </div>`;
   // one chronological feed: threads (by top-comment time) interleaved with activity
+  const showDone=!!fbShowDone[p.id];
+  const visibleThreads=threads.filter(t=>showDone||!t.top.resolved);
   const feed=[
-    ...threads.map(t=>({at:t.top.created_at,html:threadHtml(t)})),
+    ...visibleThreads.map(t=>({at:t.top.created_at,html:threadHtml(t)})),
     ...acts.map(a=>({at:a.created_at,html:actLine(a)}))
   ].sort((x,y)=>new Date(x.at)-new Date(y.at)).map(x=>x.html).join("");
+  const doneToggle=doneN?`<div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
+      <span onclick="fbToggleDone('${p.id}')" style="font-size:11.5px;font-weight:600;color:var(--muted);cursor:pointer;">
+        ${showDone?"Hide":"Show"} ${doneN} resolved</span></div>`:"";
   const composer=canComment()?`<div style="display:flex;gap:9px;align-items:flex-start;margin-top:10px;">
       ${avatar(actorName(),actorKind())}
       <div style="flex:1;display:flex;gap:7px;">
-        <input id="fb-new-${p.id}" class="fi" style="height:34px;font-size:13px;flex:1;" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')fbAddComment('${p.id}',null)"/>
+        <textarea id="fb-new-${p.id}" class="fi ta" rows="1" style="min-height:34px;font-size:13px;flex:1;resize:vertical;"
+          placeholder="Add a comment…  (Enter to post, Shift+Enter for a new line)"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();fbAddComment('${p.id}',null);}"
+          oninput="fbMentionKey(event,'fb-new-${p.id}','${p.brand_id||activeBrand}')"
+          onblur="setTimeout(closeMentionBox,150)"></textarea>
         <button class="btn btn-sm" style="background:#0D0D0D;color:#fff;border-color:#0D0D0D;" onclick="fbAddComment('${p.id}',null)">Post</button>
       </div>
     </div>`:"";
@@ -1790,7 +2158,8 @@ function fbPanelHtml(p){
       <span style="font-size:12px;font-weight:700;color:var(--muted);">Feedback &amp; activity</span>
       <span style="font-size:11px;color:var(--subtle);">${openN} open · ${doneN} resolved</span>
     </div>
-    ${feed||`<div style="font-size:12px;color:var(--subtle);padding:2px 0 4px;">No feedback yet.</div>`}
+    ${doneToggle}
+    ${feed||`<div style="font-size:12px;color:var(--subtle);padding:2px 0 4px;">${threads.length?"Nothing open — all resolved.":"No feedback yet."}</div>`}
     ${composer}
   </div>`;
 }
@@ -2341,7 +2710,7 @@ function buildDayCard(ev,evM,day,expanded){
   const card=document.createElement("div");
   card.style.cssText="border:1.5px solid var(--div);border-radius:var(--rc);margin-bottom:8px;overflow:hidden;";
   card.dataset.card=ev.id;
-  const rangeStr=isCamp&&ev.endDate?` <span style="font-size:10px;color:#BE185D;background:#FCE7F3;padding:1px 6px;border-radius:3px;margin-left:4px;">${ev.date} ${MN[evM].slice(0,3)} – ${ev.endDate} ${MN[ev.endMonth||evM].slice(0,3)}</span>`:"";
+  const rangeStr=isCamp&&ev.endDate?` <span style="font-size:10px;color:#BE185D;background:#FAD2E7;padding:1px 6px;border-radius:3px;margin-left:4px;">${ev.date} ${MN[evM].slice(0,3)} – ${ev.endDate} ${MN[ev.endMonth||evM].slice(0,3)}</span>`:"";
   // header (click to expand)
   const head=document.createElement("div");
   head.style.cssText="padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;";
@@ -2552,7 +2921,7 @@ function renderList(){
           <div class="ev-row-meta">
             <span class="ev-row-cat" style="color:${catColor}">${catLabel}</span>
             ${ev.mega?'<span class="ev-row-key">⭐ Key date</span>':""}
-            ${isCampaign?'<span style="font-size:10px;padding:1px 6px;background:#FCE7F3;color:#9D174D;border-radius:3px;font-weight:600;">Campaign</span>':""}
+            ${isCampaign?'<span style="font-size:10px;padding:1px 6px;background:#FAD2E7;color:#9D174D;border-radius:3px;font-weight:600;">Campaign</span>':""}
           </div>
           <div class="ev-row-name">${ev.name}</div>
           ${ev.notes?`<div class="ev-row-notes">${ev.notes}</div>`:""}
@@ -2888,8 +3257,8 @@ function startNewBrand(){
   document.getElementById("bm-form-title").textContent="New brand";
   document.getElementById("bf-name").value="";
   buildBfIndGrid(); renderAudTags(); buildBfEvList(); renderBpList();
-  document.getElementById("bm-form").style.display="block";
-  document.getElementById("bm-foot").style.display="flex";
+  document.getElementById("bm-form-sub").textContent="Name it, pick its industries, and the calendar fills in automatically";
+  openM("brand-form");
 }
 
 function editBrand(k){
@@ -2900,14 +3269,13 @@ function editBrand(k){
   document.getElementById("bm-form-title").textContent=`Editing: ${b.name}`;
   document.getElementById("bf-name").value=b.name;
   buildBfIndGrid(); renderAudTags(); buildBfEvList(); renderBpList();
-  document.getElementById("bm-form").style.display="block";
-  document.getElementById("bm-foot").style.display="flex";
+  document.getElementById("bm-form-sub").textContent="Changes save when you press Save brand";
+  openM("brand-form");
 }
 
 function cancelBrand(){
   bmKey=null; bmEvOverride=null;
-  document.getElementById("bm-form").style.display="none";
-  document.getElementById("bm-foot").style.display="none";
+  closeM("brand-form");
 }
 
 function saveBrand(){
@@ -2940,7 +3308,7 @@ function setBrand(k){activeBrand=k;render();}
 function rebuildBrSel(){
   const sel=document.getElementById("brand-sel");
   const cur=sel.value||activeBrand;
-  sel.innerHTML=`<option value="">★ Master Calendar</option>`;
+  sel.innerHTML=`<option value="">All brands</option>`;   // Shanghai: "Master Calendar" was internal jargon nobody understood
   Object.entries(brands).forEach(([k,b])=>{
     const o=document.createElement("option");
     o.value=k; o.textContent=b.name;
@@ -3216,8 +3584,10 @@ function rmInd(id){
 }
 
 // ── INDUSTRY DROPDOWN ──────────────────────────────────────
+/* Shanghai: industries moved into the side panel. Kept as guarded
+   no-ops so any remaining call site cannot throw. */
 function buildIndDropdown(){
-  const items=document.getElementById("ind-ms-items"); items.innerHTML="";
+  const items=document.getElementById("ind-ms-items"); if(!items) return; items.innerHTML="";
   INDS.forEach(ind=>{
     // Count events where this industry has high relevance
     let highCnt=0, medCnt=0;
@@ -3244,12 +3614,13 @@ function buildIndDropdown(){
 
 function updateIndLbl(){
   const btn=document.getElementById("ind-ms-btn"); const lbl=document.getElementById("ind-ms-lbl");
+  if(!btn||!lbl) return;
   if(!selInds.length){lbl.textContent="All Industries";btn.classList.remove("active");}
   else if(selInds.length===1){lbl.textContent=INDS.find(i=>i.id===selInds[0])?.label||"1 selected";btn.classList.add("active");}
   else{lbl.textContent=`${selInds.length} industries`;btn.classList.add("active");}
 }
 
-function toggleMS(){const d=document.getElementById("ind-ms-drop");placeDrop("ind-ms-drop",document.getElementById("ind-ms-btn"));d.classList.toggle("open");if(d.classList.contains("open")){const fn=e=>{if(!document.getElementById("ind-ms-wrap").contains(e.target)){d.classList.remove("open");document.removeEventListener("click",fn);}};setTimeout(()=>document.addEventListener("click",fn),50);}}
+function toggleMS(){const d=document.getElementById("ind-ms-drop"); if(!d) return;placeDrop("ind-ms-drop",document.getElementById("ind-ms-btn"));d.classList.toggle("open");if(d.classList.contains("open")){const fn=e=>{if(!document.getElementById("ind-ms-wrap").contains(e.target)){d.classList.remove("open");document.removeEventListener("click",fn);}};setTimeout(()=>document.addEventListener("click",fn),50);}}
 function selAllInd(){selInds=INDS.map(i=>i.id);buildIndDropdown();render();}
 function clrInd(){selInds=[];buildIndDropdown();render();}
 
@@ -3321,6 +3692,117 @@ function setView(v,btn){
   document.querySelectorAll(".tab-item").forEach(t=>t.classList.toggle("on",t.dataset.v===v));
   render();
 }
+
+
+/* ══ SHANGHAI · header B3 behaviour ═══════════════════════════════════ */
+function closeAllPops(){
+  ["brand-panel","export-panel","notif-panel","acct-menu"].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.classList.remove("open");
+  });
+}
+document.addEventListener("click",closeAllPops);
+function popOpen(id,e){
+  if(e) e.stopPropagation();
+  const el=document.getElementById(id); if(!el) return;
+  const was=el.classList.contains("open");
+  closeAllPops(); if(!was) el.classList.add("open");
+}
+
+/* ── brand switcher: picker AND manager in one control ── */
+function brandCount(k){
+  if(!k) { let n=0; for(const m of visibleMonths()) n+=filtered(m).filter(e=>!e._isPost).length; return n; }
+  const b=brands[k]; if(!b) return 0;
+  return (b.evIds?b.evIds.length:0)+((b.posts||[]).length);
+}
+function buildBrandPanel(){
+  const el=document.getElementById("brand-panel"); if(!el) return;
+  const canSeeAll=ME.role!=="client";
+  const list=Object.entries(brands).sort((a,b)=>String(a[1].name).localeCompare(String(b[1].name)));
+  let h="";
+  if(canSeeAll){
+    h+=`<div class="bphead">Viewing</div>
+        <div class="brow${activeBrand?"":" on"}" onclick="pickBrand('')">
+          <span class="bdot" style="background:var(--text)"></span>
+          <span class="bnm">All brands</span><span class="bct">${brandCount("")}</span></div>
+        <div class="bpsep"></div><div class="bphead">Brands</div>`;
+  }
+  h+=list.map(([k,b])=>`<div class="brow${activeBrand===k?" on":""}" onclick="pickBrand('${k}')">
+        <span class="bdot" style="background:${b.color||"#6B6B6B"}"></span>
+        <span class="bnm">${escAttr(b.name)}</span><span class="bct">${(b.posts||[]).length||""}</span></div>`).join("");
+  if(canEdit()){
+    h+=`<div class="bpsep"></div>
+        <div class="brow act" onclick="closeAllPops();openM('brand-mgr');startNewBrand()"><i class="ti ti-plus"></i><span class="bnm">New brand</span></div>
+        <div class="brow act" onclick="closeAllPops();openM('brand-mgr')"><i class="ti ti-settings"></i><span class="bnm">Manage brands…</span></div>`;
+  }
+  el.innerHTML=h;
+}
+function toggleBrandSw(e){ buildBrandPanel(); popOpen("brand-panel",e); }
+function pickBrand(k){ closeAllPops(); const sel=document.getElementById("brand-sel"); if(sel) sel.value=k; setBrand(k); }
+function syncBrandTrig(){
+  const nm=document.getElementById("brand-trig-nm"), dot=document.getElementById("brand-trig-dot");
+  if(!nm) return;
+  const b=activeBrand&&brands[activeBrand];
+  nm.textContent=b?b.name:"All brands";
+  dot.style.background=b?(b.color||"#6B6B6B"):"var(--text)";
+  const tc=document.getElementById("tab-content");
+  if(tc) tc.classList.toggle("off",!activeBrand);       /* Content needs a brand */
+}
+function navContent(btn){
+  if(!activeBrand){ toast("Pick a brand first — Content is per brand"); return; }
+  socialLayer=true; setView("content",btn);
+}
+
+/* ── year stepper ── */
+function stepYear(d){
+  const sel=document.getElementById("year-sel"); if(!sel) return;
+  const years=[...sel.options].map(o=>parseInt(o.value)).sort((a,b)=>a-b);
+  const i=years.indexOf(YEAR), n=i<0?-1:i+d;
+  if(n<0||n>=years.length) return;          // nothing beyond the real range
+  sel.value=String(years[n]);
+  setYear(String(years[n]));
+}
+/* ── header state: year, past-months switch, visible range ── */
+function syncHeaderState(){
+  syncAccount(); syncBell();
+  const yv=document.getElementById("year-val"); if(yv) yv.textContent=YEAR;
+  const tg=document.getElementById("past-tog"); if(tg) tg.classList.toggle("on",!fromNow);
+  const rl=document.getElementById("range-lbl");
+  if(rl){ const ms=visibleMonths(); rl.textContent = ms.length===12 ? "All year"
+        : (ms.length? MN[ms[0]].slice(0,3)+" – "+MN[ms[ms.length-1]].slice(0,3) : ""); }
+  syncBrandTrig();
+}
+
+/* ── export: says what it will export before it does it ── */
+function exportScopeText(){
+  const who=activeBrand&&brands[activeBrand]?brands[activeBrand].name:"All brands";
+  const ms=visibleMonths();
+  const span=ms.length===12?"all year":(MN[ms[0]].slice(0,3)+" – "+MN[ms[ms.length-1]].slice(0,3));
+  if(view==="content"&&activeBrand){
+    const n=socialForBrandYear(activeBrand,YEAR).filter(x=>x.month===contentMonth).length;
+    return [who+" · "+MN[contentMonth]+" "+YEAR, n+" post"+(n===1?"":"s")+" in this month"];
+  }
+  let n=0; for(const m of ms) n+=filtered(m).filter(e=>!e._isPost).length;
+  const f=(selInds.length||selCats.length)?" · filtered":"";
+  return [who+" · "+YEAR+" · "+span, n+" event"+(n===1?"":"s")+" · "+ms.length+" month"+(ms.length===1?"":"s")+f];
+}
+function buildExportPanel(){
+  const el=document.getElementById("export-panel"); if(!el) return;
+  const [line1,line2]=exportScopeText();
+  const isContent=(view==="content"&&activeBrand);
+  el.innerHTML=`<div class="exscope"><b>What will be exported</b>
+      <div>${escAttr(line1)}<br><span class="dim">${escAttr(line2)}</span></div></div>`
+    + (isContent
+      ? `<div class="brow act" onclick="closeAllPops();doExport('word')"><i class="ti ti-file-text"></i><span class="bnm">Word document</span></div>
+         <div class="brow act" onclick="closeAllPops();doExport('excel')"><i class="ti ti-table"></i><span class="bnm">Excel sheet</span></div>
+         <div class="brow act" onclick="closeAllPops();doExport('ppt')"><i class="ti ti-presentation"></i><span class="bnm">PowerPoint deck</span></div>`
+      : `<div class="brow act" onclick="closeAllPops();exportXLSX()"><i class="ti ti-table"></i><span class="bnm">Excel sheet</span></div>`);
+}
+function toggleExportSw(e){ buildExportPanel(); popOpen("export-panel",e); }
+
+/* ── notification bell (panel content wired in S5) ── */
+/* (S3 placeholder removed — the real notification builder lives in S5) */
+
+function toggleBell(e){ buildNotifPanel(); popOpen("notif-panel",e); }
 
 // TOAST
 function toast(msg,type=""){
@@ -3872,8 +4354,8 @@ function exportMasterXLSX(){
   const wb=XLSX.utils.book_new();
   const ws=XLSX.utils.aoa_to_sheet(rows);
   ws["!cols"]=[{wch:6},{wch:6},{wch:40},{wch:24},{wch:50},...INDS.map(()=>({wch:10})),{wch:8},{wch:18}];
-  XLSX.utils.book_append_sheet(wb,ws,"Master Calendar");
-  XLSX.writeFile(wb,"CC-Master-Calendar-"+YEAR+"-REVIEW.xlsx");
+  XLSX.utils.book_append_sheet(wb,ws,"All brands");   // same wording as the app — two names for one thing is what caused the confusion
+  XLSX.writeFile(wb,"CC-All-Brands-Calendar-"+YEAR+"-REVIEW.xlsx");
   toast("Review sheet exported — edit dates/names freely, keep the ID column untouched");
 }
 
@@ -3957,7 +4439,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v38 Istanbul — glass reskin (styling only, zero layout change)";
+const TOOL_VERSION="v39 Shanghai — new header, filters in the panel, comments that reach people";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -4300,26 +4782,270 @@ async function dbDeleteMonthItem(id){ if(!canEdit()) return; rtGRemove("monthIte
 // Feature-detected: if the Atlas migration hasn't been applied yet the
 // tables don't exist — the app must keep working with the panel hidden.
 let FB_AVAILABLE=false;
-const POSTFB={comments:{},activity:{}};
+const POSTFB={comments:{},activity:{},reactions:{},seen:{}};
 let fbOpen={}; // postId -> bool (panel expanded)
 function canComment(){ return ["admin","team","client"].includes(ME.role); }
 function actorName(){ return (ME.email||"").split("@")[0]||"someone"; }
 function actorKind(){ return ME.role==="client"?"client":"team"; }
 async function loadPostFeedback(){
   try{
-    const [c,a]=await Promise.all([
+    const me=(ME.email||"").toLowerCase();
+    const [c,a,rx,sn]=await Promise.all([
       sb.from("post_comments").select("*").order("created_at"),
-      sb.from("post_activity").select("*").order("created_at")
+      sb.from("post_activity").select("*").order("created_at"),
+      sb.from("comment_reactions").select("*"),
+      sb.from("post_seen").select("*")
     ]);
+    loadPeople();
     if(c.error||a.error){ FB_AVAILABLE=false; return; }
     FB_AVAILABLE=true;
-    POSTFB.comments={}; POSTFB.activity={};
+    POSTFB.comments={}; POSTFB.activity={}; POSTFB.reactions={};
+    // reactions are optional: if the Shanghai migration has not run yet the
+    // app must still work, just without them
+    if(!rx.error) (rx.data||[]).forEach(r=>{(POSTFB.reactions[r.comment_id]=POSTFB.reactions[r.comment_id]||[]).push(r);});
+    POSTFB.seen={};
+    if(!sn.error) (sn.data||[]).forEach(r=>{ if(String(r.user_email||"").toLowerCase()===me) POSTFB.seen[r.post_id]=r.seen_at; });
     (c.data||[]).forEach(r=>{(POSTFB.comments[r.post_id]=POSTFB.comments[r.post_id]||[]).push(r);});
     (a.data||[]).forEach(r=>{(POSTFB.activity[r.post_id]=POSTFB.activity[r.post_id]||[]).push(r);});
   }catch(e){ FB_AVAILABLE=false; }
 }
+
+/* ══ SHANGHAI · S4 — comment polish ═══════════════════════════════════ */
+
+/* Comment bodies were escaped flat, so a paragraph break vanished and a
+   pasted link stayed dead text. Escape FIRST (never trust the input),
+   then re-introduce only the two things people actually type. */
+function fbRich(text){
+  let h=escAttr(String(text||""));
+  h=h.replace(/(https?:\/\/[^\s<]+[^\s<.,:;"')\]])/g,
+    '<a href="$1" target="_blank" rel="noopener" style="color:#185FA5;text-decoration:underline;">$1</a>');
+  return fbHighlightMentions(h.replace(/\n/g,"<br>"));
+}
+function fbIsMine(c){
+  const me=(ME.email||"").toLowerCase();
+  return !!me && (String(c.author_email||"").toLowerCase()===me
+              || String(c.author_name||"").toLowerCase()===me.split("@")[0]);
+}
+const REACTIONS=["👍","🎉","👀","🙏"];
+function fbReactionsFor(id){ return (POSTFB.reactions[id]||[]); }
+function fbMyReaction(id,emoji){
+  const me=(ME.email||"").toLowerCase();
+  return fbReactionsFor(id).some(r=>r.emoji===emoji&&String(r.actor_email||"").toLowerCase()===me);
+}
+async function fbToggleReaction(postId,commentId,emoji){
+  if(!FB_AVAILABLE||!canComment()) return;
+  const me=(ME.email||"").toLowerCase(); if(!me) return;
+  const list=POSTFB.reactions[commentId]=POSTFB.reactions[commentId]||[];
+  const i=list.findIndex(r=>r.emoji===emoji&&String(r.actor_email||"").toLowerCase()===me);
+  const p=(brands[activeBrand]&&(brands[activeBrand].social||[]).find(x=>x.id===postId));
+  if(i>-1){
+    list.splice(i,1);
+    dbErr(await sb.from("comment_reactions").delete().eq("comment_id",commentId).eq("actor_email",me).eq("emoji",emoji));
+  }else{
+    const row={comment_id:commentId,brand_id:(p&&p.brand_id)||activeBrand,actor_email:me,
+               actor_name:actorName(),emoji,created_at:new Date().toISOString()};
+    list.push(row);
+    dbErr(await sb.from("comment_reactions").insert([row]));
+  }
+  renderSocial();
+}
+
+/* edit / delete — own comments only, and delete is SOFT: a hard delete
+   would cascade the replies underneath it away with the parent. */
+let fbEditing=null;
+function fbStartEdit(id){ fbEditing=id; renderSocial(); }
+function fbCancelEdit(){ fbEditing=null; renderSocial(); }
+async function fbSaveEdit(postId,commentId){
+  const el=document.getElementById("fb-edit-"+commentId); if(!el) return;
+  const body=(el.value||"").trim(); if(!body) return;
+  const c=fbCommentsFor(postId).find(x=>x.id===commentId); if(!c||!fbIsMine(c)) return;
+  const now=new Date().toISOString();
+  c.body=body; c.edited_at=now;
+  fbEditing=null;
+  dbErr(await sb.from("post_comments").update({body,edited_at:now,updated_at:now}).eq("id",commentId));
+  renderSocial();
+}
+async function fbDeleteComment(postId,commentId){
+  const c=fbCommentsFor(postId).find(x=>x.id===commentId); if(!c||!fbIsMine(c)) return;
+  if(!confirm("Delete this comment? Replies to it stay.")) return;
+  const now=new Date().toISOString();
+  c.deleted_at=now;
+  dbErr(await sb.from("post_comments").update({deleted_at:now,updated_at:now}).eq("id",commentId));
+  renderSocial();
+}
+
+/* resolved threads: hidden by default per post, because a resolved thread
+   is finished business and should not compete with what still needs you */
+let fbShowDone={};
+function fbToggleDone(postId){ fbShowDone[postId]=!fbShowDone[postId]; renderSocial(); }
+
+/* a link that lands on one comment — for pasting into WhatsApp or email */
+function fbCopyLink(postId,commentId){
+  const url=location.origin+location.pathname+"?post="+encodeURIComponent(postId)+"&c="+encodeURIComponent(commentId);
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(()=>toast("Link copied"),()=>toast(url));
+  } else toast(url);
+}
+
+
+/* ══ SHANGHAI · S5 — mentions, unread, notification centre ════════════
+   Comments were only useful to whoever happened to open the post. These
+   three pieces make them reach people. Email is deliberately NOT here —
+   that is a separate build, because it needs infrastructure this app
+   does not have (a provider, a verified domain).
+   ══════════════════════════════════════════════════════════════════ */
+
+let PEOPLE=[];                     // {email,name,role,brand_id}
+async function loadPeople(){
+  try{
+    const r=await sb.from("profiles").select("id,email,role,brand_id");
+    if(r.error) return;
+    PEOPLE=(r.data||[]).filter(x=>x.email&&x.role!=="pending").map(x=>({
+      email:x.email, name:String(x.email).split("@")[0], role:x.role, brand_id:x.brand_id
+    }));
+  }catch(e){}
+}
+/* who can be mentioned on THIS post: the team, plus that brand's client —
+   never a client from another brand, who could not open the post anyway */
+function mentionablesFor(postBrandId){
+  return PEOPLE.filter(pp=>pp.role!=="client"||pp.brand_id===postBrandId)
+               .filter(pp=>pp.email.toLowerCase()!==(ME.email||"").toLowerCase());
+}
+/* names in, emails out — a display name can change, an email is the key */
+function extractMentions(body,brandId){
+  const out=[];
+  mentionablesFor(brandId).forEach(pp=>{
+    const re=new RegExp("@"+pp.name.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i");
+    if(re.test(body)) out.push(pp.email);
+  });
+  return [...new Set(out)];
+}
+function fbHighlightMentions(h){
+  return h.replace(/(^|\s)@([A-Za-z0-9._-]+)/g,
+    '$1<span style="color:var(--acc);font-weight:700;">@$2</span>');
+}
+
+/* ── the @ autocomplete ── */
+let mentionBox=null;
+function fbMentionKey(e,inputId,brandId){
+  const el=document.getElementById(inputId); if(!el) return;
+  const upto=el.value.slice(0,el.selectionStart||0);
+  const m=upto.match(/@([A-Za-z0-9._-]*)$/);
+  closeMentionBox();
+  if(!m) return;
+  const q=m[1].toLowerCase();
+  const hits=mentionablesFor(brandId).filter(pp=>pp.name.toLowerCase().startsWith(q)).slice(0,6);
+  if(!hits.length) return;
+  const box=document.createElement("div");
+  box.className="ms-drop open"; box.id="mention-box";
+  box.style.cssText="position:absolute;z-index:9000;min-width:190px;padding:4px;";
+  box.innerHTML=hits.map(pp=>`<div class="brow" onmousedown="fbPickMention(event,'${inputId}','${pp.name}')">
+      <span class="nav-av${pp.role==="client"?" client":""}" style="width:20px;height:20px;font-size:9px;">${escAttr(pp.name.slice(0,2).toUpperCase())}</span>
+      <span class="bnm">${escAttr(pp.name)}</span>
+      <span style="font-size:10px;color:var(--subtle);">${pp.role==="client"?"client":"team"}</span></div>`).join("");
+  const r=el.getBoundingClientRect();
+  box.style.left=r.left+"px"; box.style.top=(r.bottom+4)+"px"; box.style.position="fixed";
+  document.body.appendChild(box); mentionBox=box;
+}
+function closeMentionBox(){ if(mentionBox){ mentionBox.remove(); mentionBox=null; } }
+function fbPickMention(ev,inputId,name){
+  ev.preventDefault();
+  const el=document.getElementById(inputId); if(!el) return;
+  const pos=el.selectionStart||el.value.length;
+  const before=el.value.slice(0,pos).replace(/@([A-Za-z0-9._-]*)$/,"@"+name+" ");
+  el.value=before+el.value.slice(pos);
+  closeMentionBox(); el.focus();
+  el.selectionStart=el.selectionEnd=before.length;
+}
+
+/* ── unread: separate from "unresolved", deliberately ── */
+function fbSeenAt(postId){ return POSTFB.seen[postId]||null; }
+function fbUnreadFor(postId){
+  const seen=fbSeenAt(postId);
+  return fbCommentsFor(postId).filter(c=>
+    String(c.author_email||"").toLowerCase()!==(ME.email||"").toLowerCase() &&
+    (!seen || new Date(c.created_at)>new Date(seen)));
+}
+async function fbMarkSeen(postId){
+  if(!FB_AVAILABLE) return;
+  const me=(ME.email||"").toLowerCase(); if(!me) return;
+  const p=(brands[activeBrand]&&(brands[activeBrand].social||[]).find(x=>x.id===postId));
+  const now=new Date().toISOString();
+  POSTFB.seen[postId]=now;
+  try{ await sb.from("post_seen").upsert({user_email:me,post_id:postId,
+        brand_id:(p&&p.brand_id)||activeBrand,seen_at:now}); }catch(e){}
+}
+
+/* ── what the bell shows ── */
+function notifItems(){
+  const me=(ME.email||"").toLowerCase();
+  const out=[];
+  Object.entries(brands).forEach(([bid,b])=>{
+    (b.social||[]).forEach(post=>{
+      fbUnreadFor(post.id).forEach(c=>{
+        out.push({brandId:bid, brandName:b.name, post, c,
+          mention:(c.mentions||[]).some(m=>String(m).toLowerCase()===me)});
+      });
+    });
+  });
+  return out.sort((a,b)=>new Date(b.c.created_at)-new Date(a.c.created_at));
+}
+function notifCount(){ return notifItems().length; }
+function syncBell(){
+  const b=document.getElementById("bell-badge"); if(!b) return;
+  const n=notifCount();
+  b.textContent=n>99?"99+":String(n);
+  b.classList.toggle("zero",n===0);
+}
+function buildNotifPanel(){
+  const el=document.getElementById("notif-panel"); if(!el) return;
+  const items=notifItems();
+  if(!items.length){
+    el.innerHTML=`<div class="nphead"><b>Notifications</b></div>
+      <div class="npempty">Nothing waiting for you.</div>`;
+    return;
+  }
+  /* grouped by BRAND — Chirag: "completely convinced it should be
+     structured by brands". Rows are message-first (W3): the comment is
+     the headline, everything else is one quiet line beneath it. */
+  const byBrand={};
+  items.forEach(it=>{(byBrand[it.brandId]=byBrand[it.brandId]||{name:it.brandName,rows:[]}).rows.push(it);});
+  const groups=Object.entries(byBrand).map(([bid,g])=>{
+    const rows=g.rows.map(it=>{
+      const verb=it.mention?"mentioned you":"commented";
+      return `<div class="nrow unread" onclick="notifOpen('${bid}','${it.post.id}')">
+        <span class="nav-av${it.c.author_kind==="client"?" client":""}">${escAttr(String(it.c.author_name||"?").slice(0,2).toUpperCase())}</span>
+        <div class="nbody">
+          <div class="msg">${fbRich(String(it.c.body||"").slice(0,160))}</div>
+          <div class="attr"><span class="who">${escAttr(it.c.author_name)}</span> ${verb} ·
+            ${shortDate(it.post.month,it.post.date)}<span class="when">${fbTimeLabel(it.c.created_at)}</span></div>
+        </div></div>`;
+    }).join("");
+    return `<div class="ngh"><span class="bdot" style="background:${(brands[bid]||{}).color||"#6B6B6B"}"></span>
+      ${escAttr(g.name)}<span class="ngn">${g.rows.length}</span></div>${rows}`;
+  }).join("");
+  el.innerHTML=`<div class="nphead"><b>Notifications</b>
+      <span class="mark" onclick="notifMarkAll()">Mark all read</span></div>${groups}`;
+}
+function notifOpen(brandId,postId){
+  closeAllPops();
+  const p=(brands[brandId]&&(brands[brandId].social||[]).find(x=>x.id===postId)); if(!p) return;
+  pickBrand(brandId);
+  socialLayer=true; contentMonth=p.month; setView("content");
+  fbOpen[postId]=true; fbMarkSeen(postId);
+  renderSocial();
+  setTimeout(()=>{ const el=document.getElementById("fbcount-"+postId);
+    if(el&&el.scrollIntoView) el.scrollIntoView({behavior:"smooth",block:"center"}); },120);
+}
+async function notifMarkAll(){
+  const items=notifItems();
+  const seen=[...new Set(items.map(i=>i.post.id))];
+  for(const pid of seen) await fbMarkSeen(pid);
+  closeAllPops(); syncBell(); renderSocial();
+}
+
 function newFbId(pre){ return pre+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
-function fbCommentsFor(postId){ return POSTFB.comments[postId]||[]; }
+function fbCommentsFor(postId){ return (POSTFB.comments[postId]||[]).filter(c=>!c.deleted_at); }
 function fbThreadsFor(postId){
   const all=fbCommentsFor(postId);
   return all.filter(x=>!x.parent_id).map(t=>({top:t,replies:all.filter(r=>r.parent_id===t.id)}));
@@ -4332,7 +5058,8 @@ async function fbAddComment(postId,parentId){
   const body=(el.value||"").trim(); if(!body) return;
   const b=brands[activeBrand]; const p=b&&(b.social||[]).find(x=>x.id===postId); if(!p) return;
   const row={id:newFbId("pc"),post_id:postId,brand_id:p.brand_id||activeBrand,parent_id:parentId||null,
-    author_id:null,author_name:actorName(),author_kind:actorKind(),body,
+    author_id:null,author_email:(ME.email||""),author_name:actorName(),author_kind:actorKind(),body,
+    mentions:extractMentions(body,p.brand_id||activeBrand),
     resolved:false,resolved_by:"",resolved_at:null,created_at:new Date().toISOString()};
   (POSTFB.comments[postId]=POSTFB.comments[postId]||[]).push(row);
   dbErr(await sb.from("post_comments").insert([row]));
@@ -4347,7 +5074,11 @@ async function fbToggleResolve(postId,commentId){
   dbErr(await sb.from("post_comments").update({resolved:c.resolved,resolved_by:c.resolved_by,resolved_at:c.resolved_at}).eq("id",commentId));
   renderSocial();
 }
-function fbTogglePanel(postId){ fbOpen[postId]=!fbOpen[postId]; renderSocial(); }
+function fbTogglePanel(postId){
+  fbOpen[postId]=!fbOpen[postId];
+  if(fbOpen[postId]) fbMarkSeen(postId);      // opening it IS reading it
+  renderSocial(); syncBell();
+}
 let fbReplyOpen={}; // commentId -> bool
 function fbToggleReply(postId,commentId){ fbReplyOpen[commentId]=!fbReplyOpen[commentId]; renderSocial(); }
 // Activity: short factual lines, auto-logged. Dedupe repeats within 10 min
@@ -4877,17 +5608,16 @@ function renderBriefDash(){
       ${(s.rows&&s.rows.length)?`<div style="margin-top:10px;">${bdKrows(s.rows)}</div>`:""}
     </div>`).join("");
   mc.innerHTML=`
-  <div class="year-head">
+  <div class="year-head bd-head">
     <div class="year-headtxt bd-headrow">
-      <div class="year-title" style="color:var(--acc);">${escAttr(b.name)}</div>
+      ${brandTitleHtml(b.name)}
       ${String(D.tagline||"").trim()?`<div class="year-tag">${escAttr(D.tagline)}</div>`:""}
     </div>
-    <div style="flex:1;"></div>
     <div class="bd-acts">
-      <button class="btn btn-p btn-sm" onclick="bdToggleEdit()">✎ Edit the data</button>
-      <button class="btn btn-s btn-sm" onclick="bdExportXLSX()">⇩ Export</button>
-      <button class="btn btn-s btn-sm" onclick="bdImportXLSX()">⇧ Import</button>
-      <button class="btn btn-s btn-sm" onclick="closeBrief()">← Back to Calendar</button>
+      <button class="btn btn-p" onclick="bdToggleEdit()"><i class="ti ti-pencil"></i> Edit the data</button>
+      <button class="btn btn-s" onclick="bdExportXLSX()"><i class="ti ti-download"></i> Export</button>
+      <button class="btn btn-s" onclick="bdImportXLSX()"><i class="ti ti-upload"></i> Import</button>
+      <button class="btn btn-s" onclick="closeBrief()"><i class="ti ti-arrow-left"></i> Back to Calendar</button>
     </div>
   </div>
   <div class="bd-wrap">
@@ -5024,15 +5754,15 @@ function renderBriefForm(){
       </div>
     </div>`).join("");
   mc.innerHTML=`
-  <div class="year-head">
+  <div class="year-head bd-head">
     <div class="year-headtxt bd-headrow">
-      <div class="year-title" style="color:var(--acc);">${escAttr(b.name)}</div>
+      ${brandTitleHtml(b.name)}
       <div class="year-tag">Editing · saves automatically</div>
     </div>
     <div style="flex:1;"></div>
     <div class="bd-acts">
-      <button class="btn btn-p btn-sm" onclick="bdToggleEdit()">✓ Done — view dashboard</button>
-      <button class="btn btn-s btn-sm" onclick="closeBrief()">← Back to Calendar</button>
+      <button class="btn btn-p" onclick="bdToggleEdit()"><i class="ti ti-check"></i> Done — view dashboard</button>
+      <button class="btn btn-s" onclick="closeBrief()"><i class="ti ti-arrow-left"></i> Back to Calendar</button>
     </div>
   </div>
   <div class="bd-wrap">
@@ -5380,7 +6110,7 @@ function deleteSocialPost(){
 
 // ── PLANNING MODE: click dates to plan, day planner popover ──
 let PLAN={m:0,day:0};
-function dayClick(m,day){ if(canEdit()&&((view==="year"&&planningMode)||view==="content")) planningDayClick(m,day); else openDay(m,day); }
+function dayClick(m,day){ if(canEdit()&&((view==="year"&&socialLayer&&activeBrand)||view==="content")) planningDayClick(m,day); else openDay(m,day); }
 function shortDate(m,d){ return `${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date(YEAR,m-1,d).getDay()]} ${d}`; }
 function postHasContent(p){
   const c=p.content||{}; const f=c.facebook||{}, i=c.instagram||{};
