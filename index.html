@@ -579,7 +579,7 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 /* ---- canvas ---- */
 body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixed;}
 .sidebar{background:rgba(255,255,255,.66);border-right-color:rgba(255,255,255,.7);}
-.s-month:hover{background:rgba(255,255,255,.6);}
+.s-month:not(.on):hover{background:rgba(255,255,255,.6);}
 
 /* ---- YEAR VIEW (Y3) ---- */
 .months-grid{gap:20px;}                                   /* approved spacing change */
@@ -2015,10 +2015,13 @@ function socialViewCard(p){
   const tags=p.content.instagram.hashtags||p.content.facebook.hashtags||"";
   const varied=p.synced===false; const fmtIcon=(p.format==="reel"||p.format==="video")?"ti-video":"ti-photo";
   // Atlas: feedback toggle (count + unresolved dot) + per-card Edit button
-  const cCount=fbCommentsFor(p.id).length;
-  const openN=fbOpenCount(p.id);
+  // BA4: counts come from the summary view until the thread is actually
+  // fetched, so a card reads "3 · one unresolved" without loading anything.
+  // Once loaded, memory is authoritative — it reflects edits made just now.
+  const cCount=FB_LOADED[p.id]?fbCommentsFor(p.id).length:fbCountFor(p.id).comments;
+  const openN=FB_LOADED[p.id]?fbOpenCount(p.id):fbCountFor(p.id).open_threads;
   // unread ≠ unresolved: one is "have I seen it", the other "is it settled"
-  const unreadN=fbUnreadFor(p.id).length;
+  const unreadN=fbUnreadCountFor(p.id);
   const isOpen=!!fbOpen[p.id];
   const fbToggleHtml=FB_AVAILABLE?`<span class="pc-fbtoggle${isOpen?" on":""}" onclick="fbTogglePanel('${p.id}')" title="Feedback &amp; activity" style="display:flex;align-items:center;gap:5px;cursor:pointer;padding:3px 9px;border-radius:999px;border:1px solid ${isOpen?"#0D0D0D":"var(--div)"};background:${isOpen?"#0D0D0D":"var(--surface)"};color:${isOpen?"#fff":"var(--muted)"};">
       <i class="ti ti-message-circle" style="font-size:12px;"></i><span id="fbcount-${p.id}" style="font-size:11px;font-weight:700;">${cCount}</span>${unreadN?`<span title="${unreadN} new since you last looked" style="min-width:15px;height:15px;padding:0 4px;border-radius:999px;background:var(--acc);color:#fff;font-size:9.5px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;">${unreadN}</span>`:(openN?`<span title="${openN} unresolved" style="width:5px;height:5px;border-radius:50%;background:var(--subtle);"></span>`:"")}
@@ -2071,7 +2074,7 @@ function fbPanelHtml(p){
     const picker=canComment()?`<span class="fb-addrx" style="position:relative;">
         <span onclick="this.nextElementSibling.classList.toggle('open')" title="React"
               style="font-size:12px;color:var(--subtle);cursor:pointer;padding:2px 6px;border-radius:999px;">☺+</span>
-        <span class="ms-drop" style="min-width:auto;padding:4px;display:none;">${REACTIONS.map(e=>
+        <span class="ms-drop" style="min-width:auto;padding:4px;">${REACTIONS.map(e=>
           `<span onclick="fbToggleReaction('${p.id}','${c.id}','${e}')" style="font-size:15px;padding:3px 5px;cursor:pointer;">${e}</span>`).join("")}</span>
       </span>`:"";
     return (shown||picker)?`<div style="display:flex;align-items:center;gap:5px;margin-top:6px;flex-wrap:wrap;">${shown}${picker}</div>`:"";
@@ -4439,7 +4442,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v39 Shanghai — new header, filters in the panel, comments that reach people";
+const TOOL_VERSION="v40 Buenos Aires — loads what the screen needs, mentions for everyone";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -4577,8 +4580,14 @@ async function loadAll(showToast){
     sb.from("brand_tags").select("*"),
     sb.from("brand_posts").select("*"),
     sb.from("brand_briefs").select("*"),
-    sb.from("social_posts").select("*").is("deleted_at",null),
-    sb.from("social_month_plan").select("*"),
+    /* BA4: scoped to the year on screen and to the live (non-archived)
+       working set. Events stay unscoped on purpose — the year view shows
+       all twelve months for every brand at once, and events are a few
+       hundred rows. Posts are per-year and archived work leaves the set,
+       which is where the growth actually is. Switching year already
+       reloads, so nothing else had to change. */
+    sb.from("social_posts").select("*").eq("year",YEAR).is("deleted_at",null).is("archived_at",null),
+    sb.from("social_month_plan").select("*").eq("year",YEAR),
     sb.from("social_month_items").select("*"),
   ]);
   const err=[inds,evts,brs,bevs,tags,posts,briefs,social,monthPlans,monthItems].find(r=>r.error);
@@ -4787,27 +4796,137 @@ let fbOpen={}; // postId -> bool (panel expanded)
 function canComment(){ return ["admin","team","client"].includes(ME.role); }
 function actorName(){ return (ME.email||"").split("@")[0]||"someone"; }
 function actorKind(){ return ME.role==="client"?"client":"team"; }
+/* ══ BUENOS AIRES · BA4 — load what the screen needs, not the database ══
+   Comments and activity are the two tables that actually grow: at 25 brands
+   they are projected at ~60,000 and ~36,000 rows a YEAR. Fetching both in
+   full on every page load is what turns a fast app into an eight-second one,
+   and no framework would save it.
+
+   So they are no longer fetched at boot. They arrive per post, when a
+   feedback panel is opened, and are cached for the session.
+
+   THE THING THAT MADE THIS NON-TRIVIAL: the notification bell counted unread
+   by walking every comment of every post held in memory. Remove the eager
+   fetch and the bell silently goes blank — the feature shipped four days
+   earlier. The count therefore moved into the database (the
+   unread_notifications view), which is both correct and far cheaper: one
+   small query returning only what the panel renders.                        */
+let FB_LOADED={};            // postId -> true once its thread is fetched
+let NOTIF=[];                // rows from unread_notifications
 async function loadPostFeedback(){
   try{
     const me=(ME.email||"").toLowerCase();
-    const [c,a,rx,sn]=await Promise.all([
-      sb.from("post_comments").select("*").order("created_at"),
-      sb.from("post_activity").select("*").order("created_at"),
-      sb.from("comment_reactions").select("*"),
-      sb.from("post_seen").select("*")
+    const [sn]=await Promise.all([
+      sb.from("post_seen").select("*").eq("user_email",me),
+      loadNotifications(),
+      loadCommentCounts()
     ]);
     loadPeople();
-    if(c.error||a.error){ FB_AVAILABLE=false; return; }
     FB_AVAILABLE=true;
-    POSTFB.comments={}; POSTFB.activity={}; POSTFB.reactions={};
-    // reactions are optional: if the Shanghai migration has not run yet the
-    // app must still work, just without them
-    if(!rx.error) (rx.data||[]).forEach(r=>{(POSTFB.reactions[r.comment_id]=POSTFB.reactions[r.comment_id]||[]).push(r);});
+    POSTFB.comments={}; POSTFB.activity={}; POSTFB.reactions={}; FB_LOADED={};
     POSTFB.seen={};
-    if(!sn.error) (sn.data||[]).forEach(r=>{ if(String(r.user_email||"").toLowerCase()===me) POSTFB.seen[r.post_id]=r.seen_at; });
-    (c.data||[]).forEach(r=>{(POSTFB.comments[r.post_id]=POSTFB.comments[r.post_id]||[]).push(r);});
-    (a.data||[]).forEach(r=>{(POSTFB.activity[r.post_id]=POSTFB.activity[r.post_id]||[]).push(r);});
+    if(!sn.error) (sn.data||[]).forEach(r=>{ POSTFB.seen[r.post_id]=r.seen_at; });
   }catch(e){ FB_AVAILABLE=false; }
+}
+
+/* ══ BA4b — ARCHIVING: structure, deliberately not policy ═══════════════
+   Chirag: "Both options have to work and we'll have to define detailed
+   rules for that. But short answers, something can be manually pushed to
+   archives. And most things will go into archive after a specific cutoff
+   date, provided it meets certain conditions."
+
+   The conditions are not written yet, so nothing automatic is built here.
+   What exists is the mechanism the future rule will drive: a timestamp, a
+   manual push, and a working set that excludes archived work. When the
+   cutoff rule is agreed it sets the same column — no schema change, no
+   backfill, no rewrite.
+
+   Archiving is NOT deleting. The row is untouched, it simply leaves the
+   default fetch; unarchiving restores it. Nothing is ever destroyed.
+
+   NOTE: these are callable but have no button yet. Placing a new control
+   is a design decision, and the Content view's control row is already
+   under review, so it waits for Chirag rather than being invented here. */
+async function archivePost(id,on=true){
+  if(!canEdit()) return;
+  const stamp=on?new Date().toISOString():null;
+  dbErr(await sb.from("social_posts").update({archived_at:stamp}).eq("id",id));
+  const b=brands[activeBrand];
+  if(b&&on) b.social=(b.social||[]).filter(p=>p.id!==id);   // leaves the working set
+  render();
+  toast(on?"Archived":"Restored from archive");
+}
+async function archiveMonth(month,on=true){
+  if(!canEdit()||!activeBrand) return;
+  const stamp=on?new Date().toISOString():null;
+  dbErr(await sb.from("social_posts").update({archived_at:stamp})
+    .eq("brand_id",activeBrand).eq("year",YEAR).eq("month",month));
+  dbErr(await sb.from("social_month_plan").update({archived_at:stamp})
+    .eq("brand_id",activeBrand).eq("year",YEAR).eq("month",month));
+  await loadAll();
+  toast(on?("Archived "+MN[month]):("Restored "+MN[month]));
+}
+/* Archived work is reachable on demand — it is out of the way, not gone. */
+async function loadArchived(month){
+  if(!activeBrand) return [];
+  let q=sb.from("social_posts").select("*").eq("brand_id",activeBrand).eq("year",YEAR)
+          .not("archived_at","is",null).is("deleted_at",null);
+  if(month) q=q.eq("month",month);
+  const r=await q;
+  return r.error?[]:(r.data||[]).map(normalizeSocial);
+}
+
+/* Per-post counts for the card badges, so nothing reads zero just because
+   its thread has not been opened yet. */
+let FB_COUNTS={};            // postId -> {comments, open_threads}
+function fbCountFor(postId){ return FB_COUNTS[postId]||{comments:0,open_threads:0}; }
+async function loadCommentCounts(){
+  try{
+    const r=await sb.from("post_comment_counts").select("*");
+    if(r.error){ FB_COUNTS={}; return; }
+    FB_COUNTS={};
+    (r.data||[]).forEach(x=>{FB_COUNTS[x.post_id]={comments:x.comments,open_threads:x.open_threads};});
+  }catch(e){ FB_COUNTS={}; }
+}
+/* Unread per post: from the notification rows when the thread is not
+   loaded, from memory once it is. Both respect a local mark-seen. */
+function fbUnreadCountFor(postId){
+  if(FB_LOADED[postId]) return fbUnreadFor(postId).length;
+  const seen=POSTFB.seen[postId];
+  return (NOTIF||[]).filter(r=>r.post_id===postId&&(!seen||new Date(r.created_at)>new Date(seen))).length;
+}
+
+/* The bell, computed by the database instead of by walking memory. */
+async function loadNotifications(){
+  try{
+    const r=await sb.from("unread_notifications").select("*").order("created_at",{ascending:false}).limit(200);
+    if(r.error){ NOTIF=[]; return; }
+    NOTIF=r.data||[];
+  }catch(e){ NOTIF=[]; }
+}
+
+/* One post's thread, fetched on demand. Cached: opening the same panel twice
+   does not hit the network twice, and an optimistic local insert is not
+   overwritten by a refetch. */
+async function fbEnsureLoaded(postId){
+  if(FB_LOADED[postId]) return;
+  FB_LOADED[postId]=true;                       // claim it first: two rapid
+  try{                                          // opens must not both fetch
+    const [c,a,rx]=await Promise.all([
+      sb.from("post_comments").select("*").eq("post_id",postId).order("created_at"),
+      sb.from("post_activity").select("*").eq("post_id",postId).order("created_at"),
+      sb.from("comment_reactions").select("*")
+    ]);
+    if(c.error){ FB_LOADED[postId]=false; return; }
+    POSTFB.comments[postId]=c.data||[];
+    POSTFB.activity[postId]=(a.error?[]:(a.data||[]));
+    // reactions stay optional — the app must run if the migration has not
+    // been applied yet, just without them
+    if(!rx.error){
+      POSTFB.reactions={};
+      (rx.data||[]).forEach(r=>{(POSTFB.reactions[r.comment_id]=POSTFB.reactions[r.comment_id]||[]).push(r);});
+    }
+  }catch(e){ FB_LOADED[postId]=false; }
 }
 
 /* ══ SHANGHAI · S4 — comment polish ═══════════════════════════════════ */
@@ -4896,14 +5015,31 @@ function fbCopyLink(postId,commentId){
    ══════════════════════════════════════════════════════════════════ */
 
 let PEOPLE=[];                     // {email,name,role,brand_id}
+/* BA5 — read the DIRECTORY, not the profiles table.
+   `profiles` is readable only by an admin (or someone with manage_users), so
+   every other user got back exactly one row — their own — and since you are
+   filtered out of your own mention list, the @ menu came up empty. It never
+   errored: RLS filters rows, it does not throw, so the app could not tell
+   "not allowed to see anyone" from "there is no one".
+   people_directory exposes only id/email/role/brand_id and is readable by
+   everyone signed in, so mentions work for the whole team. */
+let PEOPLE_BLOCKED=false;   // true = we got a directory we know is truncated
 async function loadPeople(){
   try{
-    const r=await sb.from("profiles").select("id,email,role,brand_id");
-    if(r.error) return;
+    let r=await sb.from("people_directory").select("id,email,role,brand_id");
+    if(r.error){
+      // migration not applied yet — fall back so the app still runs
+      r=await sb.from("profiles").select("id,email,role,brand_id");
+      if(r.error){ PEOPLE=[]; PEOPLE_BLOCKED=true; return; }
+    }
     PEOPLE=(r.data||[]).filter(x=>x.email&&x.role!=="pending").map(x=>({
       email:x.email, name:String(x.email).split("@")[0], role:x.role, brand_id:x.brand_id
     }));
-  }catch(e){}
+    /* If the only person we can see is ourselves, we are not looking at a
+       small team — we are looking at a truncated read. Say so rather than
+       rendering an empty menu that looks like nobody exists. */
+    PEOPLE_BLOCKED = PEOPLE.length<=1;
+  }catch(e){ PEOPLE=[]; PEOPLE_BLOCKED=true; }
 }
 /* who can be mentioned on THIS post: the team, plus that brand's client —
    never a client from another brand, who could not open the post anyway */
@@ -4935,14 +5071,20 @@ function fbMentionKey(e,inputId,brandId){
   if(!m) return;
   const q=m[1].toLowerCase();
   const hits=mentionablesFor(brandId).filter(pp=>pp.name.toLowerCase().startsWith(q)).slice(0,6);
-  if(!hits.length) return;
+  /* BA5: an empty menu used to be indistinguishable from a directory we are
+     not allowed to read — which is exactly how the admin-only mention bug
+     stayed invisible. If the directory came back truncated, say so. */
+  if(!hits.length&&!PEOPLE_BLOCKED) return;
   const box=document.createElement("div");
   box.className="ms-drop open"; box.id="mention-box";
   box.style.cssText="position:absolute;z-index:9000;min-width:190px;padding:4px;";
-  box.innerHTML=hits.map(pp=>`<div class="brow" onmousedown="fbPickMention(event,'${inputId}','${pp.name}')">
+  box.innerHTML=hits.length
+    ? hits.map(pp=>`<div class="brow" onmousedown="fbPickMention(event,'${inputId}','${pp.name}')">
       <span class="nav-av${pp.role==="client"?" client":""}" style="width:20px;height:20px;font-size:9px;">${escAttr(pp.name.slice(0,2).toUpperCase())}</span>
       <span class="bnm">${escAttr(pp.name)}</span>
-      <span style="font-size:10px;color:var(--subtle);">${pp.role==="client"?"client":"team"}</span></div>`).join("");
+      <span style="font-size:10px;color:var(--subtle);">${pp.role==="client"?"client":"team"}</span></div>`).join("")
+    : `<div style="padding:8px 10px;font-size:11.5px;color:var(--subtle);line-height:1.45;">
+         Can't load the people list.<br>Ask an admin to check your access.</div>`;
   const r=el.getBoundingClientRect();
   box.style.left=r.left+"px"; box.style.top=(r.bottom+4)+"px"; box.style.position="fixed";
   document.body.appendChild(box); mentionBox=box;
@@ -4972,23 +5114,38 @@ async function fbMarkSeen(postId){
   const p=(brands[activeBrand]&&(brands[activeBrand].social||[]).find(x=>x.id===postId));
   const now=new Date().toISOString();
   POSTFB.seen[postId]=now;
+  /* BA2: the badge is refreshed HERE, at the one place unread state changes,
+     rather than at each call site. notifOpen() used to mark-seen and re-render
+     without touching the bell, so the count went stale while the panel said
+     "Nothing waiting for you." A fourth caller cannot reintroduce that. */
+  syncBell();
   try{ await sb.from("post_seen").upsert({user_email:me,post_id:postId,
         brand_id:(p&&p.brand_id)||activeBrand,seen_at:now}); }catch(e){}
 }
 
 /* ── what the bell shows ── */
+/* BA4: these rows come from the unread_notifications view now, so the bell
+   no longer depends on every comment being in memory. The shape returned
+   here is deliberately UNCHANGED, so buildNotifPanel and the W3 row layout
+   did not have to be rewritten — only where the data comes from moved.
+   Locally-marked-seen posts are filtered out too, so the count drops the
+   instant you open something, without waiting for a round trip. */
 function notifItems(){
   const me=(ME.email||"").toLowerCase();
-  const out=[];
-  Object.entries(brands).forEach(([bid,b])=>{
-    (b.social||[]).forEach(post=>{
-      fbUnreadFor(post.id).forEach(c=>{
-        out.push({brandId:bid, brandName:b.name, post, c,
-          mention:(c.mentions||[]).some(m=>String(m).toLowerCase()===me)});
-      });
-    });
-  });
-  return out.sort((a,b)=>new Date(b.c.created_at)-new Date(a.c.created_at));
+  return (NOTIF||[])
+    .filter(r=>{
+      const seen=POSTFB.seen[r.post_id];
+      return !seen || new Date(r.created_at)>new Date(seen);
+    })
+    .map(r=>({
+      brandId:r.brand_id, brandName:r.brand_name,
+      post:{id:r.post_id, month:r.post_month, date:r.post_date, year:r.post_year},
+      c:{id:r.comment_id, body:r.body, author_name:r.author_name,
+         author_email:r.author_email, author_kind:r.author_kind||"team",
+         created_at:r.created_at, mentions:r.mentions||[]},
+      mention:!!r.mentions_me||(r.mentions||[]).some(m=>String(m).toLowerCase()===me)
+    }))
+    .sort((a,b)=>new Date(b.c.created_at)-new Date(a.c.created_at));
 }
 function notifCount(){ return notifItems().length; }
 function syncBell(){
@@ -5027,12 +5184,18 @@ function buildNotifPanel(){
   el.innerHTML=`<div class="nphead"><b>Notifications</b>
       <span class="mark" onclick="notifMarkAll()">Mark all read</span></div>${groups}`;
 }
-function notifOpen(brandId,postId){
+async function notifOpen(brandId,postId){
   closeAllPops();
-  const p=(brands[brandId]&&(brands[brandId].social||[]).find(x=>x.id===postId)); if(!p) return;
+  const p=(brands[brandId]&&(brands[brandId].social||[]).find(x=>x.id===postId));
+  // BA4: the month comes from the notification row, so this still works even
+  // if that post is not in the current working set
+  const row=(NOTIF||[]).find(r=>r.post_id===postId);
+  const month=(p&&p.month)||(row&&row.post_month);
+  if(!month) return;
   pickBrand(brandId);
-  socialLayer=true; contentMonth=p.month; setView("content");
+  socialLayer=true; contentMonth=month; setView("content");
   fbOpen[postId]=true; fbMarkSeen(postId);
+  await fbEnsureLoaded(postId);          // its thread is no longer preloaded
   renderSocial();
   setTimeout(()=>{ const el=document.getElementById("fbcount-"+postId);
     if(el&&el.scrollIntoView) el.scrollIntoView({behavior:"smooth",block:"center"}); },120);
@@ -5074,10 +5237,14 @@ async function fbToggleResolve(postId,commentId){
   dbErr(await sb.from("post_comments").update({resolved:c.resolved,resolved_by:c.resolved_by,resolved_at:c.resolved_at}).eq("id",commentId));
   renderSocial();
 }
-function fbTogglePanel(postId){
+async function fbTogglePanel(postId){
   fbOpen[postId]=!fbOpen[postId];
-  if(fbOpen[postId]) fbMarkSeen(postId);      // opening it IS reading it
-  renderSocial(); syncBell();
+  if(fbOpen[postId]){
+    fbMarkSeen(postId);                       // opening it IS reading it
+    renderSocial();                           // paint immediately…
+    await fbEnsureLoaded(postId);             // …then fill the thread in
+  }
+  renderSocial();
 }
 let fbReplyOpen={}; // commentId -> bool
 function fbToggleReply(postId,commentId){ fbReplyOpen[commentId]=!fbReplyOpen[commentId]; renderSocial(); }
