@@ -4442,7 +4442,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v40 Buenos Aires — loads what the screen needs, mentions for everyone";
+const TOOL_VERSION="v40.1 Buenos Aires — comments arrive live, no refresh";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -4894,6 +4894,49 @@ function fbUnreadCountFor(postId){
   if(FB_LOADED[postId]) return fbUnreadFor(postId).length;
   const seen=POSTFB.seen[postId];
   return (NOTIF||[]).filter(r=>r.post_id===postId&&(!seen||new Date(r.created_at)>new Date(seen))).length;
+}
+
+/* ── NOTIF is owned HERE, by these three functions, and nowhere else ─────
+   The bell has now broken twice for the same reason: a piece of state with
+   several dependent surfaces, refreshed from some of the places that change
+   it. v40 moved the unread count into a database view fetched once at load,
+   which silently killed the live path — a comment arriving over realtime
+   could no longer move the badge, because nothing told the snapshot.
+   So every mutation of NOTIF goes through one of these, and each one ends
+   by syncing the bell. A new caller cannot forget. */
+function notifRowFrom(c){
+  const me=(ME.email||"").toLowerCase();
+  let post=null;
+  for(const b of Object.values(brands)){
+    const p=(b.social||[]).find(x=>x.id===c.post_id);
+    if(p){ post=p; break; }
+  }
+  return {comment_id:c.id, post_id:c.post_id, brand_id:c.brand_id,
+    brand_name:(brands[c.brand_id]||{}).name||"",
+    author_name:c.author_name, author_email:c.author_email, author_kind:c.author_kind,
+    body:c.body, created_at:c.created_at, mentions:c.mentions||[],
+    mentions_me:(c.mentions||[]).some(m=>String(m).toLowerCase()===me),
+    post_year:post&&post.year, post_month:post&&post.month, post_date:post&&post.date};
+}
+/* A comment someone else just wrote becomes a notification immediately. */
+function notifIngest(c){
+  const me=(ME.email||"").toLowerCase();
+  if(!c||!c.id||c.deleted_at) return;
+  if(String(c.author_email||"").toLowerCase()===me) return;   // never notify me of me
+  if((NOTIF||[]).some(r=>r.comment_id===c.id)) return;        // idempotent: realtime can repeat
+  const seen=POSTFB.seen[c.post_id];
+  if(seen&&new Date(c.created_at)<=new Date(seen)) return;    // already read past this point
+  NOTIF.unshift(notifRowFrom(c));
+  const cur=FB_COUNTS[c.post_id]||{comments:0,open_threads:0};
+  FB_COUNTS[c.post_id]={comments:cur.comments+1,
+                        open_threads:cur.open_threads+(c.parent_id?0:1)};
+  syncBell();
+}
+function notifDrop(commentId){
+  if(!commentId) return;
+  const before=(NOTIF||[]).length;
+  NOTIF=(NOTIF||[]).filter(r=>r.comment_id!==commentId);
+  if(NOTIF.length!==before) syncBell();
 }
 
 /* The bell, computed by the database instead of by walking memory. */
@@ -5439,10 +5482,16 @@ function rtComment(pl){
   if(pl&&pl.eventType==="DELETE"){
     const id=pl.old&&pl.old.id; if(!id) return;
     Object.keys(POSTFB.comments).forEach(k=>{POSTFB.comments[k]=(POSTFB.comments[k]||[]).filter(c=>c.id!==id);});
+    notifDrop(id);
     if(view==="content") rtRender("social");
     return;
   }
   if(!row) return;
+  /* The bell must move whether or not this post's thread is loaded — that is
+     the whole point of the notification: you are told about work you are NOT
+     looking at. So notifIngest comes BEFORE the memory bookkeeping below,
+     which only matters for a thread already open on screen. */
+  if(row.deleted_at) notifDrop(row.id); else notifIngest(row);
   const list=POSTFB.comments[row.post_id]=POSTFB.comments[row.post_id]||[];
   const i=list.findIndex(c=>c.id===row.id);
   if(i>-1){
