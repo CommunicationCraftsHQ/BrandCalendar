@@ -4841,7 +4841,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v42 New York — the post owns its work";
+const TOOL_VERSION="v43 New York — the post owns its work";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -4905,6 +4905,29 @@ const SB_URL="https://qsxldzqdjdplffxqdokd.supabase.co";
 const SB_KEY="sb_publishable_6ng_3jnvQbJUZifYTxmRrw_0yhCZuY9";
 const sb=window.supabase.createClient(SB_URL,SB_KEY);
 let ME={role:"pending",brand_id:null,email:""};
+
+/* ══ APP EVENTS — the usage log the calendar never had ════════════════
+   The Proposal Bank has recorded sign-ins and actions since day one; the
+   calendar recorded nothing about who actually uses it. post_activity is
+   content history — what happened to a post — and answers a different
+   question entirely.
+
+   Deliberately NOT logged: comments, edits, caption changes. Those are
+   already in post_activity, and at the projected 60,000 comments a year
+   they would bury the signal in their own noise.
+
+   Failures are swallowed on purpose. A usage log must never be the
+   reason somebody cannot sign in — and it must not throw before the
+   migration has been applied. */
+async function logAppEvent(type,detail){
+  try{
+    if(!ME.email) return;
+    await sb.from("app_events").insert([{
+      app:"calendar", actor_email:(ME.email||"").toLowerCase(),
+      actor_name:actorName(), type, detail:detail||{}
+    }]);
+  }catch(e){ /* analytics must never break the app */ }
+}
 const canEdit=()=>ME.role==="admin"||ME.role==="team";
 
 function authMsg(t){document.getElementById("auth-msg").textContent=t||"";}
@@ -5137,7 +5160,8 @@ async function dbSaveSocialPost(p){
     if(!r||!r.error){ p._uat=row.updated_at; rememberOwnWrite("social_posts",row.id,row.updated_at); rtGUpsert("social",row); }
   });
 }
-async function dbTrashSocialPost(id){ if(!canEdit()) return; rtGRemove("social",id); dbErr(await sb.from("social_posts").update({deleted_at:new Date().toISOString()}).eq("id",id)); }
+async function dbTrashSocialPost(id){ if(!canEdit()) return; rtGRemove("social",id); dbErr(await sb.from("social_posts").update({deleted_at:new Date().toISOString()}).eq("id",id));
+  logAppEvent("post_deleted",{post_id:id,brand:(brands[activeBrand]||{}).name||""}); }
 
 // ── MONTH PLAN: Key Theme, Goals, Influencer Marketing, Production ──
 const INFLUENCER_STAGES={pending:["Pending","#AAAAAA"],approved:["Approved","#378ADD"],briefed:["Briefed","#8B5CF6"],content_approved:["Content OK","#0E8A8A"],published:["Published","#639922"]};
@@ -5269,6 +5293,7 @@ async function archiveMonth(month,on=true){
   dbErr(await sb.from("social_month_plan").update({archived_at:stamp})
     .eq("brand_id",activeBrand).eq("year",YEAR).eq("month",month));
   await loadAll();
+  logAppEvent(on?"month_archived":"month_restored",{month,year:YEAR,brand:(brands[activeBrand]||{}).name||""});
   toast(on?("Archived "+MN[month]):("Restored "+MN[month]));
 }
 /* Archived work is reachable on demand — it is out of the way, not gone. */
@@ -7765,6 +7790,8 @@ async function boot(){
   applyRoleUI();
   document.querySelectorAll("#setup-drop .admin-row").forEach(r=>r.style.display=ME.role==="admin"?"":"none");
   const ae=document.getElementById("acct-email"); if(ae) ae.textContent=ME.email||"";
+  /* not awaited: the sign-in log must never delay the app appearing */
+  logAppEvent("sign_in",{role:ME.role});
   await loadAll();
 }
 
