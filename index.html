@@ -1143,8 +1143,11 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
         <div class="brow staff-row" onclick="closeAllPops();openM('ind-mgr')"><i class="ti ti-tags"></i><span class="bnm">Industries</span></div>
         <div class="brow staff-row" onclick="closeAllPops();carryForward()"><i class="ti ti-arrow-forward"></i><span class="bnm">Carry forward to next year</span></div>
         <div class="brow staff-row" onclick="closeAllPops();openTrash()"><i class="ti ti-trash"></i><span class="bnm">Trash</span></div>
-        <div class="brow admin-row" onclick="closeAllPops();openPeople()"><i class="ti ti-users"></i><span class="bnm">People &amp; access</span></div>
-        <div class="brow admin-row" onclick="closeAllPops();window.open('app.html','_blank')"><i class="ti ti-external-link"></i><span class="bnm">CC Platform</span></div>
+        <!-- The calendar's own People screen is GONE. It wrote the old field,
+             which is now only a fallback, so changes made there were silently
+             ignored — a trap worth removing rather than documenting. There is
+             one place to manage people now, and this is the door to it. -->
+        <div class="brow admin-row" onclick="closeAllPops();window.open('app.html','_blank')"><i class="ti ti-users"></i><span class="bnm">People &amp; access</span><i class="ti ti-external-link" style="margin-left:auto;font-size:12px;opacity:.5;"></i></div>
         <div class="bpsep"></div>
         <div class="brow" onclick="closeAllPops();loadAll(true)"><i class="ti ti-refresh"></i><span class="bnm">Refresh</span></div>
         <div class="brow" onclick="closeAllPops();showSetPass()"><i class="ti ti-key"></i><span class="bnm">Change password</span></div>
@@ -4841,7 +4844,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v44 — one access model, read behind a fallback";
+const TOOL_VERSION="v45 — one place to manage people";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -7517,7 +7520,16 @@ async function autoTagBrands(newEvs){
 }
 
 // ── PEOPLE & ACCESS (admin) ────────────────────────────────
+/* RETIRED. This screen wrote profiles.role, which is now only a fallback —
+   so anything changed here was silently ignored by the app that reads the
+   consolidated model. A screen that looks like it works and does not is
+   worse than no screen, so it is closed off rather than left as a trap.
+   The whole body is kept for one release in case something still calls it. */
 async function openPeople(){
+  window.open("app.html","_blank");
+  return;
+}
+async function openPeopleRETIRED(){
   if(ME.role!=="admin"){toast("Admins only","err");return;}
   document.getElementById("people-list").innerHTML='<div style="padding:20px;font-size:13px;color:var(--muted);">Loading…</div>';
   document.getElementById("invite-list").innerHTML="";
@@ -7557,14 +7569,14 @@ async function inviteAdd(){
   if(error){toast(error.message,"err");return;}
   emailEl.value="";
   toast("Invited "+email);
-  openPeople();
+  openPeopleRETIRED();
 }
 async function cancelInvite(email){
   if(!confirm("Cancel this invite?"))return;
   const {error}=await sb.from("pending_invites").delete().eq("email",email);
   if(error){toast(error.message,"err");return;}
   toast("Invite cancelled");
-  openPeople();
+  openPeopleRETIRED();
 }
 function renderPeople(rows){
   const list=document.getElementById("people-list"); list.innerHTML="";
