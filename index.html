@@ -4841,7 +4841,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v43 New York — the post owns its work";
+const TOOL_VERSION="v44 — one access model, read behind a fallback";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -7773,12 +7773,67 @@ function applyRoleUI(){
   }
 }
 
+/* ══ ACCESS STAGE 2 — read the consolidated model, keep the old one ═══
+   `user_tool_roles` becomes the answer to "what may this person do in the
+   calendar", and `profiles.role` becomes the fallback for when it has no
+   answer. Both are live at once, deliberately: this is the one area where
+   a bug locks out the whole team, so the old path stays underneath until
+   the new one has been watched for a while.
+
+   STAGE 2 MUST CHANGE NOTHING ANYONE CAN SEE. Enforcement of the four
+   admin-only capabilities is stage 3. If this stage is visible, it is
+   wrong — which is exactly what makes it provable.
+
+   The five tool roles map onto the three the app already understands:
+     admin                            → admin
+     account_manager | creator        → team
+     client_reviewer | client_viewer  → client
+   `ME.toolRole` keeps the precise role, and `ME.caps` the permission set,
+   so stage 3 has them ready without another round trip. Neither is read
+   by anything yet. */
+const TOOLROLE_TO_LEGACY={admin:"admin",account_manager:"team",creator:"team",
+                          client_reviewer:"client",client_viewer:"client"};
+async function resolveAccess(userId, legacyRole){
+  ME.toolRole=null; ME.caps={}; ME.accessSource="legacy";
+  try{
+    const r=await sb.from("user_tool_roles").select("tool,role").eq("user_id",userId);
+    /* An error here means the table is missing or unreadable — NOT that
+       the person has no access. Falling through to the legacy role is the
+       whole point of the soak. */
+    if(r.error) return;
+    const cal=(r.data||[]).find(x=>x.tool==="calendar");
+    /* No calendar row is a real answer: this person was never given the
+       calendar. But during the soak the legacy field still decides, so a
+       backfill that missed somebody cannot lock them out. Today the two
+       agree for all nine people — asserted in access_fallback. */
+    if(!cal) return;
+    const mapped=TOOLROLE_TO_LEGACY[cal.role];
+    if(!mapped) return;                       // unknown role → trust the old one
+    ME.toolRole=cal.role;
+    ME.accessSource="user_tool_roles";
+    ME.role=mapped;
+    /* loaded for stage 3, read by nothing today */
+    const p=await sb.from("role_permissions").select("permission,allowed")
+      .eq("tool","calendar").eq("role",cal.role);
+    if(!p.error) (p.data||[]).forEach(x=>{ ME.caps[x.permission]=x.allowed; });
+  }catch(e){ /* never let access resolution throw somebody out of the app */ }
+}
+/* Stage 3 will read this. Today it is only ever consulted through the
+   legacy checks, so it changes nothing. */
+function can(perm){
+  if(ME.caps && Object.prototype.hasOwnProperty.call(ME.caps,perm)) return !!ME.caps[perm];
+  return canEdit();                            // pre-stage-3 behaviour
+}
+
 async function boot(){
   const {data:{session}}=await sb.auth.getSession();
   if(!session){document.getElementById("auth-screen").style.display="flex";return;}
   const {data:prof,error}=await sb.from("profiles").select("role,brand_id,email").eq("id",session.user.id).single();
   if(error){authMsg(error.message);document.getElementById("auth-screen").style.display="flex";return;}
   ME={id:session.user.id,role:prof.role,brand_id:prof.brand_id,email:prof.email||session.user.email};
+  /* ACCESS STAGE 2 — the calendar starts reading the consolidated model,
+     with the legacy field as a LIVE fallback. See resolveAccess(). */
+  await resolveAccess(session.user.id, prof.role);
   if(ME.role==="pending"){
     document.getElementById("auth-form").style.display="none";
     document.getElementById("auth-pending").style.display="block";
@@ -7791,7 +7846,7 @@ async function boot(){
   document.querySelectorAll("#setup-drop .admin-row").forEach(r=>r.style.display=ME.role==="admin"?"":"none");
   const ae=document.getElementById("acct-email"); if(ae) ae.textContent=ME.email||"";
   /* not awaited: the sign-in log must never delay the app appearing */
-  logAppEvent("sign_in",{role:ME.role});
+  logAppEvent("sign_in",{role:ME.role,tool_role:ME.toolRole,via:ME.accessSource});
   await loadAll();
 }
 
