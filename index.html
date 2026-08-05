@@ -1261,7 +1261,7 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
       <div class="acmenu" id="acct-menu">
         <div class="acmail" id="acct-email"></div>
         <div class="bpsep"></div>
-        <div class="brow staff-row" onclick="closeAllPops();openM('ev-mgr')"><i class="ti ti-calendar-cog"></i><span class="bnm">Events database</span></div>
+        <div class="brow staff-row admin-cap-events" onclick="closeAllPops();openM('ev-mgr')"><i class="ti ti-calendar-cog"></i><span class="bnm">Events database</span></div>
         <div class="brow staff-row" onclick="closeAllPops();openM('ind-mgr')"><i class="ti ti-tags"></i><span class="bnm">Industries</span></div>
         <div class="brow staff-row" onclick="closeAllPops();carryForward()"><i class="ti ti-arrow-forward"></i><span class="bnm">Carry forward to next year</span></div>
         <div class="brow staff-row" onclick="closeAllPops();openTrash()"><i class="ti ti-trash"></i><span class="bnm">Trash</span></div>
@@ -2365,6 +2365,7 @@ function socialToggleSyncInline(id){
   dbSaveSocialPost(p); renderSocial();
 }
 function deleteContentPost(id){
+  if(!canCap("delete_post")) return capDenied("Deleting a post");        // STAGE 3
   const b=brands[activeBrand]; const p=(b.social||[]).find(x=>x.id===id); if(!p)return;
   if(postHasContent(p)&&!confirm("This post has content. Delete it?"))return;
   b.social=b.social.filter(x=>x.id!==id); dbTrashSocialPost(id); renderSocial();
@@ -5057,7 +5058,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v47.1 — Lisbon";
+const TOOL_VERSION="v48 — access stage 3";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -5386,7 +5387,9 @@ async function dbSaveSocialPost(p){
     if(!r||!r.error){ p._uat=row.updated_at; rememberOwnWrite("social_posts",row.id,row.updated_at); rtGUpsert("social",row); }
   });
 }
-async function dbTrashSocialPost(id){ if(!canEdit()) return; rtGRemove("social",id); dbErr(await sb.from("social_posts").update({deleted_at:new Date().toISOString()}).eq("id",id));
+/* the write itself, not only the button — a hidden control is not a
+   permission check */
+async function dbTrashSocialPost(id){ if(!canCap("delete_post")) return; rtGRemove("social",id); dbErr(await sb.from("social_posts").update({deleted_at:new Date().toISOString()}).eq("id",id));
   logAppEvent("post_deleted",{post_id:id,brand:(brands[activeBrand]||{}).name||""}); }
 
 // ── MONTH PLAN: Key Theme, Goals, Influencer Marketing, Production ──
@@ -5512,7 +5515,8 @@ async function archivePost(id,on=true){
   toast(on?"Archived":"Restored from archive");
 }
 async function archiveMonth(month,on=true){
-  if(!canEdit()||!activeBrand) return;
+  if(!activeBrand) return;
+  if(!canCap("archive_month")) return capDenied("Archiving a month");   // STAGE 3
   const stamp=on?new Date().toISOString():null;
   dbErr(await sb.from("social_posts").update({archived_at:stamp})
     .eq("brand_id",activeBrand).eq("year",YEAR).eq("month",month));
@@ -6988,7 +6992,9 @@ function openBrief(){
   briefEdit=false; view="brief"; render(); window.scrollTo(0,0);
 }
 function closeBrief(){ briefEdit=false; view="year"; render(); }
-function bdToggleEdit(){ briefEdit=!briefEdit; renderBrief(); window.scrollTo(0,0); if(!briefEdit) toast("Brief saved"); }
+function bdToggleEdit(){
+  if(!briefEdit && !canCap("edit_brand_vision")) return capDenied("Editing the Brand Vision"); // STAGE 3
+  briefEdit=!briefEdit; renderBrief(); window.scrollTo(0,0); if(!briefEdit) toast("Brief saved"); }
 function bdo(){
   const b=brands[activeBrand]; if(!b.brief||typeof b.brief!=="object") b.brief={};
   const D=b.brief;
@@ -7130,7 +7136,7 @@ function renderBriefDash(){
       ${String(D.tagline||"").trim()?`<div class="year-tag">${escAttr(D.tagline)}</div>`:""}
     </div>
     <div class="bd-acts">
-      <button class="btn btn-p" onclick="bdToggleEdit()"><i class="ti ti-pencil"></i> Edit the data</button>
+      ${canCap("edit_brand_vision")?`<button class="btn btn-p" onclick="bdToggleEdit()"><i class="ti ti-pencil"></i> Edit the data</button>`:""}
       <!-- LISBON 6: Import came back out of the header. Same rule as the
            Content view — Export reads and lives in the header, Import
            writes and lives on the screen it changes. -->
@@ -8016,7 +8022,7 @@ async function dbPushMasterEvent(m,e){
     dbErr(await sb.from("events").upsert(row));
   });
 }
-async function dbDeleteMasterEvent(id){ if(canEdit()) dbErr(await sb.from("events").update({deleted_at:new Date().toISOString()}).eq("id",id)); }
+async function dbDeleteMasterEvent(id){ if(canCap("manage_events")) dbErr(await sb.from("events").update({deleted_at:new Date().toISOString()}).eq("id",id)); }
 
 function applyRoleUI(){
   const staffOnly=["signout-btn"]; // always visible
@@ -8032,6 +8038,12 @@ function applyRoleUI(){
     document.querySelectorAll("#setup-drop .staff-row").forEach(r=>r.style.display="none");
     document.querySelectorAll("#setup-drop .admin-row").forEach(r=>r.style.display="none");
   }
+  /* STAGE 3: the master events database is admin-only now. Hidden here
+     AND refused in dbDeleteMasterEvent, because a hidden menu row is not
+     a permission check. */
+  document.querySelectorAll(".admin-cap-events").forEach(r=>{
+    r.style.display=canCap("manage_events")?"":"none";
+  });
 }
 
 /* ══ ACCESS STAGE 2 — read the consolidated model, keep the old one ═══
@@ -8079,12 +8091,35 @@ async function resolveAccess(userId, legacyRole){
     if(!p.error) (p.data||[]).forEach(x=>{ ME.caps[x.permission]=x.allowed; });
   }catch(e){ /* never let access resolution throw somebody out of the app */ }
 }
-/* Stage 3 will read this. Today it is only ever consulted through the
-   legacy checks, so it changes nothing. */
 function can(perm){
   if(ME.caps && Object.prototype.hasOwnProperty.call(ME.caps,perm)) return !!ME.caps[perm];
-  return canEdit();                            // pre-stage-3 behaviour
+  return canEdit();
 }
+
+/* ══ ACCESS STAGE 3 — the four capabilities start being enforced ══════
+   D3, signed off 2026-08-04: master events, the Brand Vision, deleting a
+   post and archiving a month become admin-only.
+
+   Why this is NOT just can(): can() falls back to canEdit() when the
+   permission set has not loaded — right for the soak, wrong here. During
+   stage 2 anyone whose row the backfill missed still resolves through the
+   legacy field with NO caps, so can("delete_post") would answer canEdit()
+   and the capability would silently not be enforced for exactly the
+   people whose data we are least sure about.
+
+   So: the permission set decides when it exists, and ADMIN is required
+   when it does not. Falling back to "team" here would make the whole
+   stage a no-op for the accounts most likely to be wrong.
+
+   This is the one stage anyone can SEE. A creator who could archive
+   August yesterday cannot today. That is the decision, not a bug. */
+const ADMIN_ONLY_CAPS=["manage_events","edit_brand_vision","delete_post","archive_month"];
+function canCap(perm){
+  if(ME.caps && Object.prototype.hasOwnProperty.call(ME.caps,perm)) return !!ME.caps[perm];
+  return ME.role==="admin";
+}
+/* one message, so it reads the same wherever somebody meets the edge */
+function capDenied(what){ toast(what+" is limited to an admin.","err"); }
 
 async function boot(){
   const {data:{session}}=await sb.auth.getSession();
