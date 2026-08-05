@@ -88,7 +88,9 @@ body{background:var(--bg);color:var(--text);margin:0;min-height:100vh;}
 /* Shanghai: brief header now matches the calendar's — title centred,
    actions grouped immediately beside it rather than pushed far right. */
 .bd-head{align-items:center;gap:14px;}
-.bd-head .bd-acts{justify-content:flex-start;margin-left:0;}
+/* LISBON 10: the two screens are a pair. Right-aligned here as on the
+   calendar, so "Back to Calendar" lands exactly where "Brand brief" was. */
+.bd-head .bd-acts{justify-content:flex-end;margin-left:auto;}
 .bd-acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
 .year-title{font-size:40px;font-weight:700;letter-spacing:-.04em;line-height:1;}
 .year-title span{color:var(--acc);}
@@ -348,7 +350,9 @@ body.planning .mc-day:hover{box-shadow:0 0 0 2px #0EA5A5 inset;border-radius:5px
 .bd-card.tint{background:var(--surface2);}
 .bd-lbl{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--subtle);margin-bottom:6px;}
 .bd-card.dark .bd-lbl{color:#8a8a8a;}
-.bd-sec{display:flex;align-items:center;gap:12px;margin:44px 0 14px;padding:10px 0 9px;position:sticky;top:var(--sectop,var(--hdrh));z-index:15;background:var(--bg);scroll-margin-top:var(--sectop,var(--hdrh));}
+/* MO19: the section heading used to stick under the header. Dropped —
+   and with it the --sectop offset it existed to compute. */
+.bd-sec{display:flex;align-items:center;gap:12px;margin:44px 0 14px;padding:10px 0 9px;background:transparent;scroll-margin-top:var(--hdrh);}
 .bd-secnum{width:30px;height:30px;border-radius:50%;background:#0D0D0D;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;}
 .bd-sectitle{font-size:22px;font-weight:700;letter-spacing:-.02em;white-space:nowrap;}
 .bd-secrule{flex:1;height:1px;background:var(--div);}
@@ -702,7 +706,8 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
    they frost what passes underneath instead. (Sanctioned blur: sticky
    over moving content, same case as .list-month-strip.)
    ══════════════════════════════════════════════════════════════════ */
-.bd-sec{background:transparent;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);}
+/* MO19: the blur existed so page content reading THROUGH the sticky bar
+   stayed legible. Nothing passes under it now. */
 .em-month-head{background:transparent;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
   border-bottom-color:rgba(255,255,255,.65);}
 
@@ -859,7 +864,16 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
 .actxt{display:flex;flex-direction:column;justify-content:center;flex:1;min-width:0;}
 .acnm{font-size:13px;font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .acrole{font-size:11px;color:var(--muted);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.acmenu{position:absolute;bottom:52px;left:0;width:246px;background:rgba(255,255,255,.92);
+/* MO22 — MEASURED, not guessed. The account menu is 246px wide and
+   anchored left:0 inside .acct, which lives in the sidebar column with
+   14px padding either side. The column's content box is narrower than
+   246px, and .sidebar carries overflow:visible so the popover is not
+   clipped — deliberately, or it would be cut off instead. Wider box
+   inside a narrower one, with nothing stopping it: it spills into the
+   page. This is the FOURTH popover/containment fault, and all four share
+   one cause — a popover sized independently of the box it is anchored
+   in. So the width now follows the column rather than being declared. */
+.acmenu{position:absolute;bottom:52px;left:0;right:0;width:auto;background:rgba(255,255,255,.92);
   -webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);border:1px solid rgba(255,255,255,.95);
   border-radius:14px;box-shadow:0 18px 46px rgba(13,13,13,.2);padding:6px;display:none;z-index:700;}
 .acmenu.open{display:block;}
@@ -1157,6 +1171,7 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
    the same kind of fact — there is something here you have not dealt with */
 .th46 .stagedn{min-width:17px;height:17px;padding:0 5px;border-radius:999px;background:var(--acc);color:#fff;
   font-size:10px;font-weight:800;display:none;align-items:center;justify-content:center;margin-left:-3px}
+.pvimg>img{width:100%;height:100%;object-fit:cover;display:block;}
 </style>
 
 </head>
@@ -1250,6 +1265,7 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
         <div class="brow staff-row" onclick="closeAllPops();openM('ind-mgr')"><i class="ti ti-tags"></i><span class="bnm">Industries</span></div>
         <div class="brow staff-row" onclick="closeAllPops();carryForward()"><i class="ti ti-arrow-forward"></i><span class="bnm">Carry forward to next year</span></div>
         <div class="brow staff-row" onclick="closeAllPops();openTrash()"><i class="ti ti-trash"></i><span class="bnm">Trash</span></div>
+        <div class="brow staff-row" onclick="openImportHistory()"><i class="ti ti-history"></i><span class="bnm">Import history</span></div>
         <!-- The calendar's own People screen is GONE. It wrote the old field,
              which is now only a fallback, so changes made there were silently
              ignored — a trap worth removing rather than documenting. There is
@@ -1640,6 +1656,22 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
 <!-- SOCIAL POST EDITOR -->
 <div class="overlay" id="ov-social-edit" onclick="if(event.target===this)closeM('social-edit')">
   <div class="modal" style="max-width:420px;"><div id="se-body"></div></div>
+</div>
+
+<!-- LISBON 6 — the importer. Two fields, one confirm screen, a log. -->
+<div class="overlay" id="ov-import" onclick="if(event.target===this)closeM('import')">
+  <div class="modal" style="max-width:760px;"><div id="im-body"></div></div>
+</div>
+<div class="overlay" id="ov-imhist" onclick="if(event.target===this)closeM('imhist')">
+  <div class="modal" style="max-width:640px;"><div id="imh-body"></div></div>
+</div>
+
+<!-- LISBON 4 — editing ONE post uses the same form as editing the month.
+     The Instagram-preview window taught a second way to do the same job,
+     and the two drifted: the inline form has Focus, the design brief and
+     a status chip; the preview window does not. One form, two places. -->
+<div class="overlay" id="ov-post-edit" onclick="if(event.target===this)closePostEdit()">
+  <div class="modal" style="max-width:640px;"><div id="pe-body"></div></div>
 </div>
 
 <!-- PLANNING DAY PLANNER -->
@@ -2199,7 +2231,7 @@ function brandHeaderHtml(){
   } else {
     group=`<div style="display:flex;align-items:stretch;height:36px;box-sizing:border-box;border:1px solid var(--div);border-radius:8px;overflow:hidden;">${seg(false,false,"toggleSocialLayer()","ti-photo","Social",true)}</div>`;
   }
-  const brief=`<button title="Brand brief" class="btn btn-s" onclick="openBrief()" style="background:var(--surface);"><i class="ti ti-file-text"></i> Brand brief</button>`;
+  const brief=`<button title="Brand Vision" class="btn btn-s" onclick="openBrief()" style="background:var(--surface);"><i class="ti ti-file-text"></i> Brand Vision</button>`;
   // planning hint lives INLINE in the header row (row height fixed at 36px by the buttons),
   // so toggling planning never pushes the calendar down.
   const hint=(socOn&&view==="year"&&canEdit())?`<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:#E1F5EE;color:#0E8A8A;font-size:11px;font-weight:600;white-space:nowrap;"><i class="ti ti-pencil-plus"></i> Click any date to plan a post</span>`:"";
@@ -2227,9 +2259,41 @@ function renderYear(){
 
 // ── CONTENT (social posts) VIEW — month-scoped, View/Edit ────
 let contentMonth=null, contentMode="view";
+/* LISBON 4 — Edit on a post card opened a mocked-up Instagram window with
+   its own fields. It now opens the REAL form: socialEditForm, the same
+   one the month's Edit mode renders, scoped to this post.
+
+   That form saves as you type through socialFieldEdit, so there is no
+   Save button and none is wanted — closing is closing, not discarding.
+   openSocialEditor stays for the NEW-post path, which needs a date and a
+   brand before a post exists to edit. */
+let PE_ID=null;
 function openSocialEditorById(id){
-  const b=brands[activeBrand]; if(!b)return;
-  const p=(b.social||[]).find(x=>x.id===id); if(p)openSocialEditor(activeBrand,p,null);
+  const b=brands[activeBrand]; if(!b) return;
+  const p=(b.social||[]).find(x=>x.id===id); if(!p) return;
+  if(!canEdit()) return openPreview(id);
+  PE_ID=id;
+  renderPostEdit();
+  openM("post-edit");
+}
+function renderPostEdit(){
+  const b=brands[activeBrand]; if(!b||!PE_ID) return;
+  const p=(b.social||[]).find(x=>x.id===PE_ID); if(!p) return;
+  const el=document.getElementById("pe-body"); if(!el) return;
+  el.innerHTML=`
+   <div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">Edit post
+       <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${escAttr(b.name)} · ${shortDate(p.month,p.date)} ${(MN[p.month]||"").slice(0,3)}</span></div>
+     <button class="modal-x" onclick="closePostEdit()">✕</button>
+   </div>
+   <div class="modal-body" style="padding:14px 18px 18px;">${socialEditForm(p)}
+     <div style="font-size:11px;color:var(--subtle);margin-top:12px;">Changes save as you type.</div>
+   </div>`;
+}
+function closePostEdit(){
+  closeM("post-edit"); PE_ID=null;
+  /* the card behind it has to catch up with what was just typed */
+  if(view==="content") renderSocial(); else render();
 }
 function socialDateLabel(m,d){
   const dt=new Date(YEAR,m-1,d);
@@ -2718,7 +2782,14 @@ function previewCard(platform,p,bn){
   const v=p.content[platform]||emptyVariant();
   const cap=v.caption?seEsc(v.caption):'<span style="color:#AAA;">No caption</span>';
   const tags=v.hashtags?`<div style="color:#185FA5;margin-top:3px;">${seEsc(v.hashtags)}</div>`:"";
-  const img=`<div style="aspect-ratio:1;background:#FAFAFA;border-top:1px solid #EFEFEF;border-bottom:1px solid #EFEFEF;display:flex;align-items:center;justify-content:center;color:#CFCFCF;"><i class="ti ti-photo" style="font-size:26px;"></i></div>`;
+  /* LISBON 2: Preview is meant to answer "what will this look like when it
+     goes out", and it was showing a grey square where the picture goes.
+     The cover comes from the current round, or failing that from the most
+     recent picture in the thread — the same rule the card uses. */
+  const lead=leadAssetFromRound(p.current_round_id)||postLeadAsset(p.id);
+  const img=lead
+    ? `<div class="pvimg" data-sign="${escAttr(lead.view_path||lead.thumb_path||lead.poster_path||"")}" style="aspect-ratio:1;background:#FAFAFA;border-top:1px solid #EFEFEF;border-bottom:1px solid #EFEFEF;overflow:hidden;position:relative;"></div>`
+    : `<div style="aspect-ratio:1;background:#FAFAFA;border-top:1px solid #EFEFEF;border-bottom:1px solid #EFEFEF;display:flex;flex-direction:column;gap:5px;align-items:center;justify-content:center;color:#CFCFCF;"><i class="ti ti-photo" style="font-size:26px;"></i><span style="font-size:10px;">No design yet</span></div>`;
   if(platform==="facebook"){
     return `<div style="border:1px solid #DBDBDB;border-radius:10px;overflow:hidden;background:#fff;">
       <div style="display:flex;align-items:center;gap:8px;padding:10px;"><div style="width:30px;height:30px;border-radius:50%;background:#185FA5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">${initial}</div><div><div style="font-size:12px;font-weight:700;">${seEsc(bn)}</div><div style="font-size:10px;color:#6B6B6B;">${p.date} ${(MN[p.month]||"").slice(0,3)}${p.time?" · "+escAttr(p.time):""} · <i class="ti ti-world" style="font-size:10px;"></i></div></div></div>
@@ -2738,6 +2809,8 @@ function openPreview(id){
     :`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">${previewCard("instagram",p,b.name)}${previewCard("facebook",p,b.name)}</div>`;
   document.getElementById("preview-body").innerHTML=`<div class="modal-top" style="padding:16px 18px 12px;"><div class="modal-title" style="font-size:16px;">Preview <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${p.date} ${(MN[p.month]||"").slice(0,3)}</span></div><button class="modal-x" onclick="closeM('preview')">✕</button></div><div style="padding:16px 18px;">${cards}</div>`;
   openM("preview");
+  /* the signed URL is minted after the modal is in the DOM */
+  hydrateMedia(document.getElementById("preview-body"));
 }
 let contentStatusFilter="";
 function setContentStatusFilter(k){ contentStatusFilter=(contentStatusFilter===k)?"":k; renderSocial(); }
@@ -2969,12 +3042,12 @@ function renderSocial(){
   const modeSeg=(mm,icon,label)=>`<span onclick="setContentMode('${mm}')" style="height:30px;box-sizing:border-box;padding:0 12px;border-radius:6px;display:flex;align-items:center;gap:5px;font-size:13px;font-weight:${contentMode===mm?"700":"600"};cursor:pointer;${contentMode===mm?"background:#fff;color:#0D0D0D;box-shadow:0 1px 2px rgba(0,0,0,.08);":"color:var(--muted);"}"><i class="ti ${icon}" style="font-size:13px;"></i> ${label}</span>`;
   const modeToggle=`<div style="display:flex;align-items:center;background:#E7E6E1;border-radius:8px;padding:3px;gap:2px;height:36px;box-sizing:border-box;">${modeSeg("view","ti-eye","View")}${modeSeg("edit","ti-pencil","Edit")}</div>`;
   // Tokyo: Export (Word / Excel / PowerPoint) for the visible brand + month
-  const exportCtl=`<div style="position:relative;">
-    <button class="btn btn-s" style="background:var(--surface);" onclick="toggleExportMenu(event)"><i class="ti ti-download"></i> Export</button>
-    <div id="export-menu" style="display:none;position:absolute;top:42px;right:0;background:var(--surface);border:1px solid var(--div);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:60;min-width:186px;padding:5px;" onclick="event.stopPropagation()">
-      ${[["word","ti-file-text","Word document"],["excel","ti-table","Excel sheet"],["ppt","ti-presentation","PowerPoint deck"]].map(([k,ic,l])=>`<div onclick="doExport('${k}')" style="padding:8px 11px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''"><i class="ti ${ic}" style="color:var(--muted);font-size:15px;"></i> ${l}</div>`).join("")}
-    </div>
-  </div>`;
+  /* LISBON 3 + 6: the Content view's Export button was removed — the
+     header control already offers the same three files for the same
+     scope. IMPORT takes that spot, because the rule is: Export reads and
+     lives in the header, Import writes and lives on the screen it
+     changes. Staff only; the write path checks the role again. */
+  const importCtl=canEdit()?`<button class="btn btn-s" style="background:var(--surface);" onclick="openImport()" title="Update captions and hashtags from a downloaded sheet"><i class="ti ti-upload"></i> Import</button>`:"";
   mc.innerHTML=`
    <div style="padding:28px 32px 20px;">
    <div style="margin-bottom:20px;">${brandHeaderHtml()}</div>
@@ -2984,7 +3057,7 @@ function renderSocial(){
    </div>
    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap;margin:20px 0 12px;padding-top:14px;border-top:1px solid var(--div);">
      <div style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${monthTotal} Post${monthTotal!==1?"s":""} <span style="font-weight:400;color:var(--subtle);">· ${MN[contentMonth]}</span></div>
-     <div style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;flex-shrink:0;">${exportCtl}${modeToggle}${canE?`<button class="btn btn-p" style="white-space:nowrap;" onclick="addContentPost()"><i class="ti ti-plus"></i> Add post</button>`:""}</div>
+     <div style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;flex-shrink:0;">${importCtl}${modeToggle}${canE?`<button class="btn btn-p" style="white-space:nowrap;" onclick="addContentPost()"><i class="ti ti-plus"></i> Add post</button>`:""}</div>
    </div>
    <div id="content-list"></div>
    </div>`;
@@ -3087,8 +3160,15 @@ function buildMini(m){
   const planClickable=(socialLayer||view==="content")&&activeBrand&&brands[activeBrand];
   // Atlas: the red dot only appears when the month plan actually has
   // Key Theme & Goals data — not merely because the name is clickable.
+  /* M16 — RED-DOT AUDIT. Red was doing four jobs: unread, campaign,
+     a-plan-exists, and the bell. Three of them are not urgent and two are
+     not even about you, so red stopped meaning anything.
+     From here red means ONE thing: there is something new FOR YOU.
+     "This month has a plan" is a fact about the month, not a summons —
+     so it becomes a neutral grey mark. Campaigns already carry the pink
+     bar; the bell and the unread count keep red. */
   const planDot=planClickable&&monthPlanHasData(activeBrand,YEAR,m)
-    ?`<span style="width:6px;height:6px;border-radius:50%;background:#D62828;flex-shrink:0;"></span>`:"";
+    ?`<span title="This month has a theme and goals" style="width:6px;height:6px;border-radius:50%;background:var(--subtle);flex-shrink:0;"></span>`:"";
   const mcNameHtml=planClickable
     ?`<div class="mc-name" style="cursor:pointer;display:flex;align-items:center;gap:5px;" onclick="event.stopPropagation();openMonthPlan(${m})" data-tip="Click to edit this month's theme, goals &amp; trackers">${MN[m]}${planDot}</div>`
     :`<div class="mc-name">${MN[m]}</div>`;
@@ -4321,12 +4401,18 @@ function buildExportPanel(){
   const el=document.getElementById("export-panel"); if(!el) return;
   const [line1,line2]=exportScopeText();
   const isContent=(view==="content"&&activeBrand);
+  /* LISBON 10: Brand Vision's own Export and Import buttons left its strip
+     and live here. Import WRITES, so it keeps its own confirm step — the
+     menu entry is shared, the safety is not. */
+  const isBrief=!!document.querySelector(".bd-wrap");
   el.innerHTML=`<div class="exscope"><b>What will be exported</b>
       <div>${escAttr(line1)}<br><span class="dim">${escAttr(line2)}</span></div></div>`
     + (isContent
       ? `<div class="brow act" onclick="closeAllPops();doExport('word')"><i class="ti ti-file-text"></i><span class="bnm">Word document</span></div>
          <div class="brow act" onclick="closeAllPops();doExport('excel')"><i class="ti ti-table"></i><span class="bnm">Excel sheet</span></div>
          <div class="brow act" onclick="closeAllPops();doExport('ppt')"><i class="ti ti-presentation"></i><span class="bnm">PowerPoint deck</span></div>`
+      : isBrief
+      ? `<div class="brow act" onclick="closeAllPops();bdExportXLSX()"><i class="ti ti-table"></i><span class="bnm">Export this brand's data</span></div>`
       : `<div class="brow act" onclick="closeAllPops();exportXLSX()"><i class="ti ti-table"></i><span class="bnm">Excel sheet</span></div>`);
 }
 function toggleExportSw(e){ buildExportPanel(); popOpen("export-panel",e); }
@@ -4971,7 +5057,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v46.1 — the post card and the thread";
+const TOOL_VERSION="v47 — Lisbon";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -5012,7 +5098,11 @@ function showDiag(){
         const fmtLbl=fmt.charAt(0).toUpperCase()+fmt.slice(1);
         html+=`<div style="display:flex;align-items:center;gap:9px;margin:5px 0;"><span style="font-size:10px;font-weight:700;color:#cfcfcf;background:rgba(255,255,255,.12);padding:2px 7px;border-radius:999px;flex-shrink:0;">${escAttr(fmtLbl)}</span><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;font-weight:500;">${idea?escAttr(idea):'<span style=\"color:#8a8a8a;\">No idea yet</span>'}</span><span style="display:flex;align-items:center;gap:4px;flex-shrink:0;"><span style="width:7px;height:7px;border-radius:50%;background:${stColor};"></span><span style="font-size:11px;color:#c9c9c9;">${escAttr(stShort)}</span></span></div>`;
       } else {
-        html+=`<div style="display:flex;align-items:center;gap:8px;margin:3px 0;"><span style="width:7px;height:7px;background:#9AA3B0;border-radius:50%;flex-shrink:0;"></span><span>${escAttr(ln.slice(2))}</span></div>`;
+        /* MO20: slice(2) strips the "C|" / "S|" prefix. A plain line has
+           no prefix, so it was losing its first two characters — which is
+           why "Click to edit…" rendered as "ick to edit…". */
+        const plain=/^[CS]\|/.test(ln)?ln.slice(2):ln;
+        html+=`<div style="display:flex;align-items:center;gap:8px;margin:3px 0;"><span style="width:7px;height:7px;background:#9AA3B0;border-radius:50%;flex-shrink:0;"></span><span>${escAttr(plain)}</span></div>`;
       }
     });
     el.innerHTML=html; el.style.display="block";
@@ -5213,7 +5303,7 @@ async function upsertBrand(row){
   const res=await sb.from("brands").upsert(row);
   if(res&&res.error&&/brief/i.test(res.error.message||"")){
     briefCol=false;
-    toast("Brand brief not saved — the database is missing the 'brief' column. Everything else saved.","err");
+    toast("Brand Vision not saved — the database is missing the 'brief' column. Everything else saved.","err");
     const r=Object.assign({},row);delete r.brief;return sb.from("brands").upsert(r);
   }
   return res;
@@ -6378,7 +6468,7 @@ function buildNotifPanel(){
         <div class="nbody">
           <div class="msg">${fbRich(String(it.c.body||"").slice(0,160))}</div>
           <div class="attr"><span class="who">${escAttr(it.c.author_name)}</span> ${verb} ·
-            ${shortDate(it.post.month,it.post.date)}<span class="when">${fbTimeLabel(it.c.created_at)}</span></div>
+            ${notifDate(it.post.month,it.post.date)}<span class="when">${fbTimeLabel(it.c.created_at)}</span></div>
         </div></div>`;
     }).join("");
     return `<div class="ngh"><span class="bdot" style="background:${(brands[bid]||{}).color||"#6B6B6B"}"></span>
@@ -6530,11 +6620,19 @@ function rtChain(key,fn){
 // Typing protection: state merges land immediately; a re-render waits
 // while the user is inside an input (top-nav brand/year selects excluded).
 let rtQueued=null, rtToastAt=0;
+/* LISBON 1 — the caption box closed itself a few seconds into every edit.
+   This function decides whether it is safe to repaint. It tested for
+   INPUT / TEXTAREA / SELECT; the caption is a contenteditable DIV, so
+   live-sync concluded nobody was typing and rebuilt the card under the
+   cursor. Self-inflicted: the "edited the caption" activity row echoes
+   back over the realtime channel and triggers the very repaint that
+   closes the box you are typing in. */
 function rtUserTyping(){
   const el=document.activeElement;
-  if(!el||!/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName||"")) return false;
+  if(!el) return false;
   if(el.id==="brand-sel"||el.id==="year-sel") return false;
-  return true;
+  if(el.isContentEditable) return true;
+  return /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName||"");
 }
 function rtDoRender(kind){
   try{
@@ -6777,7 +6875,8 @@ function exportRows(brandId,year,month){
     .map((p,i)=>{
       const v=(p.content.instagram.caption||"").trim()?p.content.instagram:p.content.facebook;
       const dt=new Date(year,month-1,p.date);
-      return {n:i+1,dayName:DAY_FULL[dt.getDay()],dateLabel:`${(MN[month]||"").slice(0,3)} ${p.date}, ${year}`,
+      return {id:p.id,month:month,day:p.date,
+        n:i+1,dayName:DAY_FULL[dt.getDay()],dateLabel:`${(MN[month]||"").slice(0,3)} ${p.date}, ${year}`,
         time:p.time||"",platforms:"Instagram + Facebook",
         format:(p.format||"static").charAt(0).toUpperCase()+(p.format||"static").slice(1),
         focus:((p.content&&p.content.concept)||"").trim(),
@@ -6921,10 +7020,13 @@ function bdCompleteness(){
 }
 function bdJump(id){const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:"smooth",block:"start"});}
 var bdSpyBound=false;
-function bdSyncHdr(){ const h=document.querySelector("#main .year-head");
-  if(h) document.documentElement.style.setProperty("--sectop",Math.round(h.getBoundingClientRect().height)+"px"); }
+/* MO19: --sectop existed only to park the sticky section bar below the
+   header. The bar is gone, so the variable is too — but bdSyncHdr is
+   called from several places and bdHdrH still feeds the scroll-spy, so
+   both keep their names and simply stop referring to it. */
+function bdSyncHdr(){ /* nothing to offset any more */ }
 function bdHdrH(){const cs=getComputedStyle(document.documentElement);
-  const v=parseInt(cs.getPropertyValue("--sectop")||cs.getPropertyValue("--hdrh"),10);return isNaN(v)?116:v;}
+  const v=parseInt(cs.getPropertyValue("--hdrh"),10);return isNaN(v)?116:v;}
 function bdSpy(){
   const m=document.getElementById("main"); if(!m||view!=="brief") return;
   const items=Array.from(document.querySelectorAll("#sb-months .bd-navi"));
@@ -7023,7 +7125,9 @@ function renderBriefDash(){
     </div>
     <div class="bd-acts">
       <button class="btn btn-p" onclick="bdToggleEdit()"><i class="ti ti-pencil"></i> Edit the data</button>
-      <button class="btn btn-s" onclick="bdExportXLSX()"><i class="ti ti-download"></i> Export</button>
+      <!-- LISBON 6: Import came back out of the header. Same rule as the
+           Content view — Export reads and lives in the header, Import
+           writes and lives on the screen it changes. -->
       <button class="btn btn-s" onclick="bdImportXLSX()"><i class="ti ti-upload"></i> Import</button>
       <button class="btn btn-s" onclick="closeBrief()"><i class="ti ti-arrow-left"></i> Back to Calendar</button>
     </div>
@@ -7099,7 +7203,7 @@ function renderBriefDash(){
       </div>
       ${segCards}
     </div>
-    <div style="font-size:12px;color:var(--subtle);margin-top:18px;">Brand brief · ${escAttr(b.name)} · staff only · everything here is editable via “Edit the data”</div>
+    <div style="font-size:12px;color:var(--subtle);margin-top:18px;">Brand Vision · ${escAttr(b.name)} · staff only · everything here is editable via “Edit the data”</div>
   </div>`;
 }
 
@@ -7295,7 +7399,7 @@ function bdExportXLSX(){
   const b=brands[activeBrand]; if(!b) return;
   const ws=XLSX.utils.aoa_to_sheet(bdBriefToAOA());
   ws["!cols"]=[{wch:20},{wch:18},{wch:52},{wch:42},{wch:30}];
-  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Brand Brief");
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Brand Vision");
   const d=new Date(),pad=n=>String(n).padStart(2,"0");
   XLSX.writeFile(wb,`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}-${(b.name||"brand").toLowerCase().replace(/[^a-z0-9]+/g,"-")}-brand-brief.xlsx`);
   toast("Excel exported");
@@ -7529,6 +7633,11 @@ function deleteSocialPost(){
 let PLAN={m:0,day:0};
 function dayClick(m,day){ if(canEdit()&&((view==="year"&&socialLayer&&activeBrand)||view==="content")) planningDayClick(m,day); else openDay(m,day); }
 function shortDate(m,d){ return `${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date(YEAR,m-1,d).getDay()]} ${d}`; }
+/* M18: a notification row is the ONE place with no month around it. On a
+   post card "Tue 2" is unambiguous because the whole screen is September;
+   in the bell, a row from any month sits beside any other and "Tue 4"
+   tells you nothing about which post it is. */
+function notifDate(m,d){ return `${shortDate(m,d)} ${(MN[m]||"").slice(0,3)}`; }
 function postHasContent(p){
   const c=p.content||{}; const f=c.facebook||{}, i=c.instagram||{};
   return !!((f.caption||"")+(f.hashtags||"")+(f.image_ref||"")+(i.caption||"")+(i.hashtags||"")).trim();
@@ -8252,6 +8361,463 @@ function fbPanelHtml(p){
     ${activityHtml}
     ${composer}
   </div>`;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   LISBON 5 — the three export designs Chirag locked on 5 August 2026.
+   Samples they were approved from live in the project folder:
+     2026-08-05-word-export-sample.docx
+     2026-08-05-excel-export-sample-v4.xlsx
+     2026-08-05-ppt-export-sample.pptx
+   Appended, so the Tokyo generators above stay readable as the record of
+   what changed. Function declarations hoist; the last one wins.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Every picture in an export has to be fetched and measured first: the
+   Word and PowerPoint layouts both size from the REAL aspect ratio, so a
+   4:5 still is tall and a reel cover is wide. Guessing a ratio is how you
+   get squashed pictures in a document a client signs off. */
+async function exMedia(post){
+  const out=[];
+  const rid=post.current_round_id;
+  let list=rid?roundAssets(rid):[];
+  if(!list.length){ const lead=postLeadAsset(post.id); list=lead?[lead]:[]; }
+  const vis=(list||[]).filter(a=>!a.deleted_at&&a.kind!=="doc"&&(a.view_path||a.thumb_path||a.poster_path))
+    .slice().sort((x,y)=>(x.slide_no||99)-(y.slide_no||99));
+  for(const a of vis){
+    try{
+      const u=await signedUrl(a.view_path||a.thumb_path||a.poster_path);
+      if(!u) continue;
+      const buf=await (await fetch(u)).arrayBuffer();
+      const dim=await new Promise(res=>{ const im=new Image();
+        im.onload=()=>res({w:im.naturalWidth||1080,h:im.naturalHeight||1350});
+        im.onerror=()=>res({w:1080,h:1350}); im.src=u; });
+      out.push({buf,w:dim.w,h:dim.h,video:a.kind==="video",
+                b64:"data:image/png;base64,"+btoa(String.fromCharCode(...new Uint8Array(buf)))});
+    }catch(e){ /* one unreachable file must not lose the whole export */ }
+  }
+  return out;
+}
+
+/* ── WORD ─────────────────────────────────────────────────────────────
+   One post per page. The picture leads, LEFT aligned, height following
+   its real ratio. Caption at reading size, tags under it. Nothing else —
+   no time, no Idea/Visual/Status block, no "Content Plan" label.
+   Arial in all four font slots or Word quietly serves Times. */
+async function exportWordBlob(rows){
+  const D=await loadExportLib("docx");
+  const {Document,Packer,Paragraph,TextRun,ImageRun,AlignmentType,PageBreak,Table,TableRow,TableCell,WidthType,BorderStyle}=D;
+  const b=brands[activeBrand];
+  const A="Arial", INK="0D0D0D", MUT="6B6B6B", FAINT="A8A6A1", ACC="D62828", BLUE="185FA5";
+  const CW=9026;                              // content width in EMU-ish twips (A4 less margins)
+  const R=(t,o)=>new TextRun(Object.assign({text:t,font:A},o||{}));
+  const P=(kids,o)=>new Paragraph(Object.assign({children:kids},o||{}));
+
+  const children=[
+    P([R("September",{bold:true})],{spacing:{after:0}}),   // replaced below
+  ];
+  children.length=0;
+  children.push(P([R(`${MN[contentMonth]} ${YEAR}`,{bold:true,size:68})],{spacing:{after:80}}));
+  children.push(P([R(b.name,{bold:true,size:26,color:ACC})],{spacing:{after:300}}));
+  children.push(P([R(`${rows.length} post${rows.length===1?"":"s"}  ·  Instagram + Facebook`,{size:19,color:MUT})],
+    {spacing:{after:0},border:{top:{style:BorderStyle.SINGLE,size:6,color:"E4E4E2",space:10}}}));
+
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i];
+    const post=(b.social||[]).find(x=>x.id===r.id)||{id:r.id,current_round_id:null};
+    const shots=await exMedia(post);
+    children.push(P([new PageBreak()]));
+    /* the context line is deliberately the smallest thing on the page */
+    children.push(P([R(`POST ${r.n}`,{bold:true,size:17,color:FAINT}),
+                     R(`   ${r.dateLabel}   ·   ${r.platforms}   ·   ${r.format}`,{size:17,color:FAINT})],
+                    {spacing:{after:180}}));
+    if(!shots.length){
+      children.push(P([R("Creative to come",{size:20,color:FAINT,italics:true})],
+        {alignment:AlignmentType.CENTER,spacing:{before:900,after:900},
+         shading:{fill:"F4F3F0"}}));
+    } else if(shots.length===1){
+      const m=shots[0]; const w=CW*0.62, h=w*m.h/m.w;
+      children.push(P([new ImageRun({data:m.buf,transformation:{width:Math.round(w/14),height:Math.round(h/14)}})],
+        {alignment:AlignmentType.LEFT,spacing:{after:120}}));
+    } else {
+      /* a carousel puts EVERY slide in the file. Two across, or five
+         slides at column width ran to three pages and pushed the caption
+         somewhere nobody would look. */
+      const cellW=Math.round(CW*0.30/14);
+      const noB={style:BorderStyle.NONE,size:0,color:"FFFFFF"};
+      const rowsOut=[];
+      for(let k=0;k<shots.length;k+=2){
+        rowsOut.push(new TableRow({children:[0,1].map(j=>{
+          const m=shots[k+j];
+          return new TableCell({width:{size:50,type:WidthType.PERCENTAGE},
+            borders:{top:noB,bottom:noB,left:noB,right:noB},
+            children: m
+              ? [P([new ImageRun({data:m.buf,transformation:{width:cellW,height:Math.round(cellW*m.h/m.w)}})]),
+                 P([R(`Slide ${k+j+1} of ${shots.length}`,{size:16,color:FAINT})],{spacing:{after:160}})]
+              : [P([R("")])] });
+        })}));
+      }
+      children.push(new Table({rows:rowsOut,width:{size:100,type:WidthType.PERCENTAGE}}));
+      children.push(P([R("")],{spacing:{after:120}}));
+    }
+    (r.caption?String(r.caption).split(/\n\s*\n/):["Caption to come."]).forEach((blk,k)=>{
+      children.push(P([R(blk,{size:23,italics:!r.caption})],{spacing:{before:k?0:160,after:140}}));
+    });
+    if(r.hashtags) children.push(P([R(r.hashtags,{size:21,color:BLUE})],{spacing:{after:0}}));
+  }
+  return Packer.toBlob(new Document({
+    styles:{default:{document:{run:{font:A,size:21,color:INK}}}},
+    sections:[{properties:{page:{margin:{top:1000,bottom:1000,left:1200,right:1200}}},children}]}));
+}
+
+/* ── EXCEL ────────────────────────────────────────────────────────────
+   The sheet Chirag already approved, edited only where he asked:
+   Comments and Approved? gone; a greyed Post ID so a re-upload finds its
+   post however the rows are sorted; Date a picker; Day a formula; two
+   dropdowns — and all of it running to row 200 so a row added at the
+   bottom is already dressed. */
+async function exportExcelBlob(rows){
+  const EJ=await loadExportLib("exceljs");
+  const wb=new EJ.Workbook();
+  const ws=wb.addWorksheet(`${MN[contentMonth]} ${YEAR}`,{views:[{state:"frozen",ySplit:1}]});
+  const lk=wb.addWorksheet("_lists"); lk.state="veryHidden";
+  const ndays=new Date(YEAR,contentMonth,0).getDate();
+  for(let i=1;i<=ndays;i++){ const c=lk.getCell(i,1); c.value=new Date(YEAR,contentMonth-1,i); c.numFmt="mmm d, yyyy"; }
+  const PLAT=["Instagram + Facebook","Instagram","Facebook"];
+  const FMT=SOCIAL_FORMATS.map(f=>f.charAt(0).toUpperCase()+f.slice(1));
+  PLAT.forEach((v,i)=>lk.getCell(i+1,2).value=v);
+  FMT.forEach((v,i)=>lk.getCell(i+1,3).value=v);
+
+  ws.columns=[{header:"Post ID",width:16},{header:"Date",width:13},{header:"Day",width:11},
+    {header:"Platforms",width:20},{header:"Format",width:10},{header:"Focus",width:28},
+    {header:"Caption",width:60},{header:"Hashtags",width:34}];
+  rows.forEach((r,i)=>{
+    const n=i+2;
+    ws.getCell(n,1).value=r.id;
+    const dc=ws.getCell(n,2); dc.value=new Date(YEAR,r.month-1,r.day); dc.numFmt="mmm d, yyyy";
+    ws.getCell(n,4).value=r.platforms; ws.getCell(n,5).value=r.format;
+    ws.getCell(n,6).value=r.focus; ws.getCell(n,7).value=r.caption; ws.getCell(n,8).value=r.hashtags;
+  });
+  const LAST=200;
+  for(let n=2;n<=LAST;n++){
+    ws.getCell(n,2).numFmt="mmm d, yyyy";
+    /* the Day is never typed — it follows the Date, so the two cannot
+       disagree, and it stays blank until a date arrives */
+    ws.getCell(n,3).value={formula:`IF(B${n}="","",TEXT(B${n},"dddd"))`};
+    ws.getCell(n,1).font={color:{argb:"FFA8A6A1"},size:9};
+    ws.getRow(n).alignment={vertical:"top",wrapText:true};
+    /* Desktop Excel has no calendar popup for a plain cell, and an inline
+       list renders inconsistently outside Excel. A list of the month's
+       real dates is a picker that works everywhere and stays a date. */
+    ws.getCell(n,2).dataValidation={type:"list",allowBlank:true,formulae:[`=_lists!$A$1:$A$${ndays}`],
+      showErrorMessage:true,promptTitle:"Date",prompt:"Click the arrow and pick a date.",showInputMessage:true};
+    ws.getCell(n,4).dataValidation={type:"list",allowBlank:true,formulae:[`=_lists!$B$1:$B$${PLAT.length}`],showErrorMessage:true};
+    ws.getCell(n,5).dataValidation={type:"list",allowBlank:true,formulae:[`=_lists!$C$1:$C$${FMT.length}`],showErrorMessage:true};
+  }
+  ws.getRow(1).eachCell(c=>{c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF1A1A1A"}};
+    c.font={color:{argb:"FFFFFFFF"},bold:true};});
+  ws.autoFilter=`A1:H${LAST}`;
+
+  /* ── LISBON 6 — the sheet goes out locked except where it is meant to
+     be used. Caption and Hashtags are unlocked; everything else, and the
+     ability to add, delete or reorder rows, is not.
+
+     This is a GUARDRAIL, not security — accepted by Chirag on 5 Aug. The
+     thing that actually holds is that the importer only ever reads those
+     two columns, whatever the file says. */
+  for(let n=1;n<=LAST;n++) for(let c=1;c<=8;c++)
+    ws.getCell(n,c).protection={locked:!(n>1&&(c===7||c===8))};
+  ws.protect("cc",{selectLockedCells:true,selectUnlockedCells:true,autoFilter:true,sort:true,
+    formatCells:false,insertRows:false,deleteRows:false,insertColumns:false,deleteColumns:false});
+
+  /* the fingerprint: what this file is, and what the two editable fields
+     held at the moment it was downloaded. The snapshot is what lets an
+     import tell "you changed this" from "somebody else changed it while
+     your file was open". */
+  const fp=lk.getCell(1,5); fp.value="CC-CONTENT-EXPORT-V1";
+  lk.getCell(2,5).value=activeBrand;
+  lk.getCell(3,5).value=String(YEAR)+"-"+String(contentMonth);
+  lk.getCell(4,5).value=new Date().toISOString();
+  rows.forEach((r,i)=>{ const n=i+1;
+    lk.getCell(n,6).value=r.id;
+    lk.getCell(n,7).value=r.caption||"";
+    lk.getCell(n,8).value=r.hashtags||""; });
+  lk.protect("cc",{});
+
+  const buf=await wb.xlsx.writeBuffer();
+  return new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+
+/* ── POWERPOINT ───────────────────────────────────────────────────────
+   Single media CONTAINED — it grows until it meets two edges of its
+   reference box and stops, never cropped, with no grey box painted.
+   Video gets a play button. A carousel drops the reference box entirely
+   and runs a 3-over-2 grid, second row centred. */
+async function exportPptBlob(rows){
+  const Pg=await loadExportLib("pptxgenjs");
+  const pptx=new Pg();
+  pptx.defineLayout({name:"CC169",width:13.33,height:7.5}); pptx.layout="CC169";
+  const b=brands[activeBrand], W=13.33, H=7.5, PW=6.3;
+  const t=pptx.addSlide(); t.background={color:"0D0D0D"};
+  t.addText(b.name.toUpperCase(),{x:0.7,y:2.6,w:10,h:0.5,fontSize:16,color:"D62828",bold:true,charSpacing:3,fontFace:"Arial"});
+  t.addText([{text:`${MN[contentMonth]} ${YEAR}`,options:{breakLine:true}},{text:"Content Plan",options:{color:"AAAAAA"}}],
+    {x:0.7,y:3.1,w:11,h:2.2,fontSize:44,color:"FFFFFF",bold:true,fontFace:"Arial"});
+
+  const fit=(s,m,x,y,w,h)=>{ const ir=m.w/m.h, pr=w/h;
+    const nw=ir>pr?w:h*ir, nh=ir>pr?w/ir:h;
+    const px=x+(w-nw)/2, py=y+(h-nh)/2;
+    s.addImage({data:m.b64,x:px,y:py,w:nw,h:nh});
+    return {x:px,y:py,w:nw,h:nh}; };
+
+  for(const r of rows){
+    const post=(b.social||[]).find(x=>x.id===r.id)||{id:r.id,current_round_id:null};
+    const shots=await exMedia(post);
+    const s=pptx.addSlide(); s.background={color:"FFFFFF"};
+    let CX=7.0, CW=5.7, CS=16;
+    if(!shots.length){
+      s.addShape("rect",{x:0,y:0,w:PW,h:H,fill:{color:"F4F4F2"},line:{color:"F4F4F2"}});
+      s.addText(String(r.format).toUpperCase(),{x:0,y:H/2-0.4,w:PW,h:0.8,align:"center",
+        fontSize:26,color:"AAAAAA",bold:true,charSpacing:4,fontFace:"Arial"});
+    } else if(shots.length===1){
+      const box=fit(s,shots[0],0,0,PW,H);
+      if(shots[0].video){
+        const d=1.15, cx=box.x+box.w/2, cy=box.y+box.h/2;
+        s.addShape("ellipse",{x:cx-d/2,y:cy-d/2,w:d,h:d,fill:{color:"FFFFFF"},line:{color:"E0E0E0",width:0.75}});
+        s.addShape("triangle",{x:cx-d*0.16,y:cy-d*0.19,w:d*0.36,h:d*0.38,rotate:90,fill:{color:"0D0D0D"},line:{color:"0D0D0D"}});
+      }
+    } else {
+      const MX=0.34,GX=0.16,AW=9.9-MX,AH=H-0.68;
+      const cw=(AW-MX-2*GX)/3, ch=(AH-GX)/2;
+      shots.slice(0,6).forEach((m,i)=>{
+        const row=Math.floor(i/3), col=i%3;
+        const ncol=row===0?3:Math.min(3,shots.length-3);
+        const rowW=ncol*cw+(ncol-1)*GX;
+        const x0=row===1?MX+((AW-MX)-rowW)/2:MX;
+        fit(s,m,x0+col*(cw+GX),0.34+row*(ch+GX),cw,ch);
+      });
+      CX=10.35; CW=2.65; CS=13;
+    }
+    s.addText(r.caption||"(caption to come)",{x:CX,y:1.5,w:CW,h:2.7,fontSize:CS,color:"0D0D0D",
+      valign:"top",italic:!r.caption,fontFace:"Arial"});
+    if(r.hashtags) s.addText(r.hashtags,{x:CX,y:4.3,w:CW,h:0.6,fontSize:CS-4,color:"185FA5",fontFace:"Arial"});
+    s.addText(`Post ${r.n}   ·   ${r.dateLabel} · ${r.dayName}`,{x:CX,y:6.8,w:CW,h:0.4,fontSize:11,color:"6B6B6B",fontFace:"Arial"});
+  }
+  return pptx.write("blob");
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   LISBON 6 — the importer.
+
+   Objective, stated by Chirag and deliberately narrow: update captions
+   and hashtags in bulk, fast. Nothing else.
+
+   The safety is not the sheet protection — that is a guardrail and
+   everyone knows it. The safety is that THIS CODE ONLY EVER READS TWO
+   COLUMNS. A tampered date in the file has nowhere to go.
+   ══════════════════════════════════════════════════════════════════ */
+const IM_MAGIC="CC-CONTENT-EXPORT-V1";
+let IM=null;   // the parsed, diffed import awaiting confirmation
+
+function openImport(){
+  if(!canEdit()) return;
+  const inp=document.createElement("input");
+  inp.type="file"; inp.accept=".xlsx";
+  inp.onchange=()=>{ if(inp.files&&inp.files[0]) imRead(inp.files[0]); };
+  inp.click();
+}
+
+async function imRead(file){
+  try{
+    const EJ=await loadExportLib("exceljs");
+    const wb=new EJ.Workbook();
+    await wb.xlsx.load(await file.arrayBuffer());
+    const lk=wb.getWorksheet("_lists");
+    /* refuse, do not warn. A file we did not produce has no snapshot, so
+       there is no way to tell an edit from a stale value. */
+    if(!lk||String(lk.getCell(1,5).value||"")!==IM_MAGIC)
+      return imRefuse("This file was not downloaded from the calendar.",
+        "Export the month first, edit the Caption and Hashtags columns in that file, then import it back.");
+    const bId=String(lk.getCell(2,5).value||"");
+    const ym =String(lk.getCell(3,5).value||"");
+    if(bId!==activeBrand)
+      return imRefuse("That sheet belongs to a different brand.",
+        "It was downloaded for “"+((brands[bId]||{}).name||bId)+"”. Open that brand and import it there.");
+    if(ym!==YEAR+"-"+contentMonth)
+      return imRefuse("That sheet is for a different month.",
+        "It was downloaded for "+(MN[parseInt(ym.split("-")[1],10)]||"?")+" "+ym.split("-")[0]+
+        ". Switch to that month and import it there.");
+
+    /* the snapshot: what the two fields held when the file was made */
+    const snap={};
+    for(let n=1;n<=400;n++){
+      const id=lk.getCell(n,6).value; if(!id) break;
+      snap[String(id)]={caption:String(lk.getCell(n,7).value||""),hashtags:String(lk.getCell(n,8).value||"")};
+    }
+    const ws=wb.worksheets.find(x=>x.name!=="_lists");
+    const cell=(r,c)=>{ const v=ws.getCell(r,c).value;
+      if(v==null) return ""; if(typeof v==="object"&&v.richText) return v.richText.map(t=>t.text).join("");
+      if(typeof v==="object"&&"result" in v) return String(v.result==null?"":v.result);
+      return String(v); };
+
+    const b=brands[activeBrand]||{};
+    const changes=[],conflicts=[],unknown=[]; let noId=0;
+    for(let n=2;n<=400;n++){
+      const id=cell(n,1).trim();
+      if(!id){ if(cell(n,7).trim()||cell(n,8).trim()) noId++; continue; }
+      const p=(b.social||[]).find(x=>x.id===id);
+      if(!p){ unknown.push(id); continue; }
+      /* ONLY these two columns are read. Nothing else in the row exists
+         as far as this function is concerned. */
+      const cap=cell(n,7), tags=cell(n,8);
+      const v=(p.content.instagram.caption||"").trim()?p.content.instagram:p.content.facebook;
+      const nowCap=v.caption||"", nowTags=v.hashtags||"";
+      const wasCap=(snap[id]||{}).caption||"", wasTags=(snap[id]||{}).hashtags||"";
+      if(cap===nowCap&&tags===nowTags) continue;                 // nothing to do
+      const moved=(nowCap!==wasCap)||(nowTags!==wasTags);        // changed under you
+      (moved?conflicts:changes).push({id,post:p,cap,tags,nowCap,nowTags,keep:moved});
+    }
+    IM={file:file.name,changes,conflicts,unknown,noId};
+    renderImport(); openM("import");
+  }catch(e){ imRefuse("That file could not be read.",e.message||""); }
+}
+
+function imRefuse(title,detail){
+  IM=null;
+  document.getElementById("im-body").innerHTML=`
+   <div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">Import stopped</div>
+     <button class="modal-x" onclick="closeM('import')">✕</button></div>
+   <div class="modal-body" style="padding:6px 20px 20px;">
+     <div style="font-size:14px;font-weight:700;margin-bottom:6px;">${escAttr(title)}</div>
+     <div style="font-size:13px;color:var(--muted);line-height:1.6;">${escAttr(detail)}</div>
+     <div style="margin-top:16px;text-align:right;"><button class="btn btn-s" onclick="closeM('import')">Close</button></div>
+   </div>`;
+  openM("import");
+}
+
+function imToggle(i){ IM.conflicts[i].keep=!IM.conflicts[i].keep; renderImport(); }
+
+function renderImport(){
+  const n=IM.changes.length+IM.conflicts.filter(c=>!c.keep).length;
+  const fld=(lbl,was,now)=>(was===now)?"":`
+    <div style="margin-top:7px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--subtle);text-transform:uppercase;">${lbl}</div>
+      <div style="font-size:12.5px;color:var(--muted);text-decoration:line-through;white-space:pre-wrap;">${escAttr(was)||"—"}</div>
+      <div style="font-size:13px;color:${now?"var(--text)":"#C62828"};white-space:pre-wrap;font-weight:${now?"400":"700"};">${escAttr(now)||"removed"}</div>
+    </div>`;
+  const block=(c,i,conflict)=>`
+    <div style="border:1px solid ${conflict?"#E8C46A":"var(--div)"};border-radius:10px;padding:11px 13px;margin-bottom:8px;background:var(--surface);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <b style="font-size:13px;">${shortDate(c.post.month,c.post.date)} ${(MN[c.post.month]||"").slice(0,3)}</b>
+        <span style="font-size:11px;color:var(--subtle);">${escAttr(c.id)}</span>
+        ${conflict?`<label style="margin-left:auto;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" ${c.keep?"":"checked"} onchange="imToggle(${i})"> overwrite anyway</label>`:""}
+      </div>
+      ${conflict?`<div style="font-size:12px;color:#8A6D00;margin-top:5px;">Changed in the app after you downloaded the sheet. Left alone unless you tick it.</div>`:""}
+      ${fld("Caption",c.nowCap,c.cap)}${fld("Hashtags",c.nowTags,c.tags)}
+    </div>`;
+  const notes=[];
+  if(IM.unknown.length) notes.push(IM.unknown.length+" row"+(IM.unknown.length===1?"":"s")+" had an ID that no longer exists — ignored");
+  if(IM.noId) notes.push(IM.noId+" row"+(IM.noId===1?"":"s")+" without an ID — ignored, posts are made in the calendar");
+  document.getElementById("im-body").innerHTML=`
+   <div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">Import captions &amp; hashtags
+       <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${escAttr(IM.file)}</span></div>
+     <button class="modal-x" onclick="closeM('import')">✕</button></div>
+   <div class="modal-body" style="padding:6px 20px 8px;max-height:60vh;overflow-y:auto;">
+     ${(!IM.changes.length&&!IM.conflicts.length)
+       ? `<div style="font-size:13px;color:var(--muted);padding:14px 0;">Nothing in this sheet differs from what is in the calendar.</div>`
+       : IM.changes.map((c,i)=>block(c,i,false)).join("")+IM.conflicts.map((c,i)=>block(c,i,true)).join("")}
+     ${notes.length?`<div style="font-size:12px;color:var(--subtle);line-height:1.7;margin:4px 0 10px;">${notes.map(escAttr).join("<br>")}</div>`:""}
+   </div>
+   <div style="display:flex;align-items:center;gap:10px;padding:12px 20px 18px;border-top:1px solid var(--div);">
+     <span style="font-size:12.5px;color:var(--muted);">${n} post${n===1?"":"s"} will change. Nothing is saved yet.</span>
+     <span style="margin-left:auto;display:flex;gap:8px;">
+       <button class="btn btn-g" onclick="closeM('import')">Cancel</button>
+       <button class="btn btn-p" ${n?"":"disabled style=\"opacity:.5;\""} onclick="imSave()">Save ${n} change${n===1?"":"s"}</button>
+     </span>
+   </div>`;
+}
+
+async function imSave(){
+  if(!IM||!canEdit()) return;
+  const list=IM.changes.concat(IM.conflicts.filter(c=>!c.keep));
+  if(!list.length) return;
+  await imApply(list.map(c=>({id:c.id,cap:c.cap,tags:c.tags,wasCap:c.nowCap,wasTags:c.nowTags})),
+                IM.file,null);
+  closeM("import"); IM=null;
+  toast(list.length+" post"+(list.length===1?"":"s")+" updated");
+}
+
+/* One write path for an import AND for a revert — a revert is just an
+   import that puts back what the previous one replaced. */
+async function imApply(rows,fileName,revertsId){
+  const b=brands[activeBrand]; if(!b) return null;
+  rows.forEach(r=>{
+    const p=(b.social||[]).find(x=>x.id===r.id); if(!p) return;
+    if(p.synced!==false){ p.content.instagram.caption=r.cap; p.content.facebook.caption=r.cap;
+                          p.content.instagram.hashtags=r.tags; p.content.facebook.hashtags=r.tags; }
+    else { p.content.instagram.caption=r.cap; p.content.instagram.hashtags=r.tags; }
+    dbSaveSocialPost(p);
+    logActivity(r.id, revertsId?"reverted an import":"updated the caption from an imported sheet");
+  });
+  let importId=null;
+  try{
+    const ins=await sb.from("content_imports").insert({brand_id:activeBrand,year:YEAR,month:contentMonth,
+      file_name:fileName||"",actor_email:(ME.email||""),actor_name:actorName(),
+      posts_changed:rows.length,reverts_id:revertsId}).select("id").single();
+    if(ins&&ins.data){ importId=ins.data.id;
+      await sb.from("content_import_rows").insert(rows.map(r=>({import_id:importId,post_id:r.id,
+        brand_id:activeBrand,caption_before:r.wasCap,caption_after:r.cap,
+        hashtags_before:r.wasTags,hashtags_after:r.tags})));
+    }
+  }catch(e){ /* the posts are saved either way; the log is a record, not a gate */ }
+  renderSocial();
+  return importId;
+}
+
+/* ── the history, and putting one back ────────────────────────────── */
+async function openImportHistory(){
+  closeAllPops();
+  document.getElementById("imh-body").innerHTML=`<div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">Import history</div>
+     <button class="modal-x" onclick="closeM('imhist')">✕</button></div>
+   <div class="modal-body" style="padding:16px 20px 20px;font-size:13px;color:var(--muted);">Loading…</div>`;
+  openM("imhist");
+  let list=[];
+  try{ const r=await sb.from("content_imports").select("*").eq("brand_id",activeBrand)
+        .order("created_at",{ascending:false}).limit(40); list=(r&&r.data)||[]; }catch(e){}
+  const rowsHtml=list.length?list.map(im=>`
+    <div style="display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid var(--div);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;">${im.reverts_id?"Reverted an import":escAttr(im.file_name||"Import")}
+          <span style="font-weight:400;color:var(--subtle);"> · ${im.posts_changed} post${im.posts_changed===1?"":"s"}</span></div>
+        <div style="font-size:11.5px;color:var(--subtle);">${escAttr(im.actor_name||im.actor_email)} · ${fbTimeLabel(im.created_at)} · ${MN[im.month]} ${im.year}</div>
+      </div>
+      ${im.reverts_id?"":`<button class="btn btn-s btn-sm" onclick="imRevert('${im.id}')">Undo this</button>`}
+    </div>`).join("")
+    : `<div style="font-size:13px;color:var(--subtle);padding:14px 0;">Nothing has been imported for this brand yet.</div>`;
+  document.getElementById("imh-body").innerHTML=`<div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">Import history
+       <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${escAttr((brands[activeBrand]||{}).name||"")}</span></div>
+     <button class="modal-x" onclick="closeM('imhist')">✕</button></div>
+   <div class="modal-body" style="padding:6px 20px 20px;max-height:60vh;overflow-y:auto;">${rowsHtml}</div>`;
+}
+
+async function imRevert(importId){
+  if(!canEdit()) return;
+  let rows=[];
+  try{ const r=await sb.from("content_import_rows").select("*").eq("import_id",importId); rows=(r&&r.data)||[]; }catch(e){}
+  if(!rows.length) return toast("Nothing recorded for that import.","err");
+  if(!confirm("Put back the captions and hashtags as they were before this import? "+rows.length+" post"+(rows.length===1?"":"s")+".")) return;
+  /* putting back is the same operation with before and after swapped —
+     and it is logged, so a revert can itself be reverted */
+  await imApply(rows.map(r=>({id:r.post_id,cap:r.caption_before,tags:r.hashtags_before,
+    wasCap:r.caption_after,wasTags:r.hashtags_after})),"",importId);
+  closeM("imhist");
+  toast(rows.length+" post"+(rows.length===1?"":"s")+" put back");
 }
 
 </script>
