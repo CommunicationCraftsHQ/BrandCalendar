@@ -1145,6 +1145,18 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
 .th46 .cextra button:hover{color:var(--text)}
 .th46 .empty46{padding:22px 16px;text-align:center;font-size:12.5px;color:#C6C4BF}
 
+
+/* v46.1 — the new card's own icons. .pc-eye{display:none} and the grey
+   .pc-prev/.pc-edit override belong to the v45 card above and were
+   hiding and repainting these. */
+.pc46 .pcia i{display:inline-block!important;color:inherit!important;font-weight:400!important}
+.pc46 .pcia{color:var(--muted)!important}
+.pc46 .pcia:hover{color:var(--text)!important}
+.pc46 .pcia.del:hover{color:#C62828!important}
+/* the staged-file count: the same badge as a new comment, because it is
+   the same kind of fact — there is something here you have not dealt with */
+.th46 .stagedn{min-width:17px;height:17px;padding:0 5px;border-radius:999px;background:var(--acc);color:#fff;
+  font-size:10px;font-weight:800;display:none;align-items:center;justify-content:center;margin-left:-3px}
 </style>
 
 </head>
@@ -2998,6 +3010,26 @@ function renderSocial(){
    without re-rendering when there is nothing new, which is what stops the
    render → load → render loop this pattern invites. */
 let LEADS_DONE={};
+function newestCommentAsset(postId){
+  const list=(POSTFB.comments[postId]||[]).filter(c=>!c.deleted_at)
+    .slice().sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  for(const c of list){
+    const vis=(assetsFor("comment",c.id)||[]).filter(a=>!a.deleted_at&&a.kind!=="doc"&&(a.thumb_path||a.poster_path||a.view_path));
+    if(vis.length) return vis[0];
+  }
+  return null;
+}
+/* A round still wins when there is one — a submitted round is a
+   deliberate act and outranks a file dropped into the conversation. */
+function postLeadAsset(postId){
+  const list=roundsFor(postId);
+  for(let i=list.length-1;i>=0;i--){
+    const vis=roundAssets(list[i].id).filter(a=>a.kind!=="doc"&&(a.thumb_path||a.poster_path||a.view_path));
+    if(vis.length) return vis.slice().sort((x,y)=>(x.slide_no||99)-(y.slide_no||99))[0];
+  }
+  return newestCommentAsset(postId);
+}
+
 async function ensureLeadAssets(posts){
   const need=(posts||[]).map(p=>p.current_round_id)
     .filter(id=>id && !LEADS_DONE[id] && !ASSETS[assetKey("round",id)]);
@@ -4939,7 +4971,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v46 — the post card and the thread";
+const TOOL_VERSION="v46.1 — the post card and the thread";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -6391,10 +6423,17 @@ function fbOpenCount(postId){ return fbThreadsFor(postId).filter(t=>!t.top.resol
 let FB_STAGED={};
 function fbStageFiles(postId,files){
   FB_STAGED[postId]=[...(files||[])];
-  const el=document.getElementById("fb-staged-"+postId);
-  if(el) el.textContent=FB_STAGED[postId].length
-    ? FB_STAGED[postId].length+" file"+(FB_STAGED[postId].length>1?"s":"")+" ready — they upload when you post"
-    : "";
+  paintStaged(postId);
+}
+/* v46: the sentence in pale grey said the most and was seen the least.
+   A count, in the same red the new-comment badge uses, next to the thing
+   it is counting. */
+function paintStaged(postId){
+  const el=document.getElementById("fb-staged-"+postId); if(!el) return;
+  const n=(FB_STAGED[postId]||[]).length;
+  el.textContent=n?String(n):"";
+  el.title=n?(n+" file"+(n>1?"s":"")+" ready — they upload when you post"):"";
+  el.style.display=n?"inline-flex":"none";
 }
 async function fbAddComment(postId,parentId){
   if(!FB_AVAILABLE||!canComment()) return;
@@ -7996,9 +8035,9 @@ function socialViewCard(p){
     </span>`:"";
 
   /* Edit and Preview are icons now, and Delete stands beside them */
-  const acts=`<button class="pcia pc-prev" onclick="openPreview('${p.id}')" title="Preview"><i class="ti ti-eye pc-eye"></i></button>`
-    +(canEdit()?`<button class="pcia pc-edit" onclick="openSocialEditorById('${p.id}')" title="Edit post"><i class="ti ti-pencil"></i></button>
-       <button class="pcia del pc-del" onclick="deleteContentPost('${p.id}')" title="Delete post"><i class="ti ti-trash"></i></button>`:"");
+  const acts=`<button class="pcia pcia-prev" onclick="openPreview('${p.id}')" title="Preview"><i class="ti ti-eye"></i></button>`
+    +(canEdit()?`<button class="pcia pcia-edit" onclick="openSocialEditorById('${p.id}')" title="Edit post"><i class="ti ti-pencil"></i></button>
+       <button class="pcia del pcia-del" onclick="deleteContentPost('${p.id}')" title="Delete post"><i class="ti ti-trash"></i></button>`:"");
 
   /* H1 — the box height is fixed so the rows line up; the width follows
      the picture so nothing is cropped. Nothing is added; nothing lost. */
@@ -8022,6 +8061,7 @@ function socialViewCard(p){
       ${p.time?`<span style="display:flex;align-items:center;gap:4px;"><i class="ti ti-clock" style="font-size:12px;"></i> ${escAttr(p.time)}</span>`:""}
       <span class="pc-ig" style="color:#D4537E;"><i class="ti ti-brand-instagram" style="font-size:13px;"></i></span><span class="pc-fb" style="color:#185FA5;margin-left:-4px;"><i class="ti ti-brand-facebook" style="font-size:13px;"></i></span>
       ${varied?`<span style="font-size:9px;color:#993C1D;background:#FAECE7;padding:1px 6px;border-radius:999px;font-weight:700;">varied</span>`:""}
+      ${brief?`<span title="Design brief: ${escAttr(brief)}" style="color:#8A6D00;cursor:help;"><i class="ti ti-photo-cog" style="font-size:13px;"></i></span>`:""}
       <span style="margin-left:auto;display:flex;align-items:center;gap:6px;color:var(--muted);">
         <span style="display:flex;align-items:center;gap:4px;margin-right:4px;"><i class="ti ${fmtIcon}" style="font-size:12px;"></i> ${p.format.charAt(0).toUpperCase()+p.format.slice(1)}</span>
         ${fbToggleHtml}
@@ -8032,7 +8072,6 @@ function socialViewCard(p){
     <div class="pcbody">
       ${imgHtml}
       <div class="pctxt">
-        ${idea&&cap?`<div class="pc-focus" style="font-size:11px;font-weight:600;color:#0E8A8A;margin-bottom:5px;display:flex;align-items:center;gap:5px;"><i class="ti ti-bulb pc-bulb" style="font-size:12px;"></i> ${escAttr(idea)}</div>`:""}
         ${capHtml}
         ${tags?`<div class="pctags">${escAttr(tags)}</div>`:""}
         <div id="capbar-${p.id}" style="display:none;gap:7px;margin-top:7px;align-items:center;">
@@ -8040,8 +8079,7 @@ function socialViewCard(p){
           <button class="btn btn-g btn-sm" onclick="fbCaptionUndo('${p.id}')">Undo</button>
           <span style="font-size:11px;color:var(--subtle);">Nothing is saved until you keep it.</span>
         </div>
-        ${(brief&&cap)?`<div class="pcbrief" title="${escAttr(brief)}">${escAttr(brief)}</div>`:""}
-        ${(brief&&!cap)?`<div class="pcbrief" title="${escAttr(brief)}">${escAttr(brief)}</div>`:""}
+        ${(idea&&cap)?`<div class="pcbrief" title="${escAttr(idea)}">${escAttr(idea)}</div>`:""}
       </div>
     </div>
     ${isOpen?fbPanelHtml(p):""}
@@ -8053,6 +8091,26 @@ function socialViewCard(p){
    back. When they do, this patch fills it — so it must also stop the box
    being an empty one, or a real design renders inside a dashed frame that
    still invites you to add a design. */
+function newestCommentAsset(postId){
+  const list=(POSTFB.comments[postId]||[]).filter(c=>!c.deleted_at)
+    .slice().sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  for(const c of list){
+    const vis=(assetsFor("comment",c.id)||[]).filter(a=>!a.deleted_at&&a.kind!=="doc"&&(a.thumb_path||a.poster_path||a.view_path));
+    if(vis.length) return vis[0];
+  }
+  return null;
+}
+/* A round still wins when there is one — a submitted round is a
+   deliberate act and outranks a file dropped into the conversation. */
+function postLeadAsset(postId){
+  const list=roundsFor(postId);
+  for(let i=list.length-1;i>=0;i--){
+    const vis=roundAssets(list[i].id).filter(a=>a.kind!=="doc"&&(a.thumb_path||a.poster_path||a.view_path));
+    if(vis.length) return vis.slice().sort((x,y)=>(x.slide_no||99)-(y.slide_no||99))[0];
+  }
+  return newestCommentAsset(postId);
+}
+
 async function ensureLeadAssets(posts){
   const need=(posts||[]).map(p=>p.current_round_id)
     .filter(id=>id && !LEADS_DONE[id] && !ASSETS[assetKey("round",id)]);
@@ -8182,10 +8240,9 @@ function fbPanelHtml(p){
       <div class="cextra">
         <input type="file" id="fb-files-${p.id}" multiple style="display:none;" onchange="fbStageFiles('${p.id}',this.files)">
         <button onclick="document.getElementById('fb-files-${p.id}').click()"><i class="ti ti-paperclip" style="font-size:14px;"></i> Attach</button>
-        <span id="fb-staged-${p.id}" style="font-size:11.5px;color:var(--subtle);"></span>
-        ${canSubmitRound()?`<button id="fb-send-${p.id}" style="margin-left:auto;font-weight:700;"
-            title="Turn the attached files into a new round for review"
-            onclick="submitRound('${p.id}')"><i class="ti ti-send" style="font-size:14px;"></i> Send for review</button>`:""}
+        ${(()=>{const n=(FB_STAGED[p.id]||[]).length;
+          return `<span id="fb-staged-${p.id}" class="stagedn" style="display:${n?"inline-flex":"none"}"
+            title="${n?n+" file"+(n>1?"s":"")+" ready — they upload when you post":""}">${n||""}</span>`;})()}
       </div>
     </div>`:"";
 
