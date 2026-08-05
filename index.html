@@ -5057,7 +5057,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v47 — Lisbon";
+const TOOL_VERSION="v47.1 — Lisbon";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -5098,10 +5098,16 @@ function showDiag(){
         const fmtLbl=fmt.charAt(0).toUpperCase()+fmt.slice(1);
         html+=`<div style="display:flex;align-items:center;gap:9px;margin:5px 0;"><span style="font-size:10px;font-weight:700;color:#cfcfcf;background:rgba(255,255,255,.12);padding:2px 7px;border-radius:999px;flex-shrink:0;">${escAttr(fmtLbl)}</span><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;font-weight:500;">${idea?escAttr(idea):'<span style=\"color:#8a8a8a;\">No idea yet</span>'}</span><span style="display:flex;align-items:center;gap:4px;flex-shrink:0;"><span style="width:7px;height:7px;border-radius:50%;background:${stColor};"></span><span style="font-size:11px;color:#c9c9c9;">${escAttr(stShort)}</span></span></div>`;
       } else {
-        /* MO20: slice(2) strips the "C|" / "S|" prefix. A plain line has
-           no prefix, so it was losing its first two characters — which is
-           why "Click to edit…" rendered as "ick to edit…". */
-        const plain=/^[CS]\|/.test(ln)?ln.slice(2):ln;
+        /* MO20: slice(2) strips a one-letter routing prefix. A plain line
+           has none, so it was losing its first two characters — which is
+           why "Click to edit…" rendered as "ick to edit…".
+
+           FIXED AGAIN 2026-08-05: my first pass matched only C| and S|
+           and forgot E|, which every event line carries — so events
+           started rendering as "E|National Handloom Day India". Match
+           ANY single capital followed by a pipe, which is what the
+           format actually is, rather than listing the ones I remembered. */
+        const plain=/^[A-Z]\|/.test(ln)?ln.slice(2):ln;
         html+=`<div style="display:flex;align-items:center;gap:8px;margin:3px 0;"><span style="width:7px;height:7px;background:#9AA3B0;border-radius:50%;flex-shrink:0;"></span><span>${escAttr(plain)}</span></div>`;
       }
     });
