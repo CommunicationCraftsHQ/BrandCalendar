@@ -5398,7 +5398,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v53.1 — Madrid: untagged work has a home";
+const TOOL_VERSION="v53.2 — Madrid: the counts read like English";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -10058,7 +10058,17 @@ function monthPlanCardHtml(m){
     const band=(id,title,items,cat,extra)=>{
       if(!items.length&&!extra) return "";
       const dots=mpvDotsHtml(items,cat);
-      const sum=items.length+" "+(cat==="influencer"?"influencer":"shoot")+(items.length===1?"":"s")+(extra?" · "+extra:"");
+      /* seen on the live page: with a target set and nobody added yet
+         this read "0 influencers · 0 of 4" — the count twice, once
+         uselessly. A target already implies the count, so it replaces
+         it rather than sitting beside it. */
+      /* and the noun pluralises on the number NEAREST it: "1 of 10
+         influencers" is plural because of the 10, while a bare count of
+         one is singular. Pluralising on items.length gave "1 of 10
+         influencer" — caught by the gate written for the line above. */
+      const n=extra?(mp.influencer_target||0):items.length;
+      const noun=(cat==="influencer"?"influencer":"shoot")+(n===1?"":"s");
+      const sum=extra?(extra+" "+noun):(items.length+" "+noun);
       return `<div class="mpv-band${mpvIsShut(id)?" shut":""}" data-band="${id}" style="margin-top:11px;">
         <div class="mpv-bh" onclick="mpvToggle('${id}')" style="padding:8px 11px;">
           <i class="ti ti-chevron-down cv"></i><b>${title}</b><span class="sum">${sum}</span>
