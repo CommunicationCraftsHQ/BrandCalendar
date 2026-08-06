@@ -1206,6 +1206,14 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
 #main > div:first-child{min-height:94px;box-sizing:border-box;}
 .bd-headrow{display:flex;align-items:baseline;gap:10px;}
 .year-tag{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* v52.2 — D7 made both headers 94px, but INSIDE them the two states
+   still disagreed: the brand header top-aligns its contents (block
+   flow from the padding edge, buttons at y88) while the Brand Vision
+   header centred its (buttons at y93). Same box, 5px of button jump on
+   every switch — which is the exact complaint D7 was for, one level
+   down. Both start at the content top now; measured at 88 in both
+   states after the change. */
+.bd-head{align-items:flex-start;}
 /* ── end D7 ─────────────────────────────────────────────────────────── */
 
 /* ── DUBAI D3 — the account menu leaves the column ────────────────────
@@ -5278,7 +5286,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v52.1 — Dubai, three layout faults the gates could not see";
+const TOOL_VERSION="v52.2 — the menu becomes clickable; the buttons stop jumping";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -9146,6 +9154,29 @@ function popOpen(id,e){
     acctPlace();   /* AFTER .open — a display:none element measures 0×0 */
   }
 }
+/* THE STACKING LESSON — v52.1 → v52.2, found by Chirag in a five-second
+   look after I had verified "the fix" live and called it done.
+
+   position:fixed frees an element from the sidebar's LAYOUT, but not
+   from its PAINT ORDER. .sidebar is position:sticky, and sticky always
+   creates a stacking context — so the menu's z-index:700 only counted
+   against things inside the sidebar. The body-level scrim at 699
+   painted over the entire column, menu included: the calendar showed
+   through the panel, and every click landed on the scrim. All eight
+   rows dead.
+
+   jsdom cannot see any of this. It dispatches clicks straight at
+   elements and has no notion of one element covering another, so the
+   driven gate clicked rows that a person could not. The proof either
+   way is document.elementFromPoint, which only a browser has.
+
+   So the menu lives where the scrim lives: a direct child of body.
+   Same stacking context, and 700 beats 699 honestly. */
+(function(){
+  const m=document.getElementById("acct-menu");
+  if(m && m.parentElement!==document.body) document.body.appendChild(m);
+})();
+
 /* a fixed panel does not follow anything, so anything that moves the
    page has to move it or close it */
 window.addEventListener("resize",()=>{
