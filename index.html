@@ -5398,7 +5398,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v53 — Madrid: the month plan belongs to the brand";
+const TOOL_VERSION="v53.1 — Madrid: untagged work has a home";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -9857,6 +9857,17 @@ function imRel(evId,level){
    ═══════════════════════════════════════════════════════════════════ */
 
 const DISCIPLINES=[
+  /* CAUGHT BY THE BROWSER PASS, and it would have been invisible
+     otherwise: the discipline bands filter by tag, and EVERY existing
+     row is brand-wide because that is what the migration defaults to.
+     So on the live data every influencer and every shoot rendered
+     nowhere at all. The gate never saw it — my fixture tagged
+     everything, which is a harness testing the happy path.
+
+     `null` is a real band. It goes first, it is where unassigned work
+     lives, and it is the place you tag from. When everything is tagged
+     it simply stops appearing. */
+  {id:null,          label:"Not assigned yet",      icon:"ti-inbox",         lists:["influencer","production"]},
   {id:"social",      label:"Social",                icon:"ti-device-mobile", lists:["influencer","production"]},
   {id:"branding",    label:"Branding",              icon:"ti-palette",       lists:["production"]},
   {id:"performance", label:"Performance marketing", icon:"ti-chart-line",    lists:["production"]},
@@ -9912,23 +9923,31 @@ function mpvDotsHtml(items,cat){
 /* a band reports its state while folded — a count and the status dots.
    That is the whole reason folding is safe rather than hiding. */
 function mpvBandHtml(d,mp){
+  /* d.id may be null — the "not assigned yet" band. mpvItems already
+     treats null as "untagged", so the filter is the same call; only the
+     DOM/fold key needs a string. */
+  const key=d.id||"unassigned";
   const lists=d.lists.map(cat=>({cat,items:mpvItems(mp,cat,d.id)}));
   const goals=mpvItems(mp,"goal",d.id);
-  const total=goals.length+lists.reduce((a,l)=>a+l.items.length,0);
+  /* brand-wide GOALS are pinned at the top of the plan, so the
+     unassigned band must not count or repeat them — it is only about
+     work that has no discipline yet. */
+  const countGoals=d.id?goals.length:0;
+  const total=countGoals+lists.reduce((a,l)=>a+l.items.length,0);
   if(!total) return "";
   const bits=[];
-  if(goals.length) bits.push(goals.length+" goal"+(goals.length===1?"":"s"));
+  if(countGoals) bits.push(countGoals+" goal"+(countGoals===1?"":"s"));
   lists.forEach(l=>{ if(l.items.length) bits.push(l.items.length+" "+l.cat+(l.items.length===1?"":"s")); });
   const dots=lists.map(l=>mpvDotsHtml(l.items,l.cat)).join("");
   const cols=lists.filter(l=>l.items.length||d.lists.length===1);
-  return `<div class="mpv-band${mpvIsShut(d.id)?" shut":""}" data-band="${d.id}">
-    <div class="mpv-bh" onclick="mpvToggle('${d.id}')">
+  return `<div class="mpv-band${mpvIsShut(key)?" shut":""}" data-band="${key}">
+    <div class="mpv-bh" onclick="mpvToggle('${key}')">
       <i class="ti ti-chevron-down cv"></i><i class="ti ${d.icon}" style="font-size:14px;color:var(--muted)"></i>
       <b>${d.label}</b><span class="sum">${bits.join(" · ")}</span>
       <span class="dots">${dots}</span>
     </div>
     <div class="mpv-bb">
-      ${goals.length?`<div class="lbl-sm" style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);margin-bottom:5px;">${d.label} goals</div>
+      ${(goals.length&&d.id)?`<div class="lbl-sm" style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);margin-bottom:5px;">${d.label} goals</div>
         ${goals.map(g=>`<div class="mpv-goal${g.status==="done"?" done":""}"><i class="ti ti-circle"></i><span class="tx">${escAttr(g.label)}</span></div>`).join("")}
         ${cols.length?`<div style="height:11px"></div>`:""}`:""}
       ${cols.length?`<div class="mpv-sub${cols.length===1?" one":""}">${cols.map(l=>`<div>
