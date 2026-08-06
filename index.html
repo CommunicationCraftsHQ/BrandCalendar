@@ -1172,6 +1172,200 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
 .th46 .stagedn{min-width:17px;height:17px;padding:0 5px;border-radius:999px;background:var(--acc);color:#fff;
   font-size:10px;font-weight:800;display:none;align-items:center;justify-content:center;margin-left:-3px}
 .pvimg>img{width:100%;height:100%;object-fit:cover;display:block;}
+
+/* ── DUBAI D7 — the header stops changing height ──────────────────────
+   Two reported shifts, one cause: the header's height was whatever its
+   contents added up to, so every state was a different height and the
+   page below moved.
+
+   MEASURED IN A REAL BROWSER, on the live page (jsdom cannot do this —
+   it does no layout and reports 0x0 for everything):
+
+     all brands ............. header 88px, content at y148
+     a brand ................ header 94px, content at y154   ← the 6px drop
+     Brand Vision + tagline . header 103px, content at y163  ← the second shift
+
+   94px is the tallest calendar state, so it becomes the reserved height.
+   Nothing is squeezed; the shorter states stop being shorter. After:
+
+     all brands, brand calendar, another brand, Brand Vision
+       .................... header 94px, content at y154, every one
+
+   The list view's content starts lower because List has its own month
+   strip between header and rows — that is its layout, not a shift. Its
+   header is 94px like the rest.
+
+   Two things worth knowing for next time:
+   · the brand-mode header has NO class — it is an unclassed div with the
+     same padding as .year-head, which is exactly how two states drift
+     apart with nothing connecting them. Hence the positional selector.
+   · .year-headtxt computes to display:block, so the flex-wrap I first
+     reached for did nothing at all. CSS accepts flex properties on a
+     block element and silently ignores them. Making it a real flex row
+     is what changed the Brand Vision header from 103 to 94. */
+#main > div:first-child{min-height:94px;box-sizing:border-box;}
+.bd-headrow{display:flex;align-items:baseline;gap:10px;}
+.year-tag{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* ── end D7 ─────────────────────────────────────────────────────────── */
+
+/* ── DUBAI D3 — the account menu leaves the column ────────────────────
+   MO22 fixed the spill by making the popover obey the sidebar's width.
+   That was the wrong constraint. A popover is supposed to float ABOVE
+   the page; sizing it to the box that merely anchors it is what cut two
+   labels and wrapped the email onto three lines.
+
+   So: position:fixed, placed against the WINDOW by openAcctMenu(), with
+   a width that follows its content between 262 and 320px. The scrim
+   behind it is what makes overlapping the calendar read as deliberate
+   rather than broken — without it, a panel hanging over the page just
+   looks like a containment bug again.
+
+   position:fixed is only honoured if no ancestor establishes a
+   containing block. Checked, not assumed: neither .layout, .sidebar nor
+   .acct carries transform, filter, backdrop-filter or perspective. The
+   backdrop-filter on .acmenu itself is irrelevant — an element's own
+   filter does not contain the element. If a future change adds any of
+   those to the sidebar, this panel silently returns to being positioned
+   inside the column, which is the exact bug it is fixing.
+
+   MEASURED IN A REAL BROWSER on the live page, before and after — jsdom
+   does no layout, so none of this could have come from the gates:
+     before   171px wide · right edge 185 (sidebar ends at 200) ·
+              email on 3 lines · "Carry forward to next year" and
+              "People & access" both clipped
+     after    262px wide · right edge 276, so it genuinely leaves the
+              column · email on ONE line · nothing clipped ·
+              8 rows, 2 dividers · fully inside the window
+   171px, incidentally — the MO22 fix had squeezed it well below even the
+   246px it was written for, because the column's content box is what it
+   was obeying, not the column. */
+.acmenu{position:fixed;left:0;top:auto;right:auto;bottom:auto;
+  min-width:262px;width:max-content;max-width:320px;
+  box-shadow:0 20px 52px rgba(13,13,13,.22);border-color:rgba(255,255,255,.9);}
+/* the email now has room, so it breaks at sensible points rather than
+   mid-word, and carries the hairline the removed .bpsep used to draw */
+.acmail{word-break:normal;overflow-wrap:anywhere;
+  border-bottom:1px solid var(--div);margin-bottom:4px;}
+#acct-scrim{position:fixed;inset:0;background:rgba(13,13,13,.06);z-index:699;display:none;}
+#acct-scrim.on{display:block;}
+/* ── end D3 ─────────────────────────────────────────────────────────── */
+
+/* ── DUBAI D1 — Event Manager, a page where the row IS the form ───────
+   From `2026-08-05-event-manager-c2.html`, approved 5 August.
+
+   The whole idea is one sentence: THERE IS NO EDIT BUTTON, because
+   there is nothing left for it to open. Date, name, category and key
+   date all live in the row and save as you type — the same behaviour
+   the Data Bank and the post cards already have.
+
+   So the fields have to look like text until you reach them. A border
+   on hover, white on focus. Boxes everywhere would make a list of 229
+   events read as a form of 916 inputs, which is exactly the thing the
+   modal did wrong.                                                    */
+
+.em2-headacts{margin-left:auto;flex:none;}
+.em2-ctl{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;padding:0 32px;}
+.em2-split{margin:0 32px;}
+.em2-split{display:grid;grid-template-columns:1fr 330px;border:1px solid var(--div);
+  border-radius:10px;overflow:hidden;background:rgba(255,255,255,.72);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);height:calc(100vh - 300px);min-height:420px;}
+.em2-lst{overflow:auto;border-right:1px solid var(--div);}
+.em2-mth{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);
+  padding:9px 12px 6px;background:rgba(247,247,245,.9);border-bottom:1px solid var(--div);
+  position:sticky;top:34px;z-index:2;}
+/* the header row and the event rows share ONE column template, declared
+   once — two templates that must agree is a drift waiting to happen */
+.em2-hrow,.em2-li{display:grid;grid-template-columns:112px minmax(200px,1fr) 172px 46px 40px;
+  gap:8px;align-items:center;padding:5px 12px;}
+.em2-hrow{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  background:var(--text);color:#fff;padding:9px 12px;position:sticky;top:0;z-index:3;}
+.em2-li{border-bottom:1px solid rgba(241,239,234,.8);cursor:pointer;}
+.em2-li:hover{background:rgba(251,250,248,.75);}
+.em2-li.on{background:#FDF3F3;}
+.em2-ce{width:100%;height:28px;border:1px solid transparent;border-radius:6px;background:transparent;
+  font-family:inherit;font-size:12.5px;padding:0 6px;color:var(--text);outline:none;
+  text-overflow:ellipsis;}
+.em2-ce:hover{border-color:var(--div);background:#fff;}
+.em2-ce:focus{border-color:var(--acc);background:#fff;}
+.em2-ce.nm{font-weight:600;}
+.em2-ce.bad{border-color:#E9A5A5;background:#FFF6F6;}
+select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:none;cursor:pointer;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23aaa' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat:no-repeat;background-position:right 6px center;padding-right:18px;}
+.em2-star{cursor:pointer;font-size:14px;text-align:center;line-height:28px;user-select:none;}
+.em2-star.off{opacity:.22;}
+.em2-del{color:#D8D6D1;cursor:pointer;font-size:14px;text-align:right;line-height:28px;}
+.em2-del:hover{color:#C62828;}
+/* notes live UNDER the row. They run to paragraphs; in a column they
+   would crush the other four. */
+.em2-notes{grid-column:1/-1;padding:2px 12px 12px 124px;background:#FDF3F3;
+  border-bottom:1px solid rgba(241,239,234,.8);}
+.em2-notes textarea{width:100%;min-height:62px;border:1px solid var(--div);border-radius:8px;
+  background:#fff;font-family:inherit;font-size:12.5px;padding:8px 10px;color:var(--text);
+  outline:none;resize:vertical;line-height:1.55;}
+.em2-notes textarea:focus{border-color:var(--acc);}
+.em2-nlbl{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--subtle);margin-bottom:4px;}
+/* the relevance panel */
+.em2-pn{overflow:auto;padding:14px 16px;background:rgba(247,247,245,.85);}
+.em2-pn h3{font-size:13.5px;margin:0 0 1px;}
+.em2-pl{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:6px 0;border-bottom:1px solid var(--div);font-size:12.5px;}
+.em2-pl:last-child{border-bottom:none;}
+.em2-seg{display:inline-flex;background:#EDEBE4;border-radius:7px;padding:2px;gap:2px;flex:none;}
+.em2-seg span{padding:2px 9px;border-radius:5px;font-size:10.5px;font-weight:700;cursor:pointer;color:var(--muted);}
+.em2-seg span.on{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.08);}
+.em2-seg span.on.hi{color:#1F6B33;}
+.em2-seg span.on.me{color:#8A6A11;}
+.em2-pbar{display:flex;gap:5px;margin:9px 0 12px;}
+.em2-pbtn{flex:1;height:26px;border-radius:7px;border:1px solid var(--div);background:#fff;
+  font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;}
+.em2-pbtn:hover{border-color:var(--text);color:var(--text);}
+.em2-mini{font-size:11px;color:var(--subtle);}
+.em2-empty{padding:34px 16px;text-align:center;font-size:12.5px;color:var(--muted);}
+/* ── end D1 ─────────────────────────────────────────────────────────── */
+
+/* ── DUBAI D2 — Industry Manager ──────────────────────────────────────
+   From `2026-08-05-industry-manager-mockup.html`, approved 5 August.
+
+   Deliberately the SAME SHAPE as the Event Manager, pointed at the
+   other table: there you list events and edit industries, here you list
+   industries and edit events. One layout to learn, two things to
+   manage, and the two panels answer each other's question.
+
+   So the split, the row-is-the-form fields and the segment control are
+   all reused from D1 rather than restyled. Only what genuinely differs
+   gets new rules: the grip, the three count columns and the add row. */
+
+.im2-hrow,.im2-li{display:grid;grid-template-columns:26px minmax(180px,1fr) 66px 56px 66px 40px;
+  gap:8px;align-items:center;padding:5px 12px;}
+.im2-hrow{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  background:var(--text);color:#fff;padding:9px 12px;position:sticky;top:0;z-index:3;}
+.im2-li{border-bottom:1px solid rgba(241,239,234,.8);cursor:pointer;}
+.im2-li:hover{background:rgba(251,250,248,.75);}
+.im2-li.on{background:#FDF3F3;}
+.im2-li.drag{opacity:.35;}
+.im2-li.over{border-top:2px solid var(--acc);}
+.im2-grip{color:var(--faint);cursor:grab;font-size:14px;text-align:center;line-height:28px;}
+.im2-grip:active{cursor:grabbing;}
+.im2-num{font-size:12px;font-weight:600;text-align:right;padding-right:4px;}
+.im2-num.hi{color:#1F6B33;}
+.im2-num.me{color:#8A6A11;}
+/* a count of zero is information, not an error — quiet, not red */
+.im2-num.zero{color:var(--faint);font-weight:400;}
+.im2-addrow{display:grid;grid-template-columns:26px minmax(180px,1fr) 210px;gap:8px;align-items:center;
+  padding:9px 12px;background:rgba(247,247,245,.9);border-top:1px solid var(--div);}
+.im2-pnh{padding:13px 16px 11px;border-bottom:1px solid var(--div);
+  background:rgba(247,247,245,.95);position:sticky;top:0;z-index:2;}
+.im2-pnh h3{font-size:14px;margin:0 0 1px;}
+.im2-pmth{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--subtle);padding:9px 16px 4px;}
+.im2-pl{display:grid;grid-template-columns:52px 1fr auto;gap:8px;align-items:center;
+  padding:5px 16px;border-bottom:1px solid var(--div);font-size:12.5px;}
+.im2-pl:hover{background:#fff;}
+.im2-evn{line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.im2-hint{margin-left:auto;font-size:11.5px;color:var(--subtle);}
+/* ── end D2 ─────────────────────────────────────────────────────────── */
 </style>
 
 </head>
@@ -1241,6 +1435,9 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
 
 
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+<!-- DUBAI D3 — the dim behind the account panel. A direct child of body
+     on purpose: anywhere else and a future ancestor could contain it. -->
+<div id="acct-scrim"></div>
 <!-- APP -->
 <div class="layout">
   <aside class="sidebar">
@@ -1258,21 +1455,32 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
         <span class="actxt"><span class="acnm" id="acct-name">…</span><span class="acrole" id="acct-role"></span></span>
         <i class="ti ti-chevron-up" style="color:var(--subtle);font-size:14px;flex:none;"></i>
       </button>
+      <!-- DUBAI D3 — three groups, two dividers, eight items.
+           Grouped by WHO the item is for, not by how often it is used:
+           1 · things you manage FOR OTHER PEOPLE (and the door out to
+               the one place people are managed)
+           2 · things you do TO THIS CALENDAR's contents
+           3 · things about YOU
+           The email keeps its own hairline rather than a .bpsep, so the
+           two dividers in the markup are exactly the two group breaks —
+           countable, which is what the gate counts. -->
       <div class="acmenu" id="acct-menu">
         <div class="acmail" id="acct-email"></div>
-        <div class="bpsep"></div>
-        <div class="brow staff-row admin-cap-events" onclick="closeAllPops();openM('ev-mgr')"><i class="ti ti-calendar-cog"></i><span class="bnm">Events database</span></div>
-        <div class="brow staff-row" onclick="closeAllPops();openM('ind-mgr')"><i class="ti ti-tags"></i><span class="bnm">Industries</span></div>
-        <div class="brow staff-row" onclick="closeAllPops();carryForward()"><i class="ti ti-arrow-forward"></i><span class="bnm">Carry forward to next year</span></div>
-        <div class="brow staff-row" onclick="closeAllPops();openTrash()"><i class="ti ti-trash"></i><span class="bnm">Trash</span></div>
-        <div class="brow staff-row" onclick="openImportHistory()"><i class="ti ti-history"></i><span class="bnm">Import history</span></div>
+        <div class="brow staff-row admin-cap-events" onclick="closeAllPops();openEventManager()"><i class="ti ti-calendar-cog"></i><span class="bnm">Event Manager</span></div>
+        <div class="brow staff-row" onclick="closeAllPops();openIndustryManager()"><i class="ti ti-tags"></i><span class="bnm">Industry Manager</span></div>
         <!-- The calendar's own People screen is GONE. It wrote the old field,
              which is now only a fallback, so changes made there were silently
              ignored — a trap worth removing rather than documenting. There is
              one place to manage people now, and this is the door to it. -->
         <div class="brow admin-row" onclick="closeAllPops();window.open('app.html','_blank')"><i class="ti ti-users"></i><span class="bnm">People &amp; access</span><i class="ti ti-external-link" style="margin-left:auto;font-size:12px;opacity:.5;"></i></div>
         <div class="bpsep"></div>
-        <div class="brow" onclick="closeAllPops();loadAll(true)"><i class="ti ti-refresh"></i><span class="bnm">Refresh</span></div>
+        <div class="brow staff-row" onclick="closeAllPops();carryForward()"><i class="ti ti-arrow-forward"></i><span class="bnm" id="acct-carry">Carry forward to next year</span></div>
+        <div class="brow staff-row" onclick="closeAllPops();openImportHistory()"><i class="ti ti-history"></i><span class="bnm">Import history</span></div>
+        <div class="brow staff-row" onclick="closeAllPops();openTrash()"><i class="ti ti-trash"></i><span class="bnm">Trash</span></div>
+        <div class="bpsep"></div>
+        <!-- Refresh is gone. The calendar has synced in real time since
+             Sydney; a Refresh button says we do not trust our own sync,
+             and it sat one row above Sign out. -->
         <div class="brow" onclick="closeAllPops();showSetPass()"><i class="ti ti-key"></i><span class="bnm">Change password</span></div>
         <div class="brow" onclick="signOut()"><i class="ti ti-logout"></i><span class="bnm">Sign out</span></div>
       </div>
@@ -1469,59 +1677,33 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
   </div>
 </div>
 
-<!-- EVENT MANAGER -->
-<div class="overlay" id="ov-ev-mgr" onclick="if(event.target===this)closeM('ev-mgr')">
-  <div class="modal wide">
-    <div class="modal-top">
-      <div><div class="modal-title">Event Manager</div><div class="modal-sub">All calendar dates — add, edit or remove</div></div>
-      <button class="modal-x" onclick="closeM('ev-mgr')">✕</button>
-    </div>
-    <div class="modal-body" style="padding-bottom:0;">
-      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
-        <input class="fi" id="em-q" placeholder="Search events…" oninput="renderEM()" style="flex:1;min-width:160px;"/>
-        <button class="btn btn-s btn-sm" onclick="closeM('ev-mgr');openNewEv()">+ Add event</button>
-        <button class="btn btn-s btn-sm" onclick="exportMasterXLSX()">↓ Export for review</button>
-        <label class="btn btn-s btn-sm" style="cursor:pointer;">
-          ↑ Import corrections
-          <input type="file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="importEvents(this)"/>
-        </label>
-        <button class="btn btn-d btn-sm" onclick="clearAllEvents()">Delete all</button>
-      </div>
-      <!-- upload zone hint -->
-      <div class="upload-zone" onclick="document.querySelector('[accept]').click()" style="margin-bottom:12px;padding:18px;">
-        <div class="upload-zone-icon">↑</div>
-        <h4>Review workflow: Export for review → correct in Excel → Import corrections</h4>
-        <p>Rows keep their ID, so date fixes update every brand automatically. Nothing is ever deleted by an import.</p>
-      </div>
-      <div id="em-list" style="max-height:360px;overflow-y:auto;border:1px solid var(--div);border-radius:var(--rc);"></div>
-    </div>
-    <div class="modal-foot"><button class="btn btn-g" onclick="closeM('ev-mgr')">Done</button></div>
-  </div>
-</div>
+<!-- EVENT MANAGER — the modal is GONE. Dubai D1 made it a page.
+     Two doors onto the same job is the trap this whole batch keeps
+     removing, so the old one is deleted rather than left unreachable.
+     What went with it:
+       · "Delete all" — removed by decision. It was disabled anyway and
+         sat one button from Import.
+       · the Export → correct in Excel → Import explainer block, which
+         described a workflow the row-level editing replaces.
+     renderEM() and delEvFromMgr() stay defined and guarded; they now
+     find no #em-list and return, the way every other retired function
+     in this file does. -->
 
 <!-- INDUSTRY MANAGER -->
-<div class="overlay" id="ov-ind-mgr" onclick="if(event.target===this)closeM('ind-mgr')">
-  <div class="modal">
-    <div class="modal-top">
-      <div><div class="modal-title">Industry Manager</div><div class="modal-sub">Add, rename or remove industries</div></div>
-      <button class="modal-x" onclick="closeM('ind-mgr')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div id="indm-list" style="margin-bottom:12px;"></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <input class="fi" id="indm-new" placeholder="New industry name…" style="flex:1;min-width:150px;" onkeydown="if(event.key==='Enter')addInd()"/>
-        <select class="fi" id="indm-base" style="flex:1;min-width:170px;" title="Inherit event ratings from an existing industry so the new one isn't blank">
-          <option value="">Start blank</option>
-          <option value="__all">All events (medium)</option>
-          <option value="__key">Key dates only</option>
-        </select>
-        <button class="btn btn-p" onclick="addInd()">Add</button>
-      </div>
-      <p style="font-size:11px;color:var(--muted);margin-top:8px;">Tip: base a new industry on its closest cousin, then fine-tune every rating in the dialog that opens.</p>
-    </div>
-    <div class="modal-foot"><button class="btn btn-g" onclick="closeM('ind-mgr')">Done</button></div>
-  </div>
-</div>
+<!-- INDUSTRY MANAGER — the modal is GONE. Dubai D2 made it a page,
+     the same way D1 did for events. Deleted rather than left
+     unreachable, for the same reason.
+     What went with it:
+       · the "Rate events" button and the dialog it opened. The panel on
+         the right of the page does that job in place, filtered, and
+         without leaving the screen. openIndRate() stays defined and
+         guarded; nothing reaches it.
+       · "All events (medium)" and "Key dates only" as starting points.
+         Neither described a real industry; copying the closest cousin
+         is what people actually did, and it is the only option left.
+     renderIndMgr(), addInd(), renameInd() and rmInd() stay defined and
+     guarded — the page uses renderIndMgr2(), imAdd(), imRename() and
+     imDel(), which ask before they act. -->
 
 <!-- DATE PICKER MODAL -->
 <div class="overlay" id="ov-date-picker" onclick="if(event.target===this)closeM('date-picker')">
@@ -3708,7 +3890,9 @@ function deleteEv(){
 // ── EVENT MANAGER ──────────────────────────────────────────
 function renderEM(){
   const q=(document.getElementById("em-q")||{value:""}).value.toLowerCase();
-  const list=document.getElementById("em-list"); list.innerHTML="";
+  /* D1 retired this screen. The guard is the point: without it, any
+     surviving call site throws on a null #em-list. */
+  const list=document.getElementById("em-list"); if(!list) return; list.innerHTML="";
   for(let m=1;m<=12;m++){
     const mevs=(evs[m]||[]).filter(e=>!q||e.name.toLowerCase().includes(q)||(e.notes||"").toLowerCase().includes(q));
     if(!mevs.length) continue;
@@ -4134,7 +4318,9 @@ function renderIndMgr(){
     baseSel.innerHTML='<option value="">Start blank</option><option value="__all">All events (medium)</option><option value="__key">Key dates only</option>'+INDS.map(i=>`<option value="${i.id}">Copy of ${i.label}</option>`).join("");
     baseSel.value=cur||"";
   }
-  const list=document.getElementById("indm-list"); list.innerHTML="";
+  /* D2 retired this screen. Same guard as renderEM: without it, any
+     surviving call site throws on a null #indm-list. */
+  const list=document.getElementById("indm-list"); if(!list) return; list.innerHTML="";
   INDS.forEach(ind=>{
     let high=0, med=0, low=0;
     for(let m=1;m<=12;m++) (evs[m]||[]).forEach(e=>{
@@ -4162,7 +4348,10 @@ function renameInd(id){
   renderIndMgr(); buildIndDropdown(); render(); toast("Industry renamed");
 }
 function addInd(){
-  const name=document.getElementById("indm-new").value.trim(); if(!name) return;
+  /* retired with the modal — imAdd() is the live one. Guarded rather
+     than deleted, so a stale call site cannot throw on a null field. */
+  const nf=document.getElementById("indm-new"); if(!nf) return;
+  const name=nf.value.trim(); if(!name) return;
   const id=name.toLowerCase().replace(/\s+/g,"_").replace(/[^a-z0-9_]/g,"");
   if(INDS.find(i=>i.id===id)){toast("Already exists","err");return;}
   INDS.push({id,label:name}); saveIndLS(); document.getElementById("indm-new").value="";
@@ -4296,9 +4485,12 @@ function openM(id){
   if(id==="brand-mgr") renderBM();
   if(id==="ev-mgr") renderEM();
   if(id==="ind-mgr") renderIndMgr();
-  document.getElementById("ov-"+id).classList.add("open");
+  /* D1 deleted #ov-ev-mgr. importEvents() still calls closeM('ev-mgr')
+     on its way out, and an unguarded lookup here throws on a modal that
+     no longer exists — so both ends tolerate a missing overlay. */
+  const ov=document.getElementById("ov-"+id); if(ov) ov.classList.add("open");
 }
-function closeM(id){document.getElementById("ov-"+id).classList.remove("open");}
+function closeM(id){const ov=document.getElementById("ov-"+id); if(ov) ov.classList.remove("open");}
 
 function setView(v,btn){
   view=v;
@@ -5058,7 +5250,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v48 — access stage 3";
+const TOOL_VERSION="v52 — Dubai D1 + D2 + D3 + D7";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -5258,7 +5450,14 @@ function buildYearView(){
   RAW={};
   G.evts.forEach(r=>{
     if((r.year||2026)!==YEAR) return;
-    (RAW[r.month]=RAW[r.month]||[]).push({id:r.id,date:r.date,name:r.name,cat:r.cat,notes:r.notes,relevance:r.relevance,mega:r.mega,_uat:r.updated_at||null});
+    /* D1: endMonth/endDate were missing from BOTH ends — the read here
+       and the write in dbPushMasterEvent. The columns existed and
+       saveEv had been setting the value since ranges were added, so a
+       master event's range was written nowhere and read nowhere. The
+       brand-event mapping just below always had them, which is what
+       made the gap easy to miss. */
+    (RAW[r.month]=RAW[r.month]||[]).push({id:r.id,date:r.date,name:r.name,cat:r.cat,notes:r.notes,relevance:r.relevance,mega:r.mega,
+      endMonth:r.end_month||undefined,endDate:r.end_date||undefined,_uat:r.updated_at||null});
   });
   CUSTOM={};
   G.bevs.forEach(r=>{
@@ -8035,8 +8234,16 @@ function applyRoleUI(){
       const oc=b.getAttribute("onclick")||"";
       if(b.id!=="setup-btn"&&!oc.includes("exportXLSX")) b.style.display="none";
     });
-    document.querySelectorAll("#setup-drop .staff-row").forEach(r=>r.style.display="none");
-    document.querySelectorAll("#setup-drop .admin-row").forEach(r=>r.style.display="none");
+    /* #acct-menu, not #setup-drop. Shanghai replaced the ⚙ dropdown with
+       the named account block and the id went with it — but these three
+       selectors were never repointed, so from Shanghai until now they
+       matched NOTHING and every staff and admin row in the menu was
+       visible to a client. Found by the D3 gate, which listed what a
+       client actually sees rather than assuming the class did its job.
+       A selector that matches nothing fails silently, which is why a
+       dead one can sit in a file for four versions. */
+    document.querySelectorAll("#acct-menu .staff-row").forEach(r=>r.style.display="none");
+    document.querySelectorAll("#acct-menu .admin-row").forEach(r=>r.style.display="none");
   }
   /* STAGE 3: the master events database is admin-only now. Hidden here
      AND refused in dbDeleteMasterEvent, because a hidden menu row is not
@@ -8139,7 +8346,8 @@ async function boot(){
   if(RECOVERY_MODE) showSetPass();
   else document.getElementById("auth-screen").style.display="none";
   applyRoleUI();
-  document.querySelectorAll("#setup-drop .admin-row").forEach(r=>r.style.display=ME.role==="admin"?"":"none");
+  /* same dead id as above — People & access was showing to everybody */
+  document.querySelectorAll("#acct-menu .admin-row").forEach(r=>r.style.display=ME.role==="admin"?"":"none");
   const ae=document.getElementById("acct-email"); if(ae) ae.textContent=ME.email||"";
   /* not awaited: the sign-in log must never delay the app appearing */
   logAppEvent("sign_in",{role:ME.role,tool_role:ME.toolRole,via:ME.accessSource});
@@ -8859,6 +9067,621 @@ async function imRevert(importId){
     wasCap:r.caption_after,wasTags:r.hashtags_after})),"",importId);
   closeM("imhist");
   toast(rows.length+" post"+(rows.length===1?"":"s")+" put back");
+}
+
+
+/* ══ DUBAI D3 · the account menu floats ═══════════════════════════════
+   Both functions are RE-DECLARED, not edited. The last declaration of a
+   function wins, which is how every batch since Istanbul has patched
+   behaviour without touching the code above it — and it means the
+   original is still readable in place rather than replaced by a diff.
+
+   popOpen() stays generic for the other three popovers. Only the
+   account menu gets placed and scrimmed, because only the account menu
+   left the column.                                                     */
+function acctPlace(){
+  const menu=document.getElementById("acct-menu");
+  const trig=document.querySelector(".acct .acctrig");
+  if(!menu||!trig) return;
+  const t=trig.getBoundingClientRect();
+  const h=menu.offsetHeight, w=menu.offsetWidth;
+  /* against the WINDOW, and clamped to it. On a short window the panel
+     would otherwise open with its top above the viewport, which on a
+     fixed element cannot be scrolled to — it is simply gone. */
+  let top=t.top-h-8;
+  if(top<8) top=8;
+  if(top+h>window.innerHeight-8) top=Math.max(8, window.innerHeight-h-8);
+  let left=t.left;
+  if(left+w>window.innerWidth-8) left=Math.max(8, window.innerWidth-w-8);
+  menu.style.top=top+"px";
+  menu.style.left=left+"px";
+}
+function closeAllPops(){
+  ["brand-panel","export-panel","notif-panel","acct-menu"].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.classList.remove("open");
+  });
+  const sc=document.getElementById("acct-scrim"); if(sc) sc.classList.remove("on");
+}
+function popOpen(id,e){
+  if(e) e.stopPropagation();
+  const el=document.getElementById(id); if(!el) return;
+  const was=el.classList.contains("open");
+  closeAllPops();
+  if(was) return;
+  el.classList.add("open");
+  if(id==="acct-menu"){
+    /* the year is read at open time, not baked into the markup — the
+       label has to follow whatever year is on screen */
+    const cf=document.getElementById("acct-carry");
+    if(cf) cf.textContent="Carry forward to "+((typeof YEAR==="number"?YEAR:new Date().getFullYear())+1);
+    const sc=document.getElementById("acct-scrim"); if(sc) sc.classList.add("on");
+    acctPlace();   /* AFTER .open — a display:none element measures 0×0 */
+  }
+}
+/* a fixed panel does not follow anything, so anything that moves the
+   page has to move it or close it */
+window.addEventListener("resize",()=>{
+  const m=document.getElementById("acct-menu");
+  if(m&&m.classList.contains("open")) acctPlace();
+});
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeAllPops(); });
+
+
+/* ══ DUBAI D1 · EVENT MANAGER ═════════════════════════════════════════
+   A page, not a modal. It is NOT a header tab: Calendar and List are
+   where the whole team works, and this is an admin job, so it opens
+   from the admin menu alongside Industry Manager and Trash. Brand
+   Vision already works this way, so the pattern is not new.
+
+   THE FIX THAT CAME WITH IT — dbPushMasterEvent never wrote end_date or
+   end_month. saveEv has been setting evData.endDate since ranges were
+   added, the column exists, and the read maps it back — but the WRITE
+   dropped it, so editing any master event silently flattened its range
+   to a single day. Nobody caught it because the modal had no visible
+   range field to notice going missing. D1 puts the range in the row, so
+   it had to be fixed before the field could be trusted.
+   ═══════════════════════════════════════════════════════════════════ */
+
+async function dbPushMasterEvent(m,e){
+  if(!canEdit()) return;
+  return rtChain("events:"+e.id,async()=>{
+    const row={id:e.id,year:YEAR,month:m,date:e.date,name:e.name,cat:e.cat||"cat1",
+      notes:e.notes||"",relevance:e.relevance||{},mega:!!e.mega,
+      /* D1: these two were missing. Written as null rather than omitted,
+         so clearing a range actually clears it instead of leaving the
+         old end date behind. */
+      end_month:e.endMonth||null,end_date:e.endDate||null};
+    if(e._uat){
+      const r=await sb.from("events").update(row).eq("id",row.id).eq("updated_at",e._uat).select();
+      if(r&&r.error){ dbErr(r); return; }
+      if(!r||!r.data||!r.data.length){ await rtAdoptRemote("events",row.id,rtApplyEventRow); return; }
+      const w=r.data[0]||{};
+      if(w.updated_at){ e._uat=w.updated_at; rememberOwnWrite("events",row.id,w.updated_at); if(G){const gr=G.evts.find(x=>x.id===row.id); if(gr) gr.updated_at=w.updated_at;} }
+      return;
+    }
+    dbErr(await sb.from("events").upsert(row));
+  });
+}
+
+let emQ="", emCat="", emMonth=0, emSel="", emNotes="";
+const emTimers={};
+
+/* ── the date column reads and writes ONE field ──────────────────────
+   A second column for end dates would sit empty on roughly 200 of 229
+   rows. So "14 Jan", "14–18 Jan" and "28 Jan – 3 Feb" are all typed in
+   the same box, and parsed back out. */
+const EM_MON=["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+function emDateText(m,e){
+  const s=e.date+" "+MN[m].slice(0,3);
+  if(!e.endDate) return s;
+  const em=e.endMonth||m;
+  return em===m ? e.date+"–"+e.endDate+" "+MN[m].slice(0,3)
+                : s+" – "+e.endDate+" "+MN[em].slice(0,3);
+}
+/* returns null when it cannot read the text — the caller keeps the old
+   value and marks the field, rather than guessing and saving a wrong date */
+function emParseDate(txt,curM){
+  const s=String(txt||"").toLowerCase().replace(/[–—]/g,"-").replace(/\s+/g," ").trim();
+  if(!s) return null;
+  const mon=t=>{const i=EM_MON.indexOf(String(t||"").slice(0,3));return i<0?0:i+1;};
+  const day=t=>{const n=parseInt(t,10);return (n>=1&&n<=31)?n:0;};
+  let mm;
+  /* "28 jan - 3 feb" — two months */
+  if((mm=s.match(/^(\d{1,2})\s*([a-z]{3,})\s*-\s*(\d{1,2})\s*([a-z]{3,})$/))){
+    const a=day(mm[1]),am=mon(mm[2]),b=day(mm[3]),bm=mon(mm[4]);
+    if(!a||!am||!b||!bm) return null;
+    return {m:am,date:a,endMonth:bm===am?null:bm,endDate:b};
+  }
+  /* "14-18 jan" — one month */
+  if((mm=s.match(/^(\d{1,2})\s*-\s*(\d{1,2})\s*([a-z]{3,})?$/))){
+    const a=day(mm[1]),b=day(mm[2]),M=mm[3]?mon(mm[3]):curM;
+    if(!a||!b||!M||b<a) return null;
+    return {m:M,date:a,endMonth:null,endDate:b};
+  }
+  /* "14 jan" or just "14" */
+  if((mm=s.match(/^(\d{1,2})\s*([a-z]{3,})?$/))){
+    const a=day(mm[1]),M=mm[2]?mon(mm[2]):curM;
+    if(!a||!M) return null;
+    return {m:M,date:a,endMonth:null,endDate:null};
+  }
+  return null;
+}
+
+/* master events only. Brand campaigns and posts belong to a brand and
+   are edited where they live, not in the shared database. */
+function emAll(){
+  const out=[];
+  for(let m=1;m<=12;m++)(evs[m]||[]).forEach(e=>{ if(!e._custom&&!e._isPost) out.push({m,e}); });
+  return out;
+}
+function emVisible(){
+  const q=emQ.toLowerCase();
+  return emAll().filter(({m,e})=>
+    (!emMonth||m===emMonth) &&
+    (!emCat||gc(e)===emCat) &&
+    (!q||e.name.toLowerCase().includes(q)||(e.notes||"").toLowerCase().includes(q))
+  ).sort((a,b)=>(a.m-b.m)||(a.e.date-b.e.date)||a.e.name.localeCompare(b.e.name));
+}
+const emFind=id=>emAll().find(x=>x.e.id===id);
+const emBrandsUsing=id=>Object.values(brands).filter(b=>(b.evIds||[]).includes(id)).length;
+
+function openEventManager(){
+  if(!canCap("manage_events")) return capDenied("The event database");
+  setView("evmgr");
+}
+
+function renderEvMgr(){
+  const main=document.getElementById("main"); if(!main) return;
+  const rows=emVisible(), total=emAll().length;
+  if(emSel&&!emFind(emSel)) emSel="";
+  const catOpts=Object.entries(CATS).filter(([k])=>k!=="post"&&k!=="cat5")
+    .map(([k,c])=>`<option value="${k}"${emCat===k?" selected":""}>${c.short}</option>`).join("");
+  let list="", lastM=0;
+  rows.forEach(({m,e})=>{
+    if(m!==lastM){ lastM=m; list+=`<div class="em2-mth">${MN[m]} ${YEAR}</div>`; }
+    const c=CATS[gc(e)]||CATS.cat1;
+    const sel=emSel===e.id;
+    list+=`<div class="em2-li${sel?" on":""}" data-ev="${e.id}" onclick="emPick('${e.id}')">
+      <input class="em2-ce" data-f="date" value="${escAttr(emDateText(m,e))}"
+        onchange="emSetDate('${e.id}',this)" onkeydown="if(event.key==='Enter')this.blur()" title="14 Jan · 14–18 Jan · 28 Jan – 3 Feb">
+      <input class="em2-ce nm" data-f="name" value="${escAttr(e.name)}"
+        oninput="emSetName('${e.id}',this.value)" onfocus="emPick('${e.id}')">
+      <select class="em2-ce" data-f="cat" style="color:${c.color}" onchange="emSetCat('${e.id}',this.value)">
+        ${Object.entries(CATS).filter(([k])=>k!=="post"&&k!=="cat5")
+          .map(([k,cc])=>`<option value="${k}"${gc(e)===k?" selected":""}>${cc.short}</option>`).join("")}
+      </select>
+      <span class="em2-star${e.mega?"":" off"}" onclick="event.stopPropagation();emStar('${e.id}')"
+        title="${e.mega?"A key date":"Mark as a key date"}">${e.mega?"⭐":"☆"}</span>
+      <span class="em2-del" onclick="event.stopPropagation();emDel('${e.id}')" title="Move to trash"><i class="ti ti-trash"></i></span>
+    </div>`;
+    if(emNotes===e.id) list+=`<div class="em2-notes">
+      <div class="em2-nlbl">Notes</div>
+      <textarea placeholder="Anything the team should know about this date…"
+        oninput="emSetNotes('${e.id}',this.value)">${escAttr(e.notes||"")}</textarea></div>`;
+  });
+  if(!rows.length) list=`<div class="em2-empty">${total?"No events match those filters.":"No events yet."}</div>`;
+
+  main.innerHTML=`
+  <div>
+    <div class="year-head">
+      <div class="year-headtxt">
+        <div class="year-title">Event Manager</div>
+        <div class="year-sub">${total} event${total===1?"":"s"} · ${YEAR} · every date the calendar knows about. Change anything in place — it saves as you type.</div>
+      </div>
+      <div class="em2-headacts">
+        <button class="btn btn-s btn-sm" onclick="setView('year')"><i class="ti ti-arrow-left"></i> Back to the calendar</button>
+      </div>
+    </div>
+    <div class="em2-ctl">
+      <input class="fi" style="width:230px" placeholder="Search events…" value="${escAttr(emQ)}"
+        oninput="emQ=this.value;renderEvMgr();this.focus();this.setSelectionRange(this.value.length,this.value.length)">
+      <select class="fi" onchange="emCat=this.value;renderEvMgr()"><option value="">All categories</option>${catOpts}</select>
+      <select class="fi" onchange="emMonth=parseInt(this.value)||0;renderEvMgr()">
+        <option value="0">All months</option>
+        ${MN.slice(1).map((n,i)=>`<option value="${i+1}"${emMonth===i+1?" selected":""}>${n}</option>`).join("")}
+      </select>
+      <button class="btn btn-p btn-sm" style="margin-left:auto" onclick="emAdd()"><i class="ti ti-plus"></i> Add event</button>
+      <button class="btn btn-s btn-sm" onclick="exportMasterXLSX()"><i class="ti ti-download"></i> Export</button>
+      <label class="btn btn-s btn-sm" style="cursor:pointer;"><i class="ti ti-upload"></i> Import
+        <input type="file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="importEvents(this)"></label>
+    </div>
+    <div class="em2-split">
+      <div class="em2-lst">
+        <div class="em2-hrow"><span>Date / range</span><span>Event</span><span>Category</span><span>Key</span><span></span></div>
+        ${list}
+      </div>
+      <div class="em2-pn" id="em2-panel">${emPanelHtml()}</div>
+    </div>
+  </div>`;
+}
+
+function emPanelHtml(){
+  const hit=emSel?emFind(emSel):null;
+  if(!hit) return `<div class="em2-empty">Pick an event to set how relevant it is to each industry.</div>`;
+  const {m,e}=hit, n=emBrandsUsing(e.id);
+  const lv=id=>((e.relevance||{})[id])||"low";
+  return `<h3>${escAttr(e.name)||"Untitled event"}</h3>
+    <div class="em2-mini" style="margin-bottom:9px">${emDateText(m,e)} ${YEAR} · used by ${n} brand${n===1?"":"s"}</div>
+    <div style="font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--subtle);margin-bottom:2px">Industry relevance</div>
+    <!-- setting fifteen industries one at a time for a minor date is the
+         tedious case, and it is also the common one -->
+    <div class="em2-pbar">
+      <button class="em2-pbtn" onclick="emAllRel('low')">All low</button>
+      <button class="em2-pbtn" onclick="emAllRel('medium')">All medium</button>
+      <button class="em2-pbtn" onclick="emAllRel('high')">All high</button>
+    </div>
+    ${INDS.map(ind=>{const v=lv(ind.id);return `<div class="em2-pl"><span>${escAttr(ind.label)}</span>
+      <span class="em2-seg">
+        <span class="${v==="low"?"on":""}" onclick="emRel('${ind.id}','low')">L</span>
+        <span class="${v==="medium"?"on me":""}" onclick="emRel('${ind.id}','medium')">M</span>
+        <span class="${v==="high"?"on hi":""}" onclick="emRel('${ind.id}','high')">H</span>
+      </span></div>`;}).join("")}`;
+}
+function emRepaintPanel(){ const p=document.getElementById("em2-panel"); if(p) p.innerHTML=emPanelHtml(); }
+
+/* one gesture, two results: picking a row fills the panel AND opens its
+   notes underneath. The mockup asked for notes on clicking the name; the
+   name is an input now, so focusing it counts as the click. */
+function emPick(id){
+  if(emSel===id&&emNotes===id) return;
+  emSel=id; emNotes=id; renderEvMgr();
+  const el=document.querySelector(`.em2-li[data-ev="${id}"] .em2-ce.nm`);
+  if(el&&document.activeElement!==el&&!(document.activeElement||{}).closest?.(".em2-notes")) el.focus();
+}
+
+function emSave(id,msg){
+  const hit=emFind(id); if(!hit) return;
+  dbPushMasterEvent(hit.m,hit.e);
+  if(G){const gr=G.evts.find(r=>r.id===id);
+    if(gr){gr.month=hit.m;gr.date=hit.e.date;gr.name=hit.e.name;gr.cat=hit.e.cat;
+      gr.notes=hit.e.notes||"";gr.relevance=hit.e.relevance||{};gr.mega=!!hit.e.mega;}}
+  saveEvsLS();
+  if(msg) toast(msg);
+}
+/* typing saves, but not on every keystroke — one write per pause */
+function emDebounce(id,fn){ clearTimeout(emTimers[id]); emTimers[id]=setTimeout(fn,600); }
+
+function emSetName(id,val){
+  const hit=emFind(id); if(!hit||!canCap("manage_events")) return;
+  hit.e.name=val;
+  emDebounce("nm:"+id,()=>{ emSave(id); emRepaintPanel(); });
+}
+function emSetNotes(id,val){
+  const hit=emFind(id); if(!hit||!canCap("manage_events")) return;
+  hit.e.notes=val;
+  emDebounce("nt:"+id,()=>emSave(id));
+}
+function emSetDate(id,inp){
+  const hit=emFind(id); if(!hit) return;
+  if(!canCap("manage_events")){ inp.value=emDateText(hit.m,hit.e); return capDenied("Editing events"); }
+  const p=emParseDate(inp.value,hit.m);
+  if(!p){ inp.classList.add("bad"); toast("Try 14 Jan, 14–18 Jan or 28 Jan – 3 Feb","err");
+    inp.value=emDateText(hit.m,hit.e); setTimeout(()=>inp.classList.remove("bad"),1400); return; }
+  const e=hit.e, oldM=hit.m;
+  e.date=p.date; e.endDate=p.endDate||undefined; e.endMonth=p.endMonth||undefined;
+  if(p.m!==oldM){
+    /* the ID never changes, even across a month move — every brand link
+       is that id, so changing it would orphan them all */
+    evs[oldM]=(evs[oldM]||[]).filter(x=>x.id!==id);
+    if(!evs[p.m]) evs[p.m]=[];
+    evs[p.m].push(e);
+  }
+  emSave(id); renderEvMgr();
+}
+function emSetCat(id,val){
+  const hit=emFind(id); if(!hit) return;
+  if(!canCap("manage_events")) return capDenied("Editing events");
+  hit.e.cat=val; emSave(id); renderEvMgr();
+}
+function emStar(id){
+  const hit=emFind(id); if(!hit) return;
+  if(!canCap("manage_events")) return capDenied("Editing events");
+  hit.e.mega=!hit.e.mega; emSave(id); renderEvMgr();
+}
+function emDel(id){
+  const hit=emFind(id); if(!hit) return;
+  if(!canCap("manage_events")) return capDenied("Deleting events");
+  const n=emBrandsUsing(id);
+  if(!confirm(`Move "${hit.e.name}" to trash?`+(n?`\n\nIt is on ${n} brand calendar${n===1?"":"s"} and will disappear from ${n===1?"it":"them"} too.`:""))) return;
+  evs[hit.m]=(evs[hit.m]||[]).filter(x=>x.id!==id);
+  dbDeleteMasterEvent(id);
+  if(emSel===id) emSel="";
+  if(emNotes===id) emNotes="";
+  saveEvsLS(); renderEvMgr(); toast("Moved to trash");
+}
+function emRel(indId,level){
+  const hit=emSel?emFind(emSel):null; if(!hit) return;
+  if(!canCap("manage_events")) return capDenied("Editing events");
+  const e=hit.e; e.relevance=e.relevance||{};
+  if(level==="low") delete e.relevance[indId]; else e.relevance[indId]=level;
+  e.industries=Object.entries(e.relevance).filter(([,v])=>v==="high"||v==="medium").map(([k])=>k);
+  emSave(emSel); autoTagBrands([e]); emRepaintPanel();
+}
+function emAllRel(level){
+  const hit=emSel?emFind(emSel):null; if(!hit) return;
+  if(!canCap("manage_events")) return capDenied("Editing events");
+  const e=hit.e; e.relevance={};
+  if(level!=="low") INDS.forEach(i=>{ e.relevance[i.id]=level; });
+  e.industries=Object.entries(e.relevance).filter(([,v])=>v==="high"||v==="medium").map(([k])=>k);
+  emSave(emSel); autoTagBrands([e]); emRepaintPanel();
+}
+function emAdd(){
+  if(!canCap("manage_events")) return capDenied("Adding events");
+  const m=emMonth||1;
+  /* a blank name hashes to the same id every time, so two new rows on the
+     same day would collide and the second would overwrite the first */
+  let id=evtId(m,1,""), n=0;
+  while(emFind(id)){ n++; id=evtId(m,1,"")+"_"+n; }
+  const e={id,date:1,name:"",cat:"cat1",notes:"",relevance:{},industries:[],mega:false};
+  if(!evs[m]) evs[m]=[];
+  evs[m].unshift(e);
+  dbPushMasterEvent(m,e);
+  if(G) G.evts.push({id,year:YEAR,month:m,date:1,name:"",cat:"cat1",notes:"",relevance:{},mega:false,deleted_at:null});
+  emSel=id; emNotes=""; saveEvsLS(); renderEvMgr();
+  const el=document.querySelector(`.em2-li[data-ev="${id}"] .em2-ce.nm`); if(el) el.focus();
+}
+
+/* ══ DUBAI D2 · INDUSTRY MANAGER ══════════════════════════════════════
+   The same page as D1, pointed at the other table. It reuses D1's
+   split, its field styling and its segment control on purpose — a
+   second layout to learn would be the cost of no benefit.
+
+   TWO THINGS ARE GUARDED, and both because the ID never changes:
+   · A RENAME ASKS FIRST. Chirag answered this directly on 5 August.
+     Keeping the id means every brand tag and every event rating follows
+     the new name automatically — which is almost always what you want,
+     and is exactly why it needs confirming: "Water Industries" becoming
+     "Beverages" would quietly inherit 18 high ratings that were about
+     water.
+   · A DELETE WITH BRANDS ATTACHED asks for the name to be typed, and
+     names what is lost first. One with nothing attached takes a plain
+     yes/no — a guard on an empty row is theatre.
+   ═══════════════════════════════════════════════════════════════════ */
+
+let imQ="", imSel="", imShow="all", imNew="", imBase="", imDragFrom=-1;
+const imTimers={};
+
+const imBrandCount=id=>Object.values(brands).filter(b=>(b.inds||[]).includes(id)).length;
+function imCounts(id){
+  let high=0,med=0,low=0;
+  for(let m=1;m<=12;m++)(evs[m]||[]).forEach(e=>{
+    if(e._custom||e._isPost) return;
+    const lv=(e.relevance||{})[id];
+    if(lv==="high") high++; else if(lv==="medium") med++; else low++;
+  });
+  return {high,med,low};
+}
+/* master events only, in calendar order — the panel is "what does this
+   industry actually get", and a brand's own campaigns are not that */
+function imEvents(){
+  const out=[];
+  for(let m=1;m<=12;m++)(evs[m]||[]).forEach(e=>{ if(!e._custom&&!e._isPost) out.push({m,e}); });
+  return out.sort((a,b)=>(a.m-b.m)||(a.e.date-b.e.date)||a.e.name.localeCompare(b.e.name));
+}
+
+function openIndustryManager(){
+  if(!canEdit()) return toast("View-only account","err");
+  setView("indmgr");
+}
+
+function renderIndMgr2(){
+  const main=document.getElementById("main"); if(!main) return;
+  const q=imQ.toLowerCase();
+  const rows=INDS.filter(i=>!q||i.label.toLowerCase().includes(q));
+  if(imSel&&!INDS.find(i=>i.id===imSel)) imSel="";
+  let list="";
+  rows.forEach(ind=>{
+    const c=imCounts(ind.id), nb=imBrandCount(ind.id);
+    /* the real index, not the filtered one — a search must not be able
+       to reorder the list into something the user cannot see */
+    const idx=INDS.findIndex(i=>i.id===ind.id);
+    list+=`<div class="im2-li${imSel===ind.id?" on":""}" data-ind="${ind.id}" data-idx="${idx}" draggable="true"
+      onclick="imPick('${ind.id}')"
+      ondragstart="imDragStart(${idx},this)" ondragover="imDragOver(event,this)"
+      ondragleave="this.classList.remove('over')" ondrop="imDrop(event,${idx},this)" ondragend="imDragEnd()">
+      <span class="im2-grip"><i class="ti ti-grip-vertical"></i></span>
+      <input class="em2-ce nm" data-f="label" value="${escAttr(ind.label)}"
+        onchange="imRename('${ind.id}',this)" onkeydown="if(event.key==='Enter')this.blur()">
+      <span class="im2-num${nb?"":" zero"}">${nb}</span>
+      <span class="im2-num hi${c.high?"":" zero"}">${c.high}</span>
+      <span class="im2-num me${c.med?"":" zero"}">${c.med}</span>
+      <span class="em2-del" onclick="event.stopPropagation();imDel('${ind.id}')" title="Remove this industry"><i class="ti ti-trash"></i></span>
+    </div>`;
+  });
+  if(!rows.length) list=`<div class="em2-empty">${INDS.length?"No industries match that search.":"No industries yet."}</div>`;
+
+  main.innerHTML=`
+  <div>
+    <div class="year-head">
+      <div class="year-headtxt">
+        <div class="year-title">Industry Manager</div>
+        <div class="year-sub">${INDS.length} industr${INDS.length===1?"y":"ies"} · the list every brand is tagged with, and every event is rated against.</div>
+      </div>
+      <div class="em2-headacts">
+        <button class="btn btn-s btn-sm" onclick="setView('year')"><i class="ti ti-arrow-left"></i> Back to the calendar</button>
+      </div>
+    </div>
+    <div class="em2-ctl">
+      <input class="fi" style="width:230px" placeholder="Search industries…" value="${escAttr(imQ)}"
+        oninput="imQ=this.value;renderIndMgr2();this.focus();this.setSelectionRange(this.value.length,this.value.length)">
+      <span class="im2-hint">Drag to reorder — this is the order used everywhere</span>
+    </div>
+    <div class="em2-split">
+      <div class="em2-lst">
+        <div class="im2-hrow"><span></span><span>Industry</span><span>Brands</span><span>High</span><span>Medium</span><span></span></div>
+        ${list}
+        <!-- starting from scratch means rating every event by hand.
+             Copying the closest cousin and adjusting twenty is the real
+             workflow, so it is a dropdown rather than a wizard. -->
+        <div class="im2-addrow">
+          <span style="color:var(--acc);text-align:center"><i class="ti ti-plus"></i></span>
+          <input class="fi" id="im2-new" style="height:28px" placeholder="Add an industry…" value="${escAttr(imNew)}"
+            oninput="imNew=this.value" onkeydown="if(event.key==='Enter')imAdd()">
+          <select class="fi" style="height:28px;font-size:11.5px" onchange="imBase=this.value">
+            <option value=""${imBase===""?" selected":""}>Start from scratch — all low</option>
+            ${INDS.map(i=>`<option value="${i.id}"${imBase===i.id?" selected":""}>Copy ratings from ${escAttr(i.label)}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+      <div class="em2-pn" id="im2-panel">${imPanelHtml()}</div>
+    </div>
+  </div>`;
+}
+
+function imPanelHtml(){
+  const ind=imSel?INDS.find(i=>i.id===imSel):null;
+  if(!ind) return `<div class="em2-empty">Pick an industry to see what it actually gets.</div>`;
+  const c=imCounts(ind.id), nb=imBrandCount(ind.id);
+  const evsAll=imEvents();
+  const shown=evsAll.filter(({e})=>{
+    const lv=(e.relevance||{})[ind.id]||"low";
+    return imShow==="all"||lv===imShow;
+  });
+  let body="", lastM=0;
+  shown.forEach(({m,e})=>{
+    if(m!==lastM){ lastM=m; body+=`<div class="im2-pmth">${MN[m]} ${YEAR}</div>`; }
+    const lv=(e.relevance||{})[ind.id]||"low";
+    body+=`<div class="im2-pl">
+      <span class="em2-mini">${e.date} ${MN[m].slice(0,3)}</span>
+      <span class="im2-evn" title="${escAttr(e.name)}">${escAttr(e.name)}</span>
+      <span class="em2-seg">
+        <span class="${lv==="low"?"on":""}" onclick="imRel('${e.id}','low')">L</span>
+        <span class="${lv==="medium"?"on me":""}" onclick="imRel('${e.id}','medium')">M</span>
+        <span class="${lv==="high"?"on hi":""}" onclick="imRel('${e.id}','high')">H</span>
+      </span></div>`;
+  });
+  if(!shown.length) body=`<div class="em2-empty">Nothing rated ${imShow} for this industry.</div>`;
+  const btn=(k,l)=>`<button class="em2-pbtn" style="${imShow===k?"border-color:var(--text);color:var(--text);font-weight:700":""}" onclick="imSetShow('${k}')">${l}</button>`;
+  return `<div class="im2-pnh">
+      <h3>${escAttr(ind.label)}</h3>
+      <div class="em2-mini">${nb} brand${nb===1?"":"s"} · ${c.high} high · ${c.med} medium · ${c.low} low</div>
+      <!-- reading "what does this industry care about" should mean
+           reading eighteen rows, not scrolling every event there is -->
+      <div class="em2-pbar">${btn("high","Show high")}${btn("medium","Show medium")}${btn("all","Show all")}</div>
+    </div>${body}`;
+}
+function imRepaintPanel(){ const p=document.getElementById("im2-panel"); if(p) p.innerHTML=imPanelHtml(); }
+function imSetShow(k){ imShow=k; imRepaintPanel(); }
+function imPick(id){ if(imSel===id) return; imSel=id; renderIndMgr2(); }
+
+/* A RENAME ASKS FIRST — answered by Chirag on 5 August. */
+function imRename(id,inp){
+  const ind=INDS.find(i=>i.id===id); if(!ind) return;
+  const next=inp.value.trim();
+  if(!next||next===ind.label){ inp.value=ind.label; return; }
+  if(!canEdit()){ inp.value=ind.label; return toast("View-only account","err"); }
+  if(INDS.some(i=>i.id!==id&&i.label.toLowerCase()===next.toLowerCase())){
+    inp.value=ind.label; return toast("There is already an industry with that name","err");
+  }
+  const c=imCounts(id), nb=imBrandCount(id);
+  const carried=[nb?`${nb} brand${nb===1?"":"s"} tagged with it`:"",
+                 (c.high+c.med)?`${c.high+c.med} event rating${(c.high+c.med)===1?"":"s"}`:""]
+                .filter(Boolean).join(" and ");
+  const msg=`Rename "${ind.label}" to "${next}"?`
+    +(carried?`\n\nThe underlying industry does not change, so ${carried} will follow the new name.`
+             :`\n\nNothing is tagged with it yet, so nothing else changes.`);
+  if(!confirm(msg)){ inp.value=ind.label; return; }
+  ind.label=next; saveIndLS(); buildIndDropdown(); renderIndMgr2(); toast("Renamed");
+}
+
+/* DELETE IS GUARDED, NOT BLOCKED. */
+function imDel(id){
+  const ind=INDS.find(i=>i.id===id); if(!ind) return;
+  if(!canEdit()) return toast("View-only account","err");
+  const c=imCounts(id), nb=imBrandCount(id), rated=c.high+c.med;
+  if(nb||rated){
+    const names=Object.entries(brands).filter(([,b])=>(b.inds||[]).includes(id)).map(([,b])=>b.name);
+    const what=[names.length?`${names.join(", ")} ${names.length===1?"is":"are"} tagged with it`:"",
+                rated?`${rated} event rating${rated===1?"":"s"}`:""].filter(Boolean).join(", and ");
+    const typed=prompt(`Deleting "${ind.label}" removes ${what}.\n\nType the name to confirm:`);
+    if(typed===null) return;
+    if(typed.trim().toLowerCase()!==ind.label.toLowerCase()) return toast("That did not match — nothing was deleted","err");
+  } else if(!confirm(`Remove "${ind.label}"? Nothing is tagged with it.`)) return;
+  INDS=INDS.filter(i=>i.id!==id);
+  for(let m=1;m<=12;m++)(evs[m]||[]).forEach(e=>{
+    e.industries=(e.industries||[]).filter(x=>x!==id);
+    if(e.relevance) delete e.relevance[id];
+  });
+  Object.values(brands).forEach(b=>{ b.inds=(b.inds||[]).filter(x=>x!==id); });
+  selInds=selInds.filter(x=>x!==id);
+  (async()=>{ if(canEdit()) dbErr(await sb.from("industries").delete().eq("id",id)); })();
+  dbPushAllMasterEvents(); saveIndLS(); saveEvsLS();
+  if(imSel===id) imSel="";
+  buildIndDropdown(); renderIndMgr2(); toast("Industry removed");
+}
+
+function imAdd(){
+  const name=(imNew||"").trim(); if(!name) return;
+  if(!canEdit()) return toast("View-only account","err");
+  const id=name.toLowerCase().replace(/\s+/g,"_").replace(/[^a-z0-9_]/g,"");
+  if(!id) return toast("Give it a name with some letters in it","err");
+  if(INDS.find(i=>i.id===id)) return toast("Already exists","err");
+  INDS.push({id,label:name});
+  if(imBase){
+    for(let m=1;m<=12;m++)(evs[m]||[]).forEach(e=>{
+      if(e._custom||e._isPost) return;
+      e.relevance=e.relevance||{};
+      if(e.relevance[imBase]) e.relevance[id]=e.relevance[imBase];
+      e.industries=Object.entries(e.relevance).filter(([,v])=>v==="high"||v==="medium").map(([k])=>k);
+    });
+    dbPushAllMasterEvents();
+  }
+  saveIndLS(); imNew=""; imSel=id; buildIndDropdown(); renderIndMgr2();
+  toast(imBase?`Added, copying ${(INDS.find(i=>i.id===imBase)||{}).label}`:"Industry added");
+}
+
+/* ── drag to reorder. The order IS the array order: saveIndLS writes
+   pos:i straight from it, and everything that shows industries reads
+   the same array — so there is nothing else to keep in step. ── */
+function imDragStart(idx,el){ imDragFrom=idx; if(el) el.classList.add("drag"); }
+function imDragOver(e,el){ e.preventDefault(); if(el) el.classList.add("over"); }
+function imDragEnd(){ imDragFrom=-1; document.querySelectorAll(".im2-li").forEach(n=>n.classList.remove("drag","over")); }
+function imDrop(e,idx,el){
+  if(e&&e.preventDefault) e.preventDefault();
+  if(el) el.classList.remove("over");
+  imMove(imDragFrom,idx); imDragEnd();
+}
+function imMove(from,to){
+  if(from<0||to<0||from===to||from>=INDS.length||to>=INDS.length) return;
+  if(!canEdit()) return toast("View-only account","err");
+  const [row]=INDS.splice(from,1);
+  INDS.splice(to,0,row);
+  saveIndLS(); buildIndDropdown(); renderIndMgr2(); buildSidebar();
+}
+
+function imRel(evId,level){
+  if(!imSel) return;
+  if(!canEdit()) return toast("View-only account","err");
+  const hit=imEvents().find(x=>x.e.id===evId); if(!hit) return;
+  const e=hit.e; e.relevance=e.relevance||{};
+  if(level==="low") delete e.relevance[imSel]; else e.relevance[imSel]=level;
+  e.industries=Object.entries(e.relevance).filter(([,v])=>v==="high"||v==="medium").map(([k])=>k);
+  dbPushMasterEvent(hit.m,e); saveEvsLS(); autoTagBrands([e]);
+  /* the counts in the row change too, so the list is repainted, not
+     just the panel — a stale "18 high" beside a panel showing 19 is
+     the kind of small lie that costs trust in the whole screen */
+  renderIndMgr2();
+}
+
+/* render() re-declared to carry one more branch. The whole body is
+   repeated rather than wrapped, because the last declaration wins and
+   there is no way to call the earlier one by name — the same additive
+   pattern every batch since Istanbul has used. */
+function render(){
+  buildSidebar(); syncHeaderState();
+  const brandEl=document.getElementById("nav-brand-txt");
+  if(brandEl) brandEl.innerHTML=`CC Marketing Calendar<span class="dot">.</span>`;
+  const brandActive=!!(activeBrand&&brands[activeBrand]);
+  if(view==="content"&&!brandActive){view="year";document.querySelectorAll(".tab-item").forEach(t=>t.classList.toggle("on",t.dataset.v==="year"));}
+  if(view==="brief"&&!(brandActive&&canEdit())){view="year";document.querySelectorAll(".tab-item").forEach(t=>t.classList.toggle("on",t.dataset.v==="year"));}
+  /* D1: losing the capability mid-session drops you back to the calendar
+     rather than leaving an editable admin page on screen */
+  if(view==="evmgr"&&!canCap("manage_events")) view="year";
+  if(view==="indmgr"&&!canEdit()) view="year";
+  document.body.classList.toggle("planning",socialLayer&&view==="year"&&brandActive&&canEdit());
+  if(view==="evmgr") return renderEvMgr();
+  if(view==="indmgr") return renderIndMgr2();
+  view==="brief"?renderBrief():(view==="content"?renderSocial():(view==="year"?renderYear():renderList()));
 }
 
 </script>
