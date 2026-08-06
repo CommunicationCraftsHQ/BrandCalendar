@@ -1093,7 +1093,21 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
 /* edge to edge — the margin belongs to the text, not the picture */
 .pc46 .pctxt{flex:1;min-width:0;padding:14px 16px;overflow:hidden;display:flex;flex-direction:column;justify-content:center}
 .pc46 .pc-focus{flex:none}
-.pc46 .pccap{font-size:14px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+/* MEASURED on the live card Chirag reported (Jewelchic, 3 Mar, "…New
+   Day. Try thsi todayy!!"): the caption box ended at y700 and the last
+   line painted to y703 — descenders on the third line were cut by 2.8px.
+
+   -webkit-line-clamp sizes the box to the clamped LINE BOXES, and a
+   descender paints below its line box. So the box is right and the
+   glyphs still overflow it; overflow:hidden then shaves them. Only
+   letters with tails are affected, which is why it reads as a rendering
+   glitch rather than a layout fault.
+
+   4px of room below, taken straight back with a negative margin, so the
+   descenders survive and the card's vertical rhythm does not move.
+   Re-measured after: cut -1.2px (clear), .pctxt overflow still 0. */
+.pc46 .pccap{font-size:14px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+  padding-bottom:4px;margin-bottom:-4px}
 .pc46 .pccap.can{outline:none;border-radius:6px}
 .pc46 .pccap.can:focus{-webkit-line-clamp:unset;display:block;background:#fff;box-shadow:0 0 0 2px rgba(214,40,40,.25);padding:4px 6px;margin:-4px -6px}
 .pc46 .pctags{color:#185FA5;font-size:12.5px;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1406,6 +1420,84 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .im2-evn{line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .im2-hint{margin-left:auto;font-size:11.5px;color:var(--subtle);}
 /* ── end D2 ─────────────────────────────────────────────────────────── */
+
+/* ── MADRID — the month plan becomes the brand's ──────────────────────
+   Approved from `2026-08-06-month-plan-brand-level-mockup.html` and
+   `-refinements.html`.
+
+   THE DOOR. Option A of four Chirag hovered: a chevron at 55% opacity
+   beside the month name, brightening with the name on hover. The dashed
+   underline shown first was rejected as too loud — a permanent rule
+   under all twelve months is a lot of ink for a door.
+
+   THE RULE, one line, three screens: what the month is FOR is always
+   visible; what it is MADE OF folds away. Theme, goals and targets are
+   pinned open here, in the Social card, and in anything built later. */
+/* MEASURED on the live month cards before this shipped, because the
+   chevron widens a row that already carries count pills:
+     · the month-name row grows 17px and its HEIGHT does not change (43px
+       before and after) — the header does not wrap
+     · the tightest month still has 139px of slack between the name and
+       its pills; the narrowest card (350px) forced to three pills keeps
+       58px. Nothing collides.
+   That is the check v52 skipped, which is why v52 shipped broken. */
+.mc-chev{font-size:12px;color:var(--faint);opacity:.55;transition:opacity .12s,color .12s;flex:none;}
+.mc-door:hover{color:var(--acc);}
+.mc-door:hover .mc-chev{opacity:1;color:var(--acc);}
+
+.mpv{display:flex;flex-direction:column;height:calc(100vh - 60px);}
+.mpv > .year-head,.mpv > .mpv-scroll{flex:none;}
+.mpv-scroll{flex:1;min-height:0;overflow:auto;padding:0 32px 28px;}
+.mpv-sheet{background:rgba(255,255,255,.72);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+  border:1px solid var(--div);border-radius:14px;overflow:hidden;max-width:1000px;}
+.mpv-top{background:linear-gradient(135deg,#FBF3F1 0%,#F4F0F7 100%);padding:15px 18px 14px;
+  border-bottom:1px solid var(--div);position:relative;}
+.mpv-mo{display:flex;align-items:baseline;gap:9px;}
+.mpv-mo h2{font-size:19px;letter-spacing:-.02em;margin:0;}
+.mpv-mo .yr{font-size:13px;color:var(--muted);font-weight:600;}
+.mpv-mo .br{font-size:12px;color:var(--subtle);}
+.mpv-act{position:absolute;top:14px;right:15px;display:flex;align-items:center;gap:7px;}
+.mpv-step{display:flex;gap:3px;}
+.mpv-step span{width:24px;height:24px;border-radius:6px;border:1px solid var(--div);background:#fff;
+  display:inline-flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted);cursor:pointer;}
+.mpv-step span:hover{border-color:var(--text);color:var(--text);}
+.mpv-theme{font-size:15px;font-weight:700;line-height:1.4;margin-top:10px;}
+.mpv-theme.none{font-weight:500;color:var(--subtle);}
+.mpv-body{padding:15px 18px 18px;}
+/* goals + targets — never fold */
+.mpv-goal{display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:600;padding:3px 0;line-height:1.45;}
+.mpv-goal > i.ti{font-size:14px;color:var(--faint);margin-top:1px;flex:none;}
+.mpv-goal .tx{flex:1;min-width:0;}
+.mpv-goal.done .tx{color:var(--subtle);text-decoration:line-through;font-weight:500;}
+.dtag{font-size:9.5px;font-weight:800;letter-spacing:.04em;border-radius:5px;padding:1.5px 6px;flex:none;
+  margin-top:1px;text-transform:uppercase;white-space:nowrap;}
+.dt-social{background:#E6F0FB;color:#1F5B9E;}
+.dt-branding{background:#F3E9FB;color:#6B3FA0;}
+.dt-performance{background:#E8F5EC;color:#1F6B33;}
+.dt-all{background:#F0EFEC;color:#83817C;}
+.mpv-strip{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap;}
+.mpv-metric{background:var(--surface2);border:1px solid var(--div);border-radius:10px;padding:8px 13px;
+  display:flex;align-items:baseline;gap:7px;}
+.mpv-metric b{font-size:16px;font-weight:800;letter-spacing:-.01em;}
+.mpv-metric span{font-size:10.5px;color:var(--muted);font-weight:600;}
+/* the folding bands */
+.mpv-band{border:1px solid var(--div);border-radius:12px;margin-top:12px;overflow:hidden;background:#fff;}
+.mpv-bh{display:flex;align-items:center;gap:9px;padding:9px 13px;background:var(--surface2);cursor:pointer;user-select:none;}
+.mpv-bh .cv{font-size:14px;color:var(--muted);transition:transform .15s;flex:none;}
+.mpv-bh b{font-size:12.5px;font-weight:800;}
+.mpv-bh .sum{font-size:11px;color:var(--muted);font-weight:600;}
+.mpv-bh .dots{display:flex;gap:3px;margin-left:auto;align-items:center;}
+.mpv-dot{width:7px;height:7px;border-radius:50%;flex:none;}
+.mpv-bb{padding:11px 13px;border-top:1px solid var(--div);}
+.mpv-band.shut .mpv-bb{display:none;}
+.mpv-band.shut .mpv-bh .cv{transform:rotate(-90deg);}
+.mpv-sub{display:grid;grid-template-columns:1.45fr 1fr;gap:20px;}
+.mpv-sub.one{grid-template-columns:1fr;}
+.mpv-row{display:flex;align-items:center;gap:8px;padding:3.5px 0;font-size:13px;font-weight:600;min-width:0;}
+.mpv-row .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mpv-chip{font-size:10px;font-weight:700;border-radius:999px;padding:2px 8px;white-space:nowrap;}
+.mpv-empty{font-size:12px;color:var(--subtle);}
+/* ── end Madrid ─────────────────────────────────────────────────────── */
 </style>
 
 </head>
@@ -2349,7 +2441,12 @@ function buildSidebar(){
   }
   const ver=document.createElement("div");
   ver.style.cssText="margin-top:18px;padding-top:10px;border-top:1px solid var(--div);font-size:10px;color:var(--subtle);cursor:pointer;letter-spacing:.02em;";
-  ver.textContent=TOOL_VERSION.split(" — ")[0];
+  /* v52.4 — the badge stripped everything after the dash, so it has
+     NEVER shown a batch name regardless of what the string carried.
+     Chirag flagged the missing city twice before the real culprit
+     turned out to be this line, not the string. The format is
+     "vNN — Batch: description"; the badge shows through the batch. */
+  ver.textContent=TOOL_VERSION.split(":")[0];
   ver.title="Click for data status";
   ver.onclick=showDiag;
   sm.appendChild(ver);
@@ -3380,7 +3477,10 @@ function buildMini(m){
   if(mPosts) pills.push(`<span class="mc-count" style="background:#E1F5EE;color:#0E8A8A;">${mPosts} post${mPosts!==1?"s":""}</span>`);
   if(!pills.length) pills.push(`<span class="mc-count" style="opacity:.4;">0 events</span>`);
   const countPills=pills.join("");
-  const planClickable=(socialLayer||view==="content")&&activeBrand&&brands[activeBrand];
+  /* MADRID: the social-layer condition is gone. A month plan belongs to
+     the brand, so its door opens whenever a brand is selected — not
+     only when someone happens to have the social layer switched on. */
+  const planClickable=!!(activeBrand&&brands[activeBrand]);
   // Atlas: the red dot only appears when the month plan actually has
   // Key Theme & Goals data — not merely because the name is clickable.
   /* M16 — RED-DOT AUDIT. Red was doing four jobs: unread, campaign,
@@ -3392,8 +3492,16 @@ function buildMini(m){
      bar; the bell and the unread count keep red. */
   const planDot=planClickable&&monthPlanHasData(activeBrand,YEAR,m)
     ?`<span title="This month has a theme and goals" style="width:6px;height:6px;border-radius:50%;background:var(--subtle);flex-shrink:0;"></span>`:"";
+  /* MADRID — the month title is the door to the brand's month plan.
+     It opens on ANY brand calendar now, not only with the social layer
+     on, because the plan stopped being Social's.
+
+     The affordance is option A of four Chirag hovered: a chevron at 55%
+     opacity, brightening on hover with the name. The dashed underline
+     he was shown first was rejected — a permanent rule under all twelve
+     months is a lot of ink for a door. */
   const mcNameHtml=planClickable
-    ?`<div class="mc-name" style="cursor:pointer;display:flex;align-items:center;gap:5px;" onclick="event.stopPropagation();openMonthPlan(${m})" data-tip="Click to edit this month's theme, goals &amp; trackers">${MN[m]}${planDot}</div>`
+    ?`<div class="mc-name mc-door" style="cursor:pointer;display:flex;align-items:center;gap:5px;" onclick="event.stopPropagation();openMonthPlanView(${m})" data-tip="Open ${MN[m]}'s theme, goals and trackers">${MN[m]}<i class="ti ti-chevron-right mc-chev"></i>${planDot}</div>`
     :`<div class="mc-name">${MN[m]}</div>`;
   card.innerHTML=`<div class="mc-head">${mcNameHtml}<div style="display:flex;gap:4px;flex-wrap:nowrap;flex-shrink:0;">${countPills}</div></div>
     <div class="mc-grid">
@@ -5290,7 +5398,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v52.3 — Dubai: the Event Manager saves again, and the star earns its colour";
+const TOOL_VERSION="v53 — Madrid: the month plan belongs to the brand";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -5515,7 +5623,7 @@ function buildYearView(){
   G.briefs.forEach(b2=>{if(brands[b2.brand_id])brands[b2.brand_id].notes[b2.event_id]={note:b2.note,arcStart:b2.arc_start,arcEnd:b2.arc_end,arcFreq:b2.arc_freq};});
   (G.social||[]).forEach(p=>{if(brands[p.brand_id])brands[p.brand_id].social.push(normalizeSocial(p));});
   (G.monthPlans||[]).forEach(r=>{const b=brands[r.brand_id]; if(!b) return; b.monthPlans[r.year+"_"+r.month]={id:r.id,key_theme:r.key_theme||"",status:r.status||"drafted",influencer_target:r.influencer_target||0,items:[],_uat:r.updated_at||null};});
-  (G.monthItems||[]).forEach(r=>{const b=brands[r.brand_id]; if(!b) return; const key=r.year+"_"+r.month; if(!b.monthPlans[key]) b.monthPlans[key]={id:null,key_theme:"",status:"drafted",influencer_target:0,items:[]}; b.monthPlans[key].items.push({id:r.id,category:r.category,label:r.label||"",status:r.status||"",sort_order:r.sort_order||0,link_instagram:r.link_instagram||"",link_facebook:r.link_facebook||"",link_youtube:r.link_youtube||"",_uat:r.updated_at||null});});
+  (G.monthItems||[]).forEach(r=>{const b=brands[r.brand_id]; if(!b) return; const key=r.year+"_"+r.month; if(!b.monthPlans[key]) b.monthPlans[key]={id:null,key_theme:"",status:"drafted",influencer_target:0,items:[]}; b.monthPlans[key].items.push({id:r.id,category:r.category,label:r.label||"",status:r.status||"",sort_order:r.sort_order||0,link_instagram:r.link_instagram||"",link_facebook:r.link_facebook||"",link_youtube:r.link_youtube||"",discipline:r.discipline||null,value:r.value||"",_uat:r.updated_at||null});});
   initEvs(); mergeCustom(); sanitizeBrands();
 }
 
@@ -5669,7 +5777,11 @@ async function dbSaveMonthPlan(brandId,year,month){
 async function dbSaveMonthItem(item,brandId,year,month){
   if(!canEdit())return;
   return rtChain("social_month_items:"+item.id,async()=>{
-    const row={id:item.id,brand_id:brandId,year,month,category:item.category,label:item.label||"",status:item.status,sort_order:item.sort_order||0,link_instagram:item.link_instagram||"",link_facebook:item.link_facebook||"",link_youtube:item.link_youtube||"",updated_at:new Date().toISOString()};
+    /* MADRID: discipline and value are written here because a row that
+   carries them nowhere is the end_date bug again — the column
+   existed, the write omitted it, and every field in the row failed
+   with it. discipline is null for brand-wide, deliberately not "". */
+    const row={id:item.id,brand_id:brandId,year,month,category:item.category,label:item.label||"",status:item.status,sort_order:item.sort_order||0,link_instagram:item.link_instagram||"",link_facebook:item.link_facebook||"",link_youtube:item.link_youtube||"",discipline:item.discipline||null,value:item.value||"",updated_at:new Date().toISOString()};
     if(item._uat){
       const r=await sb.from("social_month_items").update(row).eq("id",row.id).eq("updated_at",item._uat).select();
       if(r&&r.error){ dbErr(r); return; }
@@ -6951,7 +7063,7 @@ function rtApplyMonthItemRow(row){
   b.monthPlans=b.monthPlans||{};
   const key=row.year+"_"+row.month;
   const mp=b.monthPlans[key]=b.monthPlans[key]||{id:null,key_theme:"",status:"drafted",influencer_target:0,items:[]};
-  const it={id:row.id,category:row.category,label:row.label||"",status:row.status||"",sort_order:row.sort_order||0,link_instagram:row.link_instagram||"",link_facebook:row.link_facebook||"",link_youtube:row.link_youtube||"",_uat:row.updated_at||null};
+  const it={id:row.id,category:row.category,label:row.label||"",status:row.status||"",sort_order:row.sort_order||0,link_instagram:row.link_instagram||"",link_facebook:row.link_facebook||"",link_youtube:row.link_youtube||"",discipline:row.discipline||null,value:row.value||"",_uat:row.updated_at||null};
   mp.items=mp.items||[];
   const i=mp.items.findIndex(x=>x.id===it.id);
   if(i>-1) mp.items[i]=it; else mp.items.push(it);
@@ -9726,6 +9838,249 @@ function imRel(evId,level){
   renderIndMgr2();
 }
 
+/* ══ MADRID · THE MONTH PLAN, BRAND-LEVEL ═════════════════════════════
+   Chirag's three decisions, 6 August:
+     · reached by clicking the MONTH TITLE on the brand calendar
+     · goals, influencers AND production all become brand-level, tagged
+     · discipline is optional — no tag means brand-wide
+
+   Productions is deliberately NOT a discipline. A shoot belongs to
+   social or to branding, so `production` stays an item CATEGORY and
+   Cape Town's Productions view will read across the disciplines rather
+   than compete with them.
+
+   Each discipline declares the lists it actually uses. Branding has no
+   influencers, so Branding shows no influencer column — rather than an
+   empty one captioned "not used for branding". Empty columns that exist
+   for symmetry are noise, and this was my call, flagged in the
+   checklist for correction.
+   ═══════════════════════════════════════════════════════════════════ */
+
+const DISCIPLINES=[
+  {id:"social",      label:"Social",                icon:"ti-device-mobile", lists:["influencer","production"]},
+  {id:"branding",    label:"Branding",              icon:"ti-palette",       lists:["production"]},
+  {id:"performance", label:"Performance marketing", icon:"ti-chart-line",    lists:["production"]},
+];
+let mpvMonth=null;
+
+/* Fold state is a preference, so it lives in the browser, per brand.
+   Flagged in the checklist: if it should follow a person across
+   machines it becomes a database column, and that is a different job. */
+function mpvFoldKey(){ return "mpvFold:"+(activeBrand||"-"); }
+function mpvFolds(){
+  try{ return JSON.parse(localStorage.getItem(mpvFoldKey())||"{}"); }catch(e){ return {}; }
+}
+function mpvIsShut(id){
+  const f=mpvFolds();
+  return Object.prototype.hasOwnProperty.call(f,id) ? !!f[id] : true;   /* folded by default */
+}
+function mpvToggle(id){
+  const f=mpvFolds(); f[id]=!mpvIsShut(id) ;
+  try{ localStorage.setItem(mpvFoldKey(),JSON.stringify(f)); }catch(e){}
+  const el=document.querySelector(`.mpv-band[data-band="${id}"]`);
+  if(el) el.classList.toggle("shut");
+}
+
+function openMonthPlanView(m){
+  if(!activeBrand||!brands[activeBrand]) return;
+  mpvMonth=m; setView("mplan");
+}
+const mpvItems=(mp,cat,disc)=>(mp.items||[])
+  .filter(i=>i.category===cat&&(i.label||"").trim())
+  .filter(i=>disc===undefined ? true : (disc===null ? !i.discipline : i.discipline===disc))
+  .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+
+function mpvTagHtml(d){
+  const k=d||"all";
+  const label=d?(DISCIPLINES.find(x=>x.id===d)||{label:d}).label:"Brand-wide";
+  return `<span class="dtag dt-${k}">${escAttr(label)}</span>`;
+}
+function mpvStageChip(cat,status){
+  const map=cat==="influencer"?INFLUENCER_STAGES:PRODUCTION_STAGES;
+  const st=map[status]||["",""];
+  if(!st[0]) return "";
+  return `<span class="mpv-chip" style="background:${st[1]}1A;color:${st[1]};">${st[0]}</span>`;
+}
+function mpvDotsHtml(items,cat){
+  const map=cat==="influencer"?INFLUENCER_STAGES:PRODUCTION_STAGES;
+  return items.slice(0,6).map(i=>{
+    const c=(map[i.status]||["","#D2D0CB"])[1]||"#D2D0CB";
+    return `<span class="mpv-dot" style="background:${c}" title="${escAttr(i.label)} — ${escAttr((map[i.status]||[""])[0]||"")}"></span>`;
+  }).join("");
+}
+
+/* a band reports its state while folded — a count and the status dots.
+   That is the whole reason folding is safe rather than hiding. */
+function mpvBandHtml(d,mp){
+  const lists=d.lists.map(cat=>({cat,items:mpvItems(mp,cat,d.id)}));
+  const goals=mpvItems(mp,"goal",d.id);
+  const total=goals.length+lists.reduce((a,l)=>a+l.items.length,0);
+  if(!total) return "";
+  const bits=[];
+  if(goals.length) bits.push(goals.length+" goal"+(goals.length===1?"":"s"));
+  lists.forEach(l=>{ if(l.items.length) bits.push(l.items.length+" "+l.cat+(l.items.length===1?"":"s")); });
+  const dots=lists.map(l=>mpvDotsHtml(l.items,l.cat)).join("");
+  const cols=lists.filter(l=>l.items.length||d.lists.length===1);
+  return `<div class="mpv-band${mpvIsShut(d.id)?" shut":""}" data-band="${d.id}">
+    <div class="mpv-bh" onclick="mpvToggle('${d.id}')">
+      <i class="ti ti-chevron-down cv"></i><i class="ti ${d.icon}" style="font-size:14px;color:var(--muted)"></i>
+      <b>${d.label}</b><span class="sum">${bits.join(" · ")}</span>
+      <span class="dots">${dots}</span>
+    </div>
+    <div class="mpv-bb">
+      ${goals.length?`<div class="lbl-sm" style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);margin-bottom:5px;">${d.label} goals</div>
+        ${goals.map(g=>`<div class="mpv-goal${g.status==="done"?" done":""}"><i class="ti ti-circle"></i><span class="tx">${escAttr(g.label)}</span></div>`).join("")}
+        ${cols.length?`<div style="height:11px"></div>`:""}`:""}
+      ${cols.length?`<div class="mpv-sub${cols.length===1?" one":""}">${cols.map(l=>`<div>
+        <div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);margin-bottom:5px;">${l.cat==="influencer"?"Influencers":"Production"}</div>
+        ${l.items.length?l.items.map(i=>`<div class="mpv-row"><span class="nm">${escAttr(i.label)}</span>${l.cat==="influencer"?mpInflLinkIcons(i):""}${mpvStageChip(l.cat,i.status)}</div>`).join("")
+          :`<div class="mpv-empty">None yet</div>`}</div>`).join("")}</div>`:""}
+    </div></div>`;
+}
+
+function renderMonthPlanView(){
+  const main=document.getElementById("main"); if(!main) return;
+  const b=brands[activeBrand]; if(!b){ setView("year"); return; }
+  const m=mpvMonth||curMonth||1;
+  const mp=monthPlanFor(activeBrand,YEAR,m);
+  const canE=canEdit();
+  const st=mp.status==="approved";
+
+  const goalsAll=mpvItems(mp,"goal");
+  const targets=mpvItems(mp,"target");
+  const bands=DISCIPLINES.map(d=>mpvBandHtml(d,mp)).filter(Boolean).join("");
+  const untagged=goalsAll.filter(g=>!g.discipline);
+  const tagged=goalsAll.filter(g=>g.discipline);
+
+  const statusCtl=canE
+    ?`<select class="mp-status" onchange="mpvSetStatus(this.value)" style="appearance:none;-webkit-appearance:none;border:none;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border-radius:999px;padding:5px 24px 5px 10px;color:${st?"#791F1F":"#854F0B"};background-color:${st?"#FCEBEB":"#FAEEDA"};background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${st?"%23791F1F":"%23854F0B"}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 9px center;">
+        <option value="drafted"${st?"":" selected"}>Drafted</option><option value="approved"${st?" selected":""}>Approved</option></select>`
+    :`<span class="mp-status" style="font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px;color:${st?"#791F1F":"#854F0B"};background:${st?"#FCEBEB":"#FAEEDA"};">${st?"Approved":"Drafted"}</span>`;
+
+  main.innerHTML=`
+  <div class="mpv">
+    <div class="year-head">
+      <div class="year-headtxt">
+        <div class="year-title">Month plan</div>
+        <div class="year-sub">${escAttr(b.name)} · what ${MN[m]} is for, and what it is made of.</div>
+      </div>
+      <div class="em2-headacts">
+        <button class="btn btn-s btn-sm" onclick="setView('year')"><i class="ti ti-arrow-left"></i> Back to the calendar</button>
+      </div>
+    </div>
+    <div class="mpv-scroll">
+      <div class="mpv-sheet">
+        <div class="mpv-top">
+          <div class="mpv-act">${statusCtl}
+            ${canE?`<span class="mp-edit" onclick="openMonthPlan(${m})" title="Edit this month plan" style="width:26px;height:26px;border-radius:50%;border:1px solid var(--div);background:var(--surface);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;"><i class="ti ti-pencil" style="font-size:13px;"></i></span>`:""}
+            <span class="mpv-step"><span onclick="mpvStep(-1)" title="Previous month"><i class="ti ti-chevron-left"></i></span><span onclick="mpvStep(1)" title="Next month"><i class="ti ti-chevron-right"></i></span></span>
+          </div>
+          <div class="mpv-mo"><h2>${MN[m]}</h2><span class="yr">${YEAR}</span><span class="br">· ${escAttr(b.name)}</span></div>
+          <div class="mpv-theme${(mp.key_theme||"").trim()?"":" none"}">${(mp.key_theme||"").trim()?escAttr(mp.key_theme):"No theme set for "+MN[m]}</div>
+        </div>
+        <div class="mpv-body">
+          <!-- PINNED OPEN, in every format: what the month is FOR -->
+          <div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);margin-bottom:6px;">Goals</div>
+          ${goalsAll.length
+            ? untagged.concat(tagged).map(g=>`<div class="mpv-goal${g.status==="done"?" done":""}"><i class="ti ti-circle"></i><span class="tx">${escAttr(g.label)}</span>${mpvTagHtml(g.discipline)}</div>`).join("")
+            : `<div class="mpv-empty">No goals yet.${canE?" Use the pencil to add them.":""}</div>`}
+
+          ${targets.length?`<div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);margin:15px 0 0;">Targets</div>
+            <div class="mpv-strip">${targets.map(t=>`<div class="mpv-metric"><b>${escAttr(t.value||t.label)}</b><span>${escAttr(t.value?t.label:"")}</span></div>`).join("")}
+              ${mp.influencer_target>0?`<div class="mpv-metric"><b>${mp.influencer_target}</b><span>influencers targeted</span></div>`:""}</div>`
+            : (mp.influencer_target>0?`<div class="mpv-strip"><div class="mpv-metric"><b>${mp.influencer_target}</b><span>influencers targeted</span></div></div>`:"")}
+
+          <!-- FOLDS: what the month is MADE OF -->
+          ${bands||`<div class="mpv-empty" style="margin-top:14px;">Nothing planned under any discipline yet.</div>`}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+/* ── the Social card, rebuilt as a SLICE ──────────────────────────────
+   Re-declared, not edited — the last declaration wins, and the original
+   stays readable above.
+
+   It is the same rows, filtered to social, and it is NOT a copy. You can
+   still edit from here; you are editing the brand's month. The gate
+   `madrid_one_thing_two_doors` writes through this card and reads the
+   result from the brand plan, because two views of one thing drift the
+   moment nobody is checking.
+
+   The rule holds here as it does in the plan: theme, goals and targets
+   are pinned open; influencers and production fold. Their fold ids are
+   deliberately their own — this card's Influencers band shows only
+   social influencers, so it is a different band from the plan's Social
+   section, and pretending otherwise would make one control lie about
+   the other. */
+function monthPlanCardHtml(m){
+  const mp=monthPlanFor(activeBrand,YEAR,m);
+  const canE=canEdit();
+  const st=mp.status==="approved";
+  /* social's own, plus everything brand-wide — a brand goal is a social
+     goal too, which is the whole point of the untagged default */
+  const goals=mpvItems(mp,"goal").filter(g=>!g.discipline||g.discipline==="social");
+  const targets=mpvItems(mp,"target");
+  const infl=mpvItems(mp,"influencer").filter(i=>!i.discipline||i.discipline==="social");
+  const prod=mpvItems(mp,"production").filter(i=>!i.discipline||i.discipline==="social");
+
+  const statusCtl=canE
+    ?`<select class="mp-status" onchange="mpCardSetStatus(this.value)" style="appearance:none;-webkit-appearance:none;border:none;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border-radius:999px;padding:5px 24px 5px 10px;color:${st?"#791F1F":"#854F0B"};background-color:${st?"#FCEBEB":"#FAEEDA"};background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${st?"%23791F1F":"%23854F0B"}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 9px center;">
+        <option value="drafted"${st?"":" selected"}>Drafted</option><option value="approved"${st?" selected":""}>Approved</option></select>`
+    :`<span class="mp-status" style="font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px;color:${st?"#791F1F":"#854F0B"};background:${st?"#FCEBEB":"#FAEEDA"};">${st?"Approved":"Drafted"}</span>`;
+  const editBtn=canE?`<span class="mp-edit" onclick="openMonthPlan(${m})" title="Edit month plan" style="width:26px;height:26px;border-radius:50%;border:1px solid var(--div);background:var(--surface);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;"><i class="ti ti-pencil" style="font-size:13px;"></i></span>`:"";
+  const lbl=t=>`<div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);margin-bottom:6px;">${t}</div>`;
+  const empty=!monthPlanHasData(activeBrand,YEAR,m)&&!infl.length&&!prod.length&&!targets.length&&!(mp.influencer_target>0);
+
+  let body;
+  if(empty){
+    body=`${lbl("Theme &amp; goals")}<div style="font-size:13px;color:var(--subtle);">No plan for ${MN[m]} yet.${canE?" Use the pencil to start one.":""}</div>`;
+  } else {
+    const band=(id,title,items,cat,extra)=>{
+      if(!items.length&&!extra) return "";
+      const dots=mpvDotsHtml(items,cat);
+      const sum=items.length+" "+(cat==="influencer"?"influencer":"shoot")+(items.length===1?"":"s")+(extra?" · "+extra:"");
+      return `<div class="mpv-band${mpvIsShut(id)?" shut":""}" data-band="${id}" style="margin-top:11px;">
+        <div class="mpv-bh" onclick="mpvToggle('${id}')" style="padding:8px 11px;">
+          <i class="ti ti-chevron-down cv"></i><b>${title}</b><span class="sum">${sum}</span>
+          <span class="dots">${dots}</span></div>
+        <div class="mpv-bb" style="padding:9px 11px;">
+          ${items.length?items.map(i=>`<div class="mpv-row"><span class="nm">${escAttr(i.label)}</span>${cat==="influencer"?mpInflLinkIcons(i):""}${mpvStageChip(cat,i.status)}</div>`).join("")
+            :`<div class="mpv-empty">None planned</div>`}
+        </div></div>`;
+    };
+    body=`${lbl(`${MN[m]} theme <span style="font-size:9px;font-weight:700;color:var(--subtle);border:1px solid var(--div);border-radius:5px;padding:1px 5px;margin-left:6px;letter-spacing:.04em;">FROM THE BRAND PLAN</span>`)}
+      <div style="font-size:15px;font-weight:700;line-height:1.4;${(mp.key_theme||"").trim()?"":"color:var(--subtle);font-weight:500;"}">${(mp.key_theme||"").trim()?escAttr(mp.key_theme):"No theme set"}</div>
+
+      ${goals.length?`<div style="margin-top:12px;">${lbl("Goals")}
+        ${goals.map(g=>`<div class="mpv-goal${g.status==="done"?" done":""}"><i class="ti ti-circle"></i><span class="tx">${escAttr(g.label)}</span>${g.discipline?"":mpvTagHtml(null)}</div>`).join("")}</div>`:""}
+
+      ${(targets.length||mp.influencer_target>0)?`<div class="mpv-strip">
+        ${targets.map(t=>`<div class="mpv-metric"><b>${escAttr(t.value||t.label)}</b><span>${escAttr(t.value?t.label:"")}</span></div>`).join("")}
+        ${mp.influencer_target>0?`<div class="mpv-metric"><b>${mp.influencer_target}</b><span>influencers targeted</span></div>`:""}</div>`:""}
+
+      ${band("sc-influencer","Influencers",infl,"influencer",mp.influencer_target>0?infl.length+" of "+mp.influencer_target:"")}
+      ${band("sc-production","Production",prod,"production","")}`;
+  }
+  return `<div class="month-card mp-hero" style="position:relative;padding:16px ${canE?"84px":"70px"} 16px 18px;overflow:visible;">
+    <div style="position:absolute;top:13px;right:13px;display:flex;align-items:center;gap:6px;">${statusCtl}${editBtn}</div>
+    ${body}
+  </div>`;
+}
+
+function mpvStep(d){
+  const m=(mpvMonth||curMonth||1)+d;
+  if(m<1||m>12) return;
+  mpvMonth=m; renderMonthPlanView();
+}
+async function mpvSetStatus(v){
+  if(!canEdit()) return;
+  const mp=monthPlanFor(activeBrand,YEAR,mpvMonth||curMonth||1);
+  mp.status=v; if(!mp.id) mp.id=newMonthPlanId();
+  await dbSaveMonthPlan(activeBrand,YEAR,mpvMonth||curMonth||1);
+  renderMonthPlanView(); buildSidebar();
+}
+
 /* render() re-declared to carry one more branch. The whole body is
    repeated rather than wrapped, because the last declaration wins and
    there is no way to call the earlier one by name — the same additive
@@ -9741,9 +10096,12 @@ function render(){
      rather than leaving an editable admin page on screen */
   if(view==="evmgr"&&!canCap("manage_events")) view="year";
   if(view==="indmgr"&&!canEdit()) view="year";
+  /* MADRID: the month plan needs a brand, the same way Content does */
+  if(view==="mplan"&&!brandActive) view="year";
   document.body.classList.toggle("planning",socialLayer&&view==="year"&&brandActive&&canEdit());
   if(view==="evmgr") return renderEvMgr();
   if(view==="indmgr") return renderIndMgr2();
+  if(view==="mplan") return renderMonthPlanView();
   view==="brief"?renderBrief():(view==="content"?renderSocial():(view==="year"?renderYear():renderList()));
 }
 
