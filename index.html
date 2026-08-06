@@ -1321,8 +1321,12 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
 select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:none;cursor:pointer;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23aaa' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>");
   background-repeat:no-repeat;background-position:right 6px center;padding-right:18px;}
-.em2-star{cursor:pointer;font-size:14px;text-align:center;line-height:28px;user-select:none;}
-.em2-star.off{opacity:.22;}
+/* v52.3 — Chirag: the emoji star was too pale to read as a marker.
+   Emoji rendering is the platform's business, not CSS's, so it cannot
+   be tinted — replaced with the icon font, which can. */
+.em2-star{cursor:pointer;font-size:17px;text-align:center;line-height:28px;user-select:none;color:#E8A200;}
+.em2-star.off{color:#D8D6D1;}
+.em2-star.off:hover{color:#B9B6AF;}
 .em2-del{color:#D8D6D1;cursor:pointer;font-size:14px;text-align:right;line-height:28px;}
 .em2-del:hover{color:#C62828;}
 /* notes live UNDER the row. They run to paragraphs; in a column they
@@ -5286,7 +5290,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v52.2 — the menu becomes clickable; the buttons stop jumping";
+const TOOL_VERSION="v52.3 — Dubai: the Event Manager saves again, and the star earns its colour";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -9310,7 +9314,7 @@ function renderEvMgr(){
           .map(([k,cc])=>`<option value="${k}"${gc(e)===k?" selected":""}>${cc.short}</option>`).join("")}
       </select>
       <span class="em2-star${e.mega?"":" off"}" onclick="event.stopPropagation();emStar('${e.id}')"
-        title="${e.mega?"A key date":"Mark as a key date"}">${e.mega?"⭐":"☆"}</span>
+        title="${e.mega?"A key date":"Mark as a key date"}"><i class="ti ${e.mega?"ti-star-filled":"ti-star"}"></i></span>
       <span class="em2-del" onclick="event.stopPropagation();emDel('${e.id}')" title="Move to trash"><i class="ti ti-trash"></i></span>
     </div>`;
     if(emNotes===e.id) list+=`<div class="em2-notes">
