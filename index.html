@@ -765,6 +765,24 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
 .hs-ic.del{background:#FDECEC;color:#B42318;}
 .hs-ic.made{background:#EAF6EC;color:#2F7A46;}
 .hs-ic.grp{background:#EEF2F6;color:#3A5169;}
+/* OSLO FIX 1 — the brand column. 132px fits "ZVC by Netre"; anything
+   longer trims rather than pushing the row about, and the full name is
+   in the tooltip, in the open row, and findable by search. Wider than
+   this and it starts eating the name, which is what you actually read. */
+.hs-brandcol{width:132px;flex:none;font-size:12.5px;font-weight:650;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  border-right:1px solid var(--div);padding-right:13px;}
+.hs-brandcol.none{color:var(--subtle);font-weight:500;font-style:italic;}
+.hs-hdr{display:flex;gap:13px;padding:8px 16px;font-size:10.5px;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--subtle);background:#FAFAF9;border-bottom:1px solid var(--div);}
+.hs-hdr .s1{width:30px;flex:none;}
+.hs-hdr .s2{width:132px;flex:none;}
+/* OSLO FIX 3 — a deletion that has already been undone says so */
+.hs-back{color:#2F7A46;font-weight:600;}
+.hs-badge{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  padding:2px 7px;border-radius:4px;background:#EAF6EC;color:#1E5B32;flex:none;}
+.hs-backline{margin-top:13px;font-size:12.5px;color:#1E5B32;background:#EAF6EC;
+  border-radius:8px;padding:8px 11px;display:flex;align-items:center;gap:7px;}
 .hs-main{min-width:0;flex:1;}
 .hs-ttl{font-size:14px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .hs-ttl b{font-weight:650;}
@@ -830,6 +848,10 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
 .hsb-stat .n{font-size:20px;font-weight:700;letter-spacing:-.02em;line-height:1.1;}
 .hsb-stat .l{font-size:11.5px;color:var(--muted);margin-top:1px;}
 @media(max-width:1000px){
+  /* the brand column costs 132px the name needs more; it moves into the
+     sub-line rather than squeezing the thing you are reading */
+  .hs-brandcol{width:86px;padding-right:9px;font-size:11.5px;}
+  .hs-hdr .s2{width:86px;}
   .hs-fr{grid-template-columns:110px 1fr;}
   .hs-arr,.hs-fv.new{display:none;}
   .hs-det{padding-left:16px;}
@@ -2605,9 +2627,25 @@ function toggleIndSection(){
   if(icon) icon.style.transform=open?"rotate(90deg)":"";
 }
 
+/* OSLO FIX 4 — a campaign cannot end before it starts.
+   This is not cosmetic. A campaign whose end falls before its start
+   COVERS NO DAYS, so the calendar paints no pink and the campaign looks
+   broken with no explanation — which is exactly what happened to two
+   Duke campaigns and took a code trace to explain.
+
+   The picker is still Chrome's: it still opens on today and still
+   starts the week on Sunday. Only the impossible dates are removed. */
+function eeApplyDateBounds(){
+  const s=document.getElementById("ee-date-native");
+  const e=document.getElementById("ee-end-date-native");
+  if(!s||!e) return;
+  e.min = s.value || `${YEAR}-01-01`;   // days before the start are unpickable
+  s.max = e.value || `${YEAR}-12-31`;   // and the start cannot jump past the end
+}
+
 function syncNativeDate(which, val){
   // val = "2026-MM-DD"
-  if(!val) return;
+  if(!val){ eeApplyDateBounds(); return; }
   const parts=val.split("-");
   const m=parseInt(parts[1]);
   const d=parseInt(parts[2]);
@@ -2616,10 +2654,19 @@ function syncNativeDate(which, val){
     document.getElementById("ee-date-single").value=d;
     document.getElementById("ee-month").value=m;
     document.getElementById("ee-month-single").value=m;
+    /* If an end date is already sitting before this new start, say so
+       rather than moving somebody's dates for them. A silent correction
+       is its own kind of surprise. */
+    const e=document.getElementById("ee-end-date-native");
+    if(e&&e.value&&e.value<val){
+      toast("The end date is before the start. Clear it, or move it to "+
+        new Date(val+"T00:00:00").getDate()+" "+MN[m]+" or later.","err");
+    }
   } else {
     document.getElementById("ee-end-date").value=d;
     document.getElementById("ee-end-month").value=m;
   }
+  eeApplyDateBounds();
 }
 
 function toggleCampaignDates(cat){} // kept for compat
@@ -3904,7 +3951,7 @@ function openNewEvDay(m,day){
   const preRel={};
   if(isBrand)(brands[activeBrand].inds||[]).forEach(id=>{preRel[id]="high";});
   buildIndChecks([],preRel);
-  openM("ev-edit");
+  openM("ev-edit"); eeApplyDateBounds();
 }
 
 
@@ -4038,7 +4085,7 @@ function openEdit(m,id){
   // Date fields
   eeSetDate(ev.date); eeSetMonth(m); eeSetEndDate(ev.endDate||"",ev.endMonth||m);
   buildIndChecks(ev.industries||[], ev.relevance||{});
-  openM("ev-edit");
+  openM("ev-edit"); eeApplyDateBounds();
 }
 
 
@@ -4223,7 +4270,7 @@ function openNewEv(){
   const preRel={};
   if(isBrand)(brands[activeBrand].inds||[]).forEach(id=>{preRel[id]="high";});
   buildIndChecks([],preRel);
-  openM("ev-edit");
+  openM("ev-edit"); eeApplyDateBounds();
 }
 
 
@@ -5528,7 +5575,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v57 — Oslo: the history reads like history";
+const TOOL_VERSION="v57.1 — Oslo: brand first, and a date that behaves";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -10693,12 +10740,25 @@ async function loadHistory(more){
   histBusy=false; renderHistory(); buildSidebar();
 }
 
+/* OSLO FIX 1 — the BRAND goes in front, not the type.
+   Chirag's call, and the right one: the type is already a filter in the
+   left panel, one click away. The brand is what you scan for and cannot
+   reach as quickly, so it gets the column.
+
+   Things with no brand say what they are rather than showing an empty
+   cell — an empty cell reads as a fault. */
+const HIST_NO_BRAND={
+  user_tool_roles:"All brands", user_brands:"All brands", profiles:"All people",
+  events:"Master calendar", industries:"All brands",
+  pb_proposals:"Proposal Bank", pb_proposal_versions:"Proposal Bank"
+};
 function histTitle(row){
   const src=(row.action==="delete")?(row.old_row||{}):((row.new_row||row.old_row)||{});
   const lab=(HIST_LABELS[row.table_name]||{}).one||row.table_name;
   const name=src.name||src.label||src.key_theme||src.body||src.filename||src.email||"";
   const brand=(src.brand_id&&brands[src.brand_id])?brands[src.brand_id].name:"";
   return {lab,name:String(name).slice(0,90),brand,
+    noBrand:brand?"":(HIST_NO_BRAND[row.table_name]||"No brand"),
     icon:(HIST_LABELS[row.table_name]||{}).icon||"ti-database"};
 }
 /* "2:14 pm today" for the restore preview, where a bare time is not
@@ -10854,7 +10914,10 @@ function renderHistory(){
       const day=histDayLabel(g.rows[0].at);
       if(day!==lastDay){
         if(open) list+=`</div>`;
-        lastDay=day; list+=`<div class="hs-day">${escHtml(day)}</div><div class="hs-card">`; open=true;
+        lastDay=day;
+        list+=`<div class="hs-day">${escHtml(day)}</div><div class="hs-card">`+
+              `<div class="hs-hdr"><span class="s1"></span><span class="s2">Brand</span><span>What happened</span></div>`;
+        open=true;
       }
       list+=(g.rows.length>1)?histGroupRow(g):histOneRow(g.rows[0]);
     });
@@ -10892,17 +10955,30 @@ function renderHistory(){
 
 function histOneRow(r){
   const k=histKind(r), K=HIST_KIND[k], t=histTitle(r), open=histOpen===r.id;
+  const back=(k==="deleted")?histPutBack(r):null;
   return `<div class="hs-row${k==="deleted"?" del":""}${open?" on":""}" onclick="histToggle(${r.id})">
       <div class="hs-ic ${K.cls}">${K.icon?`<i class="ti ${K.icon}"></i>`:`<i class="ti ${t.icon}"></i>`}</div>
+      <div class="hs-brandcol${t.brand?"":" none"}" title="${escAttr(t.brand||t.noBrand)}">${escHtml(t.brand||t.noBrand)}</div>
       <div class="hs-main">
-        <div class="hs-ttl"><b>${escHtml(t.name||"(no name)")}</b>
-          <span class="hs-chip">${escHtml(t.lab)}</span>${t.brand?`<span class="hs-chip">${escHtml(t.brand)}</span>`:""}</div>
-        <div class="hs-sub">${histSummary(r)}</div>
+        <div class="hs-ttl"><b>${escHtml(t.name||"(no name)")}</b></div>
+        <div class="hs-sub">${escHtml(t.lab)} · ${histSummary(r)}${back
+          ?` · <span class="hs-back">put back ${escHtml(histTime(back.at))} by ${escHtml(histWhoName(back))}</span>`:""}</div>
       </div>
       <span class="hs-t">${histTime(r.at)}</span>
       <span class="hs-act ${K.cls}">${K.label}</span>
+      ${back?`<span class="hs-badge">back</span>`:""}
       <i class="ti ti-chevron-${open?"up":"down"} hs-chev"></i>
     </div>`+(open?histDetail(r):"");
+}
+
+/* OSLO FIX 3 — has this deletion already been put back?
+   Without this you can look at Deletions, see something deleted, and
+   restore it a second time without knowing it is already there.
+   Answered from what is loaded: a restore that happened AFTER this
+   deletion, on the same row. */
+function histPutBack(r){
+  return HIST.find(x=>x.table_name===r.table_name && x.row_id===r.row_id &&
+    x.id>r.id && histKind(x)==="restored") || null;
 }
 function histGroupRow(g){
   const r=g.rows[0], k=histKind(r), K=HIST_KIND[k];
@@ -10910,12 +10986,13 @@ function histGroupRow(g){
   const open=histOpen===("g"+r.id);
   const brandsIn=new Set(g.rows.map(x=>{const t=histTitle(x);return t.brand;}).filter(Boolean));
   const noChange=g.rows.every(x=>histKind(x)==="changed"&&!histChangedKeys(x).length);
+  const bLabel=brandsIn.size===1?[...brandsIn][0]:(brandsIn.size?brandsIn.size+" brands":histTitle(r).noBrand);
   return `<div class="hs-row${open?" on":""}" onclick="histToggle('g${r.id}')">
       <div class="hs-ic grp"><i class="ti ti-stack-2"></i></div>
+      <div class="hs-brandcol${brandsIn.size===1?"":" none"}" title="${escAttr(bLabel)}">${escHtml(bLabel)}</div>
       <div class="hs-main">
-        <div class="hs-ttl"><b>${g.rows.length} ${escHtml(lab.toLowerCase())}${g.rows.length===1?"":"s"}</b>
-          ${noChange?`<span class="hs-chip">no values changed</span>`:""}</div>
-        <div class="hs-sub">by <span class="k">${escHtml(histWhoName(r))}</span>${brandsIn.size?" · "+brandsIn.size+" brand"+(brandsIn.size===1?"":"s"):""}</div>
+        <div class="hs-ttl"><b>${g.rows.length} ${escHtml(lab.toLowerCase())}${g.rows.length===1?"":"s"}</b>${noChange?" re-saved — no values changed":""}</div>
+        <div class="hs-sub">by <span class="k">${escHtml(histWhoName(r))}</span></div>
       </div>
       <span class="hs-t">${histTime(r.at)}</span>
       <span class="hs-act grp">${g.rows.length} ${K.label.toLowerCase()}</span>
@@ -10952,23 +11029,74 @@ function histLifeLine(r){
   return `<div class="hs-tlr"><span class="d ${dot}"></span> ${histSummary(r)} · ${escHtml(when)}</div>`;
 }
 
+/* OSLO FIX 2 — WHAT IDENTIFIES THE THING, NOT EVERY COLUMN.
+   The approved drawing showed four lines. I built "show every column"
+   and shipped twelve, most of them database: cat5, true, {}, a raw
+   timestamp, and five rows of "—". This is the correction.
+
+   Five rules:
+     1. an empty field does not appear at all
+     2. codes become words — cat5 reads Brand Campaigns & Events
+     3. a date is a date: 1 September 2026, or 15–22 September 2026
+     4. "deleted at" goes; the row already says Deleted, in red
+     5. the name comes first, because it is what you are looking for */
+
+const HIST_HIDE_FIELDS={id:1,brand_id:1,updated_at:1,created_at:1,deleted_at:1,
+  year:1,month:1,date:1,end_month:1,end_date:1,   // folded into one "When"
+  relevance:1,industries:1,                       // ratings are not identity
+  brand_only:1,synced:1,sort_order:1,current_round_id:1,event_id:1};
+
+function histNiceValue(k,v){
+  if(v===null||v===undefined||v==="") return "";
+  if(k==="cat") return (CATS[v]||{}).label||v;
+  if(typeof v==="boolean") return v?"Yes":"";
+  if(typeof v==="object"){
+    const n=Array.isArray(v)?v.length:Object.keys(v).length;
+    return n?String(n)+" item"+(n===1?"":"s"):"";
+  }
+  return String(v);
+}
+/* One line for a date or a range, from whichever of the parts exist. */
+function histWhenLine(o){
+  const y=o.year||YEAR, m=o.month, d=o.date;
+  if(!m||!d) return "";
+  const start=d+" "+MN[m];
+  if(o.end_month&&o.end_date){
+    const same=(o.end_month===m);
+    return same ? (d+"–"+o.end_date+" "+MN[m]+" "+y)
+                : (start+" – "+o.end_date+" "+MN[o.end_month]+" "+y);
+  }
+  return start+" "+y;
+}
+
 function histDetail(r){
-  const o=r.old_row||{}, n=r.new_row, kind=histKind(r);
-  const skip={id:1,brand_id:1,updated_at:1,created_at:1};
-  let body="";
-  Object.keys(o).filter(k=>!skip[k]).forEach(k=>{
-    const a=o[k], b=n?n[k]:undefined;
-    const fmt=v=>(v===null||v===undefined||v==="")?"—":(typeof v==="object"?JSON.stringify(v):String(v));
-    const moved=n && JSON.stringify(a)!==JSON.stringify(b);
-    if(n && kind==="changed" && !moved) return;      // unchanged fields hidden on an edit
-    body+=`<div class="hs-fr${moved?" moved":""}">
-      <div class="hs-fk">${escHtml(histField(k))}</div>
-      <div class="hs-fv old">${escHtml(fmt(a).slice(0,300))}</div>
-      ${n&&moved?`<i class="ti ti-arrow-right hs-arr"></i><div class="hs-fv new">${escHtml(fmt(b).slice(0,300))}</div>`:""}
-    </div>`;
+  const o=r.old_row||{}, n=r.new_row, kind=histKind(r), t=histTitle(r);
+  const rows=[];
+  const add=(label,val,was)=>{ if(val) rows.push({label,val,was:was&&was!==val?was:""}); };
+
+  add("Name", o.name||o.label||o.key_theme||o.body||o.email||"",
+      n?(n.name||n.label||n.key_theme||n.body||n.email||""):"");
+  add("When", histWhenLine(o), n?histWhenLine(n):"");
+  Object.keys(o).forEach(k=>{
+    if(HIST_HIDE_FIELDS[k]) return;
+    if(["name","label","key_theme","body","email"].includes(k)) return;
+    const val=histNiceValue(k,o[k]);
+    const was=n?histNiceValue(k,n[k]):"";
+    if(!val && !was) return;
+    /* on a plain edit, only the fields that moved are worth the space */
+    if(n && kind==="changed" && val===was) return;
+    rows.push({label:histField(k),val:val||"—",was:(n&&was!==val)?(was||"—"):""});
   });
+  if(t.brand) rows.push({label:"Brand",val:t.brand,was:""});
+
+  let body=rows.map(x=>`<div class="hs-fr${x.was?" moved":""}">
+      <div class="hs-fk">${escHtml(x.label)}</div>
+      <div class="hs-fv old">${escHtml(String(x.val).slice(0,300))}</div>
+      ${x.was?`<i class="ti ti-arrow-right hs-arr"></i><div class="hs-fv new">${escHtml(String(x.was).slice(0,300))}</div>`:""}
+    </div>`).join("");
   if(!body) body=`<div class="hs-fr"><div class="hs-fv">Nothing readable was recorded for this row.</div></div>`;
 
+  const back=(kind==="deleted")?histPutBack(r):null;
   const lifeOpen=histLifeFor===r.id;
   const life=lifeOpen
     ? (histLifeRows===null
@@ -10977,22 +11105,23 @@ function histDetail(r){
             ? `<div class="hs-tl">${histLifeRows.map(histLifeLine).join("")}</div>`
             : `<div class="hs-tl"><div class="hs-tlr">Nothing else is recorded for this one.</div></div>`))
     : "";
-  const made=(histLifeRows||[]).find(x=>x.action==="insert");
   const lifeLabel=lifeOpen&&histLifeRows
     ? "Its life · "+histLifeRows.length+" event"+(histLifeRows.length===1?"":"s")
     : "Its life";
 
   return `<div class="hs-det">
     <div class="hs-dh">${kind==="deleted"?"How it looked when it was deleted"
-      :kind==="created"?"How it was created":"What changed"}</div>
+      :kind==="created"?"How it was created"
+      :kind==="restored"?"What came back":"What changed"}</div>
     ${body}
+    ${back?`<div class="hs-backline"><i class="ti ti-arrow-back-up"></i> Already put back at ${escHtml(histTime(back.at))} by ${escHtml(histWhoName(back))} — it is on the calendar now.</div>`:""}
     <div class="hs-histtog${lifeOpen?" on":""}" onclick="event.stopPropagation();histLifeOpen(${r.id})">
       <i class="ti ti-chevron-${lifeOpen?"down":"right"}"></i> ${escHtml(lifeLabel)}</div>
     ${life}
     <div class="hs-dfoot">
       <div class="hs-note"></div>
       ${kind==="deleted"?`<button class="btn btn-s btn-sm" onclick="event.stopPropagation();closeAllPops();openTrash()"><i class="ti ti-external-link"></i> Open in Trash</button>`:""}
-      <button class="btn btn-p btn-sm" onclick="event.stopPropagation();histPreview(${r.id})"><i class="ti ti-arrow-back-up"></i> Put it back</button>
+      ${back?"":`<button class="btn btn-p btn-sm" onclick="event.stopPropagation();histPreview(${r.id})"><i class="ti ti-arrow-back-up"></i> Put it back</button>`}
     </div>
   </div>`;
 }
