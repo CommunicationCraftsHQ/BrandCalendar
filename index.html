@@ -5398,7 +5398,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v53.2 — Madrid: the counts read like English";
+const TOOL_VERSION="v54 — Reykjavik: saving is not deleting";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -5662,10 +5662,77 @@ async function upsertBrand(row){
   }
   return res;
 }
-function dbSyncBrandData(){ // debounced full sync of brands + their events/tags/posts/briefs
+/* ── REYKJAVIK: SAVING IS NOT DELETING ───────────────────────────────
+   This function used to WIPE each brand's campaigns, posts, notes and
+   tags out of the database and write back whatever the browser was
+   holding at that moment. When the browser's picture was incomplete —
+   a tab that had lost its live connection, a save landing mid-load —
+   the rewrite restored less than the wipe had removed, and the
+   difference was gone: no Trash copy, no trace, nothing to restore.
+
+   It ran on EVERY brand on EVERY edit. On 7 August 2026 it cost
+   Jewelchic several campaigns, and the log showed three brands
+   rewritten in three consecutive seconds — the loop walking the list.
+
+   Now nothing here removes a live row. Campaigns, posts and notes are
+   UPSERTED: changed rows update, new rows insert, and rows this browser
+   happens not to know about are LEFT ALONE. A campaign leaves only
+   through the Delete button, which soft-deletes it into Trash.
+
+   brand_tags is the single exception, because untagging an event
+   genuinely has to remove the link. It is diffed against what was
+   loaded rather than wiped — and it is the one table that costs
+   nothing to lose, since it rebuilds from a brand's industries.
+
+   syncSafetyCheck below is the second and independent line of defence:
+   if this page is holding far less than the database has, it is working
+   from a broken picture and the save is refused outright. */
+
+/* Returns null when it is safe to write, or a plain-English reason not
+   to. Deliberately compares against a LIVE count rather than against G,
+   because G is exactly the thing that may be stale. */
+async function syncSafetyCheck(){
+  if(!G) return "the calendar has not finished loading";
+  let held=0;
+  for(let m=1;m<=12;m++)(evs[m]||[]).forEach(e=>{if(e._custom)held++;});
+  let have=null;
+  try{
+    const res=await sb.from("brand_events").select("id",{count:"exact",head:true})
+      .eq("year",YEAR).is("deleted_at",null);
+    if(res&&!res.error&&typeof res.count==="number") have=res.count;
+  }catch(e){}
+  if(have===null) return null;   // cannot check — the write is upsert-only regardless
+  /* Half, not exact. An exact match would trip on the ordinary race
+     between deleting a campaign and this debounced save, and a guard
+     that cries wolf gets ignored. Half catches the disaster — a page
+     that has lost most or all of its picture — with no false alarms. */
+  if(have>0 && held*2<have)
+    return "this page is showing "+held+" campaign"+(held===1?"":"s")+" but the database has "+have;
+  return null;
+}
+
+/* The recovery reload is throttled, because loadAll() ends in
+   sanitizeBrands(), which can itself call saveBrLS() — and that is
+   another save. Without this, a guard that keeps tripping would spin
+   the page in a reload loop forever. The save is still refused every
+   time; only the reload is rate-limited. */
+let lastSafetyReload=0;
+function dbSyncBrandData(){ // debounced sync of brands + their events/tags/posts/briefs
   if(!canEdit())return;
   clearTimeout(syncTimer);
   syncTimer=setTimeout(async()=>{
+    const unsafe=await syncSafetyCheck();
+    if(unsafe){
+      // Loud on purpose. Silence is how the original fault went
+      // unnoticed for weeks.
+      const now=Date.now();
+      if(now-lastSafetyReload>30000){
+        lastSafetyReload=now;
+        toast("Couldn't save safely — refreshing your data. ("+unsafe+")","err");
+        try{ await loadAll(); }catch(e){}
+      }
+      return;   // refused either way — the write never happens
+    }
     for(const [id,b] of Object.entries(brands)){
       dbErr(await upsertBrand({id,name:b.name,inds:b.inds||[],audience:b.audience||[],brief:b.brief||{}}));
       const customIds=new Set();
@@ -5676,19 +5743,31 @@ function dbSyncBrandData(){ // debounced full sync of brands + their events/tags
           bevRows.push({id:e.id,brand_id:id,year:YEAR,month:m,date:e.date,name:e.name,cat:e.cat||"cat5",notes:e.notes||"",relevance:e.relevance||{},mega:!!e.mega,brand_only:!!e._brandOnly,end_month:e.endMonth||null,end_date:e.endDate||null});
         }
       });
-      // only touch THIS year's rows; trashed rows are preserved
-      dbErr(await sb.from("brand_events").delete().eq("brand_id",id).eq("year",YEAR).is("deleted_at",null));
-      if(bevRows.length) dbErr(await sb.from("brand_events").insert(bevRows));
-      dbErr(await sb.from("brand_tags").delete().eq("brand_id",id));
+      // CAMPAIGNS — upsert only. Removal is dbTrashBrandEvent's job.
+      if(bevRows.length) dbErr(await sb.from("brand_events").upsert(bevRows));
+
+      // TAGS — the one table that must lose rows, so diff it against
+      // what was loaded and remove only links that are genuinely gone.
       const allCustomIds=new Set(G?G.bevs.map(r=>r.id):[]);
       const tagRows=(b.evIds||[]).filter(x=>!customIds.has(x)&&!allCustomIds.has(x)).map(event_id=>({brand_id:id,event_id}));
-      if(tagRows.length) dbErr(await sb.from("brand_tags").insert(tagRows));
-      dbErr(await sb.from("brand_posts").delete().eq("brand_id",id).eq("year",YEAR));
+      const wantedTags=new Set(tagRows.map(r=>r.event_id));
+      const goneTags=((G&&G.tags)||[]).filter(t=>t.brand_id===id&&!wantedTags.has(t.event_id)).map(t=>t.event_id);
+      if(goneTags.length) dbErr(await sb.from("brand_tags").delete().eq("brand_id",id).in("event_id",goneTags));
+      if(tagRows.length) dbErr(await sb.from("brand_tags").upsert(tagRows));
+
+      // POSTING SLOTS — upsert only.
       const yearPosts=(b.posts||[]).filter(p=>(p.year||YEAR)===YEAR);
-      if(yearPosts.length) dbErr(await sb.from("brand_posts").insert(yearPosts.map(p=>({id:String(p.id),brand_id:id,year:YEAR,month:p.month,date:p.date,type:p.type||"Post",notes:p.notes||""}))));
-      dbErr(await sb.from("brand_briefs").delete().eq("brand_id",id));
+      if(yearPosts.length) dbErr(await sb.from("brand_posts").upsert(yearPosts.map(p=>({id:String(p.id),brand_id:id,year:YEAR,month:p.month,date:p.date,type:p.type||"Post",notes:p.notes||""}))));
+
+      // NOTES — upsert what has content; remove a note only when the
+      // person has actually emptied it. A note this browser never
+      // loaded is not touched.
       const briefRows=Object.entries(b.notes||{}).map(([event_id,n])=>{const note=typeof n==="string"?{note:n}:(n||{});return {brand_id:id,event_id,note:note.note||"",arc_start:note.arcStart||"",arc_end:note.arcEnd||"",arc_freq:note.arcFreq||""};});
-      if(briefRows.length) dbErr(await sb.from("brand_briefs").insert(briefRows));
+      const hasContent=r=>!!(r.note||r.arc_start||r.arc_end||r.arc_freq);
+      const emptied=briefRows.filter(r=>!hasContent(r)).map(r=>r.event_id);
+      const keptNotes=briefRows.filter(hasContent);
+      if(emptied.length) dbErr(await sb.from("brand_briefs").delete().eq("brand_id",id).in("event_id",emptied));
+      if(keptNotes.length) dbErr(await sb.from("brand_briefs").upsert(keptNotes));
     }
   },400);
 }
