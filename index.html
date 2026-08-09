@@ -744,6 +744,53 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
 #backup-health .bh-dot{width:8px;height:8px;border-radius:50%;background:#E8A33D;flex:none;}
 #backup-health .bh-sub{color:#8A6A2F;}
 #backup-health .btn{margin-left:auto;}
+
+/* REYKJAVIK 4b — History & restore. Borrows the Event Manager's page
+   frame so it reads as part of the same family rather than a new idea. */
+.hs-list{border:1px solid var(--div);border-radius:var(--rc);overflow:hidden;background:#fff;}
+.hs-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--div);
+  cursor:pointer;transition:background .12s;}
+.hs-row:last-child{border-bottom:0;}
+.hs-row:hover{background:#FAFAFA;}
+.hs-row.on{background:#F6F6F6;}
+.hs-ic{font-size:16px;color:var(--muted);flex:none;width:18px;text-align:center;}
+.hs-main{min-width:0;flex:1;}
+.hs-ttl{font-size:13.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hs-brand{font-size:11px;color:var(--muted);border:1px solid var(--div);border-radius:20px;padding:1px 7px;margin-left:4px;}
+.hs-sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
+.hs-act{font-size:11px;font-weight:600;border-radius:20px;padding:3px 9px;flex:none;}
+.hs-act.del{background:#FDECEC;color:#B42318;}
+.hs-act.chg{background:#EEF2F6;color:#3A5169;}
+.hs-chev{font-size:14px;color:var(--muted);flex:none;}
+.hs-det{padding:14px 16px 16px 44px;background:#FCFCFC;border-bottom:1px solid var(--div);}
+.hs-dhead{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.hs-dcols{display:grid;grid-template-columns:150px 1fr 22px 1fr;font-size:10.5px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;}
+.hs-dcols span:first-child{grid-column:2;}
+.hs-dcols span:last-child{grid-column:4;}
+.hs-fr{display:grid;grid-template-columns:150px 1fr 22px 1fr;gap:6px;align-items:start;
+  padding:5px 0;border-top:1px solid #F0F0F0;font-size:12.5px;}
+.hs-fr.moved .hs-fv{background:#FFF8E1;}
+.hs-fk{color:var(--muted);font-size:11.5px;padding-top:1px;}
+.hs-fv{word-break:break-word;border-radius:4px;padding:1px 5px;}
+.hs-fv.now{background:#EAF6EC;}
+.hs-arr{font-size:12px;color:var(--muted);text-align:center;padding-top:2px;}
+.hs-dfoot{display:flex;align-items:center;gap:14px;margin-top:14px;padding-top:12px;border-top:1px solid var(--div);}
+.hs-note{font-size:11.5px;color:var(--muted);line-height:1.45;flex:1;}
+.hs-note .ti{margin-right:4px;}
+.hs-empty{padding:40px 20px;text-align:center;font-size:13px;color:var(--muted);}
+.hs-esub{font-size:11.5px;margin-top:6px;opacity:.8;}
+.hs-only{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text);cursor:pointer;}
+.hs-cintro{font-size:13.5px;line-height:1.5;margin-bottom:12px;}
+.hs-cwrap{border:1px solid var(--div);border-radius:var(--rc);padding:8px 12px;background:#FCFCFC;}
+.hs-warn{border-radius:var(--rc);padding:11px 13px;font-size:12.5px;line-height:1.5;margin-bottom:12px;}
+.hs-warn.stop{background:#FDECEC;border:1px solid #F5C6C6;color:#7A2020;}
+.hs-warnsub{margin-top:5px;font-size:11.5px;opacity:.85;}
+@media(max-width:900px){
+  .hs-dcols,.hs-fr{grid-template-columns:110px 1fr;}
+  .hs-arr,.hs-dcols span{display:none;}
+  .hs-det{padding-left:16px;}
+}
 .sidebar{overflow:visible;}
 
 .nav-sep{width:1px;height:22px;background:rgba(255,255,255,.16);flex:none;}
@@ -1620,6 +1667,10 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
         <div class="brow staff-row" onclick="closeAllPops();carryForward()"><i class="ti ti-arrow-forward"></i><span class="bnm" id="acct-carry">Carry forward to next year</span></div>
         <div class="brow staff-row" onclick="closeAllPops();openImportHistory()"><i class="ti ti-history"></i><span class="bnm">Import history</span></div>
         <div class="brow staff-row" onclick="closeAllPops();openTrash()"><i class="ti ti-trash"></i><span class="bnm">Trash</span></div>
+        <!-- REYKJAVIK 4b: Trash holds what was deleted through the app.
+             This holds everything that changed or vanished by any route,
+             including routes with no Trash of their own. -->
+        <div class="brow admin-row" onclick="closeAllPops();openHistory()"><i class="ti ti-history"></i><span class="bnm">History &amp; restore</span></div>
         <div class="bpsep"></div>
         <!-- Refresh is gone. The calendar has synced in real time since
              Sydney; a Refresh button says we do not trust our own sync,
@@ -2025,6 +2076,22 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
       <div id="trash-list" style="max-height:420px;overflow-y:auto;border:1px solid var(--div);border-radius:var(--rc);"></div>
     </div>
     <div class="modal-foot"><button class="btn btn-g" onclick="closeM('trash')">Done</button></div>
+  </div>
+</div>
+
+<!-- REYKJAVIK 4b: the restore preview. It exists so that no restore is
+     ever one click. The extra step IS the feature. -->
+<div class="overlay" id="ov-hs-confirm" onclick="if(event.target===this)closeM('hs-confirm')">
+  <div class="modal wide">
+    <div class="modal-top">
+      <div><div class="modal-title">Put this back?</div><div class="modal-sub">Nothing has changed yet. This is what will happen.</div></div>
+      <button class="modal-x" onclick="closeM('hs-confirm')">✕</button>
+    </div>
+    <div class="modal-body" id="hs-confirm-body" style="max-height:440px;overflow-y:auto;"></div>
+    <div class="modal-foot">
+      <button class="btn btn-g" onclick="closeM('hs-confirm')">Cancel</button>
+      <span id="hs-confirm-go"></span>
+    </div>
   </div>
 </div>
 
@@ -5409,7 +5476,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v55 — Reykjavik: a backup, and an alarm when it stops";
+const TOOL_VERSION="v56 — Reykjavik: put it back yourself";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -8669,14 +8736,45 @@ async function maybeWriteDailyBackup(){
   }
 }
 
+/* REYKJAVIK 4b: the weekly self-test writes its verdict here. One alarm
+   meaning "something in your safety net is broken" beats three warnings
+   you learn to ignore, so a failed self-test reuses this same bar. */
+async function selfTestFailure(){
+  try{
+    const r=await sb.from("health_check").select("ok,at,detail")
+      .eq("name","recovery_selftest").order("at",{ascending:false}).limit(1);
+    if(r.error||!r.data||!r.data.length) return null;
+    const row=r.data[0];
+    if(row.ok) return null;
+    const f=(row.detail&&row.detail.failures)||[];
+    return f.length?String(f[0]):"the weekly recovery check failed";
+  }catch(e){ return null; }
+}
+
 /* The alarm. Admins only — nobody else can act on it. */
 async function renderBackupHealth(){
   if(ME.role!=="admin") return;
   const last=await lastBackupAt();
   const hrs=last?Math.floor((Date.now()-last.getTime())/3600000):null;
-  const bad=(hrs===null)||(hrs>BACKUP_STALE_HOURS);
+  const stale=(hrs===null)||(hrs>BACKUP_STALE_HOURS);
+  const selfFail=await selfTestFailure();
+  const bad=stale||!!selfFail;
   let bar=document.getElementById("backup-health");
   if(!bad){ if(bar) bar.remove(); return; }
+  if(selfFail && !stale){
+    /* recovery itself is broken — a worse problem than a late backup,
+       and it must not be worded as one */
+    if(!bar){
+      bar=document.createElement("div"); bar.id="backup-health";
+      const nav=document.querySelector("nav.nav");
+      if(nav&&nav.parentNode) nav.parentNode.insertBefore(bar,nav.nextSibling);
+      else document.body.insertBefore(bar,document.body.firstChild);
+    }
+    bar.innerHTML='<span class="bh-dot"></span><b>The weekly recovery check failed.</b>'+
+      '<span class="bh-sub">'+escHtml(selfFail)+'</span>'+
+      '<button class="btn btn-s btn-sm" onclick="openHistory()">Open history</button>';
+    return;
+  }
   if(!bar){
     bar=document.createElement("div");
     bar.id="backup-health";
@@ -10374,7 +10472,267 @@ function render(){
   if(view==="evmgr") return renderEvMgr();
   if(view==="indmgr") return renderIndMgr2();
   if(view==="mplan") return renderMonthPlanView();
+  if(view==="history") return renderHistory();
   view==="brief"?renderBrief():(view==="content"?renderSocial():(view==="year"?renderYear():renderList()));
+}
+
+/* ══ REYKJAVIK 4b — HISTORY & RESTORE ═══════════════════════════════
+   Stages 1–3 mean a mistake CAN be undone. This is the screen that
+   lets Chirag undo it himself, at the moment it is noticed, without
+   me and without SQL.
+
+   It is also the most dangerous thing in the batch: the only part that
+   writes to live data on purpose. So it is deliberately narrow —
+   read and restore, nothing else — it always previews before it acts,
+   and it refuses in the two cases where "helpfully" restoring would
+   destroy somebody's work.
+
+   The list speaks English. A person looking for a lost campaign is not
+   helped by the word brand_events. */
+
+/* the page has escAttr but no text escaper; history renders values that
+   came from a database and must never be treated as markup */
+function escHtml(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+const HIST_LABELS={
+  brand_events:{one:"Campaign",       icon:"ti-flag"},
+  events:      {one:"Master event",   icon:"ti-calendar"},
+  brands:      {one:"Brand",          icon:"ti-building-store"},
+  brand_tags:  {one:"Event link",     icon:"ti-link"},
+  brand_briefs:{one:"Note",           icon:"ti-note"},
+  brand_posts: {one:"Posting slot",   icon:"ti-clock"},
+  industries:  {one:"Industry",       icon:"ti-tags"},
+  social_posts:{one:"Post",           icon:"ti-device-mobile"},
+  social_month_plan:{one:"Month plan",icon:"ti-layout-list"},
+  social_month_items:{one:"Plan item",icon:"ti-list-check"},
+  post_comments:{one:"Comment",       icon:"ti-message"},
+  post_rounds: {one:"Round",          icon:"ti-versions"},
+  assets:      {one:"File",           icon:"ti-photo"},
+  pb_proposals:{one:"Proposal",       icon:"ti-file-text"},
+  pb_proposal_versions:{one:"Proposal version",icon:"ti-versions"},
+  user_tool_roles:{one:"Access",      icon:"ti-key"},
+  user_brands: {one:"Brand access",   icon:"ti-key"},
+  profiles:    {one:"Person",         icon:"ti-user"},
+  health_canary:{one:"Self-test",     icon:"ti-heartbeat"}
+};
+let HIST=[], histOnlyDeletes=false, histTable="", histWho="", histQ="", histOpen=null, histBusy=false;
+
+function openHistory(){
+  if(ME.role!=="admin") return capDenied("History & restore");
+  HIST=[]; histOpen=null; setView("history"); loadHistory();
+}
+
+async function loadHistory(){
+  histBusy=true; renderHistory();
+  try{
+    const r=await sb.from("change_log").select("*")
+      .order("at",{ascending:false}).limit(600);
+    HIST=(r.error||!r.data)?[]:r.data.filter(x=>x.table_name!=="health_canary");
+  }catch(e){ HIST=[]; }
+  histBusy=false; renderHistory();
+}
+
+/* What was this row, in words? Falls back to the id rather than to
+   nothing, because an unnamed thing is still findable by its id. */
+function histTitle(row){
+  const o=row.old_row||{}, lab=(HIST_LABELS[row.table_name]||{}).one||row.table_name;
+  const name=o.name||o.label||o.key_theme||o.body||o.filename||o.email||"";
+  const brand=(o.brand_id&&brands[o.brand_id])?brands[o.brand_id].name:"";
+  return {lab,name:String(name).slice(0,80),brand,
+    icon:(HIST_LABELS[row.table_name]||{}).icon||"ti-database"};
+}
+function histWhen(iso){
+  const d=new Date(iso), now=new Date();
+  const same=d.toDateString()===now.toDateString();
+  const yday=new Date(now.getTime()-864e5).toDateString()===d.toDateString();
+  const t=d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
+  if(same) return t+" today";
+  if(yday) return t+" yesterday";
+  return d.getDate()+" "+MN[d.getMonth()+1]+", "+t;
+}
+function histWhoName(r){ return (r.actor_email||"").split("@")[0]||"(unknown)"; }
+
+function histFiltered(){
+  return HIST.filter(r=>{
+    if(histOnlyDeletes && r.action!=="delete") return false;
+    if(histTable && r.table_name!==histTable) return false;
+    if(histWho && (r.actor_email||"")!==histWho) return false;
+    if(histQ){
+      const t=histTitle(r);
+      const hay=(t.lab+" "+t.name+" "+t.brand+" "+histWhoName(r)).toLowerCase();
+      if(!hay.includes(histQ.toLowerCase())) return false;
+    }
+    return true;
+  });
+}
+
+function renderHistory(){
+  const main=document.getElementById("main"); if(!main) return;
+  const rows=histFiltered();
+  const tables=[...new Set(HIST.map(r=>r.table_name))].sort();
+  const people=[...new Set(HIST.map(r=>r.actor_email).filter(Boolean))].sort();
+
+  let list="";
+  if(histBusy) list=`<div class="hs-empty">Reading the history…</div>`;
+  else if(!HIST.length) list=`<div class="hs-empty">Nothing has been changed or deleted yet.<div class="hs-esub">Every change from now on is recorded here for 30 days.</div></div>`;
+  else if(!rows.length) list=`<div class="hs-empty">Nothing matches those filters.</div>`;
+  else rows.forEach(r=>{
+    const t=histTitle(r), del=r.action==="delete", open=histOpen===r.id;
+    list+=`<div class="hs-row${open?" on":""}" onclick="histToggle(${r.id})">
+      <i class="ti ${t.icon} hs-ic"></i>
+      <div class="hs-main">
+        <div class="hs-ttl"><b>${escHtml(t.lab)}</b>${t.name?" · "+escHtml(t.name):""}${t.brand?` <span class="hs-brand">${escHtml(t.brand)}</span>`:""}</div>
+        <div class="hs-sub">${escHtml(histWhoName(r))} · ${escHtml(histWhen(r.at))}</div>
+      </div>
+      <span class="hs-act ${del?"del":"chg"}">${del?"Deleted":"Changed"}</span>
+      <i class="ti ti-chevron-${open?"up":"down"} hs-chev"></i>
+    </div>`;
+    if(open) list+=histDetail(r);
+  });
+
+  main.innerHTML=`
+  <div class="em2-page">
+    <div class="year-head">
+      <div class="year-headtxt">
+        <div class="year-title">History &amp; restore</div>
+        <div class="year-sub">Everything changed or deleted in the last 30 days${HIST.length?" · "+HIST.length+" record"+(HIST.length===1?"":"s"):""}. Open one to see what it was, and put it back.</div>
+      </div>
+      <div class="em2-headacts">
+        <button class="btn btn-s btn-sm" onclick="loadHistory()"><i class="ti ti-refresh"></i> Refresh</button>
+        <button class="btn btn-s btn-sm" onclick="setView('year')"><i class="ti ti-arrow-left"></i> Back to the calendar</button>
+      </div>
+    </div>
+    <div class="em2-ctl">
+      <input class="fi" style="width:230px" placeholder="Search…" value="${escAttr(histQ)}"
+        oninput="histQ=this.value;renderHistory();this.focus();this.setSelectionRange(this.value.length,this.value.length)">
+      <select class="fi" onchange="histTable=this.value;renderHistory()">
+        <option value="">Everything</option>
+        ${tables.map(t=>`<option value="${t}"${histTable===t?" selected":""}>${escHtml((HIST_LABELS[t]||{}).one||t)}</option>`).join("")}
+      </select>
+      <select class="fi" onchange="histWho=this.value;renderHistory()">
+        <option value="">Anyone</option>
+        ${people.map(p=>`<option value="${escAttr(p)}"${histWho===p?" selected":""}>${escHtml(p.split("@")[0])}</option>`).join("")}
+      </select>
+      <label class="hs-only"><input type="checkbox" ${histOnlyDeletes?"checked":""}
+        onchange="histOnlyDeletes=this.checked;renderHistory()"> Only deletions</label>
+    </div>
+    <div class="hs-list">${list}</div>
+  </div>`;
+}
+
+function histToggle(id){ histOpen=(histOpen===id)?null:id; renderHistory(); }
+
+/* Before and after, field by field. Only fields that actually differ are
+   marked, because a wall of unchanged values hides the one that moved. */
+function histDetail(r){
+  const o=r.old_row||{}, n=r.new_row;
+  const skip={id:1,brand_id:1,updated_at:1,created_at:1};
+  const keys=Object.keys(o).filter(k=>!skip[k]);
+  let body="";
+  keys.forEach(k=>{
+    const a=o[k], b=n?n[k]:undefined;
+    const av=(a===null||a===undefined||a==="")?"—":(typeof a==="object"?JSON.stringify(a):String(a));
+    const bv=(b===null||b===undefined||b==="")?"—":(typeof b==="object"?JSON.stringify(b):String(b));
+    const moved=n && JSON.stringify(a)!==JSON.stringify(b);
+    if(n && !moved) return;                    // unchanged fields hidden on a change
+    body+=`<div class="hs-fr${moved?" moved":""}">
+      <div class="hs-fk">${escHtml(k)}</div>
+      <div class="hs-fv">${escHtml(av.slice(0,300))}</div>
+      ${n?`<i class="ti ti-arrow-right hs-arr"></i><div class="hs-fv now">${escHtml(bv.slice(0,300))}</div>`:""}
+    </div>`;
+  });
+  if(!body) body=`<div class="hs-fr"><div class="hs-fv">Nothing readable was recorded for this row.</div></div>`;
+  const t=histTitle(r);
+  return `<div class="hs-det">
+    <div class="hs-dhead">${r.action==="delete"?"How it looked when it was deleted":"What changed"}</div>
+    ${n?`<div class="hs-dcols"><span>Before</span><span>After</span></div>`:""}
+    ${body}
+    <div class="hs-dfoot">
+      <div class="hs-note"><i class="ti ti-info-circle"></i> Putting this back restores <b>${escHtml(t.lab.toLowerCase())}</b> only — anything attached to it, like notes or comments, is restored separately.</div>
+      <button class="btn btn-p btn-sm" onclick="event.stopPropagation();histPreview(${r.id})"><i class="ti ti-arrow-back-up"></i> Put it back</button>
+    </div>
+  </div>`;
+}
+
+/* ── the preview, and the two refusals ─────────────────────────────
+   It NEVER writes on the first click. It reads what is there now,
+   works out exactly what would change, and shows that. */
+async function histPreview(id){
+  const r=HIST.find(x=>x.id===id); if(!r) return;
+  const o=r.old_row||{};
+  let current=null, readFailed=false;
+  try{
+    const key=o.id!==undefined
+      ? sb.from(r.table_name).select("*").eq("id",o.id)
+      : sb.from(r.table_name).select("*").eq("brand_id",o.brand_id).eq("event_id",o.event_id);
+    const res=await key;
+    if(res.error) readFailed=true; else current=(res.data||[])[0]||null;
+  }catch(e){ readFailed=true; }
+
+  if(readFailed) return toast("Couldn't check what's there now — not restoring.","err");
+
+  const t=histTitle(r);
+  let warn="", blocked=false;
+
+  if(r.action==="delete" && current){
+    /* REFUSAL 1 — the id belongs to something else now */
+    blocked=true;
+    warn=`<div class="hs-warn stop"><b>Something else is using this ID now.</b>
+      Restoring would overwrite “${escHtml(String(current.name||current.label||current.id))}”.
+      Nothing has been changed.</div>`;
+  } else if(r.action==="update" && current){
+    /* REFUSAL 2 — it moved on after the version being restored */
+    const since=HIST.filter(x=>x.table_name===r.table_name && x.row_id===r.row_id && x.id>r.id);
+    if(since.length){
+      blocked=true;
+      warn=`<div class="hs-warn stop"><b>This has been changed ${since.length} more time${since.length===1?"":"s"} since.</b>
+        Putting this version back would throw that later work away.
+        <div class="hs-warnsub">Newest version: “${escHtml(String(current.name||current.label||"")).slice(0,60)}”, ${escHtml(histWhen(since[0].at))} by ${escHtml(histWhoName(since[0]))}.</div></div>`;
+    }
+  }
+
+  const rows=Object.keys(o).filter(k=>k!=="updated_at").map(k=>{
+    const a=o[k], cur=current?current[k]:undefined;
+    const av=(a===null||a===undefined||a==="")?"—":(typeof a==="object"?JSON.stringify(a):String(a));
+    const same=current && JSON.stringify(a)===JSON.stringify(cur);
+    return `<div class="hs-fr${same?"":" moved"}"><div class="hs-fk">${escHtml(k)}</div><div class="hs-fv">${escHtml(av.slice(0,200))}</div></div>`;
+  }).join("");
+
+  document.getElementById("hs-confirm-body").innerHTML=`
+    <div class="hs-cintro">${r.action==="delete"
+      ? `This will bring back the ${escHtml(t.lab.toLowerCase())} <b>${escHtml(t.name||o.id||"")}</b>${t.brand?" in "+escHtml(t.brand):""}, exactly as shown.`
+      : `This will set the ${escHtml(t.lab.toLowerCase())} <b>${escHtml(t.name||o.id||"")}</b> back to how it was at ${escHtml(histWhen(r.at))}.`}</div>
+    ${warn}
+    <div class="hs-cwrap">${rows}</div>`;
+  document.getElementById("hs-confirm-go").innerHTML=blocked
+    ? `<button class="btn btn-d btn-sm" onclick="histRestore(${id},true)">Restore anyway</button>`
+    : `<button class="btn btn-p btn-sm" onclick="histRestore(${id},false)">Yes, put it back</button>`;
+  openM("hs-confirm");
+}
+
+async function histRestore(id,forced){
+  if(ME.role!=="admin") return capDenied("Restoring");
+  const r=HIST.find(x=>x.id===id); if(!r) return;
+  const o=Object.assign({},r.old_row||{});
+  delete o.updated_at;
+  try{
+    let res;
+    if(r.action==="delete") res=await sb.from(r.table_name).insert([o]);
+    else{
+      const q=o.id!==undefined
+        ? sb.from(r.table_name).update(o).eq("id",o.id)
+        : sb.from(r.table_name).update(o).eq("brand_id",o.brand_id).eq("event_id",o.event_id);
+      res=await q;
+    }
+    if(res&&res.error){ toast("Restore failed: "+res.error.message,"err"); return; }
+  }catch(e){ toast("Restore failed: "+(e&&e.message||e),"err"); return; }
+
+  /* A restore is an action somebody took. It goes in the record. */
+  await logAppEvent("restored",{table:r.table_name,row:r.row_id,
+    was:r.action,forced:!!forced,change_id:r.id});
+  closeM("hs-confirm");
+  toast(forced?"Restored — the newer version was replaced.":"Restored.");
+  await loadAll(); await loadHistory();
 }
 
 </script>
