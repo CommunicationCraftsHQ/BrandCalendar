@@ -733,6 +733,17 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
    and once ONE axis scrolls the other cannot stay visible — so the nav was
    clipping every dropdown at its own bottom edge. Same trap as the sidebar. */
 .nav{overflow:visible;}
+/* REYKJAVIK 3 — the backup alarm. Sits directly under the nav, full
+   width, warm rather than red: this is "attention needed", not "the
+   thing is broken". It only exists when there is something wrong, so
+   it never occupies space in the normal case. */
+#backup-health{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:10px 32px;background:#FFF4E5;border-bottom:1px solid #F0D9B5;
+  font-size:13px;color:#6B4E16;position:sticky;top:60px;z-index:99;}
+#backup-health b{font-weight:600;}
+#backup-health .bh-dot{width:8px;height:8px;border-radius:50%;background:#E8A33D;flex:none;}
+#backup-health .bh-sub{color:#8A6A2F;}
+#backup-health .btn{margin-left:auto;}
 .sidebar{overflow:visible;}
 
 .nav-sep{width:1px;height:22px;background:rgba(255,255,255,.16);flex:none;}
@@ -5398,7 +5409,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v54 — Reykjavik: saving is not deleting";
+const TOOL_VERSION="v55 — Reykjavik: a backup, and an alarm when it stops";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -8559,6 +8570,151 @@ function canCap(perm){
 /* one message, so it reads the same wherever somebody meets the edge */
 function capDenied(what){ toast(what+" is limited to an admin.","err"); }
 
+/* ══ REYKJAVIK STAGE 3 — THE BACKUP FILE AND THE HEALTH WARNING ═════
+   The change log (stage 2) already recovers any row to any moment, so
+   nothing here duplicates that. This exists for the one thing a log
+   living inside the database cannot survive: losing the database.
+
+   A complete copy of every table, as one dated file, in the folder on
+   the person's own machine. Silent, admins only, at most once a day.
+
+   An in-database nightly snapshot was in the original plan and was
+   DROPPED on 9 August: the change log does that job better, and thirty
+   nightly copies would have needed 750 MB of a 500 MB allowance.
+
+   ── AND THE PART THAT MATTERS MORE THAN THE BACKUP ──
+   A backup that quietly stopped looks exactly like one that is working.
+   So success is recorded centrally in app_events — not in this browser
+   — and every admin's page checks how long ago the last one landed. The
+   absence of success is the alarm. */
+
+const BACKUP_TABLES=["brands","events","brand_events","brand_tags","brand_posts",
+  "brand_briefs","industries","social_posts","social_month_plan","social_month_items",
+  "post_comments","post_rounds","assets","user_tool_roles","user_brands","profiles"];
+const BACKUP_STALE_HOURS=36;
+
+/* Everything, as it stands, in one object. Tables that fail (a missing
+   table, a policy that hides rows) are recorded as errors INSIDE the
+   file rather than silently omitted — a backup with a hole in it that
+   does not mention the hole is worse than no backup. */
+async function buildBackupSnapshot(){
+  const out={_meta:{taken_at:new Date().toISOString(),by:ME.email||"",
+    tool:TOOL_VERSION,year:YEAR},_errors:{}};
+  let rows=0;
+  for(const t of BACKUP_TABLES){
+    try{
+      const r=await sb.from(t).select("*");
+      if(r.error){ out._errors[t]=r.error.message; continue; }
+      out[t]=r.data||[]; rows+=out[t].length;
+    }catch(e){ out._errors[t]=String(e&&e.message||e); }
+  }
+  out._meta.tables=Object.keys(out).filter(k=>k[0]!=="_").length;
+  out._meta.rows=rows;
+  out._meta.incomplete=Object.keys(out._errors).length>0;
+  return out;
+}
+
+/* When did a backup — by anyone, on any machine — last succeed? */
+async function lastBackupAt(){
+  try{
+    const r=await sb.from("app_events").select("at")
+      .eq("app","calendar").eq("type","backup_written")
+      .order("at",{ascending:false}).limit(1);
+    if(r.error||!r.data||!r.data.length) return null;
+    return new Date(r.data[0].at);
+  }catch(e){ return null; }
+}
+
+/* Silent. Never prompts: showDirectoryPicker needs a click, so if the
+   folder was never connected we do not nag on every page load — the
+   banner says so instead, once, where it can be acted on. */
+async function maybeWriteDailyBackup(){
+  if(ME.role!=="admin") return {done:false,why:"not an admin"};
+  const last=await lastBackupAt();
+  if(last && (Date.now()-last.getTime())<20*3600*1000)
+    return {done:false,why:"one was written today"};
+
+  let dirH=null;
+  try{
+    const h=await idbGet("folder");
+    if(h && await ensurePermission(h,"readwrite")) dirH=h;
+  }catch(e){}
+  if(!dirH) return {done:false,why:"no folder connected"};
+
+  try{
+    const snap=await buildBackupSnapshot();
+    const stamp=new Date().toISOString().slice(0,10);
+    const bdir=await dirH.getDirectoryHandle("backups",{create:true});
+    const name="cc-database-backup."+stamp+".json";
+    const fh=await bdir.getFileHandle(name,{create:true});
+    const w=await fh.createWritable();
+    await w.write(JSON.stringify(snap,null,1)); await w.close();
+
+    // rotate: keep the newest 30 of ours, leave everything else alone
+    try{
+      const mine=[];
+      for await (const e of bdir.values())
+        if(e.kind==="file"&&/^cc-database-backup\./.test(e.name)) mine.push(e.name);
+      mine.sort();
+      for(const n of mine.slice(0,Math.max(0,mine.length-30)))
+        try{ await bdir.removeEntry(n); }catch(e){}
+    }catch(e){}
+
+    // Recorded CENTRALLY, so the check works from any machine.
+    await logAppEvent("backup_written",{file:name,tables:snap._meta.tables,
+      rows:snap._meta.rows,incomplete:!!snap._meta.incomplete});
+    return {done:true,file:name,rows:snap._meta.rows,incomplete:!!snap._meta.incomplete};
+  }catch(e){
+    return {done:false,why:String(e&&e.message||e)};
+  }
+}
+
+/* The alarm. Admins only — nobody else can act on it. */
+async function renderBackupHealth(){
+  if(ME.role!=="admin") return;
+  const last=await lastBackupAt();
+  const hrs=last?Math.floor((Date.now()-last.getTime())/3600000):null;
+  const bad=(hrs===null)||(hrs>BACKUP_STALE_HOURS);
+  let bar=document.getElementById("backup-health");
+  if(!bad){ if(bar) bar.remove(); return; }
+  if(!bar){
+    bar=document.createElement("div");
+    bar.id="backup-health";
+    const nav=document.querySelector("nav.nav");
+    if(nav&&nav.parentNode) nav.parentNode.insertBefore(bar,nav.nextSibling);
+    else document.body.insertBefore(bar,document.body.firstChild);
+  }
+  const when=hrs===null?"No backup has ever been saved."
+    :("The last backup was "+(hrs>=48?Math.floor(hrs/24)+" days":hrs+" hours")+" ago.");
+  bar.innerHTML='<span class="bh-dot"></span><b>'+when+'</b>'+
+    '<span class="bh-sub">Connect your project folder and a copy is saved automatically each day.</span>'+
+    '<button class="btn btn-s btn-sm" onclick="backupNow()">Back up now</button>';
+}
+
+/* The manual door, for the banner and for proving it works. */
+async function backupNow(){
+  if(ME.role!=="admin"){ capDenied("Backups"); return; }
+  let dirH=null;
+  try{
+    const h=await idbGet("folder");
+    if(h && await ensurePermission(h,"readwrite")) dirH=h;
+    else dirH=await getFolderHandle();      // a click happened, so we may ask
+  }catch(e){ toast("Folder not connected","err"); return; }
+  if(!dirH){ toast("Folder not connected","err"); return; }
+  toast("Saving a backup…");
+  const r=await maybeWriteDailyBackupForce();
+  if(r.done) toast("Backup saved — "+r.rows+" rows"+(r.incomplete?" (some tables were unreadable)":""));
+  else toast("Backup failed: "+r.why,"err");
+  renderBackupHealth();
+}
+/* Same path, minus the once-a-day check. Deliberately a separate name
+   so the automatic route can never be made to skip that check. */
+async function maybeWriteDailyBackupForce(){
+  const real=lastBackupAt; lastBackupAt=async()=>null;
+  try{ return await maybeWriteDailyBackup(); }
+  finally{ lastBackupAt=real; }
+}
+
 async function boot(){
   const {data:{session}}=await sb.auth.getSession();
   if(!session){document.getElementById("auth-screen").style.display="flex";return;}
@@ -8583,6 +8739,14 @@ async function boot(){
   /* not awaited: the sign-in log must never delay the app appearing */
   logAppEvent("sign_in",{role:ME.role,tool_role:ME.toolRole,via:ME.accessSource});
   await loadAll();
+  /* REYKJAVIK 3 — deliberately AFTER loadAll and never awaited. A
+     backup must not delay the calendar appearing, and a failure here
+     must not stop anybody working. The banner follows the attempt so
+     it reports the state after it, not before. */
+  (async()=>{
+    try{ await maybeWriteDailyBackup(); }catch(e){}
+    try{ await renderBackupHealth(); }catch(e){}
+  })();
 }
 
 // client gating for edit-style CSS
