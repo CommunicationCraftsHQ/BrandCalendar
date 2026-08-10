@@ -5626,7 +5626,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v57.3 — Oslo: the thumbnail is there before you click";
+const TOOL_VERSION="v57.4 — Oslo: an out-of-date page cannot save";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -5700,6 +5700,106 @@ const SB_URL="https://qsxldzqdjdplffxqdokd.supabase.co";
 const SB_KEY="sb_publishable_6ng_3jnvQbJUZifYTxmRrw_0yhCZuY9";
 const sb=window.supabase.createClient(SB_URL,SB_KEY);
 let ME={role:"pending",brand_id:null,email:""};
+
+/* ══ v57.4 — AN OUT-OF-DATE PAGE DOES NOT GET TO WRITE ════════════════
+   On 10 August a browser that had held this page open since 7 August
+   deleted 109 campaigns and 523 links in six seconds, and 15 campaigns
+   were lost. Nothing was wrong with the person or with today's code:
+   the tab was running the version from BEFORE the 9 August fix, because
+   A FIX ONLY REACHES A BROWSER THAT RELOADS THE PAGE.
+
+   So the page now knows whether it is the published one, and if it is
+   not, every write is refused. Not warned about — refused. An old page
+   carrying a known bug is more dangerous than an inconvenienced person.
+
+   Three rules, each of which matters:
+     · READING IS NEVER BLOCKED. Somebody looking at the calendar is not
+       interrupted, and can still see everything.
+     · IF IT CANNOT TELL, IT DOES NOT BLOCK. A failed check means the
+       network is unhappy, not that the page is stale. A tool that stops
+       working when the wifi drops teaches people to ignore it.
+     · IT NEVER RELOADS FOR YOU. Somebody may be mid-sentence. It asks. */
+
+const VERSION_URL="version.txt";
+const VERSION_EVERY_MS=30*60*1000;
+const STALE={behind:false,published:"",checkedAt:0,couldNotCheck:false};
+
+async function checkVersion(){
+  try{
+    const r=await fetch(VERSION_URL+"?cb="+Date.now(),{cache:"no-store"});
+    if(!r.ok) throw new Error("http "+r.status);
+    const pub=(await r.text()).trim();
+    if(!pub) throw new Error("empty");
+    STALE.published=pub;
+    STALE.checkedAt=Date.now();
+    STALE.couldNotCheck=false;
+    const was=STALE.behind;
+    STALE.behind=(pub!==TOOL_VERSION);
+    if(STALE.behind!==was){ try{ renderBackupHealth(); }catch(e){} }
+  }catch(e){
+    /* fail open, and say so in the object rather than silently */
+    STALE.couldNotCheck=true;
+  }
+  return STALE.behind;
+}
+
+/* The message is the same wherever it appears, so it is written once. */
+const STALE_MSG="This page is out of date, so nothing can be saved from it. Reload to carry on.";
+
+/* ── the choke point ──────────────────────────────────────────────────
+   Every write in this file goes through sb.from(...).insert/update/
+   upsert/delete. Wrapping those four is one guard for the whole app,
+   including code written after this — which a guard added save by save
+   would not be. That is the whole reason it is done here and not in the
+   twenty places that save.
+
+   app_events is exempt: a refused write is worth recording, and the log
+   can never damage anything. */
+(function guardWrites(){
+  const realFrom=sb.from.bind(sb);
+  const WRITES=["insert","update","upsert","delete"];
+  const refusal={data:null,error:{message:STALE_MSG,code:"stale_page"}};
+  /* Something that behaves enough like a query builder to be chained
+     onto — .eq(...).select() and so on — and resolves to an error. */
+  function refused(){
+    const box={};
+    const self=new Proxy(box,{get(_,k){
+      if(k==="then")   return (res)=>Promise.resolve(refusal).then(res);
+      if(k==="catch")  return ()=>self;
+      if(k==="finally")return (f)=>{try{f&&f();}catch(e){} return self;};
+      return ()=>self;
+    }});
+    return self;
+  }
+  sb.from=function(table){
+    const q=realFrom(table);
+    if(table==="app_events") return q;
+    WRITES.forEach(m=>{
+      if(typeof q[m]!=="function") return;
+      const real=q[m].bind(q);
+      q[m]=function(...args){
+        if(STALE.behind){
+          try{ toast(STALE_MSG,"err"); }catch(e){}
+          try{ logAppEvent("write_refused_stale_page",{table,version:TOOL_VERSION,published:STALE.published}); }catch(e){}
+          try{ renderBackupHealth(); }catch(e){}
+          return refused();
+        }
+        return real(...args);
+      };
+    });
+    return q;
+  };
+})();
+
+/* When to look: coming back to the tab, waking from sleep, the network
+   returning, and every half hour. All cheap — the file is one line. */
+function startVersionWatch(){
+  checkVersion();
+  setInterval(checkVersion,VERSION_EVERY_MS);
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden) checkVersion(); });
+  window.addEventListener("focus",checkVersion);
+  window.addEventListener("online",checkVersion);
+}
 
 /* ══ APP EVENTS — the usage log the calendar never had ════════════════
    The Proposal Bank has recorded sign-ins and actions since day one; the
@@ -8978,9 +9078,33 @@ async function selfTestFailure(){
   }catch(e){ return null; }
 }
 
-/* The alarm. Admins only — nobody else can act on it. */
+/* The alarm. ONE bar for everything wrong with the safety net — two
+   warnings mean neither is read.
+
+   v57.4 puts staleness at the top of it, and for EVERYBODY rather than
+   admins only: the person who cannot save is the person who needs to
+   know, and on 10 August that was not an admin. It also returns before
+   touching the database, because a stale page must not be asking the
+   database questions to draw its own warning. */
 async function renderBackupHealth(){
-  if(ME.role!=="admin") return;
+  if(STALE.behind){
+    let sbar=document.getElementById("backup-health");
+    if(!sbar){
+      sbar=document.createElement("div"); sbar.id="backup-health";
+      const nav=document.querySelector("nav.nav");
+      if(nav&&nav.parentNode) nav.parentNode.insertBefore(sbar,nav.nextSibling);
+      else document.body.insertBefore(sbar,document.body.firstChild);
+    }
+    sbar.innerHTML='<span class="bh-dot"></span><b>'+escHtml(STALE_MSG)+'</b>'+
+      '<span class="bh-sub">You can keep reading. Nothing you type will be saved until you reload.</span>'+
+      '<button class="btn btn-s btn-sm" onclick="location.reload()">Reload</button>';
+    return;
+  }
+  if(ME.role!=="admin"){
+    /* not an admin and not stale — if the stale bar was up, take it down */
+    const old=document.getElementById("backup-health"); if(old) old.remove();
+    return;
+  }
   const last=await lastBackupAt();
   const hrs=last?Math.floor((Date.now()-last.getTime())/3600000):null;
   const stale=(hrs===null)||(hrs>BACKUP_STALE_HOURS);
@@ -9072,6 +9196,9 @@ async function boot(){
     try{ await maybeWriteDailyBackup(); }catch(e){}
     try{ await renderBackupHealth(); }catch(e){}
   })();
+  /* v57.4 — start watching the published version. After loadAll, never
+     awaited: a version check must not delay the calendar appearing. */
+  try{ startVersionWatch(); }catch(e){}
 }
 
 // client gating for edit-style CSS
