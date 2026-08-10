@@ -3107,9 +3107,11 @@ function fbPanelHtml(p){
       <input type="file" id="fb-files-${p.id}" multiple style="display:none;"
              onchange="fbStageFiles('${p.id}',this.files)">
       <span class="btn btn-sm" style="cursor:pointer;" onclick="document.getElementById('fb-files-${p.id}').click()">📎 Attach</span>
-      ${canSubmitRound()?`<span class="btn btn-sm" style="cursor:pointer;font-weight:700;"
-          title="Create a new round from the attached files. A round is a submission — attaching alone does not make one."
-          onclick="submitRound('${p.id}')">⬆ Submit for review</span>`:""}
+      <!-- v57.3: "Submit for review" is gone. In the tool's whole life it was
+           used zero times — every one of the 58 images in July arrived in the
+           conversation instead. The button asked people to do a second,
+           formal thing on top of the natural one, so nobody did, and the card
+           thumbnail depended on it. Attaching an image IS the submission. -->
       <span id="fb-staged-${p.id}" style="font-size:11.5px;color:var(--subtle);"></span>
     </div>`:"";
   const curR=currentRound(p.id);
@@ -3118,7 +3120,7 @@ function fbPanelHtml(p){
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;flex-wrap:wrap;">
       <span style="font-size:12px;font-weight:700;color:var(--muted);">Feedback</span>
       <span style="font-size:11px;color:var(--subtle);">${openN} open · ${doneN} resolved</span>
-      ${curR?`<span class="rchip cur" style="margin-left:auto;">Round ${curR.round_no} in review</span>`:""}
+      ${curR?`<span class="rchip cur" style="margin-left:auto;">Round ${curR.round_no}</span>`:""}
     </div>
     ${activityHtml}
     ${doneToggle}
@@ -3197,13 +3199,15 @@ function variantFields(p,platform){
                 thread, because a submission is what makes it reviewable.
                 Say where it lives instead of showing a dead box. */
       const lead=leadAssetFromRound(p.current_round_id)||postLeadAsset(p.id);
-      const r=currentRound(p.id);
       return lead
         ? `<div style="display:flex;align-items:center;gap:8px;border:1px solid var(--div);border-radius:8px;padding:5px 8px;background:var(--surface);">
              <span class="pc-thumb" style="width:26px;height:26px;border-radius:6px;overflow:hidden;display:block;flex:none;background:var(--surface2);" data-sign="${escAttr(lead.thumb_path||lead.poster_path||"")}"></span>
-             <span style="font-size:11px;color:var(--muted);">Round ${r?r.round_no:""} attached · manage it in Feedback</span></div>`
+             <span style="font-size:11px;color:var(--muted);">Design attached · manage it in Feedback</span></div>`
+        /* v57.3: this used to name the review button, which no longer
+           exists — and never worked, because in the tool's whole life
+           nobody pressed it once. Say the thing that is actually true. */
         : `<div style="border:1px dashed var(--div);border-radius:8px;padding:6px 8px;color:var(--subtle);font-size:11px;">
-             No design yet — attach it in Feedback and press Submit for review.</div>`;
+             No design yet — attach it in Feedback.</div>`;
     })()}`;
 }
 function statusChipEditable(p){
@@ -3594,28 +3598,75 @@ function postLeadAsset(postId){
     const vis=roundAssets(list[i].id).filter(a=>a.kind!=="doc"&&(a.thumb_path||a.poster_path||a.view_path));
     if(vis.length) return vis.slice().sort((x,y)=>(x.slide_no||99)-(y.slide_no||99))[0];
   }
-  return newestCommentAsset(postId);
+  /* An open thread has the real comments loaded, so it is asked first —
+     that is what keeps the card right the instant somebody posts a new
+     image. The prefetch below is for every card whose thread nobody has
+     opened, which before v57.3 meant a blank square. */
+  return newestCommentAsset(postId) || LEAD_BY_POST[postId] || null;
 }
 
-async function ensureLeadAssets(posts){
-  const need=(posts||[]).map(p=>p.current_round_id)
-    .filter(id=>id && !LEADS_DONE[id] && !ASSETS[assetKey("round",id)]);
-  if(!need.length) return;
-  need.forEach(id=>{ LEADS_DONE[id]=true; });
-  await loadAssetsFor("round",need);
-  /* fill in the thumbnails that are already on screen without rebuilding
-     the list — a full re-render would close an open panel */
-  (posts||[]).forEach(p=>{
-    const lead=leadAssetFromRound(p.current_round_id);
-    const node=document.querySelector('#pcthumb-'+CSS.escape(p.id));
-    if(lead&&node&&!node._signed){
-      node.setAttribute("data-sign",lead.thumb_path||lead.poster_path||lead.view_path||"");
-      node.innerHTML="";
-    }
-  });
-  const list=document.getElementById("content-list");
-  if(list) hydrateMedia(list);
+/* ── v57.3 · WHERE THE THUMBNAIL ACTUALLY COMES FROM ────────────────
+   This used to fetch ROUND assets only. Measured on the live database
+   on 10 August: July had 26 posts, 58 attached images, and ZERO of them
+   on a round — every one was dropped into a comment. So this found
+   nothing, stopped, and the card stayed blank until somebody opened the
+   thread, which is the only thing that loads comments.
+
+   The loader was not broken. It was looking where nobody puts anything.
+
+   So it now looks in both places, and still in TWO QUERIES for the whole
+   month rather than one per card:
+     · the rounds on screen (unchanged — a round still wins)
+     · the comments of the posts that have no round, and their images
+
+   It stays thin on purpose. It asks comments for id, post_id and
+   created_at — no bodies, no authors, no reactions — because Buenos
+   Aires made comments lazy to keep the view light, and this must not
+   quietly undo that. */
+const LEAD_BY_POST={};      // postId -> asset | null, from the prefetch
+let LEADS_TRIED={};         // postId -> true, so a blank post is asked about once
+
+async function prefetchCommentLeads(postIds){
+  const need=(postIds||[]).filter(id=>id && !LEADS_TRIED[id]);
+  if(!need.length) return false;
+  need.forEach(id=>{ LEADS_TRIED[id]=true; });
+  try{
+    const c=await sb.from("post_comments").select("id,post_id,created_at")
+      .in("post_id",need).is("deleted_at",null);
+    if(c.error||!c.data||!c.data.length) return false;
+    const byId={}; c.data.forEach(x=>{ byId[x.id]=x; });
+    const a=await sb.from("assets").select("*").eq("owner_kind","comment")
+      .in("owner_id",c.data.map(x=>x.id)).is("deleted_at",null)
+      .order("slide_no",{nullsFirst:false});
+    if(a.error) return false;
+    /* newest comment wins, and within it the lowest slide number — the
+       same order the thread shows them in, so the card and the thread
+       never disagree about which image represents the post */
+    const best={};
+    (a.data||[]).forEach(as=>{
+      if(as.kind==="doc") return;
+      if(!(as.thumb_path||as.poster_path||as.view_path)) return;
+      const cm=byId[as.owner_id]; if(!cm) return;
+      const cur=best[cm.post_id];
+      const when=new Date(cm.created_at).getTime();
+      if(!cur || when>cur.when || (when===cur.when && (as.slide_no||99)<(cur.a.slide_no||99)))
+        best[cm.post_id]={when,a:as};
+    });
+    let found=false;
+    Object.keys(best).forEach(pid=>{ LEAD_BY_POST[pid]=best[pid].a; found=true; });
+    return found;
+  }catch(e){ return false; }
 }
+
+/* SUPERSEDED — a later declaration of ensureLeadAssets wins, and it is
+   the one that runs. It lives with the post card it serves. Do not fix
+   anything here: nothing here executes.
+
+   Function declarations hoist and the LAST one wins. This file has been
+   patched additively for fifty versions, so a duplicate is normal — but
+   editing the wrong copy is the trap, and it caught me on this very fix
+   before any of it reached a browser. */
+async function ensureLeadAssets_superseded(posts){ }
 function leadAssetFromRound(roundId){
   if(!roundId) return null;
   const vis=(ASSETS[assetKey("round",roundId)]||[])
@@ -5575,7 +5626,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v57.2 — Oslo: the backup covers every tool, not a typed list";
+const TOOL_VERSION="v57.3 — Oslo: the thumbnail is there before you click";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -6382,17 +6433,21 @@ async function deleteAsset(id,ownerKind,ownerId){
   ASSETS[k]=(ASSETS[k]||[]).filter(a=>a.id!==id);
 }
 
-/* ══ NEW YORK · STAGE 2A — ROUNDS ════════════════════════════════════
-   Stage 1 attached files to COMMENTS only, which left the thing actually
-   being reviewed — the post's creative — with no media of its own. A
-   round fixes that: one post → many rounds → each round owns its assets,
-   and comments hang off the round they are about.
+/* ══ ROUNDS — RETIRED IN v57.3, STILL READ ═══════════════════════════
+   The idea, from August: a design is submitted as a numbered round, so
+   the thing being reviewed is a deliberate act rather than a file that
+   appeared in a conversation.
 
-   Two rules decided 2026-08-04 and enforced here as well as in RLS:
-     · a round is created ONLY by "Submit for review", never by dropping
-       a file. Intent is what makes the notification worth sending.
-     · a round is DESIGN. Copy is not versioned — it is an editable
-       caption with an activity trail.                                   */
+   It was never used. Not once. In July there were 26 posts and 58
+   attached images, and every single image arrived in a comment. The
+   button asked people to do a second, formal thing on top of the
+   natural one, so nobody did — and the card thumbnail, which read only
+   rounds, stayed blank.
+
+   So the way to CREATE a round is gone. Everything below still READS
+   one, because a round that exists must never lose its images, and
+   because deleting a table is not reversible. If the table is still
+   empty in a few months, drop it deliberately with a backup first.  */
 
 let ROUNDS = {};                 // postId -> [round rows, oldest first]
 const roundsFor = postId => (ROUNDS[postId]||[]);
@@ -9131,17 +9186,34 @@ function postLeadAsset(postId){
     const vis=roundAssets(list[i].id).filter(a=>a.kind!=="doc"&&(a.thumb_path||a.poster_path||a.view_path));
     if(vis.length) return vis.slice().sort((x,y)=>(x.slide_no||99)-(y.slide_no||99))[0];
   }
-  return newestCommentAsset(postId);
+  /* An open thread has the real comments loaded, so it is asked first —
+     that is what keeps the card right the instant somebody posts a new
+     image. The prefetch below is for every card whose thread nobody has
+     opened, which before v57.3 meant a blank square. */
+  return newestCommentAsset(postId) || LEAD_BY_POST[postId] || null;
 }
 
 async function ensureLeadAssets(posts){
-  const need=(posts||[]).map(p=>p.current_round_id)
+  /* v57.3 — THIS is the copy that runs. It used to ask for round assets
+     and stop. Measured on the live database on 10 August: 26 posts in
+     July, 58 attached images, ZERO of them on a round — every one was
+     dropped into a comment. So it found nothing and the card stayed
+     blank until somebody opened the thread, which is the only thing
+     that loaded comments. It now looks in both places. */
+  const all=posts||[];
+  const need=all.map(p=>p.current_round_id)
     .filter(id=>id && !LEADS_DONE[id] && !ASSETS[assetKey("round",id)]);
-  if(!need.length) return;
   need.forEach(id=>{ LEADS_DONE[id]=true; });
-  await loadAssetsFor("round",need);
-  (posts||[]).forEach(p=>{
-    const lead=leadAssetFromRound(p.current_round_id);
+  if(need.length) await loadAssetsFor("round",need);
+
+  /* only the posts STILL without an image cost the second query */
+  const blank=all.filter(p=>!leadAssetFromRound(p.current_round_id)&&!LEAD_BY_POST[p.id])
+                 .map(p=>p.id);
+  const gotSome=await prefetchCommentLeads(blank);
+  if(!need.length && !gotSome) return;
+
+  all.forEach(p=>{
+    const lead=leadAssetFromRound(p.current_round_id)||LEAD_BY_POST[p.id];
     const node=document.querySelector('#pcthumb-'+CSS.escape(p.id));
     if(lead&&node&&!node._signed){
       node.setAttribute("data-sign",lead.thumb_path||lead.poster_path||lead.view_path||"");
@@ -9248,7 +9320,7 @@ function fbPanelHtml(p){
   const curR=currentRound(p.id);
   const bar=`<div class="tbar">
       <b>${openN?openN+(openN===1?" open":" open"):"Nothing open"}</b>
-      ${curR?`<span class="rchip cur">Round ${curR.round_no} in review</span>`:""}
+      ${curR?`<span class="rchip cur">Round ${curR.round_no}</span>`:""}
       <span class="sp">${doneN?`<button class="tog${showDone?" on":""}" onclick="fbToggleDone('${p.id}')">${doneN} resolved</button>`:""}</span>
     </div>`;
 
