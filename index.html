@@ -3312,6 +3312,11 @@ function openPreview(id){
 }
 let contentStatusFilter="";
 function setContentStatusFilter(k){ contentStatusFilter=(contentStatusFilter===k)?"":k; renderSocial(); }
+/* v57.5 — the same idea for format. Clicking the row you are already on
+   clears it, exactly as status does; two filters that behave differently
+   is worse than one filter fewer. */
+let contentFormatFilter="";
+function setContentFormatFilter(k){ contentFormatFilter=(contentFormatFilter===k)?"":k; renderSocial(); }
 function setContentMonthTo(m){ contentMonth=m; renderSocial(); buildContentSidebar(); }
 
 // ── MONTH PLAN MODAL ──────────────────────────────────────
@@ -3447,6 +3452,53 @@ function sbTrackerBlock(title,category,items,stages){
     </div>
     ${list.length?list.map(it=>{const st=stages[it.status]||["",""];return `<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:3px 0;"><span style="width:6px;height:6px;border-radius:50%;background:${st[1]};flex-shrink:0;"></span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escAttr(it.label||"(untitled)")}</span><span style="font-size:10px;color:${st[1]};font-weight:700;white-space:nowrap;">${st[0]}</span></div>`;}).join(""):`<div style="font-size:12px;color:var(--subtle);">None planned</div>`}`;
 }
+/* ══ v57.5 — FORMAT DOWN, PLATFORM ACROSS ════════════════════════════
+   It used to say "Instagram 20 · Facebook 20". Those were not two
+   counts — it printed the month's total twice, because EVERY POST GOES
+   TO BOTH PLATFORMS and nothing in the tool can say otherwise.
+
+   So the useful question is not "how many per platform" but "how many
+   of each format". This answers that, and keeps the platform columns
+   because the shape is right for the day a post can go to one platform
+   and not the other. Until then the two columns are honestly identical,
+   and that is a truthful thing for the screen to show.
+
+   A format with nothing in it is GREYED, not hidden: a row that
+   disappears makes you wonder whether it was counted. */
+const FORMAT_ICON={static:"ti-photo",carousel:"ti-layout-grid",reel:"ti-video",
+                   story:"ti-circle-dashed",video:"ti-movie"};
+function formatGridHtml(posts){
+  const by={}; SOCIAL_FORMATS.forEach(f=>by[f]=0);
+  (posts||[]).forEach(p=>{const f=(p.format||"static"); by[f]=(by[f]||0)+1;});
+  const total=(posts||[]).length;
+  const cell=(n,on)=>`<td style="padding:5px 0;border-top:1px solid var(--div);text-align:right;font-weight:${n?"650":"400"};color:${n?"var(--text)":"#D6D6D2"};${on?"font-weight:700;":""}">${n}</td>`;
+  const rows=SOCIAL_FORMATS.map(f=>{
+    const n=by[f]||0, on=contentFormatFilter===f;
+    const label=f.charAt(0).toUpperCase()+f.slice(1);
+    /* only a format that HAS posts is clickable — offering to filter to
+       nothing is a dead end dressed as a control */
+    const click=n?` onclick="setContentFormatFilter('${f}')" style="cursor:pointer;"`:"";
+    return `<tr${click} title="${n?(on?"Showing only "+label.toLowerCase()+" — click to clear":"Show only "+label.toLowerCase()):""}">
+      <td style="padding:5px 0;border-top:1px solid var(--div);color:${n?"var(--text)":"#BFBFBB"};${on?"font-weight:700;":""}">
+        <span style="display:flex;align-items:center;gap:6px;"><i class="ti ${FORMAT_ICON[f]||"ti-photo"}" style="font-size:12px;color:var(--subtle);"></i>${label}</span></td>
+      ${cell(n,on)}${cell(n,on)}</tr>`;
+  }).join("");
+  return `<div class="s-divider"></div><div class="s-lbl">Format</div>`+
+    `<table style="width:100%;border-collapse:collapse;font-size:12px;">`+
+    `<tr><th style="padding:0 0 6px;"></th>`+
+    `<th style="padding:0 0 6px;text-align:right;" title="Instagram"><i class="ti ti-brand-instagram" style="color:#D4537E;font-size:13px;"></i></th>`+
+    `<th style="padding:0 0 6px;text-align:right;" title="Facebook"><i class="ti ti-brand-facebook" style="color:#185FA5;font-size:13px;"></i></th></tr>`+
+    rows+
+    `<tr><td style="padding:5px 0;border-top:1.5px solid var(--div);color:var(--muted);font-size:11.5px;font-weight:700;">All</td>`+
+    `<td style="padding:5px 0;border-top:1.5px solid var(--div);text-align:right;color:var(--muted);font-size:11.5px;font-weight:700;">${total}</td>`+
+    `<td style="padding:5px 0;border-top:1.5px solid var(--div);text-align:right;color:var(--muted);font-size:11.5px;font-weight:700;">${total}</td></tr>`+
+    `</table>`+
+    (contentFormatFilter?`<div onclick="setContentFormatFilter('')" style="font-size:11px;color:var(--acc);cursor:pointer;padding:5px 0 0;">Clear format filter</div>`:"")+
+    /* Said once, quietly, rather than left for somebody to work out from
+       two columns that never disagree. */
+    `<div style="font-size:10.5px;color:var(--subtle);line-height:1.45;margin-top:8px;">Every post goes to both platforms.</div>`;
+}
+
 function buildContentSidebar(){
   const m=contentMonth||curMonth||1;
   const posts=socialForBrandYear(activeBrand,YEAR).filter(p=>p.month===m);
@@ -3467,7 +3519,7 @@ function buildContentSidebar(){
     `<div class="s-divider"></div><div class="s-lbl">By status</div>`+
     rows.map(([k,l,c])=>`<div onclick="setContentStatusFilter('${k}')" style="display:flex;align-items:center;gap:8px;font-size:13px;padding:6px 8px;border-radius:var(--r);cursor:pointer;${contentStatusFilter===k?"background:var(--bg);font-weight:600;":""}"><span style="width:8px;height:8px;border-radius:50%;background:${c};flex-shrink:0;"></span><span style="flex:1;">${l}</span><span style="color:var(--muted);">${by[k]||0}</span></div>`).join("")+
     (contentStatusFilter?`<div onclick="setContentStatusFilter('')" style="font-size:11px;color:var(--acc);cursor:pointer;padding:5px 8px;">Clear filter</div>`:"")+
-    `<div class="s-divider"></div><div class="s-lbl">Platforms</div><div style="display:flex;gap:14px;font-size:13px;color:var(--muted);padding:2px 8px;"><span style="color:#D4537E;"><i class="ti ti-brand-instagram"></i> ${total}</span><span style="color:#185FA5;"><i class="ti ti-brand-facebook"></i> ${total}</span></div>`;
+    formatGridHtml(posts);
 }
 // ── ATLAS: Month Plan card (locked v3) — sits beside the calendar ──
 function mpCardSetStatus(val){
@@ -3536,6 +3588,7 @@ function renderSocial(){
   let posts=socialForBrandYear(activeBrand,YEAR).filter(p=>p.month===contentMonth);
   const monthTotal=posts.length;
   if(contentStatusFilter) posts=posts.filter(p=>p.status===contentStatusFilter);
+  if(contentFormatFilter) posts=posts.filter(p=>(p.format||"static")===contentFormatFilter);
   posts.sort((a,b2)=>a.date-b2.date||String(a.time||"").localeCompare(String(b2.time||"")));
   const modeSeg=(mm,icon,label)=>`<span onclick="setContentMode('${mm}')" style="height:30px;box-sizing:border-box;padding:0 12px;border-radius:6px;display:flex;align-items:center;gap:5px;font-size:13px;font-weight:${contentMode===mm?"700":"600"};cursor:pointer;${contentMode===mm?"background:#fff;color:#0D0D0D;box-shadow:0 1px 2px rgba(0,0,0,.08);":"color:var(--muted);"}"><i class="ti ${icon}" style="font-size:13px;"></i> ${label}</span>`;
   const modeToggle=`<div style="display:flex;align-items:center;background:#E7E6E1;border-radius:8px;padding:3px;gap:2px;height:36px;box-sizing:border-box;">${modeSeg("view","ti-eye","View")}${modeSeg("edit","ti-pencil","Edit")}</div>`;
@@ -5626,7 +5679,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v57.4 — Oslo: an out-of-date page cannot save";
+const TOOL_VERSION="v57.5 — Oslo: the sidebar counts formats, not the total twice";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
