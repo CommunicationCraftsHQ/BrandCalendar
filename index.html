@@ -1078,6 +1078,10 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
   backdrop-filter:blur(14px);z-index:900;display:none;align-items:center;justify-content:center;padding:34px;}
 .mlb.open{display:flex;}
 .mlb img,.mlb video{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 24px 70px rgba(0,0,0,.5);}
+.mlbdel{position:fixed;top:18px;right:62px;width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;
+  color:rgba(255,255,255,.72);font-size:17px;background:rgba(255,255,255,.08);}
+.mlbdel:hover{background:rgba(180,35,24,.9);color:#fff;}
 .mlbx{position:absolute;top:18px;right:22px;color:#fff;font-size:26px;cursor:pointer;line-height:1;opacity:.8;}
 .mlbnav{position:absolute;top:50%;transform:translateY(-50%);color:#fff;font-size:30px;cursor:pointer;
   opacity:.7;padding:14px;user-select:none;}
@@ -1758,6 +1762,10 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
              ignored — a trap worth removing rather than documenting. There is
              one place to manage people now, and this is the door to it. -->
         <div class="brow" data-need="admin" onclick="closeAllPops();window.open('app.html','_blank')"><i class="ti ti-users"></i><span class="bnm">People &amp; access</span><i class="ti ti-external-link" style="margin-left:auto;font-size:12px;opacity:.5;"></i></div>
+        <!-- UTRECHT — the sweep. data-need="admin" is Bergen's rule: the
+             row declares what it needs and applyMenuVisibility() decides.
+             Nothing new had to be taught to the menu. -->
+        <div class="brow" data-need="admin" onclick="closeAllPops();sweepOrphans()"><i class="ti ti-database-cog"></i><span class="bnm">Storage sweep</span></div>
         <!-- MONTREAL — the row the calendar has never had. Every other tool in
              the suite has had this since Nairobi; the calendar was the only one
              with no way to reach its siblings. Hover opens the flyout; see
@@ -5714,7 +5722,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v60 — Bergen: the menu shows what you can open";
+const TOOL_VERSION="v61 — Utrecht: the calendar can give storage back";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -6593,6 +6601,101 @@ function mediaPath(brandId,ownerKind,ownerId,name){
   return `${brandId}/${ownerKind}/${ownerId}/${Date.now().toString(36)}_${name.replace(/[^\w.\-]/g,"_")}`;
 }
 
+/* ══ UTRECHT — GIVING THE BYTES BACK ════════════════════════════════
+   18 August 2026. Until today the calendar could take storage and had
+   no way on earth to return it: `sb.storage.from(MEDIA_BUCKET)` was
+   called for upload and createSignedUrl, and for nothing else. Delete a
+   post, delete a brand, let the 30-day purge run — the rows went and
+   the files stayed. Forever. 298 test uploads reached 20% of the free
+   tier and three of them were already unreachable.
+
+   ── THE ORDER IS THE WHOLE RULE ──────────────────────────────────
+   FILES FIRST, THEN ROWS. Always, everywhere below.
+
+   If a file removal fails, the rows survive and we can try again — the
+   asset row is the only record of which object belongs to what. Delete
+   the row first and the bytes become untraceable: not just orphaned but
+   invisible, because every query that finds an orphan works by joining
+   storage against `assets`.
+
+   This is not a theoretical ordering. Supabase's own docs say deleting
+   through SQL "will not remove the object from the bucket and will
+   result in the object being orphaned", and the first draft of the
+   clean-up handed Chirag exactly that query. The docs check is what
+   stopped it. The rule is written here so the next person does not have
+   to be lucky.
+
+   ── AND NOTHING HERE THROWS ──────────────────────────────────────
+   A failure to tidy up must never be the reason somebody cannot use the
+   tool — the same rule the change log and recordEvent already follow.
+   Every function returns what it managed to do and says so. */
+
+/* Remove a list of object paths. Batched, because a brand with a year
+   of work behind it is thousands of objects and one request with all of
+   them in it is a request that times out. */
+async function removeFiles(paths){
+  const list=[...new Set((paths||[]).filter(p=>typeof p==="string"&&p))];
+  if(!list.length) return {removed:0,failed:0,ok:true};
+  let removed=0,failed=0;
+  for(let i=0;i<list.length;i+=100){
+    const chunk=list.slice(i,i+100);
+    try{
+      const r=await sb.storage.from(MEDIA_BUCKET).remove(chunk);
+      if(r&&r.error) failed+=chunk.length; else removed+=chunk.length;
+    }catch(e){ failed+=chunk.length; }
+  }
+  return {removed,failed,ok:failed===0};
+}
+
+/* Every object one asset row owns. FOUR columns, not one — the original
+   plus the three derivatives the uploader writes beside it. Reading only
+   storage_path would leave the thumbnail, the view copy and the video
+   poster behind on every single delete, which is a leak that looks like
+   a fix. */
+function assetPaths(a){
+  return a?[a.storage_path,a.thumb_path,a.view_path,a.poster_path].filter(Boolean):[];
+}
+
+/* Files first, then rows. The one function everything else calls. */
+async function removeAssetsAndFiles(rows){
+  const list=(rows||[]).filter(Boolean);
+  if(!list.length) return {files:0,rows:0,ok:true};
+  const f=await removeFiles(list.flatMap(assetPaths));
+  /* A partial file failure does NOT stop the row delete for the ones
+     that worked — but it is reported, and the rows for failed files are
+     kept so a later sweep can still find them. */
+  const del=await sb.from("assets").delete().in("id",list.map(a=>a.id));
+  return {files:f.removed,rows:del.error?0:list.length,ok:f.ok&&!del.error,
+          error:del.error?del.error.message:""};
+}
+
+/* Everything under a prefix, walked. Supabase lists one folder at a
+   time and marks folders with a null id, so the three levels of
+   <brand_id>/<owner_kind>/<owner_id>/ have to be walked rather than
+   globbed. Capped, and the cap is REPORTED — a silent truncation here
+   would read as "the brand is clean". */
+async function listPrefix(prefix,depth=0,seen={n:0}){
+  if(depth>4||seen.n>20000) return {paths:[],capped:true};
+  let out=[],capped=false,offset=0;
+  for(;;){
+    let r;
+    try{ r=await sb.storage.from(MEDIA_BUCKET).list(prefix,{limit:100,offset}); }
+    catch(e){ return {paths:out,capped:true}; }
+    if(!r||r.error) return {paths:out,capped:true};
+    const batch=r.data||[];
+    for(const e of batch){
+      const full=prefix?prefix+"/"+e.name:e.name;
+      if(e.id===null||e.id===undefined){
+        const kid=await listPrefix(full,depth+1,seen);
+        out=out.concat(kid.paths); capped=capped||kid.capped;
+      }else{ out.push(full); seen.n++; }
+    }
+    if(batch.length<100) break;
+    offset+=100;
+  }
+  return {paths:out,capped};
+}
+
 /* One file, start to finish. Returns the asset row, or null.
    onTick reports progress so the composer can show a bar for something
    that may take minutes. */
@@ -6611,6 +6714,11 @@ async function uploadAsset(file,{ownerKind,ownerId,brandId,slideNo=null,onTick})
     const base=mediaPath(brandId,ownerKind,ownerId,file.name);
     const storage_path=await putObject(base,file,file.type||"application/octet-stream");
     if(!storage_path){ tick(0,"failed","Upload was refused — check your access to this brand"); return null; }
+    /* Nothing to roll back here: the original is written FIRST, so a
+       refusal at this point means the bucket is untouched. The order is
+       deliberate and this comment exists so nobody "tidies" it by
+       uploading the small derivatives first — that would put a
+       thumbnail in the bucket for every refused upload. */
     tick(78,"uploading");
 
     let thumb_path="",view_path="",poster_path="";
@@ -6631,7 +6739,29 @@ async function uploadAsset(file,{ownerKind,ownerId,brandId,slideNo=null,onTick})
       slide_no:slideNo,status,fail_reason:"",
       created_by:(ME.email||"").toLowerCase(),created_at:new Date().toISOString()};
     const ins=await sb.from("assets").insert([row]);
-    if(ins.error){ tick(0,"failed","Saved the file but could not record it"); return null; }
+    /* UTRECHT — THE MESSAGE WAS ALREADY CONFESSING.
+       "Saved the file but could not record it" is what this said, and
+       then it returned null and left the bytes sitting in the bucket
+       with nothing pointing at them. The code KNEW the file was orphaned
+       at this exact line and did nothing about it.
+
+       That is almost certainly where the three unreachable objects came
+       from — 40 MB, 13 MB each, three large videos whose insert failed
+       or whose page closed between the upload and the record. 20% of
+       everything stored, from 1% of the files, all of it created here.
+
+       Now the upload rolls back. Everything written above is removed
+       before we return, so a failure leaves nothing behind. If the
+       removal ITSELF fails the message says so, because a person
+       deserves to know a file is stranded rather than be told a
+       comfortable half-truth. */
+    if(ins.error){
+      const undo=await removeFiles([storage_path,thumb_path,view_path,poster_path]);
+      tick(0,"failed", undo.ok
+        ? "Could not record the upload — nothing was left behind"
+        : "Could not record the upload, and the file could not be cleaned up either");
+      return null;
+    }
 
     const k=assetKey(ownerKind,ownerId);
     (ASSETS[k]=ASSETS[k]||[]).push(row);
@@ -6680,10 +6810,45 @@ async function loadAssetsFor(ownerKind,ownerIds){
   (r.data||[]).forEach(a=>{ const k=assetKey(a.owner_kind,a.owner_id);
                             (ASSETS[k]=ASSETS[k]||[]).push(a); });
 }
+/* UTRECHT — this function existed and NOTHING CALLED IT.
+
+   Defined since New York, zero call sites: there has never been a way
+   to remove one attachment from a post. And what it did was set
+   deleted_at and stop — so even the delete that did not exist would
+   not have deleted anything.
+
+   Chirag chose immediate removal over a 30-day grace, knowing it
+   differs from Trash: an attachment is a mistake you notice at once,
+   not a record you might want back in three weeks. So the file goes,
+   and the row goes with it — a row left behind would point at nothing
+   and every card reading it would show a broken frame.
+
+   THE ROW IS HARD-DELETED, not marked. `assets` is change-logged, so
+   the deletion is still recorded and History will show it happened —
+   but do not restore it. The bytes are gone; a restored row is a
+   pointer to nothing. The log is honest about the event; it cannot
+   un-delete a file. */
 async function deleteAsset(id,ownerKind,ownerId){
-  dbErr(await sb.from("assets").update({deleted_at:new Date().toISOString()}).eq("id",id));
   const k=assetKey(ownerKind,ownerId);
+  const row=(ASSETS[k]||[]).find(a=>a.id===id)
+         || (await sb.from("assets").select("*").eq("id",id).maybeSingle()).data;
+  if(!row){ toast("That attachment is already gone","err"); return false; }
+  const r=await removeAssetsAndFiles([row]);
+  if(!r.rows){ toast(r.error||"Could not remove that attachment","err"); return false; }
   ASSETS[k]=(ASSETS[k]||[]).filter(a=>a.id!==id);
+  if(!r.ok) toast("Removed, but some files could not be cleaned up","err");
+  return true;
+}
+
+/* The confirm lives here rather than in the markup, so every future
+   caller gets it without having to remember. There is no undo. */
+async function removeAttachment(id,ownerKind,ownerId,label){
+  if(!canEdit()){ toast("View-only account","err"); return; }
+  if(!confirm("Remove "+(label?'"'+label+'"':"this attachment")+"?\n\nThe file is deleted immediately and cannot be recovered.")) return;
+  if(await deleteAsset(id,ownerKind,ownerId)){
+    toast("Attachment removed");
+    if(typeof rerenderThread==="function") try{ rerenderThread(); }catch(e){}
+  }
 }
 
 /* ══ ROUNDS — RETIRED IN v57.3, STILL READ ═══════════════════════════
@@ -6925,10 +7090,29 @@ function openLightbox(assetId,list){
   const i=Math.max(0,live.findIndex(a=>a.id===assetId));
   if(!live.length) return;
   LB={list:live,i}; paintLightbox();
+  /* view-only accounts do not get a bin */
+  const del=document.getElementById("mlb-del");
+  if(del) del.style.display=canEdit()?"":"none";
   document.getElementById("mlb").classList.add("open");
 }
 function closeLightbox(){ const el=document.getElementById("mlb");
   if(el){ el.classList.remove("open"); el.querySelector(".mlbbody").innerHTML=""; } }
+
+/* UTRECHT — remove the file you are looking at.
+   findAssetOwner() already knows which thread an asset belongs to, so
+   the caller does not have to be told and cannot be told wrong. */
+async function lbRemove(){
+  const a=LB.list[LB.i]; if(!a) return;
+  if(!canEdit()){ toast("View-only account","err"); return; }
+  const own=findAssetOwner(a.id);
+  if(!own){ toast("Cannot tell what that file belongs to","err"); return; }
+  if(!confirm('Remove "'+(a.filename||"this file")+'"?\n\nThe file is deleted immediately and cannot be recovered.')) return;
+  if(!await deleteAsset(a.id,own.kind,own.id)) return;
+  toast("Removed");
+  LB.list=LB.list.filter(x=>x.id!==a.id);
+  if(!LB.list.length) closeLightbox();
+  else { LB.i=Math.min(LB.i,LB.list.length-1); paintLightbox(); }
+}
 function lbStep(d){ if(!LB.list.length) return;
   LB.i=(LB.i+d+LB.list.length)%LB.list.length; paintLightbox(); }
 async function paintLightbox(){
@@ -8847,10 +9031,16 @@ async function openTrash(){
   if(!canEdit()){toast("View-only account","err");return;}
   renderTrashLoading(); openM("trash");
   const cutoff=new Date(Date.now()-30*24*3600*1000).toISOString();
-  // auto-purge anything older than 30 days
-  await sb.from("events").delete().not("deleted_at","is",null).lt("deleted_at",cutoff);
-  await sb.from("brand_events").delete().not("deleted_at","is",null).lt("deleted_at",cutoff);
-  await sb.from("brands").delete().not("deleted_at","is",null).lt("deleted_at",cutoff);
+  /* UTRECHT — the auto-purge takes the files with it now, and it
+     CHECKS. The brands line used to be a bare `delete` with no error
+     handling: on any brand a Production Planner shoot or a Portfolio
+     logo pointed at, it raised a foreign-key violation, returned it in
+     an object nobody read, and did nothing. Silently, every time Trash
+     was opened, since the day it was written. */
+  dbErr(await sb.from("events").delete().not("deleted_at","is",null).lt("deleted_at",cutoff));
+  dbErr(await sb.from("brand_events").delete().not("deleted_at","is",null).lt("deleted_at",cutoff));
+  const old=await sb.from("brands").select("id").not("deleted_at","is",null).lt("deleted_at",cutoff);
+  for(const b of (old.data||[])) await clearBrandFromCalendar(b.id,{ask:false});
   const [ev,bev,br]=await Promise.all([
     sb.from("events").select("*").not("deleted_at","is",null),
     sb.from("brand_events").select("*").not("deleted_at","is",null),
@@ -8880,7 +9070,131 @@ async function restoreTrash(table,id){
   if(r.error){toast(r.error.message,"err");return;}
   toast("Restored"); await loadAll(); openTrash();
 }
+/* ══ UTRECHT — CLEARING A BRAND, AND WHY IT IS NOT CALLED DELETING ══
+   A brand is not the calendar's to destroy. `productions.brand_id` is
+   NOT NULL, so a Production Planner shoot cannot exist without its
+   brand — the database will refuse to remove a brand any shoot points
+   at, and refuse is the right answer: deleting another tool's work from
+   inside this one is not a thing a button in Trash should be able to do.
+
+   THE BUTTON WAS ALREADY BROKEN. `delete from brands` on a brand with a
+   shoot or a Portfolio logo raises a foreign-key violation, which this
+   function used to hand straight to a toast as a raw Postgres message.
+   And the 30-day auto-purge below ran the same delete WITH NO ERROR
+   CHECK AT ALL, so for those brands it has silently done nothing since
+   the day it was written.
+
+   So the action is what it honestly is: clear this brand OUT OF THE
+   CALENDAR — its posts, plans, campaigns, briefs, imports and every
+   file. The brand record itself is removed only if nothing outside the
+   calendar still needs it, and quietly kept if something does.
+
+   FILES FIRST, THEN ROWS, and belt and braces on the files: the asset
+   rows' four paths each, AND a walk of the whole <brand_id>/ prefix.
+   The second catches anything the first cannot see — a failed upload
+   that never got a row is exactly the case that stranded 40 MB. */
+const BRAND_CHILDREN=[
+  ["social_posts","posts"],["social_month_plan","month plans"],
+  ["social_month_items","month plan items"],["brand_events","campaigns"],
+  ["brand_briefs","briefs"],["brand_tags","event links"],
+  ["brand_posts","planned posts"],["content_imports","imports"],
+];
+
+async function brandFootprint(id){
+  const counts=await Promise.all(BRAND_CHILDREN.map(async ([t,label])=>{
+    const r=await sb.from(t).select("brand_id",{count:"exact",head:true}).eq("brand_id",id);
+    return {label,n:r.error?null:(r.count||0)};
+  }));
+  const a=await sb.from("assets").select("*").eq("brand_id",id);
+  const rows=a.error?[]:(a.data||[]);
+  const bytes=rows.reduce((n,r)=>n+(Number(r.bytes)||0),0);
+  return {counts:counts.filter(c=>c.n),assets:rows,bytes};
+}
+
+async function clearBrandFromCalendar(id,{ask=true}={}){
+  const brand=(brands[id]||{}).name||"this brand";
+  const fp=await brandFootprint(id);
+  if(ask){
+    const lines=fp.counts.map(c=>"  "+c.n+" "+c.label);
+    if(fp.assets.length) lines.push("  "+fp.assets.length+" files ("+kbmb(fp.bytes)+")");
+    if(!confirm('Clear "'+brand+'" out of the Marketing Calendar?\n\n'
+      +(lines.length?"This permanently removes:\n"+lines.join("\n"):"There is nothing to remove.")
+      +"\n\nThe brand itself is kept, so Production Planner shoots and\n"
+      +"Portfolio logos are not touched.\n\nThis cannot be undone.")) return false;
+  }
+
+  /* 1 · the files. Both ways round. */
+  const byRow=await removeFiles(fp.assets.flatMap(assetPaths));
+  const walk=await listPrefix(String(id));
+  const byPrefix=await removeFiles(walk.paths);
+  if(walk.capped) toast("More files than could be listed in one pass — run the sweep afterwards","err");
+
+  /* 2 · then the rows, the calendar's own only. */
+  if(fp.assets.length) await sb.from("assets").delete().eq("brand_id",id);
+  for(const [t] of BRAND_CHILDREN) await sb.from(t).delete().eq("brand_id",id);
+
+  /* 3 · and the brand itself, ONLY if nothing outside the calendar
+         still points at it. The foreign key is the authority here, not
+         a list of tables in this file that would go stale the day a
+         sixth tool is built. */
+  const del=await sb.from("brands").delete().eq("id",id);
+  const kept=!!del.error;
+  if(kept) await sb.from("brands").update({deleted_at:null}).eq("id",id);
+
+  toast((byRow.removed+byPrefix.removed)+" file(s) removed"+(kept?" · brand kept, still in use elsewhere":""));
+  return true;
+}
+
+/* ══ UTRECHT — THE SWEEP ════════════════════════════════════════════
+   Everything above stops NEW files being stranded. This is for the ones
+   already there: on 18 August three objects totalling 40 MB — 20% of
+   everything stored, from 1% of the files — had no row pointing at them.
+
+   It compares what is in the bucket against every path any asset row
+   claims. A file no row claims is unreachable: nothing in the app can
+   ever show it, sign it, or delete it, and it is charged for monthly.
+
+   IT REPORTS BEFORE IT REMOVES, and the count it reports is the true
+   one — if the walk hit its cap it says so rather than sweeping a
+   subset and calling the bucket clean. A sweep that quietly did less
+   than it claimed would be worse than no sweep, because the number it
+   printed would be believed. */
+async function sweepOrphans(){
+  if(ME.role!=="admin") return capDenied("The storage sweep");
+  toast("Reading the bucket…");
+  const walk=await listPrefix("");
+  const a=await sb.from("assets").select("storage_path,thumb_path,view_path,poster_path");
+  if(a.error){ toast("Could not read the asset list — not sweeping","err"); return; }
+  /* CLAIMED IS BUILT FROM ROWS, AND THE ROWS ARE READ FIRST.
+     If this read failed and we treated it as "no rows", every file in
+     the bucket would look unreachable and the sweep would empty it.
+     That is the empty-registry trap in its most expensive form, so the
+     refusal above is not politeness. */
+  const claimed=new Set((a.data||[]).flatMap(assetPaths));
+  const orphans=walk.paths.filter(pth=>!claimed.has(pth));
+  if(walk.capped) toast("The bucket is larger than one pass can list — this is a partial view","err");
+  if(!orphans.length){
+    alert("Nothing to sweep.\n\n"+walk.paths.length+" file(s) in the bucket, and every one of them\n"
+      +"is claimed by an asset row."+(walk.capped?"\n\nNOTE: the listing hit its cap, so this is a partial view.":""));
+    return;
+  }
+  if(!confirm("Remove "+orphans.length+" unreachable file(s)?\n\n"
+    +"These are objects in the bucket that no asset row points at, so\n"
+    +"nothing in the calendar can show or recover them. They are charged\n"
+    +"for every month.\n\n"
+    +orphans.slice(0,6).map(x=>"  "+x).join("\n")
+    +(orphans.length>6?"\n  … and "+(orphans.length-6)+" more":"")
+    +(walk.capped?"\n\nNOTE: the listing hit its cap — run this again afterwards.":"")
+    +"\n\nThis cannot be undone.")) return;
+  const r=await removeFiles(orphans);
+  toast(r.removed+" removed"+(r.failed?" · "+r.failed+" could not be":""), r.failed?"err":"");
+}
+
 async function purgeTrash(table,id){
+  if(table==="brands"){
+    if(await clearBrandFromCalendar(id)){ await loadAll(); openTrash(); }
+    return;
+  }
   if(!confirm("Delete forever? This cannot be undone.")) return;
   const r=await sb.from(table).delete().eq("id",id);
   if(r.error){toast(r.error.message,"err");return;}
@@ -11946,6 +12260,11 @@ async function histRestore(id,forced){
 <!-- NEW YORK: lightbox. Preview only — there is deliberately no download
      control here; originals are for the branding module's delivery step. -->
 <div class="mlb" id="mlb" onclick="if(event.target===this)closeLightbox()">
+  <!-- UTRECHT — Remove. It goes HERE and nowhere else, deliberately.
+       The lightbox is the only screen where you are looking at exactly
+       one file and can see what it is. A bin on every thumbnail in a
+       strip is how the wrong image gets deleted, and there is no undo. -->
+  <span class="mlbdel" id="mlb-del" onclick="lbRemove()" title="Remove this file permanently"><i class="ti ti-trash"></i></span>
   <span class="mlbx" onclick="closeLightbox()">✕</span>
   <span class="mlbnav l" onclick="lbStep(-1)">‹</span>
   <div class="mlbbody" style="position:relative;display:flex;align-items:center;justify-content:center;max-width:100%;max-height:100%;"></div>
