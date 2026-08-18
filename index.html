@@ -849,8 +849,24 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
   .hs-det{padding-left:16px;}
   .hs-kid{padding-left:16px;}
 }
-}
-.sidebar{overflow:visible;}
+/* BERGEN — a stray `}` and an orphaned rule, both removed, 18 August 2026.
+
+   The @media block above closed on the line before. A second `}` followed
+   it, and then `.sidebar{overflow:visible;}`. Every CSS parser discards an
+   unexpected top-level `}` and carries on, so the rule below it was never
+   in effect — not in any browser, not once, since the day it was typed.
+   check_drift's brace counter reported "every CSS block closes" throughout,
+   because the count balanced; it was the ORDER that was wrong.
+
+   The rule is deleted rather than rescued, and that is the deliberate part.
+   It was written to let the account flyout escape the sidebar's box.
+   Montreal solved that differently and better — the flyout is a child of
+   <body> now, in the same stacking context as the scrim — so the rule has
+   nothing left to do. Un-hiding it would have overridden the kit's
+   `.sidebar{overflow-y:auto}` and changed how the column scrolls, which is
+   a real change dressed up as a bug fix. `.side-scroll` does the scrolling.
+
+   Net effect on screen: nothing. That is the point, and it was measured. */
 
 
 
@@ -1726,27 +1742,27 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 
              The email keeps its own hairline rather than a .bpsep, so the three
              dividers in the markup are exactly the three group breaks. -->
-        <div class="brow staff-row admin-cap-events" onclick="closeAllPops();openEventManager()"><i class="ti ti-calendar-cog"></i><span class="bnm">Event Manager</span></div>
-        <div class="brow staff-row" onclick="closeAllPops();openIndustryManager()"><i class="ti ti-tags"></i><span class="bnm">Industry Manager</span></div>
-        <div class="brow staff-row" onclick="closeAllPops();carryForward()"><i class="ti ti-arrow-forward"></i><span class="bnm" id="acct-carry">Carry forward to next year</span></div>
-        <div class="brow staff-row" onclick="closeAllPops();openImportHistory()"><i class="ti ti-file-import"></i><span class="bnm">Import history</span></div>
+        <div class="brow" data-need="manage_events" onclick="closeAllPops();openEventManager()"><i class="ti ti-calendar-cog"></i><span class="bnm">Event Manager</span></div>
+        <div class="brow" data-need="edit" onclick="closeAllPops();openIndustryManager()"><i class="ti ti-tags"></i><span class="bnm">Industry Manager</span></div>
+        <div class="brow" data-need="edit" onclick="closeAllPops();carryForward()"><i class="ti ti-arrow-forward"></i><span class="bnm" id="acct-carry">Carry forward to next year</span></div>
+        <div class="brow" data-need="edit" onclick="closeAllPops();openImportHistory()"><i class="ti ti-file-import"></i><span class="bnm">Import history</span></div>
         <div class="bpsep"></div>
         <!-- REYKJAVIK 4b: Trash holds what was deleted through the app.
              History holds everything that changed or vanished by any route,
              including routes with no Trash of their own. -->
-        <div class="brow admin-row" onclick="closeAllPops();openHistory()"><i class="ti ti-history"></i><span class="bnm">History &amp; restore</span></div>
-        <div class="brow staff-row" onclick="closeAllPops();openTrash()"><i class="ti ti-trash"></i><span class="bnm">Trash</span></div>
+        <div class="brow" data-need="admin" onclick="closeAllPops();openHistory()"><i class="ti ti-history"></i><span class="bnm">History &amp; restore</span></div>
+        <div class="brow" data-need="edit" onclick="closeAllPops();openTrash()"><i class="ti ti-trash"></i><span class="bnm">Trash</span></div>
         <div class="bpsep"></div>
         <!-- The calendar's own People screen is GONE. It wrote the old field,
              which is now only a fallback, so changes made there were silently
              ignored — a trap worth removing rather than documenting. There is
              one place to manage people now, and this is the door to it. -->
-        <div class="brow admin-row" onclick="closeAllPops();window.open('app.html','_blank')"><i class="ti ti-users"></i><span class="bnm">People &amp; access</span><i class="ti ti-external-link" style="margin-left:auto;font-size:12px;opacity:.5;"></i></div>
+        <div class="brow" data-need="admin" onclick="closeAllPops();window.open('app.html','_blank')"><i class="ti ti-users"></i><span class="bnm">People &amp; access</span><i class="ti ti-external-link" style="margin-left:auto;font-size:12px;opacity:.5;"></i></div>
         <!-- MONTREAL — the row the calendar has never had. Every other tool in
              the suite has had this since Nairobi; the calendar was the only one
              with no way to reach its siblings. Hover opens the flyout; see
              openSuiteFlyout() for the geometry and why it is pinned by the top. -->
-        <div class="brow staff-row" id="acct-suite-row" onmouseenter="openSuiteFlyout()" onmouseleave="closeSuiteFlyout()"><i class="ti ti-layout-grid"></i><span class="bnm">CC Suite</span><i class="ti ti-chevron-right" style="margin-left:auto;font-size:12px;opacity:.5;"></i></div>
+        <div class="brow" data-need="suite" id="acct-suite-row" onmouseenter="openSuiteFlyout()" onmouseleave="closeSuiteFlyout()"><i class="ti ti-layout-grid"></i><span class="bnm">CC Suite</span><i class="ti ti-chevron-right" style="margin-left:auto;font-size:12px;opacity:.5;"></i></div>
         <div class="bpsep"></div>
         <!-- Refresh is gone. The calendar has synced in real time since
              Sydney; a Refresh button says we do not trust our own sync,
@@ -5698,7 +5714,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v59 — Montreal: the switcher, the menu order, and one version badge";
+const TOOL_VERSION="v60 — Bergen: the menu shows what you can open";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -8970,23 +8986,82 @@ function applyRoleUI(){
       const oc=b.getAttribute("onclick")||"";
       if(b.id!=="setup-btn"&&!oc.includes("exportXLSX")) b.style.display="none";
     });
-    /* #acct-menu, not #setup-drop. Shanghai replaced the ⚙ dropdown with
-       the named account block and the id went with it — but these three
-       selectors were never repointed, so from Shanghai until now they
-       matched NOTHING and every staff and admin row in the menu was
-       visible to a client. Found by the D3 gate, which listed what a
-       client actually sees rather than assuming the class did its job.
-       A selector that matches nothing fails silently, which is why a
-       dead one can sit in a file for four versions. */
-    document.querySelectorAll("#acct-menu .staff-row").forEach(r=>r.style.display="none");
-    document.querySelectorAll("#acct-menu .admin-row").forEach(r=>r.style.display="none");
   }
-  /* STAGE 3: the master events database is admin-only now. Hidden here
-     AND refused in dbDeleteMasterEvent, because a hidden menu row is not
-     a permission check. */
-  document.querySelectorAll(".admin-cap-events").forEach(r=>{
-    r.style.display=canCap("manage_events")?"":"none";
+  /* BERGEN — the account menu is no longer hidden by role NAME.
+     See applyMenuVisibility(): every row declares the capability it
+     needs, and the row is shown when that capability answers yes.
+
+     What was here: three selectors that hid `.staff-row` and
+     `.admin-row` if and only if ME.role === "client". Two faults in
+     one block. A role that is neither client nor staff — a new one, or
+     `pending` slipping through — saw everything. And the three
+     `.bpsep` dividers between the groups carried no class, so a client
+     who correctly lost all eight middle rows was left looking at their
+     email, THREE STACKED HAIRLINES, and Change password. That was live
+     from Montreal until today; it is what made "hide what they cannot
+     enter" worth doing properly rather than adding a fourth selector. */
+  applyMenuVisibility();
+}
+
+/* ══ BERGEN — WHO SEES WHICH ROW ════════════════════════════════════
+   One question per row, asked of the capability rather than the role
+   name, so a role nobody has invented yet gets the right answer by
+   default instead of the most permissive one.
+
+   ── THE FLOOR ────────────────────────────────────────────────────
+   A row with no `data-need` is never hidden. Change password and Sign
+   out are the floor: whatever else is true of somebody, they must be
+   able to leave and to fix their own password. A menu that can empty
+   itself completely is a support call.
+
+   ── AND A WARNING THAT BELONGS NEXT TO THE CODE ──────────────────
+   THIS IS NOT ACCESS CONTROL. It decides what is drawn. Two of these
+   rows are governed by the browser alone today:
+
+     · Event Manager asks canCap("manage_events"), which Stage 3 made
+       admin-only. The database's events_write policy allows any
+       is_staff() — admin OR team. A team member is refused here and
+       permitted by the API.
+
+     · ME.role comes from user_tool_roles; every RLS policy resolves
+       through my_role(), which reads profiles.role. The two agree for
+       everyone today and nothing keeps them agreeing.
+
+   Both are written up in the Bergen record. Neither is fixed by this
+   function and neither should be believed to be. */
+function menuAllows(need){
+  if(!need)              return true;
+  if(need==="admin")     return ME.role==="admin";
+  if(need==="edit")      return canEdit();
+  if(need==="suite")     return SUITE.mine>=2;
+  return canCap(need);
+}
+
+function applyMenuVisibility(){
+  const menu=document.getElementById("acct-menu"); if(!menu) return;
+  menu.querySelectorAll(".brow[data-need]").forEach(r=>{
+    r.style.display=menuAllows(r.getAttribute("data-need"))?"":"none";
   });
+
+  /* THE DIVIDERS FOLLOW THEIR GROUPS, and are not placed by hand any
+     more. A separator earns its place only when a visible row stands on
+     BOTH sides of it — so an emptied group takes its hairline with it,
+     and no menu ever ends on a line with nothing under it. */
+  const kids=[...menu.children];
+  const vis=el=>el.classList.contains("brow")&&el.style.display!=="none";
+  const seps=[];
+  let before=false;
+  for(const el of kids){
+    if(el.classList.contains("bpsep")){ seps.push({el,before,after:false}); before=false; continue; }
+    if(vis(el)) before=true;
+  }
+  let after=false;
+  for(let i=kids.length-1;i>=0;i--){
+    const el=kids[i];
+    if(el.classList.contains("bpsep")){ const s=seps.find(x=>x.el===el); if(s) s.after=after; continue; }
+    if(vis(el)) after=true;
+  }
+  seps.forEach(s=>{ s.el.style.display=(s.before&&s.after)?"":"none"; });
 }
 
 /* ══ ACCESS STAGE 2 — read the consolidated model, keep the old one ═══
@@ -9011,12 +9086,26 @@ const TOOLROLE_TO_LEGACY={admin:"admin",account_manager:"team",creator:"team",
                           client_reviewer:"client",client_viewer:"client"};
 async function resolveAccess(userId, legacyRole){
   ME.toolRole=null; ME.caps={}; ME.accessSource="legacy";
+  /* BERGEN — the global role, kept before anything overwrites ME.role.
+     Every RLS policy in the database resolves a person through
+     my_role(), which reads profiles.role. This is that value, and it is
+     the one the DATABASE will act on. ME.role below is the CALENDAR's
+     answer, from user_tool_roles. They agree today. Nothing keeps them
+     agreeing, which is why this is kept separately rather than merged. */
+  ME.globalRole=legacyRole||null;
+  ME.toolRoles={};
   try{
     const r=await sb.from("user_tool_roles").select("tool,role").eq("user_id",userId);
     /* An error here means the table is missing or unreadable — NOT that
        the person has no access. Falling through to the legacy role is the
        whole point of the soak. */
     if(r.error) return;
+    /* BERGEN — KEEP THEM ALL. This query has asked for every tool role
+       the person has since Stage 2, and then thrown all but the
+       calendar's away on the next line. The CC Suite flyout needs
+       exactly that list to show only the tools somebody can open, and
+       it has been arriving and being discarded this whole time. */
+    (r.data||[]).forEach(x=>{ if(x&&x.tool) ME.toolRoles[x.tool]=x.role; });
     const cal=(r.data||[]).find(x=>x.tool==="calendar");
     /* No calendar row is a real answer: this person was never given the
        calendar. But during the soak the legacy field still decides, so a
@@ -9334,8 +9423,21 @@ async function boot(){
   if(RECOVERY_MODE) showSetPass();
   else document.getElementById("auth-screen").style.display="none";
   applyRoleUI();
-  /* same dead id as above — People & access was showing to everybody */
-  document.querySelectorAll("#acct-menu .admin-row").forEach(r=>r.style.display=ME.role==="admin"?"":"none");
+  /* BERGEN — the second pass over `.admin-row` that used to live here is
+     gone. It existed because applyRoleUI only hid those rows for
+     clients, so admin-only rows needed hiding again for everybody else;
+     two functions deciding one row's visibility, in a file where a dead
+     selector has already survived four versions unnoticed.
+     applyMenuVisibility() is now the only place that decides. */
+  /* The CC Suite row needs to know how many tools this person can
+     actually open, and that answer comes from the register. Not awaited:
+     the menu is closed at boot, the row starts hidden, and it appears
+     when the answer arrives. A row that is briefly absent is honest; a
+     row that is briefly wrong is not. */
+  loadSuiteTools().then(list=>{
+    SUITE.mine=suiteToolsForMe(list).length;
+    applyMenuVisibility();
+  });
   const ae=document.getElementById("acct-email"); if(ae) ae.textContent=ME.email||"";
   /* not awaited: the sign-in log must never delay the app appearing */
   logAppEvent("sign_in",{role:ME.role,tool_role:ME.toolRole,via:ME.accessSource});
@@ -10049,6 +10151,15 @@ async function imApply(rows,fileName,revertsId){
 
 /* ── the history, and putting one back ────────────────────────────── */
 async function openImportHistory(){
+  /* BERGEN — this had NO guard. Every other row in that group checks
+     something before it opens; this one checked nothing and was kept
+     out of a client's way purely by the `staff-row` class on its markup,
+     which is a decision about drawing, not about permission. imRevert()
+     below it has always checked canEdit(), so the undo was safe and the
+     screen was not. The read policy on content_imports is
+     `is_staff() or brand_id = my_brand()`, so the database would have
+     shown a client their own brand's import log quite happily. */
+  if(!canEdit()) return toast("View-only account","err");
   closeAllPops();
   document.getElementById("imh-body").innerHTML=`<div class="modal-top" style="padding:18px 20px 14px;">
      <div class="modal-title" style="font-size:17px;">Import history</div>
@@ -10166,7 +10277,7 @@ function closeAllPops(){
    · The panel is opaque. `.acmenu` is 92% white with a 22px blur, invisible
      over a flat sidebar and a rendering fault over the calendar's dates.
      The inline background on #acct-suite is that fix. */
-const SUITE={tools:null,timer:null};
+const SUITE={tools:null,timer:null,mine:0};
 const SUITE_HIDE=["platform"];
 
 async function loadSuiteTools(){
@@ -10184,6 +10295,45 @@ async function loadSuiteTools(){
   return SUITE.tools;
 }
 
+/* ══ BERGEN — THE FLYOUT LISTS ONLY WHAT YOU CAN OPEN ═══════════════
+   Chirag's rule, applied one level below the row it was asked about:
+   if you cannot enter a thing, you should not be looking at a door to
+   it. Until now the calendar's flyout showed every registered tool to
+   everybody who could see the row, and the row was staff-only — so
+   "should a client see the switcher" had one answer for all clients and
+   told you nothing about what any particular one could reach.
+
+   ── THIS IS NOT A NEW RULE. IT IS THE KIT'S RULE, WHICH THE CALENDAR
+      HAS BEEN THE ONLY TOOL NOT FOLLOWING ────────────────────────────
+   cc-suite/ui/access.js has had openableTools() since Nairobi, and all
+   four React tools have called it since. The first draft of this
+   function invented a slightly different rule — with an admin bypass —
+   before that was noticed. Two rules for one question, across five
+   tools, is how the suite drifts apart while every individual tool
+   looks defensible. So this mirrors openableTools() exactly:
+
+       filter(t => t && t.key && t.url && !t.retired_at && mine.has(t.key))
+
+   including the `t.url` test, which is not decoration. A tool with no
+   address is dropped rather than rendered as a dead link — the calendar
+   rendered href="#" instead, which is what the Proposal Bank's 404
+   would have looked like from in here.
+
+   NO ADMIN BYPASS, deliberately, because the kit has none. An admin
+   who is not rostered on a tool does not see it. If that is wrong it is
+   wrong in five places at once, which is the right number.
+
+   The ROW ITSELF hides below two entries — a switcher whose only
+   destination is where you already are is not a switcher. That part
+   IS new, and it is going into the kit in the same batch.
+
+   THE PAIR IS GATED. tests/bergen-menu/run.js proves the two agree,
+   because the calendar is plain HTML and cannot import the module. */
+function suiteToolsForMe(list){
+  const mine=ME.toolRoles||{};
+  return (list||[]).filter(t=>t&&t.key&&t.url&&!t.retired_at&&Object.prototype.hasOwnProperty.call(mine,t.key));
+}
+
 function renderSuiteFlyout(list){
   const fly=document.getElementById("acct-suite"); if(!fly) return;
   fly.innerHTML=list.map(function(t){
@@ -10199,7 +10349,8 @@ function renderSuiteFlyout(list){
 
 async function openSuiteFlyout(){
   clearTimeout(SUITE.timer);
-  const list=await loadSuiteTools();
+  const list=suiteToolsForMe(await loadSuiteTools());
+  SUITE.mine=list.length;
   const fly=document.getElementById("acct-suite");
   const menu=document.getElementById("acct-menu");
   const row=document.getElementById("acct-suite-row");
