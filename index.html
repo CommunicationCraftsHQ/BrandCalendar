@@ -1708,21 +1708,45 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
            countable, which is what the gate counts. -->
       <div class="acmenu" id="acct-menu">
         <div class="acmail" id="acct-email"></div>
+        <!-- MONTREAL, 18 August 2026 — FOUR groups, three dividers, ten items.
+
+             Dubai D3 grouped these by WHO the item is for. Montreal keeps that
+             idea and adds the group the calendar never had: the suite itself.
+             Chirag chose this order (Option 1 in the mockup) over the order
+             Nairobi settled, and the reason is frequency — Event Manager and
+             Carry forward are opened daily, History and Trash occasionally.
+             The trade he accepted: the shared block no longer starts at the
+             same place in every tool, because the block above it is a
+             different length in each.
+
+             1 · what this calendar lets you manage
+             2 · what has happened to its contents
+             3 · the suite — the one door out to other people, and to other tools
+             4 · you
+
+             The email keeps its own hairline rather than a .bpsep, so the three
+             dividers in the markup are exactly the three group breaks. -->
         <div class="brow staff-row admin-cap-events" onclick="closeAllPops();openEventManager()"><i class="ti ti-calendar-cog"></i><span class="bnm">Event Manager</span></div>
         <div class="brow staff-row" onclick="closeAllPops();openIndustryManager()"><i class="ti ti-tags"></i><span class="bnm">Industry Manager</span></div>
+        <div class="brow staff-row" onclick="closeAllPops();carryForward()"><i class="ti ti-arrow-forward"></i><span class="bnm" id="acct-carry">Carry forward to next year</span></div>
+        <div class="brow staff-row" onclick="closeAllPops();openImportHistory()"><i class="ti ti-file-import"></i><span class="bnm">Import history</span></div>
+        <div class="bpsep"></div>
+        <!-- REYKJAVIK 4b: Trash holds what was deleted through the app.
+             History holds everything that changed or vanished by any route,
+             including routes with no Trash of their own. -->
+        <div class="brow admin-row" onclick="closeAllPops();openHistory()"><i class="ti ti-history"></i><span class="bnm">History &amp; restore</span></div>
+        <div class="brow staff-row" onclick="closeAllPops();openTrash()"><i class="ti ti-trash"></i><span class="bnm">Trash</span></div>
+        <div class="bpsep"></div>
         <!-- The calendar's own People screen is GONE. It wrote the old field,
              which is now only a fallback, so changes made there were silently
              ignored — a trap worth removing rather than documenting. There is
              one place to manage people now, and this is the door to it. -->
         <div class="brow admin-row" onclick="closeAllPops();window.open('app.html','_blank')"><i class="ti ti-users"></i><span class="bnm">People &amp; access</span><i class="ti ti-external-link" style="margin-left:auto;font-size:12px;opacity:.5;"></i></div>
-        <div class="bpsep"></div>
-        <div class="brow staff-row" onclick="closeAllPops();carryForward()"><i class="ti ti-arrow-forward"></i><span class="bnm" id="acct-carry">Carry forward to next year</span></div>
-        <div class="brow staff-row" onclick="closeAllPops();openImportHistory()"><i class="ti ti-history"></i><span class="bnm">Import history</span></div>
-        <div class="brow staff-row" onclick="closeAllPops();openTrash()"><i class="ti ti-trash"></i><span class="bnm">Trash</span></div>
-        <!-- REYKJAVIK 4b: Trash holds what was deleted through the app.
-             This holds everything that changed or vanished by any route,
-             including routes with no Trash of their own. -->
-        <div class="brow admin-row" onclick="closeAllPops();openHistory()"><i class="ti ti-history"></i><span class="bnm">History &amp; restore</span></div>
+        <!-- MONTREAL — the row the calendar has never had. Every other tool in
+             the suite has had this since Nairobi; the calendar was the only one
+             with no way to reach its siblings. Hover opens the flyout; see
+             openSuiteFlyout() for the geometry and why it is pinned by the top. -->
+        <div class="brow staff-row" id="acct-suite-row" onmouseenter="openSuiteFlyout()" onmouseleave="closeSuiteFlyout()"><i class="ti ti-layout-grid"></i><span class="bnm">CC Suite</span><i class="ti ti-chevron-right" style="margin-left:auto;font-size:12px;opacity:.5;"></i></div>
         <div class="bpsep"></div>
         <!-- Refresh is gone. The calendar has synced in real time since
              Sydney; a Refresh button says we do not trust our own sync,
@@ -1730,6 +1754,12 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
         <div class="brow" onclick="closeAllPops();showSetPass()"><i class="ti ti-key"></i><span class="bnm">Change password</span></div>
         <div class="brow" onclick="signOut()"><i class="ti ti-logout"></i><span class="bnm">Sign out</span></div>
       </div>
+      <!-- MONTREAL — the CC Suite flyout. A SIBLING of #acct-menu, not a child,
+           exactly as the kit's AccountMenu builds it: it is positioned against
+           the window and must not inherit the menu's own box. Filled by
+           renderSuiteFlyout() from the tools register, never from a list
+           written here — two lists would disagree within a month. -->
+      <div class="acmenu" id="acct-suite" style="background:#fff;-webkit-backdrop-filter:none;backdrop-filter:none;" onmouseenter="cancelSuiteClose()" onmouseleave="closeSuiteFlyout()"></div>
     </div>
   </aside>
   <main class="main" id="main"></main>
@@ -2573,17 +2603,21 @@ function buildSidebar(){
       <div style="font-size:11px;color:var(--acc);margin-top:4px;font-weight:600;">${(b.evIds||[]).length} events tagged</div>`;
     sm.appendChild(bSection);
   }
-  const ver=document.createElement("div");
-  ver.style.cssText="margin-top:18px;padding-top:10px;border-top:1px solid var(--div);font-size:10px;color:var(--subtle);cursor:pointer;letter-spacing:.02em;";
-  /* v52.4 — the badge stripped everything after the dash, so it has
-     NEVER shown a batch name regardless of what the string carried.
-     Chirag flagged the missing city twice before the real culprit
-     turned out to be this line, not the string. The format is
-     "vNN — Batch: description"; the badge shows through the batch. */
-  ver.textContent=TOOL_VERSION.split(":")[0];
-  ver.title="Click for data status";
-  ver.onclick=showDiag;
-  sm.appendChild(ver);
+  /* MONTREAL, 18 August 2026 — the badge left this function.
+
+     It was built here with inline styles and appended to #sb-months, which
+     lives inside .side-scroll. Two things were wrong with that: it scrolled
+     away with the brand list, and its styling was a one-off no other tool
+     could reuse. Every other tool now gets this badge from the kit's Shell,
+     against the shared .cc-ver class, pinned below the account block. The
+     calendar draws its own because it is plain HTML — but it draws the SAME
+     thing, from the same class, in the same place.
+
+     The v52.4 note that lived here is worth carrying forward: the format is
+     "vNN — Batch: description" and the badge shows through the batch.
+     Getting that split wrong once hid every city name for weeks. The Shell
+     now does the same split for the other four, so it is written once. */
+  ensureVersionBadge();
 }
 
 // ── EDIT FORM HELPERS ──────────────────────────────────────
@@ -5664,7 +5698,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v58 — Helsinki: the calendar joins the kit";
+const TOOL_VERSION="v59 — Montreal: the switcher, the menu order, and one version badge";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -10090,7 +10124,172 @@ function closeAllPops(){
     const el=document.getElementById(id); if(el) el.classList.remove("open");
   });
   const sc=document.getElementById("acct-scrim"); if(sc) sc.classList.remove("on");
+  /* MONTREAL — the suite flyout closes WITH the menu, and immediately. The
+     260ms grace exists for the trip between the row and the flyout, not for
+     a click that dismissed everything.
+
+     FOR WHOEVER READS THIS NEXT: there are TWO closeAllPops in this file.
+     The other is ~5,000 lines above and is DEAD — a later function
+     declaration in the same scope wins — so this is the one that runs, and
+     the one anything new must be added to. Adding it up there would do
+     nothing, silently. Not removed here; dead code is its own small job. */
+  clearTimeout(SUITE.timer);
+  const fl=document.getElementById("acct-suite"); if(fl) fl.classList.remove("open");
 }
+
+/* ═══ MONTREAL — THE CC SUITE FLYOUT ══════════════════════════════════
+   The calendar was the only tool in the suite with no way to reach its
+   siblings. Every other tool has had this since Nairobi, from the kit's
+   AccountMenu. The calendar is plain HTML and cannot mount that component,
+   so this is the same behaviour written by hand — deliberately the same,
+   because two answers to one question is worse than one imperfect answer.
+
+   WHAT IS COPIED FROM THE KIT, AND WHY EACH PART IS THERE:
+
+   · The list comes from the `tools` REGISTER, never from a list written
+     here. A second list disagrees with the first within a month.
+   · CC Platform is hidden. People & access opens it from the row directly
+     above, and listing it again is the same door twice.
+   · The flyout is pinned by its TOP to the row, panels touching
+     (left = menu.right - 1). Nairobi pinned the BOTTOM once: the panel grew
+     upward, put the first tool ~113px above the row, and turned the trip
+     into a diagonal across a 4px gap belonging to neither panel. The close
+     timer expired mid-journey and the farthest tool was never reachable.
+   · The top is then clamped into the window, or a long list pinned to a low
+     row would run off the bottom.
+   · 260ms of grace on leaving, cancelled by entering the flyout — and NOT
+     cancelled by re-entering the menu. That refinement was tried and was
+     wrong twice over: mouseenter does not fire when the pointer moves
+     between rows of the same menu, which is the only case it was meant to
+     cover; and had it worked, the flyout would have sat open while you
+     hovered Sign out.
+   · The panel is opaque. `.acmenu` is 92% white with a 22px blur, invisible
+     over a flat sidebar and a rendering fault over the calendar's dates.
+     The inline background on #acct-suite is that fix. */
+const SUITE={tools:null,timer:null};
+const SUITE_HIDE=["platform"];
+
+async function loadSuiteTools(){
+  if(SUITE.tools) return SUITE.tools;
+  try{
+    const {data,error}=await sb.from("tools").select("key,label,url,colour,sort,retired_at").order("sort");
+    if(error) throw error;
+    SUITE.tools=(data||[]).filter(t=>!t.retired_at && !SUITE_HIDE.includes(t.key));
+  }catch(e){
+    /* If the register cannot be read, the row does nothing rather than
+       opening an empty panel that looks broken. Same rule as the version
+       watch: if it cannot tell, it does not shout. */
+    SUITE.tools=[];
+  }
+  return SUITE.tools;
+}
+
+function renderSuiteFlyout(list){
+  const fly=document.getElementById("acct-suite"); if(!fly) return;
+  fly.innerHTML=list.map(function(t){
+    const cur=(t.key==="calendar");
+    const dot=t.colour?'<span class="bdot" style="background:'+escAttr(t.colour)+';"></span>':"";
+    const tag=cur?'<span style="margin-left:auto;padding-left:14px;font-size:10px;opacity:.4;white-space:nowrap;">current</span>':"";
+    const cls="brow"+(cur?" act":"");
+    return cur
+      ? '<a class="'+cls+'" style="text-decoration:none;">'+dot+'<span class="bnm">'+escHtml(t.label||t.key)+'</span>'+tag+'</a>'
+      : '<a class="'+cls+'" href="'+escAttr(t.url||"#")+'" style="text-decoration:none;">'+dot+'<span class="bnm">'+escHtml(t.label||t.key)+'</span></a>';
+  }).join("");
+}
+
+async function openSuiteFlyout(){
+  clearTimeout(SUITE.timer);
+  const list=await loadSuiteTools();
+  const fly=document.getElementById("acct-suite");
+  const menu=document.getElementById("acct-menu");
+  const row=document.getElementById("acct-suite-row");
+  if(!fly||!menu||!row||!list.length) return;
+  renderSuiteFlyout(list);
+  fly.classList.add("open");
+  const m=menu.getBoundingClientRect(), r=row.getBoundingClientRect();
+  const h=fly.offsetHeight;
+  fly.style.left=(m.right-1)+"px";
+  fly.style.top=Math.max(8,Math.min(r.top,window.innerHeight-h-8))+"px";
+  fly.style.right="auto"; fly.style.bottom="auto";
+}
+function closeSuiteFlyout(){
+  clearTimeout(SUITE.timer);
+  SUITE.timer=setTimeout(function(){
+    const f=document.getElementById("acct-suite"); if(f) f.classList.remove("open");
+  },260);
+}
+function cancelSuiteClose(){ clearTimeout(SUITE.timer); }
+
+/* ═══ MONTREAL — THE WARNING BAR HAS TO TELL THE LAYOUT ITS HEIGHT ═══
+   FOUND BY THE BROWSER PASS, 18 August 2026, and it is OLDER than Montreal.
+
+   #backup-health is inserted after the nav, above .layout. But .sidebar is
+   sized calc(100vh - 60px) — it assumes the nav is the only thing above it.
+   So whenever that bar is up, the sidebar is exactly the bar's height too
+   tall and its bottom hangs below the fold. Measured at 1400x900 with the
+   bar showing: sidebar 111..951 in a 900px window. Remove the bar and it is
+   111..900, correct.
+
+   What was falling off the bottom was the ACCOUNT BLOCK — the sign-out
+   button among it. Nobody reported it because the bar is rare. Montreal
+   makes it obvious rather than causing it: the version badge is now the
+   bottom-most thing, so it disappears first.
+
+   Nairobi hit this exact wall with the kit's own alarm and solved it there:
+   .cc-alarm measures itself, sets --cc-alarm-h, and cc-suite.css already
+   carries `body .sidebar{height:calc(100vh - 60px - var(--cc-alarm-h,0px))}`
+   plus the same for .main and .em2-page. The calendar's bar is
+   #backup-health, not .cc-alarm, so it never set the variable and never got
+   the fix. This connects the one to the other. No new CSS: the rules that
+   need this have been in the stylesheet since 9 August, waiting.
+
+   MEASURED, NOT ASSUMED — the bar is one line at 1400px and two at 900px,
+   so a hardcoded height would be wrong at one of them. */
+function syncAlarmHeight(){
+  const root=document.documentElement;
+  const bar=document.getElementById("backup-health");
+  if(!bar){ root.style.removeProperty("--cc-alarm-h"); return; }
+  root.style.setProperty("--cc-alarm-h", bar.offsetHeight+"px");
+  if(!bar._ccRO && window.ResizeObserver){
+    bar._ccRO=new ResizeObserver(()=>syncAlarmHeight());
+    bar._ccRO.observe(bar);
+  }
+}
+/* Watched rather than called from renderBackupHealth, which has five exit
+   points — one missed return would leave the variable stale, which is worse
+   than never setting it. The observer cannot miss one. */
+(function watchAlarmHeight(){
+  if(!document.body) return;
+  try{
+    new MutationObserver(syncAlarmHeight).observe(document.body,{childList:true});
+    window.addEventListener("resize",syncAlarmHeight);
+    syncAlarmHeight();
+  }catch(e){ /* an old browser simply keeps today's behaviour */ }
+})();
+
+/* ═══ MONTREAL — THE VERSION BADGE ════════════════════════════════════
+   Created once and kept, rather than rebuilt with the sidebar's contents.
+   Appended to .sidebar AFTER #acct-block, which puts it outside
+   .side-scroll — so it cannot scroll away — and below the account block,
+   which is exactly where the kit's Shell puts it in the other four tools.
+
+   No border here. `.acct` directly above already has margin-top:auto and
+   its own border-top; a rule on this as well would put two hairlines within
+   40px of each other. The account block IS the separator. */
+function ensureVersionBadge(){
+  const side=document.querySelector("aside.sidebar"); if(!side) return;
+  let v=document.getElementById("cc-ver");
+  if(!v){
+    v=document.createElement("div");
+    v.id="cc-ver";
+    v.className="cc-ver clickable";   /* only the calendar has a data-status panel to open */
+    v.title="Click for data status";
+    v.onclick=showDiag;
+    side.appendChild(v);
+  }
+  v.textContent=String(TOOL_VERSION).split(":")[0].trim();
+}
+
 function popOpen(id,e){
   if(e) e.stopPropagation();
   const el=document.getElementById(id); if(!el) return;
@@ -10128,6 +10327,20 @@ function popOpen(id,e){
 (function(){
   const m=document.getElementById("acct-menu");
   if(m && m.parentElement!==document.body) document.body.appendChild(m);
+  /* MONTREAL — and the CC Suite flyout goes with it, for exactly the reason
+     written above. Left inside the sidebar it was trapped: .sidebar is
+     position:sticky, which creates a stacking context, so the flyout's 700
+     only ordered it WITHIN the sidebar while the scrim sat at 699 in the
+     root — above the whole column. Measured at 1400x900: the calendar's
+     dates read straight through an opaque white panel, elementFromPoint
+     returned #acct-scrim, and a click on "Proposal Bank" never landed.
+
+     The kit's AccountMenu keeps its flyout beside the menu inside .acct,
+     and copying that was the wrong instinct: what matters is that the
+     flyout shares the MENU's parent, and in this calendar the menu left
+     the column two batches ago. */
+  const f=document.getElementById("acct-suite");
+  if(f && m && f.parentElement!==m.parentElement) m.parentElement.appendChild(f);
 })();
 
 /* a fixed panel does not follow anything, so anything that moves the
