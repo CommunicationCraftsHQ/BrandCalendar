@@ -1657,6 +1657,8 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
     <button class="tab-item" data-v="list" onclick="setView('list',this)">List</button>
     <button class="tab-item" data-v="content" id="tab-content" onclick="navContent(this)"
             title="Pick a brand to open Content">Content</button>
+    <button class="tab-item" data-v="branding" id="tab-branding" onclick="navBranding(this)"
+            title="Pick a brand to open Branding">Branding</button>
   </div>
 
   <div class="ystep">
@@ -2474,20 +2476,21 @@ function filtered(m){
 function allFiltered(){let a=[];for(let m=1;m<=12;m++) a=a.concat(filtered(m).map(e=>({...e,_m:m})));return a;}
 
 // ── RENDER ─────────────────────────────────────────────────
-function render(){
-  buildSidebar(); syncHeaderState();
-  // Update nav brand: show brand name when active
-  const brandEl=document.getElementById("nav-brand-txt");
-  if(brandEl) brandEl.innerHTML=`CC Marketing Calendar<span class="dot">.</span>`;
-  const brandActive=!!(activeBrand&&brands[activeBrand]);
-  if(view==="content"&&!brandActive){view="year";document.querySelectorAll(".tab-item").forEach(t=>t.classList.toggle("on",t.dataset.v==="year"));}
-  if(view==="brief"&&!(brandActive&&canEdit())){view="year";document.querySelectorAll(".tab-item").forEach(t=>t.classList.toggle("on",t.dataset.v==="year"));}
-  // Social/Planning/Content buttons now live in the brand header (rendered by renderYear/renderSocial)
-  // Shanghai: Planning is no longer a mode. With the Social layer on and
-  // edit rights, every day is clickable to plan a post.
-  document.body.classList.toggle("planning",socialLayer&&view==="year"&&brandActive&&canEdit());
-  view==="brief"?renderBrief():(view==="content"?renderSocial():(view==="year"?renderYear():renderList()));
-}
+/* ══ CAPE TOWN · this render() has been DELETED ══════════════════════
+   It was declared here AND again further down the file. Function
+   declarations hoist, so the later one won and this one had never run
+   since the day the second was added — while still reading, to anyone
+   scrolling past, like the authoritative router. Editing it would have
+   changed nothing, silently.
+
+   It was also missing four views the survivor handles (evmgr, indmgr,
+   mplan, history), which is how the difference was found.
+
+   This is not the only pair: twelve top-level functions in this file are
+   declared more than once with DIFFERENT bodies. The others are reported,
+   not touched, because they are not Cape Town's job.
+   tests/capetown_routing.js now refuses any NEW duplicate.
+   ══════════════════════════════════════════════════════════════════ */
 function toggleSocialLayer(){ socialLayer=!socialLayer; if(!socialLayer&&view==="content"){ setView("year"); return; } render(); }
 // Shanghai: Planning removed as a mode. Kept as a no-op shim so any
 // stale call site cannot throw; planningMode stays false forever.
@@ -2590,9 +2593,11 @@ function buildSidebar(){
   /* OSLO: the panel used to show calendar categories and industries on
      the History screen, which mean nothing there. Each page gets the
      panel that belongs to it. */
-  if(view==="history"){ buildHistorySidebar(); return; }
-  if(view==="brief"&&activeBrand&&brands[activeBrand]&&canEdit()){ buildBriefSidebar(); return; }
-  if(view==="content"&&activeBrand&&brands[activeBrand]){ buildContentSidebar(); return; }
+  /* CAPE TOWN: the same table the router uses, so a view can never have
+     one answer here and a different one there. Three hand-written lines
+     drifted from render()'s cascade once already. */
+  const r=viewRoute(view);
+  if(r&&r.sidebar&&routeAllows(r)){ r.sidebar(); return; }
   const sm=document.getElementById("sb-months"); sm.innerHTML="";
   const vm=new Set(visibleMonths());
   // Distinct events, split master vs brand campaigns (a multi-day campaign counts once)
@@ -5028,6 +5033,55 @@ function navContent(btn){
   if(!activeBrand){ toast("Pick a brand first — Content is per brand"); return; }
   socialLayer=true; setView("content",btn);
 }
+/* ══ CAPE TOWN · STAGE 1 — the Branding tab ══════════════════════════
+   Brand-scoped for the same reason Content is, and it is not a drawing
+   decision: a branding task carries exactly one brand_id, because brand
+   membership is how a client is scoped to what they may see. A task on
+   two brands has no answer to "which client sees this."
+
+   Stage 1 renders the empty screen and nothing else. There are no
+   branding tables yet — this ships alone so the routing can be proved
+   before any data depends on it. ═════════════════════════════════════ */
+function navBranding(btn){
+  if(!activeBrand){ toast("Pick a brand first — Branding is per brand"); return; }
+  setView("branding",btn);
+}
+/* The sidebar says what the screen will hold, and says plainly that it
+   holds nothing yet. An empty panel with working-looking controls is a
+   promise the screen cannot keep. */
+function buildBrandingSidebar(){
+  const el=document.getElementById("sb-stats"); if(el) el.innerHTML="";
+  const sm=document.getElementById("sb-months"); if(!sm) return;
+  sm.innerHTML=
+    `<div class="s-lbl">Branding</div>`+
+    `<div style="font-size:12.5px;color:var(--muted);line-height:1.6;padding:6px 2px 2px;">`+
+      `Filters by status, owner, type and overdue arrive with Stage 2, when there are tasks to filter.`+
+    `</div>`;
+}
+function renderBranding(){
+  const mc=document.getElementById("main");
+  const b=activeBrand&&brands[activeBrand];
+  /* The router already refuses this view without a brand. This is the
+     second lock, on the screen itself, because a render function that
+     trusts its caller is one call site away from a blank page. */
+  if(!b){ mc.innerHTML=""; return; }
+  mc.innerHTML=`
+   <div style="padding:28px 32px 20px;">
+     <div style="margin-bottom:20px;">${brandHeaderHtml()}</div>
+     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:20px 0 12px;padding-top:14px;border-top:1px solid var(--div);">
+       <div style="font-size:15px;font-weight:700;">0 Branding tasks</div>
+     </div>
+     <div style="text-align:center;padding:52px 20px;color:var(--muted);">
+       <div style="font-size:28px;margin-bottom:10px;color:var(--subtle);"><i class="ti ti-clipboard-text"></i></div>
+       <div style="font-size:14px;font-weight:600;color:var(--text);">Nothing here yet</div>
+       <div style="font-size:12.5px;margin-top:6px;max-width:430px;margin-left:auto;margin-right:auto;line-height:1.65;">
+         This is Stage 1 — the tab and its routing, shipped on their own so they can be
+         proved before any data depends on them. Creating tasks, milestones and the
+         calendar lane arrive in Stage 2.
+       </div>
+     </div>
+   </div>`;
+}
 
 /* ── year stepper ── */
 function stepYear(d){
@@ -5722,7 +5776,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v61 — Utrecht: the calendar can give storage back";
+const TOOL_VERSION="v62 — Cape Town: the Branding tab, and one route table";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -11629,25 +11683,73 @@ async function mpvSetStatus(v){
    repeated rather than wrapped, because the last declaration wins and
    there is no way to call the earlier one by name — the same additive
    pattern every batch since Istanbul has used. */
+/* ══ CAPE TOWN · C4 — ONE ROUTE TABLE ════════════════════════════════
+   What was here: four `if(view===…) return render…()` lines bolted on
+   above a nested ternary that ended `: renderList()`.
+
+   THAT FINAL ELSE WAS THE BUG. Any view name the router did not know
+   drew the List — not an error, not a blank screen, but a real screen
+   that looks like it worked. A typo, a stale link, or a new view added
+   without touching this line all landed there silently. The four
+   if-returns above it exist because that is exactly what happened four
+   times, and each was patched instead of the fallback.
+
+   Now every view is declared once, with what it renders, what sidebar it
+   takes and what it requires. An unknown view goes to the calendar AND
+   says so in the console. Adding a view is a row in the table.
+
+   Declared inside a function on purpose: an object literal at the top
+   level would be in the temporal dead zone if anything ever rendered
+   before this line executed, which is a failure that only appears on
+   slow loads. ══════════════════════════════════════════════════════ */
+function viewRoute(v){
+  const R={
+    year:    {render:renderYear,          sidebar:null},
+    list:    {render:renderList,          sidebar:null},
+    content: {render:renderSocial,        sidebar:buildContentSidebar,  needs:"brand"},
+    branding:{render:renderBranding,      sidebar:buildBrandingSidebar, needs:"brand"},
+    brief:   {render:renderBrief,         sidebar:buildBriefSidebar,    needs:"brand+edit"},
+    mplan:   {render:renderMonthPlanView, sidebar:null,                 needs:"brand"},
+    evmgr:   {render:renderEvMgr,         sidebar:null,                 needs:"manage_events"},
+    indmgr:  {render:renderIndMgr2,       sidebar:null,                 needs:"edit"},
+    history: {render:renderHistory,       sidebar:buildHistorySidebar}
+  };
+  return Object.prototype.hasOwnProperty.call(R,v) ? R[v] : null;
+}
+/* D1: losing the requirement mid-session drops you back to the calendar
+   rather than leaving an editable admin page, or a brand-scoped screen
+   with no brand, on the display. */
+function routeAllows(r){
+  if(!r||!r.needs) return true;
+  const brandActive=!!(activeBrand&&brands[activeBrand]);
+  if(r.needs==="brand")      return brandActive;
+  if(r.needs==="brand+edit") return brandActive&&canEdit();
+  if(r.needs==="edit")       return canEdit();
+  return canCap(r.needs);
+}
+function syncTabs(){
+  document.querySelectorAll(".tab-item").forEach(t=>t.classList.toggle("on",t.dataset.v===view));
+}
 function render(){
-  buildSidebar(); syncHeaderState();
   const brandEl=document.getElementById("nav-brand-txt");
   if(brandEl) brandEl.innerHTML=`CC Marketing Calendar<span class="dot">.</span>`;
+
+  /* RESOLVE THE ROUTE BEFORE BUILDING ANYTHING. The old order built the
+     sidebar first and demoted the view afterwards, so losing a brand
+     while on Content drew the Content sidebar and then the year grid —
+     a panel belonging to a screen that was no longer on display. */
+  let r=viewRoute(view);
+  if(!r){
+    console.warn("[route] unknown view "+JSON.stringify(view)+" — falling back to the calendar");
+    view="year"; r=viewRoute("year");
+  }
+  if(!routeAllows(r)){ view="year"; r=viewRoute("year"); }
+  syncTabs();
+
+  buildSidebar(); syncHeaderState();
   const brandActive=!!(activeBrand&&brands[activeBrand]);
-  if(view==="content"&&!brandActive){view="year";document.querySelectorAll(".tab-item").forEach(t=>t.classList.toggle("on",t.dataset.v==="year"));}
-  if(view==="brief"&&!(brandActive&&canEdit())){view="year";document.querySelectorAll(".tab-item").forEach(t=>t.classList.toggle("on",t.dataset.v==="year"));}
-  /* D1: losing the capability mid-session drops you back to the calendar
-     rather than leaving an editable admin page on screen */
-  if(view==="evmgr"&&!canCap("manage_events")) view="year";
-  if(view==="indmgr"&&!canEdit()) view="year";
-  /* MADRID: the month plan needs a brand, the same way Content does */
-  if(view==="mplan"&&!brandActive) view="year";
   document.body.classList.toggle("planning",socialLayer&&view==="year"&&brandActive&&canEdit());
-  if(view==="evmgr") return renderEvMgr();
-  if(view==="indmgr") return renderIndMgr2();
-  if(view==="mplan") return renderMonthPlanView();
-  if(view==="history") return renderHistory();
-  view==="brief"?renderBrief():(view==="content"?renderSocial():(view==="year"?renderYear():renderList()));
+  return r.render();
 }
 
 /* ══ REYKJAVIK 4b — HISTORY & RESTORE ═══════════════════════════════
