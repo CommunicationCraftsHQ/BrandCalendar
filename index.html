@@ -955,6 +955,10 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 /* message first — the comment is the headline, everything else is one quiet line */
 .nbody .msg{font-size:14px;font-weight:500;line-height:1.45;color:var(--text);margin:0 0 5px;}
 .nbody .attr{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+/* A post notification points at a DATE on the calendar. A branding task
+   has no date to point at, so it names itself instead — the title is the
+   thing you recognise. Same row, one different anchor. */
+.nbody .attr .ntask{color:var(--text);font-weight:600;}
 .nbody .attr .who{font-weight:700;color:var(--text);}
 .nbody .attr .when{margin-left:auto;color:var(--subtle);}
 .npempty{padding:26px 16px;text-align:center;font-size:12.5px;color:var(--muted);}
@@ -5927,6 +5931,7 @@ async function loadThread(taskId){
 function openTaskScreen(id){
   if(!activeBrand) return;
   TASK={id,msgs:[],acts:[],loading:true,err:"",asClient:false,draft:""};
+  taskMarkSeen(id);                 // opening it IS reading it, same as a post
   setView("task");
   loadThread(id).then(()=>{ if(TASK.id===id&&view==="task") render(); });
 }
@@ -6910,7 +6915,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v67 — Cape Town: the missing id, and tagging that works";
+const TOOL_VERSION="v68 — Cape Town: the bell learns about branding tasks";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -7619,13 +7624,19 @@ function actorKind(){ return ME.role==="client"?"client":"team"; }
    small query returning only what the panel renders.                        */
 let FB_LOADED={};            // postId -> true once its thread is fetched
 let NOTIF=[];                // rows from unread_notifications
+/* The branding half of "have I read this". post_seen is keyed on a post
+   and cannot hold a task, so tasks get their own marker — see the Stage 4
+   migration for why widening post_seen was the worse of the two. */
+let TASK_SEEN={};            // taskId -> seen_at
+let TASK_SEEN_OK=false;      // false until we know the table is there
 async function loadPostFeedback(){
   try{
     const me=(ME.email||"").toLowerCase();
     const [sn]=await Promise.all([
       sb.from("post_seen").select("*").eq("user_email",me),
       loadNotifications(),
-      loadCommentCounts()
+      loadCommentCounts(),
+      loadTaskSeen()
     ]);
     loadPeople();
     FB_AVAILABLE=true;
@@ -7633,6 +7644,38 @@ async function loadPostFeedback(){
     POSTFB.seen={};
     if(!sn.error) (sn.data||[]).forEach(r=>{ POSTFB.seen[r.post_id]=r.seen_at; });
   }catch(e){ FB_AVAILABLE=false; }
+}
+
+/* SAFE BEFORE THE MIGRATION, AND THAT IS THE POINT. task_seen arrives
+   with Stage 4. Until it does, this returns nothing, TASK_SEEN_OK stays
+   false, and taskMarkSeen() below does the local half only — so this
+   version can be deployed on its own, with no task rows to draw and
+   nothing that throws. The app half ships first; the migration switches
+   it on. The reverse order breaks the bell. */
+async function loadTaskSeen(){
+  TASK_SEEN={}; TASK_SEEN_OK=false;
+  try{
+    const me=(ME.email||"").toLowerCase(); if(!me) return;
+    const r=await sb.from("task_seen").select("task_id,seen_at").eq("user_email",me);
+    if(r.error) return;                       // the table is not there yet
+    TASK_SEEN_OK=true;
+    (r.data||[]).forEach(x=>{ TASK_SEEN[x.task_id]=x.seen_at; });
+  }catch(e){}
+}
+/* The badge is refreshed HERE, at the one place branding unread state
+   changes — the same rule fbMarkSeen follows, and for the same reason:
+   a call site that marks-seen and re-renders without touching the bell
+   leaves the count stale while the panel says "Nothing waiting for you."  */
+async function taskMarkSeen(taskId){
+  if(!taskId) return;
+  const me=(ME.email||"").toLowerCase(); if(!me) return;
+  const now=new Date().toISOString();
+  TASK_SEEN[taskId]=now;
+  syncBell();
+  if(!TASK_SEEN_OK) return;                   // local half only, pre-migration
+  const t=(BR.tasks||[]).find(x=>x.id===taskId);
+  try{ await sb.from("task_seen").upsert({user_email:me,task_id:taskId,
+        brand_id:(t&&t.brand_id)||activeBrand,seen_at:now}); }catch(e){}
 }
 
 /* ══ BA4b — ARCHIVING: structure, deliberately not policy ═══════════════
@@ -8491,7 +8534,11 @@ function notifRowFrom(c){
     const p=(b.social||[]).find(x=>x.id===c.post_id);
     if(p){ post=p; break; }
   }
-  return {comment_id:c.id, post_id:c.post_id, brand_id:c.brand_id,
+  return {comment_id:c.id, post_id:c.post_id||null, brand_id:c.brand_id,
+    task_id:c.task_id||null,
+    /* the title is only knowable if that brand's branding is loaded; the
+       panel falls back to "a branding task" rather than showing nothing */
+    task_title:((BR.tasks||[]).find(t=>t.id===c.task_id)||{}).title||"",
     brand_name:(brands[c.brand_id]||{}).name||"",
     author_name:c.author_name, author_email:c.author_email, author_kind:c.author_kind,
     body:c.body, created_at:c.created_at, mentions:c.mentions||[],
@@ -8504,12 +8551,21 @@ function notifIngest(c){
   if(!c||!c.id||c.deleted_at) return;
   if(String(c.author_email||"").toLowerCase()===me) return;   // never notify me of me
   if((NOTIF||[]).some(r=>r.comment_id===c.id)) return;        // idempotent: realtime can repeat
-  const seen=POSTFB.seen[c.post_id];
+  /* NEVER NOTIFY ME OF ME, part two. author_email is empty on a message
+     typed AS THE CLIENT, so the author check above lets it through — and
+     the Ac Manager who transcribed the call would be told about their own
+     typing. entered_by is who actually pressed the keys. */
+  if(c.entered_by&&ME.id&&c.entered_by===ME.id) return;
+  const seen=c.task_id?TASK_SEEN[c.task_id]:POSTFB.seen[c.post_id];
   if(seen&&new Date(c.created_at)<=new Date(seen)) return;    // already read past this point
   NOTIF.unshift(notifRowFrom(c));
-  const cur=FB_COUNTS[c.post_id]||{comments:0,open_threads:0};
-  FB_COUNTS[c.post_id]={comments:cur.comments+1,
-                        open_threads:cur.open_threads+(c.parent_id?0:1)};
+  /* comment counts are a POST idea — a task has no card to badge, and
+     FB_COUNTS[null] is a key nothing ever reads and nothing ever clears */
+  if(c.post_id){
+    const cur=FB_COUNTS[c.post_id]||{comments:0,open_threads:0};
+    FB_COUNTS[c.post_id]={comments:cur.comments+1,
+                          open_threads:cur.open_threads+(c.parent_id?0:1)};
+  }
   syncBell();
 }
 function notifDrop(commentId){
@@ -8813,10 +8869,16 @@ function notifItems(){
   const me=(ME.email||"").toLowerCase();
   return (NOTIF||[])
     .filter(r=>{
-      const seen=POSTFB.seen[r.post_id];
+      const seen=r.task_id?TASK_SEEN[r.task_id]:POSTFB.seen[r.post_id];
       return !seen || new Date(r.created_at)>new Date(seen);
     })
     .map(r=>({
+      /* `post` is kept on EVERY row, nulls and all. Half the panel and
+         "mark all read" reach for it.post.id, and a row shaped
+         differently depending on its kind is how one of those quietly
+         starts throwing on a Tuesday. One shape, one extra field. */
+      kind:r.task_id?"task":"post",
+      taskId:r.task_id||null, taskTitle:r.task_title||"",
       brandId:r.brand_id, brandName:r.brand_name,
       post:{id:r.post_id, month:r.post_month, date:r.post_date, year:r.post_year},
       c:{id:r.comment_id, body:r.body, author_name:r.author_name,
@@ -8849,12 +8911,17 @@ function buildNotifPanel(){
   const groups=Object.entries(byBrand).map(([bid,g])=>{
     const rows=g.rows.map(it=>{
       const verb=it.mention?"mentioned you":"commented";
-      return `<div class="nrow unread" onclick="notifOpen('${bid}','${it.post.id}')">
+      const isTask=it.kind==="task";
+      const where=isTask
+        ? `<span class="ntask">${escAttr(it.taskTitle||"a branding task")}</span>`
+        : notifDate(it.post.month,it.post.date);
+      const target=isTask?it.taskId:it.post.id;
+      return `<div class="nrow unread" onclick="notifOpen('${bid}','${it.kind}','${escAttr(target)}')">
         <span class="nav-av${it.c.author_kind==="client"?" client":""}">${escAttr(String(it.c.author_name||"?").slice(0,2).toUpperCase())}</span>
         <div class="nbody">
           <div class="msg">${fbRich(String(it.c.body||"").slice(0,160))}</div>
           <div class="attr"><span class="who">${escAttr(it.c.author_name)}</span> ${verb} ·
-            ${notifDate(it.post.month,it.post.date)}<span class="when">${fbTimeLabel(it.c.created_at)}</span></div>
+            ${where}<span class="when">${fbTimeLabel(it.c.created_at)}</span></div>
         </div></div>`;
     }).join("");
     return `<div class="ngh"><span class="bdot" style="background:${(brands[bid]||{}).color||"#6B6B6B"}"></span>
@@ -8863,8 +8930,21 @@ function buildNotifPanel(){
   el.innerHTML=`<div class="nphead"><b>Notifications</b>
       <span class="mark" onclick="notifMarkAll()">Mark all read</span></div>${groups}`;
 }
-async function notifOpen(brandId,postId){
+async function notifOpen(brandId,kind,postId){
   closeAllPops();
+  if(kind==="task"){
+    const taskId=postId;                       // same slot, different thing
+    pickBrand(brandId);
+    /* WAIT FOR THE BRANDING LOAD. renderTask() looks the task up in BR
+       and bounces to the list when it is not there yet — so opening a
+       notification for a brand you were not already on would land you on
+       the wrong screen with no error. brSync() would fetch it a moment
+       later, by which time the view has already moved. */
+    if(BR.brand!==brandId) await loadBranding(brandId);
+    await taskMarkSeen(taskId);
+    openTaskScreen(taskId);
+    return;
+  }
   const p=(brands[brandId]&&(brands[brandId].social||[]).find(x=>x.id===postId));
   // BA4: the month comes from the notification row, so this still works even
   // if that post is not in the current working set
@@ -8881,8 +8961,13 @@ async function notifOpen(brandId,postId){
 }
 async function notifMarkAll(){
   const items=notifItems();
-  const seen=[...new Set(items.map(i=>i.post.id))];
-  for(const pid of seen) await fbMarkSeen(pid);
+  /* .filter(Boolean) is not decoration: before Stage 4 every row had a
+     post and this could map blindly. Now half of them do not, and a
+     single undefined in here writes a post_seen row for the post "undefined". */
+  const posts=[...new Set(items.filter(i=>i.kind!=="task").map(i=>i.post.id).filter(Boolean))];
+  const tasks=[...new Set(items.filter(i=>i.kind==="task").map(i=>i.taskId).filter(Boolean))];
+  for(const pid of posts) await fbMarkSeen(pid);
+  for(const tid of tasks) await taskMarkSeen(tid);
   closeAllPops(); syncBell(); renderSocial();
 }
 
@@ -9168,6 +9253,18 @@ function rtComment(pl){
      looking at. So notifIngest comes BEFORE the memory bookkeeping below,
      which only matters for a thread already open on screen. */
   if(row.deleted_at) notifDrop(row.id); else notifIngest(row);
+  /* A BRANDING MESSAGE IS NOT A POST COMMENT, and this line used to file
+     it as one — POSTFB.comments[null], a bucket nothing reads and nothing
+     clears. It goes to the open thread instead, if that is the thread
+     being looked at. */
+  if(row.task_id){
+    if(view==="task"&&TASK.id===row.task_id&&!row.deleted_at){
+      const i=(TASK.msgs||[]).findIndex(m=>m.id===row.id);
+      if(i>-1) TASK.msgs[i]=row; else TASK.msgs.push(row);
+      render();
+    }
+    return;
+  }
   const list=POSTFB.comments[row.post_id]=POSTFB.comments[row.post_id]||[];
   const i=list.findIndex(c=>c.id===row.id);
   if(i>-1){
