@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>CC Marketing Calendar 2026</title>
+<title>Marketing Calendar 2026</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico"/>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png"/>
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png"/>
@@ -1783,6 +1783,35 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
   font-weight:600;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px;}
 .brs-del:hover{color:var(--acc);}
 
+
+/* ══ CAPE TOWN LOCK · THE LAYER TOGGLES ══════════════════════════════
+   A switch you flip, not a tab you pick — because Social and Branding
+   are independent on/off while Calendar and List are exclusive. The
+   little sliding switch is the same control Past months already uses,
+   so it is not a new idea in this interface. Each carries the colour it
+   puts on the calendar. */
+.laygrp{display:flex;gap:7px;align-items:center;}
+.lay{height:32px;padding:0 11px 0 9px;border-radius:8px;border:1px solid rgba(255,255,255,.2);
+  display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:650;cursor:pointer;
+  color:rgba(255,255,255,.7);background:transparent;font-family:inherit;white-space:nowrap;
+  transition:background 120ms,border-color 120ms,color 120ms,opacity 120ms;}
+.lay .sw{width:26px;height:15px;border-radius:99px;background:rgba(255,255,255,.22);
+  position:relative;flex:none;font-style:normal;transition:background 120ms;}
+.lay .sw::after{content:'';position:absolute;top:2px;left:2px;width:11px;height:11px;
+  border-radius:50%;background:#fff;transition:left .12s;}
+.lay:hover{color:#fff;}
+.lay.on{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.45);color:#fff;}
+.lay.on .sw::after{left:13px;}
+#lay-social.on .sw{background:#0E9A9A;}
+#lay-branding.on .sw{background:#6D28D9;}
+/* Inert on the List, because the layers change what the CALENDAR draws
+   and the merged list was dropped. Dimmed rather than hidden so the bar
+   does not change width every time you switch view. */
+.lay.inert{opacity:.4;cursor:default;}
+.lay.inert:hover{color:rgba(255,255,255,.7);}
+/* the brand header's four doors */
+.bh-door.on{background:var(--text)!important;color:#fff!important;border-color:var(--text)!important;}
+
 </style>
 
 </head>
@@ -1791,7 +1820,7 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 <!-- NAV -->
 <nav class="nav">
   <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menu">☰</button>
-  <div class="nav-brand" id="nav-brand-txt" onclick="goHome()" title="Back to the calendar">CC Marketing Calendar<span class="dot">.</span></div>
+  <div class="nav-brand" id="nav-brand-txt" onclick="goHome()" title="Back to the calendar">Marketing Calendar<span class="dot">.</span></div>
   <span class="nav-sep"></span>
 
   <!-- ONE brand control. It used to be a picker (a select) next to a
@@ -1807,27 +1836,35 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
     <div class="bpanel" id="brand-panel"></div>
   </div>
 
+  <!-- ══ CAPE TOWN · TWO QUESTIONS, TWO SHAPES ═══════════════════════
+       Calendar and List are MUTUALLY EXCLUSIVE — one is always on — so
+       they are a switch. Social and Branding are INDEPENDENT on/off — none,
+       one or both — so they are toggles. The old bar drew both as identical
+       tabs, which is why nobody could tell that Content behaved unlike its
+       neighbours. The shape now carries the rule. -->
   <div class="tab-pill" style="margin-left:2px;">
     <button class="tab-item on" data-v="year" onclick="setView('year',this)">Calendar</button>
     <button class="tab-item" data-v="list" onclick="setView('list',this)">List</button>
-    <button class="tab-item" data-v="content" id="tab-content" onclick="navContent(this)"
-            title="Pick a brand to open Content">Content</button>
   </div>
 
-  <div class="ystep">
-    <button onclick="stepYear(-1)" title="Previous year">‹</button>
-    <span class="yv" id="year-val">2026</span>
-    <button onclick="stepYear(1)" title="Next year">›</button>
+  <span class="nav-sep" id="lay-sep" style="display:none;"></span>
+  <div class="laygrp" id="lay-grp" style="display:none;">
+    <button class="lay" id="lay-social" onclick="toggleSocialLayer()"><i class="sw"></i> Social</button>
+    <button class="lay" id="lay-branding" onclick="toggleBrandingLayer()"><i class="sw"></i> Branding</button>
   </div>
-
-  <!-- was "Full | Upcoming": two pills identical to the view switcher but
-       answering a different question. One switch, and it says what it does. -->
-  <button class="qtog" id="past-tog" onclick="setFromNow(!fromNow)" title="Show months before this one">
-    <i class="sw"></i> Past months
-  </button>
-  <span class="nav-year" id="range-lbl"></span>
 
   <div class="nav-right">
+    <!-- The year and the past-months switch are SETTINGS for the view, not
+         destinations. They were sitting where destinations go. The month
+         range label is gone: it restated what the visible cards showed. -->
+    <div class="ystep">
+      <button onclick="stepYear(-1)" title="Previous year">‹</button>
+      <span class="yv" id="year-val">2026</span>
+      <button onclick="stepYear(1)" title="Next year">›</button>
+    </div>
+    <button class="qtog" id="past-tog" onclick="setFromNow(!fromNow)" title="Show months before this one">
+      <i class="sw"></i> Past months
+    </button>
     <div class="bsw">
       <button class="nav-btn" id="export-btn" onclick="toggleExportSw(event)">
         <i class="ti ti-download"></i> Export <i class="ti ti-chevron-down" style="font-size:11px;opacity:.6;"></i>
@@ -2234,7 +2271,7 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 <!-- AUTH -->
 <div id="auth-screen" style="position:fixed;inset:0;background:var(--bg);z-index:5000;display:flex;align-items:center;justify-content:center;">
   <div style="background:var(--surface);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.12);padding:36px;width:100%;max-width:380px;">
-    <div style="font-size:22px;font-weight:700;letter-spacing:-.02em;">CC Marketing Calendar<span style="color:var(--acc);">.</span></div>
+    <div style="font-size:22px;font-weight:700;letter-spacing:-.02em;">Marketing Calendar<span style="color:var(--acc);">.</span></div>
     <div style="font-size:13px;color:var(--muted);margin:4px 0 22px;">Sign in to your calendar</div>
     <div id="auth-form">
       <div class="field"><label class="fl">Email</label><input class="fi" id="auth-email" type="email" autocomplete="username"/></div>
@@ -2648,7 +2685,12 @@ function allFiltered(){let a=[];for(let m=1;m<=12;m++) a=a.concat(filtered(m).ma
    not touched, because they are not Cape Town's job.
    tests/capetown_routing.js now refuses any NEW duplicate.
    ══════════════════════════════════════════════════════════════════ */
-function toggleSocialLayer(){ socialLayer=!socialLayer; if(!socialLayer&&view==="content"){ setView("year"); return; } render(); }
+function toggleSocialLayer(){
+  if(!activeBrand) return;
+  socialLayer=!socialLayer; LAYER_PREF.social=socialLayer;
+  if(!socialLayer&&view==="content"){ setView("year"); return; }
+  render();
+}
 // Shanghai: Planning removed as a mode. Kept as a no-op shim so any
 // stale call site cannot throw; planningMode stays false forever.
 function togglePlanning(){ if(!socialLayer)socialLayer=true; if(view!=="year")setView("year"); else render(); }
@@ -2917,33 +2959,43 @@ function brandHeaderHtml(){
   const b=brands[activeBrand]; if(!b) return "";
   const name=brandTitleHtml(b.name);
   if(!canEdit()) return `<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">${name}</div>`;
-  const socOn=socialLayer;
-  // one crisp segmented control; every segment fixed 36px tall
-  const seg=(active,dark,onclick,icon,label,first)=>`<span onclick="${onclick}" style="height:36px;box-sizing:border-box;padding:0 14px;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;${first?"":"border-left:1px solid rgba(214,40,40,.22);"}background:${active?(dark?"#0D0D0D":"#D62828"):"#fff"};color:${active?"#fff":"var(--muted)"};"><i class="ti ${icon}"></i> ${label}</span>`;
-  /* CAPE TOWN: Branding sits immediately after Social, because both are
-     verticals for the same client and are therefore the same kind of
-     thing. The black nav bar holds VIEWS of the calendar, and a vertical
-     is not a view — which is why the tab there was wrong. */
-  const brOn=brandingActive();
-  const brSeg=seg(brOn,false,"brandingBtn()","ti-clipboard-text","Branding",false);
-  let group;
-  if(socOn){
-    // Shanghai: Planning is gone (the calendar is always plannable) and
-    // Content moved up into the nav's view switcher, so the brand header
-    // carries only the Social layer toggle.
-    group=`<div style="display:flex;align-items:stretch;height:36px;box-sizing:border-box;border:1px solid #D62828;border-radius:8px;overflow:hidden;">${seg(true,false,"toggleSocialLayer()","ti-photo","Social",true)}${brSeg}</div>`;
-  } else {
-    group=`<div style="display:flex;align-items:stretch;height:36px;box-sizing:border-box;border:1px solid ${brOn?"#D62828":"var(--div)"};border-radius:8px;overflow:hidden;">${seg(false,false,"toggleSocialLayer()","ti-photo","Social",true)}${brSeg}</div>`;
-  }
-  const brief=`<button title="Brand Vision" class="btn btn-s" onclick="openBrief()" style="background:var(--surface);"><i class="ti ti-file-text"></i> Brand Vision</button>`;
-  // planning hint lives INLINE in the header row (row height fixed at 36px by the buttons),
-  // so toggling planning never pushes the calendar down.
-  const hint=(socOn&&view==="year"&&canEdit())?`<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:#E1F5EE;color:#0E8A8A;font-size:11px;font-weight:600;white-space:nowrap;"><i class="ti ti-pencil-plus"></i> Click any date to plan a post</span>`:"";
+  /* ══ CAPE TOWN · THE HEADER HOLDS SCREENS, THE NAV HOLDS LAYERS ═════
+     Four doors, and they appear with the BRAND — never with a layer.
+     Gating a screen behind a layer toggle is what made the Branding list
+     unreachable from the calendar, and it is the same fault whichever
+     level it happens at: the door to a screen must not depend on how a
+     different screen is drawn.
+
+     The names say what the screen holds. The nav says Social and
+     Branding — the verticals — and these say Posts and Tasks, because
+     "Social" and "Social Content" are two different things one word
+     apart and they will be confused in conversation before they are
+     confused on screen. */
+  const door=(on,onclick,icon,label)=>`<button class="btn btn-s bh-door${on?" on":""}" onclick="${onclick}" style="${on?"":"background:var(--surface);"}"><i class="ti ${icon}"></i> ${label}</button>`;
+  const doors=[
+    door(view==="brief",   "openBrief()",           "ti-file-text",      "Brand Vision"),
+    door(view==="mplan",   "openMonthPlanView(curMonth||1)","ti-calendar-stats","Monthly plan"),
+    door(view==="content", "navPosts()",            "ti-photo",          "Posts"),
+    door(view==="branding","navTasks()",            "ti-clipboard-text", "Tasks"),
+  ].join("");
   return `<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">${name}${hint}</div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">${group}${brief}</div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">${name}</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">${doors}</div>
   </div>`;
 }
+/* A control that silently does nothing is worse than one that says why.
+   The first draft of these returned quietly with no brand — the gate
+   caught it, because the assertion was written when the old function
+   still toasted. */
+function navPosts(){
+  if(!activeBrand){ toast("Pick a brand first — Posts is per brand"); return; }
+  socialLayer=true; LAYER_PREF.social=true; setView("content");
+}
+function navTasks(){
+  if(!activeBrand){ toast("Pick a brand first — Tasks is per brand"); return; }
+  setView("branding");
+}
+
 function renderYear(){
   const mc=document.getElementById("main");
   const b=activeBrand&&brands[activeBrand];
@@ -3961,19 +4013,27 @@ function buildMini(m){
   // posts count shown consistently for a brand (like events/campaigns), independent of the layer toggle
   const mPosts=(activeBrand&&brands[activeBrand])?socialForBrandYear(activeBrand,YEAR).filter(p=>p.month===m).length:0;
   const mBrand=brLaneItems(m).length;
-  /* ══ CAPE TOWN · CAMPAIGNS, POSTS, BRANDING — AND EVENTS IS GONE ══
-     Dropping the event count is what made room for the third pill. Every
-     month has events and that number never told anybody anything they
-     would act on, so it was the cheapest of the four to lose.
+  const mEvents=fevs.filter(e=>!e._isPost&&gc(e)!=="cat5").length;
+  /* ══ CAPE TOWN · NEVER MORE THAN THREE, AND THEY SAY WHAT IS ON SCREEN
+     Campaigns are always there. Posts and branding claim a slot when
+     their layer is on — a pill for a layer you switched off would be
+     counting something you cannot see.
 
-     THE SHORT WORD STAYS. Three bare numerals in a row read as ONE
-     number unless you have memorised which colour is which — and there
-     is no roll-over at all on a tablet, which is where this is used. So
-     each pill keeps a word, shortened, with the full title on hover. */
+     EVENTS COMES BACK WHEN THERE IS ROOM, and I argued the opposite last
+     week. "Every month has events and the number never told you
+     anything" is true inside one brand looking at that brand's work. It
+     is NOT true on All brands, where events and campaigns are the only
+     thing on screen and the count is the whole summary. Cutting it there
+     was one screen's logic applied to another.
+
+     THE SHORT WORD STAYS. Three bare numerals read as one number unless
+     you have memorised the colours, and there is no hover on a tablet. */
+  const layerOn=(socialLayer||brandingLayer)&&!!(activeBrand&&brands[activeBrand]);
   const pills=[];
+  if(!layerOn&&mEvents) pills.push(`<span class="mc-count" title="${mEvents} event${mEvents!==1?"s":""}">${mEvents} events</span>`);
   if(mCamp)  pills.push(`<span class="mc-count camp" title="${mCamp} campaign${mCamp!==1?"s":""}">${mCamp} camp</span>`);
-  if(mPosts) pills.push(`<span class="mc-count" style="background:#E1F5EE;color:#0E8A8A;" title="${mPosts} post${mPosts!==1?"s":""}">${mPosts} post</span>`);
-  if(mBrand) pills.push(`<span class="mc-count" style="background:#F1EDFA;color:#4C1D95;" title="${mBrand} branding task${mBrand!==1?"s":""}">${mBrand} brand</span>`);
+  if(socialLayer&&mPosts) pills.push(`<span class="mc-count" style="background:#E1F5EE;color:#0E8A8A;" title="${mPosts} post${mPosts!==1?"s":""}">${mPosts} post</span>`);
+  if(brandingLayer&&mBrand) pills.push(`<span class="mc-count" style="background:#F1EDFA;color:#4C1D95;" title="${mBrand} branding task${mBrand!==1?"s":""}">${mBrand} brand</span>`);
   if(!pills.length) pills.push(`<span class="mc-count" style="opacity:.4;">—</span>`);
   const countPills=pills.join("");
   /* MADRID: the social-layer condition is gone. A month plan belongs to
@@ -4751,7 +4811,7 @@ function delBrand(k){
 }
 
 function selectBrand(k){
-  activeBrand=k; document.getElementById("brand-sel").value=k; renderBM(); render();
+  activeBrand=k; applyLayerDefaults(); document.getElementById("brand-sel").value=k; renderBM(); render();
   loadBranding(k).then(()=>{ if(activeBrand===k){ renderBM(); render(); } });
 }
 /* CAPE TOWN: every brand change reloads that brand's branding. It
@@ -4760,7 +4820,7 @@ function selectBrand(k){
    holding the whole interface on a network round trip for a strip under
    the month cards. */
 function setBrand(k){
-  activeBrand=k; render();
+  activeBrand=k; applyLayerDefaults(); render();
   loadBranding(k).then(()=>{ if(activeBrand===k) render(); });
 }
 
@@ -5217,10 +5277,7 @@ function syncBrandTrig(){
   const tc=document.getElementById("tab-content");
   if(tc) tc.classList.toggle("off",!activeBrand);       /* Content needs a brand */
 }
-function navContent(btn){
-  if(!activeBrand){ toast("Pick a brand first — Content is per brand"); return; }
-  socialLayer=true; setView("content",btn);
-}
+
 /* ══ CAPE TOWN · STAGE 1 — the Branding tab ══════════════════════════
    Brand-scoped for the same reason Content is, and it is not a drawing
    decision: a branding task carries exactly one brand_id, because brand
@@ -5246,18 +5303,59 @@ let BR={brand:null,tasks:[],ms:[],projects:[],types:[],ok:false,err:"",loading:f
    Same shape as socialLayer, which has worked since Shanghai. */
 let brandingLayer=false;
 
+/* ══ THE LAYERS START ON, AND THEY REMEMBER FOR THE SESSION ═════════
+   Starting OFF made the toggle a thing you had to press every single
+   time to see your own work. Starting ON makes it a thing you press
+   occasionally to quiet a busy calendar down — which is a far better
+   job for a toggle, and how map layers have always worked.
+
+   It does NOT bring back the empty strips: the lane only draws for
+   months that actually have branding work, so a brand with no tasks
+   gets no lane and no extra card height either way.
+
+   MEMORY IS FOR THE SESSION, NOT FOREVER. Remembering per brand in the
+   database would mean two people opening the same brand see different
+   calendars, and neither could describe what they were looking at to
+   the other. Reloading resets to on. */
+const LAYER_PREF={social:null,branding:null};   // null = never touched this session
+function applyLayerDefaults(){
+  if(!activeBrand){ socialLayer=false; brandingLayer=false; return; }
+  socialLayer   = LAYER_PREF.social   === null ? true : LAYER_PREF.social;
+  brandingLayer = LAYER_PREF.branding === null ? true : LAYER_PREF.branding;
+}
+function toggleBrandingLayer(){
+  if(!activeBrand) return;
+  brandingLayer=!brandingLayer; LAYER_PREF.branding=brandingLayer; render();
+}
+/* The toggles belong to the Calendar — they change what it draws. With
+   the merged list dropped they do nothing on the List, so there they are
+   DIMMED and say why, rather than sitting there as live controls that
+   change nothing. Hiding them would make the bar change width on every
+   view switch; dimming keeps it still. */
+function syncLayerBar(){
+  const grp=document.getElementById("lay-grp"), sep=document.getElementById("lay-sep");
+  const on=!!(activeBrand&&brands[activeBrand]);
+  if(grp) grp.style.display=on?"flex":"none";
+  if(sep) sep.style.display=on?"":"none";
+  if(!on) return;
+  const inert=(view!=="year");
+  const set=(id,active,why)=>{
+    const el=document.getElementById(id); if(!el) return;
+    el.classList.toggle("on",active);
+    el.classList.toggle("inert",inert);
+    el.title=inert?"Layers change what the Calendar draws":why;
+  };
+  set("lay-social",socialLayer,socialLayer?"Hide posts on the calendar":"Show posts on the calendar");
+  set("lay-branding",brandingLayer,brandingLayer?"Hide the branding lane":"Show the branding lane");
+}
+
 /* ONE BUTTON, TWO JOBS, AND THE RULE IS "SHOW ME BRANDING".
    On the calendar that means the lane; anywhere else it means the list.
    Social behaves this way already — it toggles a layer on the calendar
    and Content is its own screen — so this is the same idea with one
    fewer control. From the calendar the list is reached by the lane's own
    "Branding" heading and by "+n more". */
-function brandingBtn(){
-  if(!activeBrand){ toast("Pick a brand first — Branding is per brand"); return; }
-  if(view==="branding"){ setView("year"); return; }
-  if(view==="year"){ brandingLayer=!brandingLayer; render(); return; }
-  setView("branding");
-}
+
 function brandingActive(){ return view==="branding"||(view==="year"&&brandingLayer); }
 
 /* BR BELONGS TO ONE BRAND, AND IT SAYS WHICH.
@@ -5424,10 +5522,7 @@ function brLaneHtml(m){
    exists. */
 function brOpenListFor(m){ brFilter={status:"",project:"",overdue:false}; setView("branding"); }
 
-function navBranding(btn){
-  if(!activeBrand){ toast("Pick a brand first — Branding is per brand"); return; }
-  setView("branding",btn);
-}
+
 /* ── the list: v4's row, three lenses, one fixed grid ─────────────── */
 const BR_PILL={not_started:'p-plan',drafting:'p-draft',internal_review:'p-int',
                with_client:'p-cli',needs_closing:'p-close',closed:'p-done'};
@@ -5812,9 +5907,8 @@ function syncHeaderState(){
   syncAccount(); syncBell();
   const yv=document.getElementById("year-val"); if(yv) yv.textContent=YEAR;
   const tg=document.getElementById("past-tog"); if(tg) tg.classList.toggle("on",!fromNow);
-  const rl=document.getElementById("range-lbl");
-  if(rl){ const ms=visibleMonths(); rl.textContent = ms.length===12 ? "All year"
-        : (ms.length? MN[ms[0]].slice(0,3)+" – "+MN[ms[ms.length-1]].slice(0,3) : ""); }
+  /* the month-range label is gone — it restated what the visible cards
+     already showed, and it was taking space on the left of the bar */
   syncBrandTrig();
 }
 
@@ -6491,14 +6585,14 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v64 — Cape Town: the lock — branding as a layer";
+const TOOL_VERSION="v65 — Cape Town: the frame — layers, doors and a new name";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
   let store=0;Object.values(CUSTOM).forEach(a=>store+=a.length);
   let lsOK="working";try{localStorage.setItem("cc_test","1");localStorage.removeItem("cc_test");}catch(e){lsOK="BLOCKED (reload files after each reopen)";}
   const bl=Object.entries(brands).map(([k,b])=>b.name+" ("+(b.evIds||[]).length+" linked, "+(b.posts||[]).length+" dates)").join("\n  ")||"none";
-  alert("CC Marketing Calendar — Data Status\n"
+  alert("Marketing Calendar — Data Status\n"
     +"Tool version: "+TOOL_VERSION+"\n\n"
     +"Master events loaded: "+base+"\n"
     +"Custom events visible: "+cust+"\n"
@@ -11531,7 +11625,12 @@ function ensureVersionBadge(){
     v.className="cc-ver clickable";   /* only the calendar has a data-status panel to open */
     v.title="Click for data status";
     v.onclick=showDiag;
-    side.appendChild(v);
+    /* BEFORE the account block, not appended to the sidebar. Appending
+       put it under .acct, which is why the version sat below the name
+       and the grey line belonged to the account block instead of
+       separating it from the tool. */
+    const acct=side.querySelector(".acct");
+    if(acct) side.insertBefore(v,acct); else side.appendChild(v);
   }
   v.textContent=String(TOOL_VERSION).split(":")[0].trim();
 }
@@ -12459,7 +12558,7 @@ function syncTabs(){
 }
 function render(){
   const brandEl=document.getElementById("nav-brand-txt");
-  if(brandEl) brandEl.innerHTML=`CC Marketing Calendar<span class="dot">.</span>`;
+  if(brandEl) brandEl.innerHTML=`Marketing Calendar<span class="dot">.</span>`;
 
   /* RESOLVE THE ROUTE BEFORE BUILDING ANYTHING. The old order built the
      sidebar first and demoted the view afterwards, so losing a brand
@@ -12474,7 +12573,7 @@ function render(){
   syncTabs();
 
   brSync();                     // Cape Town: fetch if BR is for another brand
-  buildSidebar(); syncHeaderState();
+  buildSidebar(); syncHeaderState(); syncLayerBar();
   const brandActive=!!(activeBrand&&brands[activeBrand]);
   document.body.classList.toggle("planning",socialLayer&&view==="year"&&brandActive&&canEdit());
   return r.render();
