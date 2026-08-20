@@ -5741,6 +5741,18 @@ function brMsDel(i){ BT.ms.splice(i,1); brRenderEditor(); }
 function brMsSet(i,k,v){ BT.ms[i][k]=v; }
 function brSet(k,v){ BT[k]=v; }
 
+/* A uuid column takes a uuid or nothing at all. Anything else — most
+   often the STRING "undefined", out of a <select> whose options were
+   built from a field that was not there — is refused by Postgres with a
+   message nobody can act on. This turns that into null at the last
+   moment before a write, so a broken option can cost you an assignment
+   but can never cost you the task you just typed. */
+const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function uuidOrNull(v){
+  const s=String(v==null?"":v).trim();
+  return UUID_RE.test(s)?s:null;
+}
+
 function brRenderEditor(){
   const canE=canEdit();
   const pjOpts=`<option value=""${BT.project_id?"":" selected"}>— no project —</option>`+
@@ -5775,7 +5787,7 @@ function brRenderEditor(){
         <div class="fld"><label>Project <em>optional</em></label>
           <select onchange="brPickProject(this)">${pjOpts}</select></div>
         <div class="fld"><label>Ac Manager</label>
-          <select onchange="brSet('owner_id',this.value||null)">${amOpts}</select></div>
+          <select onchange="brSet('owner_id',uuidOrNull(this.value))">${amOpts}</select></div>
       </div>
       <div class="brf">
         <div class="fld"><label>Delivery to client</label>
@@ -5785,12 +5797,13 @@ function brRenderEditor(){
       </div>
       <div class="brf one"><div class="fld"><label>Brief</label>
         <div class="brbox">
-          <textarea rows="3" placeholder="What the client asked for. Type @ to tag someone."
-                    oninput="brSet('brief',this.value)">${escHtml(BT.brief)}</textarea>
+          <textarea id="bt-brief" rows="3" placeholder="What the client asked for. Type @ to tag someone."
+                    oninput="brSet('brief',this.value);fbMentionKey(event,'bt-brief',activeBrand,true)"
+                    onblur="closeMentionBox()">${escHtml(BT.brief)}</textarea>
           <div class="brbar">
-            <button class="brchip" onclick="toast('Tagging arrives with the thread, in Stage 3')">@ Tag someone</button>
-            <button class="brchip" onclick="toast('Attachments arrive with the thread, in Stage 3')">Attach a file</button>
-            <button class="brchip" onclick="toast('Links arrive with the thread, in Stage 3')">Add a link</button>
+            <button class="brchip" onclick="mentionStart('bt-brief')">@ Tag someone</button>
+            <button class="brchip" onclick="toast('Files on a brief are the next piece of work')">Attach a file</button>
+            <button class="brchip" onclick="toast('Links on a brief are the next piece of work')">Add a link</button>
           </div>
         </div></div></div>
       <div class="brm-h"><b>Milestones</b><small>optional — add them when you know them</small>
@@ -5823,7 +5836,7 @@ async function brSaveTask(){
   const title=(BT.title||"").trim();
   if(!title){ toast("A task needs a title","err"); return; }
   const row={brand_id:activeBrand, title,
-    brief:BT.brief||"", project_id:BT.project_id||null, owner_id:BT.owner_id||null,
+    brief:BT.brief||"", project_id:uuidOrNull(BT.project_id), owner_id:uuidOrNull(BT.owner_id),
     delivery_date:BT.delivery_date||null, status:BT.status||"not_started",
     updated_at:new Date().toISOString()};
   let taskId=BT.id;
@@ -5890,12 +5903,17 @@ async function brDeleteTask(){
    Approval is a consequence of moving on — the same shape as Send to
    the client writing a draft. That is what kept post_rounds from ever
    being pressed: a second, formal act on top of a natural one.        */
-let TASK={id:null,msgs:[],acts:[],loading:false,err:"",asClient:false};
+/* `draft` is the half-typed message. It lives in TASK and not in the
+   textarea because renderTask() rebuilds the composer from scratch, and
+   anything only the DOM knew about is gone the moment the status
+   dropdown, a post, or a reload calls render(). */
+let TASK={id:null,msgs:[],acts:[],loading:false,err:"",asClient:false,draft:""};
 
 function brIsAM(t){ return !!t && (ME.role==="admin" || t.owner_id===ME.id); }
 
 async function loadThread(taskId){
-  TASK={id:taskId,msgs:[],acts:[],loading:true,err:"",asClient:false};
+  const draft=(TASK.id===taskId?TASK.draft:"")||"";
+  TASK={id:taskId,msgs:[],acts:[],loading:true,err:"",asClient:false,draft};
   try{
     const [c,a]=await Promise.all([
       sb.from("post_comments").select("*").eq("task_id",taskId).order("created_at"),
@@ -5908,7 +5926,7 @@ async function loadThread(taskId){
 }
 function openTaskScreen(id){
   if(!activeBrand) return;
-  TASK={id,msgs:[],acts:[],loading:true,err:"",asClient:false};
+  TASK={id,msgs:[],acts:[],loading:true,err:"",asClient:false,draft:""};
   setView("task");
   loadThread(id).then(()=>{ if(TASK.id===id&&view==="task") render(); });
 }
@@ -5951,7 +5969,7 @@ function msgHtml(m){
       <div class="th-h"><b>${who}</b>
         <span class="th-kind${client?" cli":""}">${client?"Client":"Team"}</span>
         ${by}<span class="th-when">${m.created_at?fmtWhen(m.created_at):""}</span></div>
-      <div class="th-t">${escHtml(m.body||"").replace(/\n/g,"<br>")}</div>
+      <div class="th-t">${fbHighlightMentions(escHtml(m.body||"")).replace(/\n/g,"<br>")}</div>
     </div></div>`;
 }
 function fmtWhen(iso){
@@ -6030,7 +6048,8 @@ async function taskSend(){
 
 async function taskPost(){
   const t=brTask(); if(!t) return;
-  const box=document.getElementById("th-in"); const body=(box?box.value:"").trim();
+  const box=document.getElementById("th-in");
+  const body=((box?box.value:TASK.draft)||"").trim();
   if(!body) return;
   const asClient=TASK.asClient;
   if(asClient&&!ME.id){ toast("Cannot record who typed this — sign in again","err"); return; }
@@ -6039,11 +6058,20 @@ async function taskPost(){
     task_id:t.id, brand_id:activeBrand, body,
     author_kind:asClient?"client":"team",
     author_name:asClient?"Client":actorName(),
+    author_email:asClient?"":(ME.email||""),
     author_id:asClient?null:(ME.id||null),
-    entered_by:asClient?(ME.id||null):null};
+    entered_by:asClient?(ME.id||null):null,
+    /* MENTIONS, NOT `tagged`. post_comments.mentions already existed and
+       is the column the notification view reads; the `tagged uuid[]` I
+       added in the Stage 3 migration duplicated it and is left unused.
+       Writing to both would be two truths about one thing.
+       A message typed AS THE CLIENT tags nobody: the client is not
+       choosing to pull the team in, the Ac Manager is transcribing. */
+    mentions:asClient?[]:brMentions(body)};
   const r=await sb.from("post_comments").insert([row]);
   if(r.error){ dbErr(r); return; }
   if(box) box.value="";
+  TASK.draft="";
   TASK.asClient=false;
   await loadThread(t.id); render();
 }
@@ -6077,8 +6105,11 @@ function renderTask(){
          <div class="th-c">
            <span class="th-av">${escHtml(brInitials(ME.id)||"··")}</span>
            <div style="flex:1">
-             <textarea id="th-in" rows="2" placeholder="${TASK.asClient?"What the client said…":"Write a message…"}"></textarea>
+             <textarea id="th-in" rows="2" placeholder="${TASK.asClient?"What the client said…":"Write a message…"}"
+               oninput="TASK.draft=this.value;fbMentionKey(event,'th-in',activeBrand,true)"
+               onblur="closeMentionBox()">${escHtml(TASK.draft||"")}</textarea>
              <div class="th-cb">
+               <button class="th-chip" onclick="mentionStart('th-in')">@ Tag someone</button>
                <button class="th-chip" onclick="toast('Attachments arrive with the file work')">Attach a file</button>
                <button class="th-chip" onclick="toast('Links arrive with the file work')">Add a link</button>
                <button class="th-chip${TASK.asClient?" on":""}" onclick="taskToggleAsClient()">
@@ -6879,7 +6910,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v66 — Cape Town Stage 3: the task is a thread";
+const TOOL_VERSION="v67 — Cape Town: the missing id, and tagging that works";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -8614,7 +8645,7 @@ function fbCopyLink(postId,commentId){
    does not have (a provider, a verified domain).
    ══════════════════════════════════════════════════════════════════ */
 
-let PEOPLE=[];                     // {email,name,role,brand_id}
+let PEOPLE=[];                     // {id,email,name,role,brand_id}
 /* BA5 — read the DIRECTORY, not the profiles table.
    `profiles` is readable only by an admin (or someone with manage_users), so
    every other user got back exactly one row — their own — and since you are
@@ -8632,8 +8663,18 @@ async function loadPeople(){
       r=await sb.from("profiles").select("id,email,role,brand_id");
       if(r.error){ PEOPLE=[]; PEOPLE_BLOCKED=true; return; }
     }
-    PEOPLE=(r.data||[]).filter(x=>x.email&&x.role!=="pending").map(x=>({
-      email:x.email, name:String(x.email).split("@")[0], role:x.role, brand_id:x.brand_id
+    /* BA5b — CARRY THE ID. It was selected here and then dropped on the
+       next line, so every consumer that matches on p.id matched nothing:
+       the Ac Manager column read "—", avatars read "··", and brIsAM() was
+       false for everybody except an admin. Worse, the Ac Manager <option>
+       was built as value="${escAttr(p.id)}" and escAttr(undefined) is the
+       six-letter STRING "undefined" — which went into a uuid column and
+       had every task insert refused. One dropped field, four faults.
+       A row with no id can be none of those things, so it is filtered out
+       here rather than offered as an option that cannot be saved. */
+    PEOPLE=(r.data||[]).filter(x=>x.id&&x.email&&x.role!=="pending").map(x=>({
+      id:x.id, email:x.email, name:String(x.email).split("@")[0],
+      role:x.role, brand_id:x.brand_id
     }));
     /* If the only person we can see is ourselves, we are not looking at a
        small team — we are looking at a truncated read. Say so rather than
@@ -8656,6 +8697,23 @@ function extractMentions(body,brandId){
   });
   return [...new Set(out)];
 }
+/* TEAM ONLY, DELIBERATELY. A branding task is internal until somebody
+   presses "Send to the client", so nobody can tag a client into one —
+   not even their own. mentionablesFor() includes the brand's client,
+   which is right for a social post and wrong here. Same shape, one
+   different rule, so the menu and the extractor cannot drift apart. */
+function brMentionables(){
+  return (PEOPLE||[]).filter(pp=>pp.role!=="client")
+    .filter(pp=>pp.email.toLowerCase()!==(ME.email||"").toLowerCase());
+}
+function brMentions(body){
+  const out=[];
+  brMentionables().forEach(pp=>{
+    const re=new RegExp("@"+pp.name.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i");
+    if(re.test(body||"")) out.push(pp.email);
+  });
+  return [...new Set(out)];
+}
 function fbHighlightMentions(h){
   return h.replace(/(^|\s)@([A-Za-z0-9._-]+)/g,
     '$1<span style="color:var(--acc);font-weight:700;">@$2</span>');
@@ -8663,14 +8721,15 @@ function fbHighlightMentions(h){
 
 /* ── the @ autocomplete ── */
 let mentionBox=null;
-function fbMentionKey(e,inputId,brandId){
+function fbMentionKey(e,inputId,brandId,teamOnly){
   const el=document.getElementById(inputId); if(!el) return;
   const upto=el.value.slice(0,el.selectionStart||0);
   const m=upto.match(/@([A-Za-z0-9._-]*)$/);
   closeMentionBox();
   if(!m) return;
   const q=m[1].toLowerCase();
-  const hits=mentionablesFor(brandId).filter(pp=>pp.name.toLowerCase().startsWith(q)).slice(0,6);
+  const pool=teamOnly?brMentionables():mentionablesFor(brandId);
+  const hits=pool.filter(pp=>pp.name.toLowerCase().startsWith(q)).slice(0,6);
   /* BA5: an empty menu used to be indistinguishable from a directory we are
      not allowed to read — which is exactly how the admin-only mention bug
      stayed invisible. If the directory came back truncated, say so. */
@@ -8698,6 +8757,26 @@ function fbPickMention(ev,inputId,name){
   el.value=before+el.value.slice(pos);
   closeMentionBox(); el.focus();
   el.selectionStart=el.selectionEnd=before.length;
+  /* Setting .value in script does NOT fire `input`, and the branding
+     brief is stored in BT on that very event — without this line the tag
+     you picked is on the screen and is not in what gets saved. Harmless
+     for the social boxes, which read .value at send time: the inserted
+     text ends in a space, so the re-entered fbMentionKey matches nothing
+     and simply closes. It cannot loop, because the re-entry returns
+     before it can dispatch anything itself. */
+  el.dispatchEvent(new Event("input",{bubbles:true}));
+}
+/* The chip is a shortcut for typing "@", not a second mechanism. There
+   is one menu, and this opens it where the cursor already is. */
+function mentionStart(inputId){
+  const el=document.getElementById(inputId); if(!el) return;
+  el.focus();
+  const pos=el.selectionStart==null?el.value.length:el.selectionStart;
+  const pre=el.value.slice(0,pos);
+  const ins=(!pre||/\s$/.test(pre))?"@":" @";
+  el.value=pre+ins+el.value.slice(pos);
+  el.selectionStart=el.selectionEnd=pos+ins.length;
+  el.dispatchEvent(new Event("input",{bubbles:true}));
 }
 
 /* ── unread: separate from "unresolved", deliberately ── */
