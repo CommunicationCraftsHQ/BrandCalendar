@@ -1038,6 +1038,31 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 
 /* history: same content, a quarter of the height */
 .mstripwrap{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;}
+/* A refused upload, said out loud. Amber rather than red: the comment
+   itself was posted and is fine — only the file did not make it, and a
+   red block would read as "everything failed". */
+/* What is about to be attempted, named and sized, before the comment is
+   written. A bare count made a 240MB reel look like a 40KB logo. */
+.stagedfs{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-left:2px;}
+.stagedf{display:inline-flex;align-items:center;gap:6px;max-width:230px;
+  background:var(--surface);border:1px solid var(--div);border-radius:7px;
+  padding:3px 5px 3px 9px;font-size:11.5px;font-weight:600;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.stagedf b{font-weight:600;color:var(--subtle);flex:none;}
+.stagedf i{font-style:normal;cursor:pointer;color:var(--subtle);font-size:14px;
+  line-height:1;padding:0 3px;flex:none;}
+.stagedf i:hover{color:var(--acc);}
+.upfail{margin:8px 0 0;display:flex;flex-direction:column;gap:6px;}
+.upfail-r{display:flex;gap:9px;align-items:flex-start;background:#FDF6E7;
+  border:1px solid #EBD9AE;border-radius:9px;padding:9px 10px 9px 11px;}
+.upfail-i{color:#9A6B08;font-size:14px;line-height:1;padding-top:1px;flex:none;}
+.upfail-t{flex:1;min-width:0;font-size:12.5px;line-height:1.45;}
+.upfail-t b{font-weight:700;word-break:break-all;}
+.upfail-b{color:#8A7B55;font-weight:600;margin-left:7px;white-space:nowrap;}
+.upfail-w{color:#7A5E12;margin-top:2px;}
+.upfail-x{border:0;background:transparent;color:#9A6B08;font-size:17px;line-height:1;
+  cursor:pointer;padding:0 2px;flex:none;font-family:inherit;}
+.upfail-x:hover{color:#5E4207;}
 .mstrip{position:relative;height:74px;width:74px;border-radius:9px;overflow:hidden;background:var(--surface2);
   flex:none;cursor:zoom-in;}
 
@@ -3346,7 +3371,7 @@ function fbPanelHtml(p){
       /* A6 — NYF8: a comment that suggests a line had no way of becoming
          that line. Staged, never saved silently (D14). */
       : `<div style="font-size:13px;line-height:1.5;">${fbRich(c.body)}</div>
-         ${mediaBlock(assetsFor("comment",c.id))}
+         ${mediaBlock(assetsFor("comment",c.id))}${uploadFailBlock("comment",c.id)}
          ${canEditCaption()&&(c.body||"").trim()
             ?`<span class="capply" onclick="fbApplyToCaption('${p.id}','${c.id}')"
                 title="Put this into the caption — you confirm before it saves">↑ Apply to caption</span>`:""}
@@ -6991,7 +7016,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v71 — Valencia: a CC mailbox is the only way in";
+const TOOL_VERSION="v72 — a refused upload says so";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -7947,10 +7972,36 @@ function loadScript(src){
 /* Supabase Storage is resumable above 6 MB, so a dropped connection on a
    1 GB file resumes rather than starting again. Below that a plain PUT is
    faster than the protocol overhead. */
+/* ══ THE REASON IS NOT OURS TO THROW AWAY ════════════════════════════
+   This returned `r.error ? null : path` — so Supabase said exactly why it
+   refused a file and the answer was dropped on the floor one line later.
+   uploadAsset then guessed: "check your access to this brand", which is
+   the wrong sentence for a file that is simply too large, and sends
+   somebody to look at permissions that were never the problem.
+
+   Videos failed for a week and nobody could find out why, because the
+   only system that knew had been silenced here.
+
+   The contract changes to {path, error}. Four call sites, all in
+   uploadAsset, all updated — the derivatives still treat a missing path
+   as "no derivative", which is a state they are allowed to be in. */
+function storageErrText(e){
+  if(!e) return "";
+  const bits=[e.message, e.error, e.statusCode!=null?("status "+e.statusCode):""]
+    .filter(x=>x&&String(x).trim()).map(String);
+  return [...new Set(bits)].join(" · ") || "Storage refused the file and gave no reason";
+}
 async function putObject(path,blob,contentType){
-  const r=await sb.storage.from(MEDIA_BUCKET).upload(path,blob,
-    {contentType,upsert:true,cacheControl:"3600"});
-  return r.error?null:path;
+  try{
+    const r=await sb.storage.from(MEDIA_BUCKET).upload(path,blob,
+      {contentType,upsert:true,cacheControl:"3600"});
+    if(r.error) return {path:null,error:storageErrText(r.error)};
+    return {path,error:""};
+  }catch(e){
+    /* A network failure never reaches r.error — it throws. A big file on a
+       slow line dies here, and this used to surface as the same silence. */
+    return {path:null,error:storageErrText(e)||"The upload did not complete — the connection dropped"};
+  }
 }
 function mediaPath(brandId,ownerKind,ownerId,name){
   return `${brandId}/${ownerKind}/${ownerId}/${Date.now().toString(36)}_${name.replace(/[^\w.\-]/g,"_")}`;
@@ -8067,8 +8118,14 @@ async function uploadAsset(file,{ownerKind,ownerId,brandId,slideNo=null,onTick})
     tick(12,"uploading");
 
     const base=mediaPath(brandId,ownerKind,ownerId,file.name);
-    const storage_path=await putObject(base,file,file.type||"application/octet-stream");
-    if(!storage_path){ tick(0,"failed","Upload was refused — check your access to this brand"); return null; }
+    const put=await putObject(base,file,file.type||"application/octet-stream");
+    const storage_path=put.path;
+    if(!storage_path){
+      const why=put.error||"Upload was refused";
+      tick(0,"failed",why);
+      noteUploadFail(ownerKind,ownerId,file,why);
+      return null;
+    }
     /* Nothing to roll back here: the original is written FIRST, so a
        refusal at this point means the bucket is untouched. The order is
        deliberate and this comment exists so nobody "tidies" it by
@@ -8077,9 +8134,9 @@ async function uploadAsset(file,{ownerKind,ownerId,brandId,slideNo=null,onTick})
     tick(78,"uploading");
 
     let thumb_path="",view_path="",poster_path="";
-    if(d.thumb)  thumb_path =await putObject(base+".thumb.jpg", d.thumb, "image/jpeg")||"";
-    if(d.view)   view_path  =await putObject(base+".view.jpg",  d.view,  "image/jpeg")||"";
-    if(d.poster) poster_path=await putObject(base+".poster.jpg",d.poster,"image/jpeg")||"";
+    if(d.thumb)  thumb_path =(await putObject(base+".thumb.jpg", d.thumb, "image/jpeg")).path||"";
+    if(d.view)   view_path  =(await putObject(base+".view.jpg",  d.view,  "image/jpeg")).path||"";
+    if(d.poster) poster_path=(await putObject(base+".poster.jpg",d.poster,"image/jpeg")).path||"";
     tick(94,"uploading");
 
     /* A video with no poster is not ready to look at even though the bytes
@@ -8112,9 +8169,12 @@ async function uploadAsset(file,{ownerKind,ownerId,brandId,slideNo=null,onTick})
        comfortable half-truth. */
     if(ins.error){
       const undo=await removeFiles([storage_path,thumb_path,view_path,poster_path]);
-      tick(0,"failed", undo.ok
+      const why=(undo.ok
         ? "Could not record the upload — nothing was left behind"
-        : "Could not record the upload, and the file could not be cleaned up either");
+        : "Could not record the upload, and the file could not be cleaned up either")
+        + " · " + (ins.error.message||"");
+      tick(0,"failed",why);
+      noteUploadFail(ownerKind,ownerId,file,why);
       return null;
     }
 
@@ -8122,7 +8182,16 @@ async function uploadAsset(file,{ownerKind,ownerId,brandId,slideNo=null,onTick})
     (ASSETS[k]=ASSETS[k]||[]).push(row);
     tick(100,"ready");
     return row;
-  }catch(e){ tick(0,"failed","Something went wrong — try again"); return null; }
+  }catch(e){
+    /* "Something went wrong — try again" told nobody anything, and this is
+       where a browser that cannot read the file, or a poster step that
+       throws, has always landed. The message now carries what happened. */
+    const why="Something went wrong while preparing the file"+
+              (e&&e.message?" · "+e.message:"");
+    tick(0,"failed",why);
+    noteUploadFail(ownerKind,ownerId,file,why);
+    return null;
+  }
 }
 
 /* Several files at once. Images dropped together are ONE carousel in
@@ -8320,6 +8389,46 @@ function stateBadge(a,up){
   return "";
 }
 const playable = a => a.kind==="video" && a.status==="ready" && !a.purged_at;
+
+/* ══ A REFUSED UPLOAD HAS TO APPEAR SOMEWHERE ════════════════════════
+   THE BUG CHIRAG REPORTED. A failed upload wrote its reason into
+   UPLOADS[id] and that map is read in exactly one place — assetTile(),
+   which draws an asset ROW. A failure creates no row, so the tile is
+   never drawn, so the reason was recorded and shown to nobody. The
+   comment posted, the paperclip count cleared, and a 200MB video
+   evaporated in silence.
+
+   A failure is not an asset and must not be written to `assets` — a row
+   pointing at bytes that were never stored is worse than no row. It
+   lives here instead, in memory, beside the thread it belongs to, until
+   the person dismisses it or the page reloads. */
+let UPLOAD_FAILS={};              // ownerKey -> [{id,name,bytes,reason}]
+function noteUploadFail(ownerKind,ownerId,file,reason){
+  const k=assetKey(ownerKind,ownerId);
+  (UPLOAD_FAILS[k]=UPLOAD_FAILS[k]||[]).push({
+    id:"uf"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    name:(file&&file.name)||"the file", bytes:(file&&file.size)||0,
+    reason:reason||"Upload failed"});
+}
+function dismissUploadFail(ownerKind,ownerId,id){
+  const k=assetKey(ownerKind,ownerId);
+  UPLOAD_FAILS[k]=(UPLOAD_FAILS[k]||[]).filter(f=>f.id!==id);
+  renderSocial();
+}
+function uploadFailBlock(ownerKind,ownerId){
+  const list=UPLOAD_FAILS[assetKey(ownerKind,ownerId)]||[];
+  if(!list.length) return "";
+  return `<div class="upfail">`+list.map(f=>`
+    <div class="upfail-r">
+      <span class="upfail-i"><i class="ti ti-alert-triangle"></i></span>
+      <div class="upfail-t">
+        <b>${escHtml(f.name)}</b><span class="upfail-b">${kbmb(f.bytes)}</span>
+        <div class="upfail-w">Not attached — ${escHtml(f.reason)}</div>
+      </div>
+      <button class="upfail-x" title="Dismiss"
+        onclick="dismissUploadFail('${escAttr(ownerKind)}','${escAttr(ownerId)}','${escAttr(f.id)}')">&times;</button>
+    </div>`).join("")+`</div>`;
+}
 
 /* One tile. `cls` decides the weight — mlead / mtile / mstrip. */
 function assetTile(a,cls,opts){
@@ -9110,10 +9219,30 @@ function fbStageFiles(postId,files){
    it is counting. */
 function paintStaged(postId){
   const el=document.getElementById("fb-staged-"+postId); if(!el) return;
-  const n=(FB_STAGED[postId]||[]).length;
+  const files=FB_STAGED[postId]||[];
+  const n=files.length;
   el.textContent=n?String(n):"";
+  /* A COUNT IS NOT ENOUGH WHEN THE THING THAT FAILS IS SIZE. "1 ready"
+     looks identical for a 40KB logo and a 240MB reel, so the one that was
+     never going to be accepted looked exactly like the one that was. The
+     names and sizes go beside it — before the comment is written, not
+     after it is posted. */
   el.title=n?(n+" file"+(n>1?"s":"")+" ready — they upload when you post"):"";
   el.style.display=n?"inline-flex":"none";
+  const nm=document.getElementById("fb-stagednames-"+postId);
+  if(nm){
+    nm.innerHTML=files.map((f,i)=>
+      `<span class="stagedf" title="${escAttr(f.name)}">${escHtml(f.name)}
+         <b>${kbmb(f.size)}</b>
+         <i onclick="fbUnstage('${escAttr(postId)}',${i})" title="Remove">&times;</i></span>`).join("");
+    nm.style.display=n?"flex":"none";
+  }
+}
+function fbUnstage(postId,i){
+  const files=FB_STAGED[postId]||[];
+  files.splice(i,1);
+  FB_STAGED[postId]=files;
+  paintStaged(postId);
 }
 async function fbAddComment(postId,parentId){
   if(!FB_AVAILABLE||!canComment()) return;
@@ -11477,7 +11606,7 @@ function fbPanelHtml(p){
           ${c.author_kind==="client"?`<span style="font-size:10px;font-weight:700;color:#378ADD;">Client</span>`:""}
           <span class="when46">${fbTimeLabel(c.created_at)}${c.edited_at?" · edited":""}</span></div>
         <div class="ct46">${fbRich(c.body)}</div>
-        ${mediaBlock(assetsFor("comment",c.id))}
+        ${mediaBlock(assetsFor("comment",c.id))}${uploadFailBlock("comment",c.id)}
         <div class="acts46${hasRx?" always":""}">${rx(c)}<span class="rgt">${own}
           <button onclick="fbCopyLink('${p.id}','${c.id}')">Link</button>${resolve}</span></div>
       </div></div>`;
@@ -11544,9 +11673,14 @@ function fbPanelHtml(p){
       <div class="cextra">
         <input type="file" id="fb-files-${p.id}" multiple style="display:none;" onchange="fbStageFiles('${p.id}',this.files)">
         <button onclick="document.getElementById('fb-files-${p.id}').click()"><i class="ti ti-paperclip" style="font-size:14px;"></i> Attach</button>
-        ${(()=>{const n=(FB_STAGED[p.id]||[]).length;
+        ${(()=>{const fs=FB_STAGED[p.id]||[]; const n=fs.length;
           return `<span id="fb-staged-${p.id}" class="stagedn" style="display:${n?"inline-flex":"none"}"
-            title="${n?n+" file"+(n>1?"s":"")+" ready — they upload when you post":""}">${n||""}</span>`;})()}
+            title="${n?n+" file"+(n>1?"s":"")+" ready — they upload when you post":""}">${n||""}</span>
+          <span id="fb-stagednames-${p.id}" class="stagedfs" style="display:${n?"flex":"none"}">${
+            fs.map((f,i)=>`<span class="stagedf" title="${escAttr(f.name)}">${escHtml(f.name)}
+              <b>${kbmb(f.size)}</b>
+              <i onclick="fbUnstage('${escAttr(p.id)}',${i})" title="Remove">&times;</i></span>`).join("")
+          }</span>`;})()}
       </div>
     </div>`:"";
 
