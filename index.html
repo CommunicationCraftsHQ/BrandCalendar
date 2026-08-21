@@ -1354,6 +1354,17 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
      reached for did nothing at all. CSS accepts flex properties on a
      block element and silently ignores them. Making it a real flex row
      is what changed the Brand Vision header from 103 to 94. */
+/* v68 — THE POSITIONAL SELECTOR IS NOW HALF RETIRED. It was written
+   because the brand header had no class to aim at, and the note above
+   says so. It has one now — .ph — and the class carries the height
+   itself, one line down. The selector stays for the screens that still
+   lead with .year-head (the all-brands calendar, the event and industry
+   managers, History), and only for those.
+
+   This mattered: with the height coming from "first child of main", the
+   List wrapped its header in a div and lost it, so the same header stood
+   84px tall there and 94px everywhere else. Ten pixels, invisible on any
+   one screen, and exactly the kind of drift this batch exists to end. */
 #main > div:first-child{min-height:94px;box-sizing:border-box;}
 .bd-headrow{display:flex;align-items:baseline;gap:10px;}
 .year-tag{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -1813,8 +1824,35 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
    does not change width every time you switch view. */
 .lay.inert{opacity:.4;cursor:default;}
 .lay.inert:hover{color:rgba(255,255,255,.7);}
-/* the brand header's four doors */
-.bh-door.on{background:var(--text)!important;color:#fff!important;border-color:var(--text)!important;}
+/* ══ THE PAGE HEAD ═══════════════════════════════════════════════════
+   ONE ROW, WORN BY EVERY SCREEN INSIDE A BRAND. It was not a thing
+   before this — brandHeaderHtml() was a fragment that four render
+   functions chose to call and three did not, each wrapping it in its own
+   padding. That is why the List sat 16px tighter than the Calendar, why
+   Monthly plan wrote its own 40px title, and why the task screen started
+   120px in from the left. A frame that every page composes for itself is
+   a frame that drifts. This one is handed to them.
+
+   Nothing here is optional except `ph-acts`, and only two screens fill
+   it: Brand Vision, and the task thread. */
+.ph{display:flex;align-items:center;gap:16px;padding:28px 32px 20px;flex-wrap:wrap;
+    min-height:94px;box-sizing:border-box;}
+.ph-sp{flex:1;}
+.ph-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+
+/* ONE CONTROL, NOT FOUR BUTTONS. Four separate buttons read as four
+   actions and competed with the page's own — Brand Vision's red "Edit
+   the data" made three button styles in one row. Grouped, they read as
+   what they are: a switch between four screens, one of them current. */
+.bh-seg{display:inline-flex;align-items:center;background:#E7E6E1;
+  border-radius:9px;padding:3px;gap:2px;}
+.bh-door{height:30px;padding:0 12px;border-radius:6px;border:0;background:transparent;
+  font-family:inherit;font-size:12.5px;font-weight:600;color:var(--muted);
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer;
+  transition:background 120ms,color 120ms;}
+.bh-door:hover{color:var(--text);}
+.bh-door.on{background:var(--surface);color:var(--text);font-weight:700;
+  box-shadow:0 1px 2px rgba(0,0,0,.09);}
 
 
 /* ══ CAPE TOWN STAGE 3 · THE TASK SCREEN ═════════════════════════════ */
@@ -3037,34 +3075,44 @@ function eeSetEndDate(d,m){
 function brandTitleHtml(name){
   return `<div class="year-title brand-title" style="font-size:34px;color:var(--acc);line-height:1;">${escAttr(name)}<span style="color:var(--text);">.</span></div>`;
 }
-function brandHeaderHtml(){
+/* Which of the four is current. The task thread is not a fifth screen —
+   it is a room inside Tasks, so Tasks stays lit while you are in it. */
+function phActive(){ return view==="task" ? "branding" : view; }
+
+/* THE ONE HEAD. `acts` is the only thing a page supplies, and only two
+   pages supply anything. Every other screen calls this with nothing and
+   gets the identical row — which is the entire point.
+
+   CAPE TOWN'S RULE, CARRIED OVER FROM brandHeaderHtml(), WHICH THIS
+   REPLACES: the four appear with the BRAND, never with a layer. Gating a
+   screen behind a layer toggle is what made the Branding list
+   unreachable from the calendar, and it is the same fault at whatever
+   level it happens: the door to a screen must not depend on how a
+   different screen is drawn.
+
+   The names say what the screen holds. The nav says Social and Branding
+   — the verticals — and these say Posts and Tasks, because "Social" and
+   "Social Content" are two different things one word apart and they will
+   be confused in conversation before they are confused on screen. */
+function pageHead(acts){
   const b=brands[activeBrand]; if(!b) return "";
   const name=brandTitleHtml(b.name);
-  if(!canEdit()) return `<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">${name}</div>`;
-  /* ══ CAPE TOWN · THE HEADER HOLDS SCREENS, THE NAV HOLDS LAYERS ═════
-     Four doors, and they appear with the BRAND — never with a layer.
-     Gating a screen behind a layer toggle is what made the Branding list
-     unreachable from the calendar, and it is the same fault whichever
-     level it happens at: the door to a screen must not depend on how a
-     different screen is drawn.
-
-     The names say what the screen holds. The nav says Social and
-     Branding — the verticals — and these say Posts and Tasks, because
-     "Social" and "Social Content" are two different things one word
-     apart and they will be confused in conversation before they are
-     confused on screen. */
-  const door=(on,onclick,icon,label)=>`<button class="btn btn-s bh-door${on?" on":""}" onclick="${onclick}" style="${on?"":"background:var(--surface);"}"><i class="ti ${icon}"></i> ${label}</button>`;
-  const doors=[
-    door(view==="brief",   "openBrief()",           "ti-file-text",      "Brand Vision"),
-    door(view==="mplan",   "openMonthPlanView(curMonth||1)","ti-calendar-stats","Monthly plan"),
-    door(view==="content", "navPosts()",            "ti-photo",          "Posts"),
-    door(view==="branding","navTasks()",            "ti-clipboard-text", "Tasks"),
-  ].join("");
-  return `<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">${name}</div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">${doors}</div>
-  </div>`;
+  const right=acts?`<div class="ph-sp"></div><div class="ph-acts">${acts}</div>`:"";
+  if(!canEdit()) return `<div class="ph">${name}${right}</div>`;
+  const active=phActive();
+  const seg=(k,onclick,icon,label)=>
+    `<button class="bh-door${active===k?" on":""}" onclick="${onclick}"
+       aria-current="${active===k?"page":"false"}">
+       <i class="ti ${icon}"></i> ${label}</button>`;
+  const doors=`<div class="bh-seg">`+[
+    seg("brief",   "openBrief()",                    "ti-file-text",      "Brand Vision"),
+    seg("mplan",   "openMonthPlanView(curMonth||1)", "ti-calendar-stats", "Monthly plan"),
+    seg("content", "navPosts()",                     "ti-photo",          "Posts"),
+    seg("branding","navTasks()",                     "ti-clipboard-text", "Tasks"),
+  ].join("")+`</div>`;
+  return `<div class="ph">${name}${doors}${right}</div>`;
 }
+
 /* A control that silently does nothing is worse than one that says why.
    The first draft of these returned quietly with no brand — the gate
    caught it, because the assertion was written when the old function
@@ -3083,9 +3131,9 @@ function renderYear(){
   const b=activeBrand&&brands[activeBrand];
   let header;
   if(b){
-    // match .year-head padding exactly so the brand name lands where "2026." does (and doesn't touch the nav)
-    header=`<div style="padding:28px 32px 20px;">${brandHeaderHtml()}
-      <div style="margin-top:10px;">${filterSummaryHtml()}</div></div>`;
+    /* The padding used to be restated here to "match .year-head exactly".
+       It does not have to match anything now — .ph owns it, once. */
+    header=pageHead()+`<div style="padding:0 32px 14px;">${filterSummaryHtml()}</div>`;
   } else {
     header=`<div class="year-head"><div class="year-title">${YEAR}<span>.</span></div>
       <div class="year-sub">Click any date to view or add events</div>${filterSummaryHtml()}</div>`;
@@ -3945,8 +3993,8 @@ function renderSocial(){
      changes. Staff only; the write path checks the role again. */
   const importCtl=canEdit()?`<button class="btn btn-s" style="background:var(--surface);" onclick="openImport()" title="Update captions and hashtags from a downloaded sheet"><i class="ti ti-upload"></i> Import</button>`:"";
   mc.innerHTML=`
-   <div style="padding:28px 32px 20px;">
-   <div style="margin-bottom:20px;">${brandHeaderHtml()}</div>
+   ${pageHead()}
+   <div style="padding:0 32px 20px;">
    <div style="display:grid;grid-template-columns:minmax(280px,340px) minmax(0,1fr);gap:14px;align-items:start;">
      <div id="content-monthcard"></div>
      <div id="content-plancard">${monthPlanCardHtml(contentMonth)}</div>
@@ -4430,7 +4478,10 @@ function openNewEvDay(m,day){
 // ── LIST VIEW ──────────────────────────────────────────────
 function renderList(){
   const mc=document.getElementById("main"); mc.innerHTML="";
-  if(activeBrand&&brands[activeBrand]){ const bh=document.createElement("div"); bh.style.cssText="padding:28px 32px 4px;"; bh.innerHTML=brandHeaderHtml(); mc.appendChild(bh); }
+  /* This one carried padding:28px 32px 4px — sixteen pixels tighter at the
+     bottom than every other screen, for no reason anybody chose. Gone with
+     the inline padding. */
+  if(activeBrand&&brands[activeBrand]){ const bh=document.createElement("div"); bh.innerHTML=pageHead(); mc.appendChild(bh); }
   const strip=document.createElement("div"); strip.className="list-month-strip";
   for(const m of visibleMonths()){
     const n=filtered(m).length; const b=document.createElement("button");
@@ -6107,15 +6158,21 @@ function renderTask(){
     : (TASK.err ? `<div class="th-load">Could not load the thread — ${escHtml(TASK.err)}</div>`
                 : threadHtml(t));
   mc.innerHTML=`
-   <div style="padding:22px 28px 24px;">
+   ${pageHead(
+      `<button class="btn btn-s" onclick="setView('branding')"><i class="ti ti-arrow-left"></i> Tasks</button>`+
+      `<select class="tk-st" onchange="taskSetStatus(this)" ${isAM?"":"disabled"}
+         title="${isAM?"Moving forward approves the milestone you are leaving":"Only the Ac Manager moves a task on"}">${stOpts}</select>`)}
+   <div style="padding:0 32px 24px;">
+     <!-- THE TASK NAMES ITSELF ONE LINE DOWN, in the slot the Tasks list
+          uses for "3 Branding tasks". Opening a task used to replace the
+          whole frame — no brand name, no switch, the title 120px in from
+          the left — so it read as leaving the tool rather than opening
+          something inside it. -->
      <div class="tk-top">
-       <button class="btn btn-s" onclick="setView('branding')"><i class="ti ti-arrow-left"></i> Tasks</button>
        <div class="tk-title">${escHtml(t.title)}</div>
        ${pj?`<span class="brl-pj" style="color:${escAttr(pj.colour||'#7C3AED')}">◧ ${escHtml(pj.name)}</span>`:""}
        <span class="tk-meta">${t.delivery_date?`Due ${fmtShort(t.delivery_date)}`:"No delivery date"}</span>
        ${late?`<span class="tk-late">${brDueText(t).replace(/<[^>]*>/g,"")}</span>`:""}
-       <select class="tk-st" onchange="taskSetStatus(this)" ${isAM?"":"disabled"}
-         title="${isAM?"Moving forward approves the milestone you are leaving":"Only the Ac Manager moves a task on"}">${stOpts}</select>
      </div>
      <div class="tk-grid">
        <div class="tk-thread">
@@ -6214,10 +6271,10 @@ function renderBranding(){
     body=`<div class="brl">${head}${rowsHtml}</div>`;
   }
   mc.innerHTML=`
-   <div style="padding:28px 32px 20px;">
-     <div style="margin-bottom:20px;">${brandHeaderHtml()}</div>
+   ${pageHead()}
+   <div style="padding:0 32px 20px;">
      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;
-                 margin:20px 0 12px;padding-top:14px;border-top:1px solid var(--div);">
+                 margin:0 0 12px;">
        <div style="font-size:15px;font-weight:700;">
          ${BR.ok?`${rows.length} Branding task${rows.length===1?"":"s"}`:"Branding"}
          ${BR.ok&&filtered&&rows.length!==total?`<span style="font-weight:400;color:var(--subtle);"> · of ${total}</span>`:""}
@@ -6928,7 +6985,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v69 — Antwerp: sign in with your CC account";
+const TOOL_VERSION="v70 — Cape Town: one page frame";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -9639,20 +9696,12 @@ function renderBriefDash(){
       ${(s.rows&&s.rows.length)?`<div style="margin-top:10px;">${bdKrows(s.rows)}</div>`:""}
     </div>`).join("");
   mc.innerHTML=`
-  <div class="year-head bd-head">
-    <div class="year-headtxt bd-headrow">
-      ${brandTitleHtml(b.name)}
-      ${String(D.tagline||"").trim()?`<div class="year-tag">${escAttr(D.tagline)}</div>`:""}
-    </div>
-    <div class="bd-acts">
-      ${canCap("edit_brand_vision")?`<button class="btn btn-p" onclick="bdToggleEdit()"><i class="ti ti-pencil"></i> Edit the data</button>`:""}
-      <!-- LISBON 6: Import came back out of the header. Same rule as the
-           Content view — Export reads and lives in the header, Import
-           writes and lives on the screen it changes. -->
-      <button class="btn btn-s" onclick="bdImportXLSX()"><i class="ti ti-upload"></i> Import</button>
-      <button class="btn btn-s" onclick="closeBrief()"><i class="ti ti-arrow-left"></i> Back to Calendar</button>
-    </div>
-  </div>
+  ${pageHead(
+      `<button class="btn btn-s" onclick="bdImportXLSX()"><i class="ti ti-upload"></i> Import</button>`+
+      (canCap("edit_brand_vision")
+        ?`<button class="btn btn-p" onclick="bdToggleEdit()"><i class="ti ti-pencil"></i> Edit the data</button>`:""))}
+  ${String(D.tagline||"").trim()
+    ?`<div style="padding:0 32px 14px;"><div class="year-tag">${escAttr(D.tagline)}</div></div>`:""}
   <div class="bd-wrap">
     ${D.meta.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">${D.meta.map(m=>`<span class="bd-chip" style="background:var(--surface);border:1px solid var(--div);">${escAttr(m)}</span>`).join("")}</div>`:""}
 
@@ -9787,17 +9836,8 @@ function renderBriefForm(){
       </div>
     </div>`).join("");
   mc.innerHTML=`
-  <div class="year-head bd-head">
-    <div class="year-headtxt bd-headrow">
-      ${brandTitleHtml(b.name)}
-      <div class="year-tag">Editing · saves automatically</div>
-    </div>
-    <div style="flex:1;"></div>
-    <div class="bd-acts">
-      <button class="btn btn-p" onclick="bdToggleEdit()"><i class="ti ti-check"></i> Done — view dashboard</button>
-      <button class="btn btn-s" onclick="closeBrief()"><i class="ti ti-arrow-left"></i> Back to Calendar</button>
-    </div>
-  </div>
+  ${pageHead(`<button class="btn btn-p" onclick="bdToggleEdit()"><i class="ti ti-check"></i> Done — view dashboard</button>`)}
+  <div style="padding:0 32px 14px;"><div class="year-tag">Editing · saves automatically</div></div>
   <div class="bd-wrap">
     <div class="bd-f"><h3>Brand basics</h3><div class="hint">Tagline, the chips shown under the title, and the links.</div>
       ${fIn("Tagline",D.tagline,"bset('tagline',this.value)")}
@@ -12896,15 +12936,7 @@ function renderMonthPlanView(){
 
   main.innerHTML=`
   <div class="mpv">
-    <div class="year-head">
-      <div class="year-headtxt">
-        <div class="year-title">Month plan</div>
-        <div class="year-sub">${escAttr(b.name)} · what ${MN[m]} is for, and what it is made of.</div>
-      </div>
-      <div class="em2-headacts">
-        <button class="btn btn-s btn-sm" onclick="setView('year')"><i class="ti ti-arrow-left"></i> Back to the calendar</button>
-      </div>
-    </div>
+    ${pageHead()}
     <div class="mpv-scroll">
       <div class="mpv-sheet">
         <div class="mpv-top">
