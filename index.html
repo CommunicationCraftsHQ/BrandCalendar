@@ -2402,7 +2402,7 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
       <button class="btn btn-s btn-sm" style="width:100%;justify-content:center;" onclick="showSignup()">New here? Create your account</button>
     </div>
     <div id="auth-signup" style="display:none;">
-      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6;">Use your <b>@communicationcrafts.com</b> email — team access is granted automatically.</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6;">Your <b>@communicationcrafts.com</b> account is your Outlook one — go back and use <b>Sign in with Communication Crafts</b>. Access to each tool is given to you by Chirag; it does not arrive on its own.</div>
       <div class="field"><label class="fl">Work email</label><input class="fi" id="su-email" type="email" autocomplete="username" placeholder="you@communicationcrafts.com"/></div>
       <div class="field"><label class="fl">Choose a password</label><input class="fi" id="su-pass" type="password" autocomplete="new-password" onkeydown="if(event.key==='Enter')signUp()"/></div>
       <button class="btn btn-p" style="width:100%;justify-content:center;" onclick="signUp()">Create account &amp; enter</button>
@@ -2414,7 +2414,7 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
       <button class="btn btn-g btn-sm" style="width:100%;justify-content:center;margin-top:8px;" onclick="RECOVERY_MODE=false;document.getElementById('auth-setpass').style.display='none';document.getElementById('auth-form').style.display='block';document.getElementById('auth-screen').style.display='none';boot();">Cancel</button>
     </div>
     <div id="auth-pending" style="display:none;font-size:13px;color:var(--muted);line-height:1.6;">
-      ✓ You're signed in, but your account hasn't been approved yet.<br/>Ask the calendar admin to grant you access, then hit refresh.
+      ✓ You're signed in. Nothing has been given to you yet.<br/>Ask Chirag for the tools you need, then refresh this page.
     </div>
     <p id="auth-msg" style="font-size:12px;color:var(--acc);margin-top:10px;min-height:16px;"></p>
   </div>
@@ -6922,6 +6922,12 @@ function importEvents(input){
           cat:(e.cat&&e.cat!=="cat5")?e.cat:"cat1",notes:e.notes||"",relevance:rel,mega:!!e.mega});
       });
       if(!all.length){toast("No valid event rows found","err");return;}
+      /* VALENCIA — master events are admin-only (Stage 3) and were
+         admin-only only in the Event Manager. This path, dbPushAll-
+         MasterEvents, carryForward and the Trash purge all wrote them
+         behind canEdit(). The database now refuses them, so an ungated
+         path here would fail AFTER the confirm. */
+      if(!canCap("manage_events")) return capDenied("Importing master events");
       if(!confirm("Update the MASTER calendar with "+all.length+" events from this file?\n\nRows with a matching ID update the existing event everywhere (all brands included). Rows without an ID are added as new events. Nothing is deleted.")) return;
       (async()=>{
         const existing=new Set((G?G.evts:[]).map(e=>e.id));
@@ -6985,7 +6991,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v70 — Cape Town: one page frame";
+const TOOL_VERSION="v71 — Valencia: a CC mailbox is the only way in";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -7251,8 +7257,20 @@ const canEdit=()=>ME.role==="admin"||ME.role==="team";
 
 function authMsg(t){document.getElementById("auth-msg").textContent=t||"";}
 async function signIn(){
+  /* VALENCIA — a CC mailbox signs in with Microsoft, and only Microsoft.
+     THIS IS NOT THE ENFORCEMENT. Refusing a password sign-in server-side
+     needs the Password Verification Attempt hook, which is Team plan and
+     above; this project is on Pro. Checked in the dashboard, not assumed.
+     What actually closes it is step 5 removing the password. This line
+     exists so that somebody whose password has not been removed yet is
+     pointed at the button instead of quietly using the old door. */
+  const _em=document.getElementById("auth-email").value.trim();
+  if(_em.toLowerCase().endsWith(CC_DOMAIN)){
+    authMsg("Communication Crafts accounts sign in with the button above.");
+    return;
+  }
   authMsg("Signing in…");
-  const {error}=await sb.auth.signInWithPassword({email:document.getElementById("auth-email").value.trim(),password:document.getElementById("auth-pass").value});
+  const {error}=await sb.auth.signInWithPassword({email:_em,password:document.getElementById("auth-pass").value});
   if(error){authMsg(error.message);return;}
   authMsg(""); boot();
 }
@@ -7282,15 +7300,23 @@ async function signInMicrosoft(){
   if(error) authMsg(error.message);
 }
 async function signUp(){
+  /* VALENCIA — checklist items 2 and 3. There is no password sign-up
+     any more: a CC mailbox uses the button, and nobody outside CC gets
+     an account at all until the outside door is designed as its own
+     piece of work.
+
+     THE REFUSAL IS THE Before User Created HOOK, not this function. Two
+     different sentences here only so the person reads the one that tells
+     them what to do — a Microsoft error code helps nobody. Deleting the
+     panel instead was the other option and was NOT taken: somebody who
+     arrives here needs to be told why, and an absent button explains
+     nothing. */
   const email=document.getElementById("su-email").value.trim();
-  const pw=document.getElementById("su-pass").value;
-  if(!email){authMsg("Enter your work email.");return;}
-  if(!pw||pw.length<6){authMsg("Password must be at least 6 characters.");return;}
-  authMsg("Creating your account…");
-  const {data,error}=await sb.auth.signUp({email,password:pw});
-  if(error){authMsg(error.message);return;}
-  if(data.session){ authMsg(""); boot(); }
-  else authMsg("Account created. You can sign in now.");
+  if(email.toLowerCase().endsWith(CC_DOMAIN)){
+    authMsg("Your Communication Crafts account is your Outlook one — use the button on the sign-in screen. There is no separate password here.");
+  }else{
+    authMsg("Accounts here are for Communication Crafts staff. Speak to Chirag if you need access.");
+  }
 }
 async function forgotPass(){
   const email=document.getElementById("auth-email").value.trim();
@@ -10297,7 +10323,9 @@ async function dbDeleteBrand(id){ if(canEdit()) dbErr(await sb.from("brands").up
 async function dbTrashBrandEvent(id){ if(canEdit()) dbErr(await sb.from("brand_events").update({deleted_at:new Date().toISOString()}).eq("id",id)); }
 async function dbSyncIndustries(){ if(canEdit()) dbErr(await sb.from("industries").upsert(INDS.map((x,i)=>({id:x.id,label:x.label,pos:i})))); }
 async function dbPushAllMasterEvents(){
-  if(!canEdit()) return;
+  /* VALENCIA — was canEdit(). A silent bulk upsert of the master events
+     is the widest of the four, and the least visible. */
+  if(!canCap("manage_events")) return;
   const all=[];
   for(let m=1;m<=12;m++)(evs[m]||[]).forEach(e=>{
     if(e._custom||e._isPost) return;
@@ -10419,6 +10447,9 @@ async function setPersonBrand(id,brandId){
 // ── CARRY FORWARD: copy master events into the next year ───
 async function carryForward(){
   if(!canEdit()){toast("View-only account","err");return;}
+  /* VALENCIA — this writes MASTER events, so it needs the master-events
+     capability and not merely an editor. */
+  if(!canCap("manage_events")) return capDenied("Copying the master calendar forward");
   const target=YEAR+1;
   const srcRows=G.evts.filter(r=>(r.year||2026)===YEAR);
   if(!srcRows.length){toast("No events in "+YEAR+" to copy","err");return;}
@@ -10451,7 +10482,13 @@ async function openTrash(){
      logo pointed at, it raised a foreign-key violation, returned it in
      an object nobody read, and did nothing. Silently, every time Trash
      was opened, since the day it was written. */
-  dbErr(await sb.from("events").delete().not("deleted_at","is",null).lt("deleted_at",cutoff));
+  /* VALENCIA — the master-event sweep is a WRITE to master events, and
+     it fired for anybody who opened Trash. Skipped rather than refused:
+     housekeeping that an admin will do on their next visit must not
+     greet a creator with an error for something they did not ask for.
+     Brand events are per-brand work and stay with canEdit(). */
+  if(canCap("manage_events"))
+    dbErr(await sb.from("events").delete().not("deleted_at","is",null).lt("deleted_at",cutoff));
   dbErr(await sb.from("brand_events").delete().not("deleted_at","is",null).lt("deleted_at",cutoff));
   const old=await sb.from("brands").select("id").not("deleted_at","is",null).lt("deleted_at",cutoff);
   for(const b of (old.data||[])) await clearBrandFromCalendar(b.id,{ask:false});
@@ -10750,20 +10787,22 @@ function applyRoleUI(){
    itself completely is a support call.
 
    ── AND A WARNING THAT BELONGS NEXT TO THE CODE ──────────────────
-   THIS IS NOT ACCESS CONTROL. It decides what is drawn. Two of these
-   rows are governed by the browser alone today:
+   THIS IS STILL NOT ACCESS CONTROL. It decides what is drawn, and that
+   has not changed. What HAS changed is what stands behind it.
 
-     · Event Manager asks canCap("manage_events"), which Stage 3 made
-       admin-only. The database's events_write policy allows any
-       is_staff() — admin OR team. A team member is refused here and
-       permitted by the API.
+   The two gaps Bergen wrote up here were both closed in Valencia, by
+   the database and not by this function:
 
-     · ME.role comes from user_tool_roles; every RLS policy resolves
-       through my_role(), which reads profiles.role. The two agree for
-       everyone today and nothing keeps them agreeing.
+     · events_write now asks tool_can("calendar","manage_events") —
+       the same question canCap() asks — so a team member is refused by
+       the API as well as by the menu.
 
-   Both are written up in the Bergen record. Neither is fixed by this
-   function and neither should be believed to be. */
+     · my_role() reads user_tool_roles, the same grant ME.role is built
+       from. The browser and the database ask one question now.
+
+   Both are in webapp/2026-08-21-valencia-server-side-enforcement.sql.
+   If that file has not been run, this menu is a curtain again — which
+   is why it is named here rather than described as done. */
 function menuAllows(need){
   if(!need)              return true;
   if(need==="admin")     return ME.role==="admin";
@@ -10820,21 +10859,46 @@ function applyMenuVisibility(){
 const TOOLROLE_TO_LEGACY={admin:"admin",account_manager:"team",creator:"team",
                           client_reviewer:"client",client_viewer:"client"};
 async function resolveAccess(userId, legacyRole){
-  ME.toolRole=null; ME.caps={}; ME.accessSource="legacy";
-  /* BERGEN — the global role, kept before anything overwrites ME.role.
-     Every RLS policy in the database resolves a person through
-     my_role(), which reads profiles.role. This is that value, and it is
-     the one the DATABASE will act on. ME.role below is the CALENDAR's
-     answer, from user_tool_roles. They agree today. Nothing keeps them
-     agreeing, which is why this is kept separately rather than merged. */
+  ME.toolRole=null; ME.caps={}; ME.accessSource="grant";
+  /* VALENCIA — THE FALLBACK IS GONE, AND THIS IS THE HALF THAT MATTERS.
+     Bergen kept ME.globalRole beside ME.role because the browser read
+     user_tool_roles and every RLS policy read profiles.role, and nothing
+     kept the two agreeing. They now agree by construction: my_role() in
+     the database reads the same grant this function reads. See
+     webapp/2026-08-21-valencia-server-side-enforcement.sql.
+
+     WHAT WAS FOUND WHILE DOING IT, AND IS WORSE THAN BERGEN THOUGHT:
+     People & access writes user_tool_roles and profiles.app_role and has
+     NEVER written profiles.role. So the field the database obeyed was
+     set once at sign-up and never again — change somebody from Creator
+     to Client viewer and the calendar showed them a client's view while
+     the API still let them write every brand. Not a drift that MIGHT
+     happen. A drift the admin screen produced.
+
+     ME.globalRole is kept, and now means what it says: it is a reading
+     of the legacy field, for the Restore screen and for telling a stale
+     row from a live one. NOTHING GRANTS ACCESS FROM IT. */
   ME.globalRole=legacyRole||null;
   ME.toolRoles={};
   try{
     const r=await sb.from("user_tool_roles").select("tool,role").eq("user_id",userId);
-    /* An error here means the table is missing or unreadable — NOT that
-       the person has no access. Falling through to the legacy role is the
-       whole point of the soak. */
-    if(r.error) return;
+    /* VALENCIA — THIS EARLY RETURN IS THE BREAK-GLASS, and it is the one
+       piece of the old fallback that is kept ON PURPOSE.
+
+       The soak is over and a missing ROW is now a real answer (below).
+       But a missing or unreadable TABLE is not an answer, it is a
+       failure to ask — and it is exactly the state BREAK-GLASS puts the
+       database into when the new model has to be abandoned in a hurry.
+       Falling through to profiles.role here is what makes that document
+       work without a redeploy.
+
+       It is safe to be optimistic here for one reason only: after the
+       enforcement migration the DATABASE refuses this person too, so an
+       over-generous screen during an outage shows buttons that do not
+       work. That is a display fault. Failing shut instead would sign the
+       whole team out of their own tools on one dropped request, which is
+       the fault this batch is most afraid of. */
+    if(r.error){ ME.accessSource="unreadable"; return; }
     /* BERGEN — KEEP THEM ALL. This query has asked for every tool role
        the person has since Stage 2, and then thrown all but the
        calendar's away on the next line. The CC Suite flyout needs
@@ -10842,13 +10906,21 @@ async function resolveAccess(userId, legacyRole){
        it has been arriving and being discarded this whole time. */
     (r.data||[]).forEach(x=>{ if(x&&x.tool) ME.toolRoles[x.tool]=x.role; });
     const cal=(r.data||[]).find(x=>x.tool==="calendar");
-    /* No calendar row is a real answer: this person was never given the
-       calendar. But during the soak the legacy field still decides, so a
-       backfill that missed somebody cannot lock them out. Today the two
-       agree for all nine people — asserted in access_fallback. */
-    if(!cal) return;
+    /* VALENCIA — no calendar row is now the WHOLE answer, not the start
+       of one. The soak is over: the database refuses this person too, so
+       showing them a calendar the API will not serve is the worse of the
+       two failures. `pending` sends them to the waiting screen in boot().
+
+       This is also the line that makes a new CC mailbox arrive with
+       nothing. The migration stops handle_new_user() writing 'team';
+       this stops the calendar reading it if anything ever does. */
+    if(!cal){ ME.role="pending"; ME.accessSource="no-grant"; return; }
     const mapped=TOOLROLE_TO_LEGACY[cal.role];
-    if(!mapped) return;                       // unknown role → trust the old one
+    /* An unknown role used to mean "trust the old one", which is the
+       most permissive answer to a question nobody can answer. Bergen
+       found the same shape in the menu: a role that was neither client
+       nor staff saw everything. Refuse instead. */
+    if(!mapped){ ME.role="pending"; ME.accessSource="unknown-role"; return; }
     ME.toolRole=cal.role;
     ME.accessSource="user_tool_roles";
     ME.role=mapped;
