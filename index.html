@@ -1052,6 +1052,16 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .stagedf i{font-style:normal;cursor:pointer;color:var(--subtle);font-size:14px;
   line-height:1;padding:0 3px;flex:none;}
 .stagedf i:hover{color:var(--acc);}
+/* In progress. Quiet — this is the normal case, not an alarm. */
+.uplive{margin:8px 0 0;display:flex;flex-direction:column;gap:7px;}
+.uplive-r{background:var(--surface);border:1px solid var(--div);border-radius:9px;padding:8px 11px;}
+.uplive-t{display:flex;align-items:baseline;gap:8px;font-size:12px;line-height:1.4;}
+.uplive-t b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.uplive-t span{color:var(--subtle);font-weight:600;flex:none;}
+.uplive-t em{font-style:normal;color:var(--muted);margin-left:auto;flex:none;font-weight:600;}
+.uplive-bar{height:4px;border-radius:3px;background:#EDEDEA;margin-top:7px;overflow:hidden;}
+.uplive-bar span{display:block;height:100%;background:var(--acc);border-radius:3px;
+  transition:width 220ms ease;}
 .upfail{margin:8px 0 0;display:flex;flex-direction:column;gap:6px;}
 .upfail-r{display:flex;gap:9px;align-items:flex-start;background:#FDF6E7;
   border:1px solid #EBD9AE;border-radius:9px;padding:9px 10px 9px 11px;}
@@ -3371,7 +3381,7 @@ function fbPanelHtml(p){
       /* A6 — NYF8: a comment that suggests a line had no way of becoming
          that line. Staged, never saved silently (D14). */
       : `<div style="font-size:13px;line-height:1.5;">${fbRich(c.body)}</div>
-         ${mediaBlock(assetsFor("comment",c.id))}${uploadFailBlock("comment",c.id)}
+         ${mediaBlock(assetsFor("comment",c.id))}${uploadLiveBlock("comment",c.id)}${uploadFailBlock("comment",c.id)}
          ${canEditCaption()&&(c.body||"").trim()
             ?`<span class="capply" onclick="fbApplyToCaption('${p.id}','${c.id}')"
                 title="Put this into the caption — you confirm before it saves">↑ Apply to caption</span>`:""}
@@ -6014,6 +6024,10 @@ async function loadThread(taskId){
     ]);
     const bad=[c,a].find(r=>r.error);
     if(bad){ TASK={...TASK,loading:false,err:bad.error.message}; return; }
+    /* Attachments arrive with the thread, per view — the same rule Buenos
+       Aires set for social and New York kept. Nothing is fetched for a
+       task nobody has opened. */
+    try{ await loadAssetsFor("message",(c.data||[]).map(x=>x.id)); }catch(e){}
     TASK={...TASK,msgs:c.data||[],acts:a.data||[],loading:false};
   }catch(e){ TASK={...TASK,loading:false,err:String(e&&e.message||e)}; }
 }
@@ -6063,7 +6077,10 @@ function msgHtml(m){
       <div class="th-h"><b>${who}</b>
         <span class="th-kind${client?" cli":""}">${client?"Client":"Team"}</span>
         ${by}<span class="th-when">${m.created_at?fmtWhen(m.created_at):""}</span></div>
-      <div class="th-t">${fbHighlightMentions(escHtml(m.body||"")).replace(/\n/g,"<br>")}</div>
+      <div class="th-t">${fbRich(m.body||"")}</div>
+      ${m._brief?"":mediaBlock(assetsFor("message",m.id))
+                  +uploadLiveBlock("message",m.id)
+                  +uploadFailBlock("message",m.id)}
     </div></div>`;
 }
 function fmtWhen(iso){
@@ -6140,7 +6157,51 @@ async function taskSend(){
   toast(`Draft ${no} sent to the client`);
 }
 
+/* ══ FILES AND LINKS ON A TASK MESSAGE ═══════════════════════════════
+   These two chips have said "arrives with the file work" since Stage 3.
+   The work they were waiting for is already here: Stage 3 widened
+   assets.owner_kind to accept 'message', and that migration has run. So
+   a task message stores its files exactly the way a social comment does
+   — same table, same bucket, same removal machinery — and nothing new
+   had to be invented.
+
+   A LINK IS NOT A FILE and does not become an asset row. It goes into
+   the message text, and fbRich() — which the thread now uses — turns any
+   URL into a link. A row with no bytes behind it would be a second kind
+   of attachment for every screen to learn about, for nothing gained. */
+let TASK_STAGED=[];
+function taskStageFiles(files){
+  const seen=new Set(), out=[], dupes=[];
+  [...(files||[])].forEach(f=>{
+    const k=f.name+"|"+f.size;
+    if(seen.has(k)){ dupes.push(f.name); return; }
+    seen.add(k); out.push(f);
+  });
+  TASK_STAGED=out;
+  if(dupes.length) toast(`"${dupes[0]}" was picked twice — keeping one`);
+  render();
+}
+function taskUnstage(i){ TASK_STAGED.splice(i,1); render(); }
+function taskAddLink(){
+  const url=(prompt("Paste the link")||"").trim();
+  if(!url) return;
+  if(!/^https?:\/\//i.test(url)){ toast("A link needs to start with http:// or https://","err"); return; }
+  const el=document.getElementById("th-in"); if(!el) return;
+  const pre=el.value;
+  el.value=(pre&&!/\s$/.test(pre)?pre+" ":pre)+url+" ";
+  TASK.draft=el.value;
+  el.focus();
+  el.selectionStart=el.selectionEnd=el.value.length;
+}
+
+let TASK_POSTING=false;
 async function taskPost(){
+  if(TASK_POSTING) return;
+  TASK_POSTING=true;
+  try{ return await taskPostInner(); }
+  finally{ TASK_POSTING=false; }
+}
+async function taskPostInner(){
   const t=brTask(); if(!t) return;
   const box=document.getElementById("th-in");
   const body=((box?box.value:TASK.draft)||"").trim();
@@ -6167,7 +6228,16 @@ async function taskPost(){
   if(box) box.value="";
   TASK.draft="";
   TASK.asClient=false;
+  /* THE MESSAGE APPEARS FIRST, THE FILES FILL IN BEHIND IT — the same
+     order the social composer uses, and the progress bar is what makes
+     the wait legible rather than alarming. */
+  const staged=TASK_STAGED; TASK_STAGED=[];
   await loadThread(t.id); render();
+  if(staged.length){
+    await uploadMany(staged,{ownerKind:"message",ownerId:row.id,
+      brandId:activeBrand,onTick:()=>{ if(view==="task") render(); }});
+    if(view==="task") render();
+  }
 }
 function taskToggleAsClient(){ TASK.asClient=!TASK.asClient; render(); }
 
@@ -6210,12 +6280,19 @@ function renderTask(){
                onblur="closeMentionBox()">${escHtml(TASK.draft||"")}</textarea>
              <div class="th-cb">
                <button class="th-chip" onclick="mentionStart('th-in')">@ Tag someone</button>
-               <button class="th-chip" onclick="toast('Attachments arrive with the file work')">Attach a file</button>
-               <button class="th-chip" onclick="toast('Links arrive with the file work')">Add a link</button>
+               <input type="file" id="th-files" multiple style="display:none;"
+                      onchange="taskStageFiles(this.files)">
+               <button class="th-chip" onclick="document.getElementById('th-files').click()">Attach a file</button>
+               <button class="th-chip" onclick="taskAddLink()">Add a link</button>
                <button class="th-chip${TASK.asClient?" on":""}" onclick="taskToggleAsClient()">
                  ${TASK.asClient?"✓ posting as the client":"post as the client"}</button>
                <button class="btn btn-p" style="margin-left:auto" onclick="taskPost()">Post</button>
              </div>
+             ${TASK_STAGED.length?`<span class="stagedfs" style="margin-top:8px;">${
+               TASK_STAGED.map((f,i)=>`<span class="stagedf" title="${escAttr(f.name)}">${escHtml(f.name)}
+                 <b>${kbmb(f.size)}</b>
+                 <i onclick="taskUnstage(${i})" title="Remove">&times;</i></span>`).join("")
+             }</span>`:""}
              ${TASK.asClient?`<div class="th-note">This will be recorded as the client's words, entered by you — both names are kept.</div>`:""}
            </div>
          </div>
@@ -7016,7 +7093,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v72 — a refused upload says so";
+const TOOL_VERSION="v73 — uploads you can see, and files on a task";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -8067,11 +8144,23 @@ async function removeAssetsAndFiles(rows){
   const list=(rows||[]).filter(Boolean);
   if(!list.length) return {files:0,rows:0,ok:true};
   const f=await removeFiles(list.flatMap(assetPaths));
-  /* A partial file failure does NOT stop the row delete for the ones
-     that worked — but it is reported, and the rows for failed files are
-     kept so a later sweep can still find them. */
+  /* THE COMMENT HERE USED TO PROMISE SOMETHING THE CODE DID NOT DO. It
+     said "the rows for failed files are kept so a later sweep can still
+     find them", and then deleted every row unconditionally — which is
+     precisely the orphaning this whole section was written to end. An
+     asset row is the ONLY record of which object belongs to what; delete
+     it while its bytes are still in the bucket and they are untraceable
+     forever.
+     removeFiles reports counts, not which path failed, so the safe
+     reading of that promise is the conservative one: if anything failed,
+     no rows go. A second attempt can then find and finish the job. */
+  if(!f.ok){
+    return {files:f.removed,rows:0,ok:false,
+      error:"Some files could not be removed, so no rows were deleted — "+
+            "the bytes can still be found and removed on a second attempt"};
+  }
   const del=await sb.from("assets").delete().in("id",list.map(a=>a.id));
-  return {files:f.removed,rows:del.error?0:list.length,ok:f.ok&&!del.error,
+  return {files:f.removed,rows:del.error?0:list.length,ok:!del.error,
           error:del.error?del.error.message:""};
 }
 
@@ -8108,6 +8197,7 @@ async function listPrefix(prefix,depth=0,seen={n:0}){
 async function uploadAsset(file,{ownerKind,ownerId,brandId,slideNo=null,onTick}){
   const id=newFbId("as"), kind=assetKindOf(file);
   const tick=(pct,state,reason)=>{ UPLOADS[id]={name:file.name,bytes:file.size,pct,state,reason:reason||""};
+                                   noteUploadLive(ownerKind,ownerId,id,file,pct,state);
                                    if(onTick) onTick(id,UPLOADS[id]); };
   tick(0,"uploading");
   try{
@@ -8402,6 +8492,42 @@ const playable = a => a.kind==="video" && a.status==="ready" && !a.purged_at;
    pointing at bytes that were never stored is worse than no row. It
    lives here instead, in memory, beside the thread it belongs to, until
    the person dismisses it or the page reloads. */
+/* ══ AND SO DOES ONE IN PROGRESS ═════════════════════════════════════
+   THE OTHER HALF OF THE SAME BLINDNESS. Yesterday I found that a failed
+   upload recorded its reason and rendered nowhere, and fixed that half.
+   The half Chirag was actually hitting was this one: an 11MB video takes
+   several seconds to upload and make a poster for, and during those
+   seconds the app said NOTHING. The comment appeared instantly, the
+   paperclip count cleared instantly, and the file arrived later in
+   silence — so it looked broken, and people posted again.
+
+   Three duplicate pairs in storage came from exactly that, one of them
+   1.5 seconds apart. The fix for a duplicate is not a blocker on the
+   second attempt; it is removing the reason anybody makes one. */
+let UPLOAD_LIVE={};               // ownerKey -> [{id,name,bytes,pct}]
+function noteUploadLive(ownerKind,ownerId,id,file,pct,state){
+  const k=assetKey(ownerKind,ownerId);
+  const list=UPLOAD_LIVE[k]=UPLOAD_LIVE[k]||[];
+  const i=list.findIndex(x=>x.id===id);
+  if(state!=="uploading"){                     // ready or failed: it is done here
+    if(i>-1) list.splice(i,1);
+    if(!list.length) delete UPLOAD_LIVE[k];
+    return;
+  }
+  const row={id,name:(file&&file.name)||"file",bytes:(file&&file.size)||0,pct:pct|0};
+  if(i>-1) list[i]=row; else list.push(row);
+}
+function uploadLiveBlock(ownerKind,ownerId){
+  const list=UPLOAD_LIVE[assetKey(ownerKind,ownerId)]||[];
+  if(!list.length) return "";
+  return `<div class="uplive">`+list.map(f=>`
+    <div class="uplive-r">
+      <div class="uplive-t"><b>${escHtml(f.name)}</b><span>${kbmb(f.bytes)}</span>
+        <em>${f.pct<12?"preparing":(f.pct<95?"uploading":"finishing")} · ${f.pct}%</em></div>
+      <div class="uplive-bar"><span style="width:${Math.max(3,Math.min(100,f.pct))}%"></span></div>
+    </div>`).join("")+`</div>`;
+}
+
 let UPLOAD_FAILS={};              // ownerKey -> [{id,name,bytes,reason}]
 function noteUploadFail(ownerKind,ownerId,file,reason){
   const k=assetKey(ownerKind,ownerId);
@@ -9211,7 +9337,22 @@ function fbOpenCount(postId){ return fbThreadsFor(postId).filter(t=>!t.top.resol
    orphaned objects in storage with no row pointing at them. */
 let FB_STAGED={};
 function fbStageFiles(postId,files){
-  FB_STAGED[postId]=[...(files||[])];
+  /* Picking the same file twice in one composer is always a mistake — the
+     browser hands back a fresh File object so nothing else would notice.
+     A LEGITIMATE re-upload of the same file to a DIFFERENT comment is not
+     blocked, and must not be: sending the same logo twice in a thread is
+     a real thing to want. What stops those duplicates is the progress bar
+     above, not a rule about filenames. */
+  const seen=new Set(), out=[], dupes=[];
+  [...(files||[])].forEach(f=>{
+    const k=f.name+"|"+f.size;
+    if(seen.has(k)){ dupes.push(f.name); return; }
+    seen.add(k); out.push(f);
+  });
+  FB_STAGED[postId]=out;
+  if(dupes.length) toast(dupes.length===1
+    ? `"${dupes[0]}" was picked twice — keeping one`
+    : `${dupes.length} files were picked twice — keeping one of each`);
   paintStaged(postId);
 }
 /* v46: the sentence in pale grey said the most and was seen the least.
@@ -9244,8 +9385,22 @@ function fbUnstage(postId,i){
   FB_STAGED[postId]=files;
   paintStaged(postId);
 }
+/* ONE POST AT A TIME. Two clicks 1.5 seconds apart made two comments and
+   two uploads of the same file — reproduced in a browser, not guessed.
+   Nothing here disabled the button, and the work is asynchronous, so the
+   second click read FB_STAGED before the first had cleared it and both
+   went through. The guard is keyed on the exact composer, so a reply and
+   a new comment on the same post do not block each other. */
+let FB_POSTING={};
 async function fbAddComment(postId,parentId){
   if(!FB_AVAILABLE||!canComment()) return;
+  const lock=postId+"|"+(parentId||"");
+  if(FB_POSTING[lock]) return;
+  FB_POSTING[lock]=true;
+  try{ return await fbAddCommentInner(postId,parentId); }
+  finally{ FB_POSTING[lock]=false; }
+}
+async function fbAddCommentInner(postId,parentId){
   const inputId=parentId?("fb-reply-"+parentId):("fb-new-"+postId);
   const el=document.getElementById(inputId); if(!el) return;
   const body=(el.value||"").trim();
@@ -11606,7 +11761,7 @@ function fbPanelHtml(p){
           ${c.author_kind==="client"?`<span style="font-size:10px;font-weight:700;color:#378ADD;">Client</span>`:""}
           <span class="when46">${fbTimeLabel(c.created_at)}${c.edited_at?" · edited":""}</span></div>
         <div class="ct46">${fbRich(c.body)}</div>
-        ${mediaBlock(assetsFor("comment",c.id))}${uploadFailBlock("comment",c.id)}
+        ${mediaBlock(assetsFor("comment",c.id))}${uploadLiveBlock("comment",c.id)}${uploadFailBlock("comment",c.id)}
         <div class="acts46${hasRx?" always":""}">${rx(c)}<span class="rgt">${own}
           <button onclick="fbCopyLink('${p.id}','${c.id}')">Link</button>${resolve}</span></div>
       </div></div>`;
