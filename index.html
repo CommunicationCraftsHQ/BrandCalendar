@@ -898,10 +898,24 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
    guessed. visibility:hidden keeps the box and moves nothing. */
 .brow:hover .bgear{visibility:visible;}
 .brow .bgear:hover{color:var(--text);border-color:var(--div);background:var(--surface);}
-.brow.bmuted .bnm{color:var(--subtle);}
-.brow.bmuted .bdot{opacity:.45;}
-.brow .bmute{display:inline-flex;align-items:center;color:var(--subtle);opacity:.8;}
-.brow .bmute i{font-size:13px;}
+/* THE BELL CARRIES IT. THE NAME DOES NOT.
+   Muting used to grey the name and fade the dot as well. Chirag hit it
+   on his own account and read it exactly as it looked: "why does the
+   Jewelchic brand appear inactive / grey?" Grey means unavailable
+   everywhere else in this suite — a retired tool, a disabled control —
+   so using it for "you asked me to stop mentioning this one" says
+   something the feature does not mean. A muted brand is fully usable:
+   you can open it, edit it, and every count still includes it.
+
+   So the name and the dot render at full strength and the crossed-out
+   bell is the whole signal. One marker, and it is the marker for the
+   thing that actually changed.
+
+   `.bmuted` STAYS ON THE ROW with no styling of its own — it is the
+   state hook the Lucern gate reads, and the honest place to hang
+   anything else that ever needs to know. */
+.brow .bmute{display:inline-flex;align-items:center;color:var(--muted);}
+.brow .bmute i{font-size:14px;}
 /* who is on a brand */
 .bp-r{display:flex;align-items:center;gap:11px;padding:10px 20px;border-bottom:1px solid var(--div);}
 .bp-av{width:30px;height:30px;border-radius:50%;background:var(--text);color:#fff;font-size:11px;
@@ -5548,7 +5562,7 @@ function buildBrandPanel(){
      .map(([k,b])=>`<div class="brow${activeBrand===k?" on":""}${brandMuted(k)?" bmuted":""}" onclick="pickBrand('${k}')">
         <span class="bdot" style="background:${b.color||"#6B6B6B"}"></span>
         <span class="bnm">${escAttr(b.name)}</span>
-        ${brandMuted(k)?`<span class="bmute" title="Muted — turn it back on from the bell"><i class="ti ti-bell-off"></i></span>`:""}
+        ${brandMuted(k)?`<span class="bmute" role="img" aria-label="Muted" title="Muted — turn it back on from the bell"><i class="ti ti-bell-off"></i></span>`:""}
         <span class="bct">${(b.posts||[]).length||""}</span>
         ${canEdit()?`<button class="bgear" title="Who is on this brand"
            onclick="event.stopPropagation();openBrandPeople('${k}')"><i class="ti ti-users"></i></button>`:""}
@@ -7807,7 +7821,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v77 — São Paulo: a brand is a wall";
+const TOOL_VERSION="v77.1 — São Paulo: the bell carries the mute, not the name";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
