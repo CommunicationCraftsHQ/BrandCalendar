@@ -890,9 +890,13 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .bphead{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--subtle);padding:7px 10px 5px;}
 /* ── LUCERN — the switcher carries two new things per row ── */
 .brow .bgear{width:24px;height:24px;border-radius:6px;border:1px solid transparent;background:transparent;
-  color:var(--subtle);font-size:13px;display:none;align-items:center;justify-content:center;
-  cursor:pointer;font-family:inherit;margin-left:4px;}
-.brow:hover .bgear{display:inline-flex;}
+  color:var(--subtle);font-size:13px;display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;font-family:inherit;margin-left:4px;flex:none;visibility:hidden;}
+/* THE SPACE IS ALWAYS THERE; ONLY THE INK APPEARS. display:none on a
+   flex child gives its width back to the row, so every element after it
+   slid 37px sideways the moment the cursor arrived — measured, not
+   guessed. visibility:hidden keeps the box and moves nothing. */
+.brow:hover .bgear{visibility:visible;}
 .brow .bgear:hover{color:var(--text);border-color:var(--div);background:var(--surface);}
 .brow.bmuted .bnm{color:var(--subtle);}
 .brow.bmuted .bdot{opacity:.45;}
@@ -997,9 +1001,12 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
    have silenced. The footer is drawn even on an empty panel, because a
    mute you cannot find is a mute you cannot undo. */
 .ngh .nmute{width:22px;height:22px;border-radius:6px;border:1px solid transparent;background:transparent;
-  color:var(--subtle);font-size:12px;display:none;align-items:center;justify-content:center;
-  cursor:pointer;font-family:inherit;}
-.ngh:hover .nmute{display:inline-flex;}
+  color:var(--subtle);font-size:12px;display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;font-family:inherit;flex:none;visibility:hidden;}
+/* Same fault, same fix. Here it is the brand NAME that pays: it is an
+   anonymous flex item, so on a long name there is no slack and the text
+   itself compresses when the button takes its width. */
+.ngh:hover .nmute{visibility:visible;}
 .ngh .nmute:hover{color:var(--acc);border-color:rgba(13,13,13,.12);background:rgba(255,255,255,.75);}
 .npmuted{border-top:1px solid rgba(13,13,13,.07);background:rgba(13,13,13,.02);}
 .npmh{padding:9px 14px 4px;font-size:10px;font-weight:700;letter-spacing:.07em;
@@ -7723,7 +7730,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v74 — Lucern: archive, membership, memory";
+const TOOL_VERSION="v74.1 — Lucern: nothing moves on hover";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
