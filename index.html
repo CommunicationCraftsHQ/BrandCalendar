@@ -3670,7 +3670,8 @@ function fbToggleActivity(postId){ fbActOpen[postId]=!fbActOpen[postId]; renderS
 /* A6 — the caption, edited where it is read. Staff only (D13): a client
    suggesting a line is a comment; a client silently rewriting the caption
    is a different product. */
-function canEditCaption(){ return ["admin","team"].includes(ME.role); }
+/* editing a caption is editing the post it belongs to */
+function canEditCaption(){ return can("create"); }
 /* innerText is what a contenteditable really contains — it collapses the
    <br>s a browser inserts. It does not exist everywhere, so read through
    a helper rather than assuming it. */
@@ -5036,6 +5037,7 @@ function buildBfEvList(){
 function resetBrandEvs(){bmEvOverride=null;buildBfEvList();}
 
 function startNewBrand(){
+  if(!can("manage_brands")) return capDenied("Creating a brand");
   bmKey=null;bmAud=[];bmInds=[];bmEvOverride=null;bmPosts=[];
   document.getElementById("bm-form-title").textContent="New brand";
   document.getElementById("bf-name").value="";
@@ -5079,6 +5081,7 @@ function saveBrand(){
 }
 
 function delBrand(k){
+  if(!can("manage_brands")) return capDenied("Deleting a brand");
   if(!confirm(`Delete "${brands[k]?.name}"?`)) return;
   dbDeleteBrand(k);
   delete brands[k]; if(activeBrand===k){activeBrand="";document.getElementById("brand-sel").value="";}
@@ -5810,7 +5813,9 @@ function isBrandAM(bid,email){
 }
 /* Chirag, 21 August — "Who manages people on a brand → admins, and that
    brand's Ac Manager." */
-function canManagePeople(bid){ return ME.role==="admin"||isBrandAM(bid||activeBrand); }
+function canManagePeople(bid){
+  return can("manage_brand_people") && (ME.role==="admin"||isBrandAM(bid||activeBrand));
+}
 /* And — "Who edits Brand Vision → admins, that brand's Ac Manager, and
    anyone on the brand."
 
@@ -5825,9 +5830,22 @@ function canManagePeople(bid){ return ME.role==="admin"||isBrandAM(bid||activeBr
    the membership branch. openBrief() blocks them too; this is the
    second lock, because a permission that is checked in one place is a
    permission one call site away from not being checked at all. */
+/* Chirag, 22 August: "Anyone on a brand can edit brand vision."
+   Lucern expressed that as three ORed conditions because the matrix said
+   NO for account_manager and creator and had to be routed around. The
+   Stage 1 migration sets those two to yes, so the matrix can simply be
+   asked — and the sentence survives intact, because being on the brand
+   is still required. One condition instead of three, saying the same
+   thing, and now changeable without a deploy. */
 function canEditVision(bid){
   const b=bid||activeBrand;
-  return canCap("edit_brand_vision") || isBrandAM(b) || (canEdit()&&isOnBrand(b));
+  /* AN ADMIN IS NOT BLOCKED BY MEMBERSHIP, and leaving that out was a
+     real regression that tests/capetown-frame caught before this shipped:
+     with the permission ANDed to isOnBrand, an admin standing on a brand
+     they were not a member of lost the Edit button — on a screen that has
+     been admin-only since August. It also matches the rule Chirag
+     confirmed on 22 August, "Admin means all brands". */
+  return can("edit_brand_vision") && (ME.role==="admin" || isOnBrand(b));
 }
 
 /* ══ THE LANE IS A LAYER, AND IT STARTS OFF ══════════════════════════
@@ -6218,7 +6236,7 @@ function brShowArchived(){
    an admin. Anyone who can put work away can take it back out. */
 async function brSetArchived(id,on){
   const t=BR.tasks.find(x=>x.id===id); if(!t) return;
-  if(!brIsAM(t)){ toast("Only the Ac Manager or an admin archives a task","err"); return; }
+  if(!brCanArchive(t)){ toast("Only the Ac Manager or an admin archives a task","err"); return; }
   const was=t.archived_at||null;
   const at=on?new Date().toISOString():null;
   t.archived_at=at; render();
@@ -6302,7 +6320,7 @@ function buildBrandingSidebar(){
 let BT=null;   // the task being edited, plus its milestone rows
 
 function brNewTask(){
-  if(!canEdit()||!activeBrand) return;
+  if(!can("task_create")||!activeBrand) return;
   BT={id:null,title:"",brief:"",project_id:"",owner_id:null,delivery_date:"",
       status:"not_started",ms:[]};
   brRenderEditor(); openM("br-task");
@@ -6413,7 +6431,7 @@ async function brPickProject(sel){
 const BR_PROJECT_COLOURS=["#7C3AED","#0E8A8A","#C2185B","#D2691E","#2F7A46","#3B6FD4"];
 
 async function brSaveTask(){
-  if(!canEdit()||!activeBrand) return;
+  if(!can("task_create")||!activeBrand) return;
   const title=(BT.title||"").trim();
   if(!title){ toast("A task needs a title","err"); return; }
   const row={brand_id:activeBrand, title,
@@ -6457,7 +6475,7 @@ async function brSaveTask(){
 }
 
 async function brDeleteTask(){
-  if(!canEdit()||!BT||!BT.id) return;
+  if(!can("task_create")||!BT||!BT.id) return;
   const t=BR.tasks.find(x=>x.id===BT.id);
   const n=brMsFor(BT.id).length;
   /* Soft delete, like everything else here — deleted_at, not a DELETE.
@@ -6490,7 +6508,15 @@ async function brDeleteTask(){
    dropdown, a post, or a reload calls render(). */
 let TASK={id:null,msgs:[],acts:[],loading:false,err:"",asClient:false,draft:""};
 
-function brIsAM(t){ return !!t && (ME.role==="admin" || t.owner_id===ME.id); }
+/* PERMISSION **AND** THE CONDITION THAT WAS ALREADY THERE. brIsAM has
+   always been "an admin, or the person who owns this task" — an ownership
+   test, not a role test, so it cannot become a pure permission without
+   changing behaviour. Seeded true for all three staff roles, this is
+   exactly what it answered yesterday; turning Creator off in the matrix
+   is what makes the separation real, and it does it without this line
+   moving again. Same shape for archiving and for brand people below. */
+function brIsAM(t){ return !!t && can("task_advance") && (ME.role==="admin" || t.owner_id===ME.id); }
+function brCanArchive(t){ return !!t && can("task_archive") && (ME.role==="admin" || t.owner_id===ME.id); }
 
 async function loadThread(taskId){
   const draft=(TASK.id===taskId?TASK.draft:"")||"";
@@ -7645,7 +7671,10 @@ function exportMasterXLSX(){
 }
 
 function importEvents(input){
-  if(!canEdit()){toast("View-only account","err");return;}
+  /* Bulk-loading a file over the working set is the most destructive
+     thing in the tool that is not called delete. It has always been
+     behind canEdit(), which is to say behind "is this person staff". */
+  if(!can("import_export")){ capDenied("Importing a file"); return; }
   const file=input.files&&input.files[0]; input.value=""; if(!file) return;
   const finish=(rows)=>{
     try{
@@ -7730,7 +7759,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v74.1 — Lucern: nothing moves on hover";
+const TOOL_VERSION="v75 — São Paulo: the calendar asks the matrix";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -7738,7 +7767,9 @@ function showDiag(){
   let lsOK="working";try{localStorage.setItem("cc_test","1");localStorage.removeItem("cc_test");}catch(e){lsOK="BLOCKED (reload files after each reopen)";}
   const bl=Object.entries(brands).map(([k,b])=>b.name+" ("+(b.evIds||[]).length+" linked, "+(b.posts||[]).length+" dates)").join("\n  ")||"none";
   alert("Marketing Calendar — Data Status\n"
-    +"Tool version: "+TOOL_VERSION+"\n\n"
+    +"Tool version: "+TOOL_VERSION+"\n"
+    +"Permissions: "+(ME.capsOk?("read — "+Object.keys(ME.caps||{}).length+" for role "+(ME.toolRole||"?"))
+                              :("NOT READ — "+(ME.capsErr||"unknown")+" — every gate is admin-only until this works"))+"\n\n"
     +"Master events loaded: "+base+"\n"
     +"Custom events visible: "+cust+"\n"
     +"Custom events held in memory: "+store+"\n"
@@ -7803,7 +7834,7 @@ function showDiag(){
 const SB_URL="https://qsxldzqdjdplffxqdokd.supabase.co";
 const SB_KEY="sb_publishable_6ng_3jnvQbJUZifYTxmRrw_0yhCZuY9";
 const sb=window.supabase.createClient(SB_URL,SB_KEY);
-let ME={role:"pending",brand_id:null,email:""};
+let ME={role:"pending",brand_id:null,email:"",capsOk:false,capsErr:""};
 
 /* ══ v57.4 — AN OUT-OF-DATE PAGE DOES NOT GET TO WRITE ════════════════
    On 10 August a browser that had held this page open since 7 August
@@ -7992,7 +8023,21 @@ async function logAppEvent(type,detail){
     }]);
   }catch(e){ /* analytics must never break the app */ }
 }
-const canEdit=()=>ME.role==="admin"||ME.role==="team";
+/* ══ SÃO PAULO · THE COLLAPSE ENDS HERE ════════════════════════════
+   This line was `ME.role==="admin"||ME.role==="team"`, and TOOLROLE_TO_LEGACY
+   maps BOTH account_manager and creator to "team". So all 83 call sites
+   behind this function have treated an Account manager and a Creator as
+   the same person since the day roles were introduced.
+
+   can("create") is the same answer, derived rather than hardcoded: the
+   matrix grants `create` to admin, account_manager and creator, and
+   refuses it to both client roles — verified role by role in
+   tests/verify_sao_paulo_stage1.mjs, which computes it rather than
+   asserting it. Nothing changes on the day this ships.
+
+   What changes is that separating the two roles is now a toggle on a
+   screen instead of a build. */
+const canEdit=()=>can("create");
 
 function authMsg(t){document.getElementById("auth-msg").textContent=t||"";}
 async function signIn(){
@@ -8138,6 +8183,13 @@ async function loadAll(showToast){
      remembered layer choice would have been read on every brand switch
      and ignored on the one that matters most, the first screen you see. */
   applyLayerDefaults();
+  /* SÃO PAULO — SAY IT, DO NOT LET THEM WONDER. With the matrix
+     unreadable every gate falls back to admin-only, so a Creator would
+     find half the buttons gone and no reason given. A permission
+     decision and an outage look identical from the outside; only one of
+     them is fixed by reloading, so the message says which. */
+  if(ME.role!=="pending" && !ME.capsOk)
+    toast("Could not read what your role is allowed to do, so some buttons are hidden. Reload to try again.","err");
   render();
   startRealtime(); // Sydney: live updates from teammates (safe no-op if sockets unavailable)
   if(showToast) toast("Refreshed");
@@ -8468,7 +8520,14 @@ async function dbDeleteMonthItem(id){ if(!canEdit()) return; rtGRemove("monthIte
 let FB_AVAILABLE=false;
 const POSTFB={comments:{},activity:{},reactions:{},seen:{}};
 let fbOpen={}; // postId -> bool (panel expanded)
-function canComment(){ return ["admin","team","client"].includes(ME.role); }
+/* THE ONE PLACE STAGE 1 IS NOT A NO-OP, AND IT AFFECTS NOBODY TODAY.
+   This said admin-or-team-or-CLIENT, and "client" covers both client
+   roles. The matrix grants `comment` to Client reviewer and refuses it
+   to Client VIEWER — which is what a viewer is. So this is a tightening,
+   it is the matrix's own answer, and there are currently zero client
+   accounts in the directory for it to tighten. It is named here rather
+   than discovered later. */
+function canComment(){ return can("comment"); }
 function actorName(){ return (ME.email||"").split("@")[0]||"someone"; }
 function actorKind(){ return ME.role==="client"?"client":"team"; }
 /* ══ BUENOS AIRES · BA4 — load what the screen needs, not the database ══
@@ -9055,7 +9114,7 @@ async function loadRoundsFor(postId){
 }
 
 /* Only staff submit a round — RLS says so too, this is just the UI half. */
-function canSubmitRound(){ return ["admin","team"].includes(ME.role); }
+function canSubmitRound(){ return can("submit_review"); }
 
 async function submitRound(postId){
   if(!canSubmitRound()) return;
@@ -11303,9 +11362,14 @@ function renderPlanner(){
    </div>`;
 }
 
-async function dbDeleteBrand(id){ if(canEdit()) dbErr(await sb.from("brands").update({deleted_at:new Date().toISOString()}).eq("id",id)); }
+/* A CREATOR COULD DELETE A BRAND. Not a hypothetical and not a
+   decision anybody took — canEdit() is admin-or-team and team is both
+   staff roles, so it followed from the collapse. manage_brands is seeded
+   true for Creator because that IS today's behaviour; it is the first
+   toggle worth turning off, and it is now a toggle. */
+async function dbDeleteBrand(id){ if(can("manage_brands")) dbErr(await sb.from("brands").update({deleted_at:new Date().toISOString()}).eq("id",id)); }
 async function dbTrashBrandEvent(id){ if(canEdit()) dbErr(await sb.from("brand_events").update({deleted_at:new Date().toISOString()}).eq("id",id)); }
-async function dbSyncIndustries(){ if(canEdit()) dbErr(await sb.from("industries").upsert(INDS.map((x,i)=>({id:x.id,label:x.label,pos:i})))); }
+async function dbSyncIndustries(){ if(can("manage_industries")) dbErr(await sb.from("industries").upsert(INDS.map((x,i)=>({id:x.id,label:x.label,pos:i})))); }
 async function dbPushAllMasterEvents(){
   /* VALENCIA — was canEdit(). A silent bulk upsert of the master events
      is the widest of the four, and the least visible. */
@@ -11908,39 +11972,59 @@ async function resolveAccess(userId, legacyRole){
     ME.toolRole=cal.role;
     ME.accessSource="user_tool_roles";
     ME.role=mapped;
-    /* loaded for stage 3, read by nothing today */
-    const p=await sb.from("role_permissions").select("permission,allowed")
+    /* SÃO PAULO: this is no longer "loaded and read by nothing". Every
+       gate in the tool now depends on it, so a failure here is not a
+       degraded experience — it is an app where nobody but an admin can
+       do anything. Retried once, then RECORDED, then said out loud.
+       An access failure that looks like a permissions decision is the
+       worst outcome of all, because the person blames themselves. */
+    let p=await sb.from("role_permissions").select("permission,allowed")
       .eq("tool","calendar").eq("role",cal.role);
-    if(!p.error) (p.data||[]).forEach(x=>{ ME.caps[x.permission]=x.allowed; });
+    if(p.error) p=await sb.from("role_permissions").select("permission,allowed")
+      .eq("tool","calendar").eq("role",cal.role);
+    if(!p.error && (p.data||[]).length){
+      (p.data||[]).forEach(x=>{ ME.caps[x.permission]=x.allowed; });
+      ME.capsOk=true;
+    }else{
+      ME.capsOk=false;
+      ME.capsErr=(p.error&&p.error.message)||"the permission list came back empty";
+    }
   }catch(e){ /* never let access resolution throw somebody out of the app */ }
 }
+/* ══ SÃO PAULO · STAGE 1 — THE CALENDAR ASKS THE MATRIX ═════════════
+   There were two of these. can() fell back to canEdit(); canCap() fell
+   back to admin-only. Two fallbacks for one question is how a permission
+   silently stops being enforced for exactly the accounts you are least
+   sure about — which is the argument Access Stage 3 made for adding the
+   second one, and it was right at the time.
+
+   It cannot stay right now, for a reason that is not a matter of taste:
+   canEdit() is itself can("create") from this build on, so a fallback
+   through canEdit() is an infinite loop. One had to go, and the one that
+   goes is the permissive one.
+
+   THE FALLBACK IS ADMIN-ONLY, AND THAT IS FAIL-CLOSED ON PURPOSE. A
+   permission the matrix does not mention is a permission nobody granted.
+   The cost is real and is named: if role_permissions cannot be read at
+   all, every non-admin becomes read-only until they reload. That is why
+   resolveAccess() retries, why ME.capsOk exists, and why the person is
+   TOLD rather than left wondering why the buttons went. A silent
+   downgrade would be the worse failure; this suite has been bitten by
+   the silent kind twice. */
 function can(perm){
-  if(ME.caps && Object.prototype.hasOwnProperty.call(ME.caps,perm)) return !!ME.caps[perm];
-  return canEdit();
-}
-
-/* ══ ACCESS STAGE 3 — the four capabilities start being enforced ══════
-   D3, signed off 2026-08-04: master events, the Brand Vision, deleting a
-   post and archiving a month become admin-only.
-
-   Why this is NOT just can(): can() falls back to canEdit() when the
-   permission set has not loaded — right for the soak, wrong here. During
-   stage 2 anyone whose row the backfill missed still resolves through the
-   legacy field with NO caps, so can("delete_post") would answer canEdit()
-   and the capability would silently not be enforced for exactly the
-   people whose data we are least sure about.
-
-   So: the permission set decides when it exists, and ADMIN is required
-   when it does not. Falling back to "team" here would make the whole
-   stage a no-op for the accounts most likely to be wrong.
-
-   This is the one stage anyone can SEE. A creator who could archive
-   August yesterday cannot today. That is the decision, not a bug. */
-const ADMIN_ONLY_CAPS=["manage_events","edit_brand_vision","delete_post","archive_month"];
-function canCap(perm){
   if(ME.caps && Object.prototype.hasOwnProperty.call(ME.caps,perm)) return !!ME.caps[perm];
   return ME.role==="admin";
 }
+
+/* ACCESS STAGE 3 argued for a second, stricter fallback and got one.
+   São Paulo folds it back into can(), which now has Stage 3's fallback
+   and not the permissive one — so nothing Stage 3 protected is loosened
+   by the merge, and the 33 call sites keep their name while it is
+   retired. ADMIN_ONLY_CAPS went with it: it was a hardcoded list of four
+   capabilities, declared, referenced by nothing, and exactly the thing
+   Chirag meant by "permissions can change specifics in future when
+   needed". They are rows now. */
+const canCap=can;
 /* one message, so it reads the same wherever somebody meets the edge */
 function capDenied(what){ toast(what+" is limited to an admin.","err"); }
 
@@ -12805,7 +12889,7 @@ const IM_MAGIC="CC-CONTENT-EXPORT-V1";
 let IM=null;   // the parsed, diffed import awaiting confirmation
 
 function openImport(){
-  if(!canEdit()) return;
+  if(!can("import_export")) return capDenied("Importing captions");
   const inp=document.createElement("input");
   inp.type="file"; inp.accept=".xlsx";
   inp.onchange=()=>{ if(inp.files&&inp.files[0]) imRead(inp.files[0]); };
