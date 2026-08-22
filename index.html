@@ -7821,7 +7821,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v77.1 — São Paulo: the bell carries the mute, not the name";
+const TOOL_VERSION="v78 — Lima: nothing is destroyed by looking";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -11601,23 +11601,32 @@ async function carryForward(){
 async function openTrash(){
   if(!canEdit()){toast("View-only account","err");return;}
   renderTrashLoading(); openM("trash");
-  const cutoff=new Date(Date.now()-30*24*3600*1000).toISOString();
-  /* UTRECHT — the auto-purge takes the files with it now, and it
-     CHECKS. The brands line used to be a bare `delete` with no error
-     handling: on any brand a Production Planner shoot or a Portfolio
-     logo pointed at, it raised a foreign-key violation, returned it in
-     an object nobody read, and did nothing. Silently, every time Trash
-     was opened, since the day it was written. */
-  /* VALENCIA — the master-event sweep is a WRITE to master events, and
-     it fired for anybody who opened Trash. Skipped rather than refused:
-     housekeeping that an admin will do on their next visit must not
-     greet a creator with an error for something they did not ask for.
-     Brand events are per-brand work and stay with canEdit(). */
-  if(canCap("manage_events"))
-    dbErr(await sb.from("events").delete().not("deleted_at","is",null).lt("deleted_at",cutoff));
-  dbErr(await sb.from("brand_events").delete().not("deleted_at","is",null).lt("deleted_at",cutoff));
-  const old=await sb.from("brands").select("id").not("deleted_at","is",null).lt("deleted_at",cutoff);
-  for(const b of (old.data||[])) await clearBrandFromCalendar(b.id,{ask:false});
+  /* ══ LIMA · STAGE 1 — OPENING TRASH NO LONGER DESTROYS ANYTHING ════
+
+     A 30-day auto-purge used to run right here, as the first thing
+     openTrash() did. Not on a schedule — as a SIDE EFFECT OF LOOKING.
+
+     On 22 August the live database held 87 deleted master events, 21
+     campaigns and 9 brands, and 82 of those rows were already past the
+     cutoff. The next person to open this modal would have destroyed all
+     82 permanently: no confirmation, no record, no way back, and no way
+     for them to know it had happened. Somebody opening Trash to CHECK
+     WHETHER SOMETHING COULD BE RESTORED would have been the person who
+     made it unrestorable.
+
+     Two more things were wrong with it. It ran for anyone who could
+     edit, so a Creator glancing at Trash triggered an admin's
+     housekeeping. And it covered three tables out of the nineteen in
+     this suite that soft-delete, so posts, tasks and comments were
+     never purged at all — they simply accumulated forever, which is the
+     other half of the same fault.
+
+     The sweep comes back in stage 6: reading a retention policy you can
+     see and edit, running on an admin's sign-in rather than on a glance,
+     and only after stage 5 lets you watch what it is about to take.
+     Until then NOTHING here destroys anything. Trash reads and restores;
+     that is all it does.
+     ═══════════════════════════════════════════════════════════════════ */
   const [ev,bev,br]=await Promise.all([
     sb.from("events").select("*").not("deleted_at","is",null),
     sb.from("brand_events").select("*").not("deleted_at","is",null),
@@ -11721,11 +11730,40 @@ async function clearBrandFromCalendar(id,{ask=true}={}){
          still points at it. The foreign key is the authority here, not
          a list of tables in this file that would go stale the day a
          sixth tool is built. */
+  /* ══ LIMA · STAGE 7 — IT STAYS DELETED HERE ════════════════════════
+     Chirag, 22 August: "keep it deleted in the Calendar and leave the
+     other tool's reference intact. Wherever the brand is deleted, all
+     data related to that brand from THAT TOOL should also get deleted."
+
+     So deletion is PER TOOL, and this function is the Calendar's half.
+
+     WHAT THIS REPLACED, AND WHY IT WAS THE WORST OF BOTH. The old line
+     was `if(kept) update({deleted_at:null})` — when a Production Planner
+     shoot or a Portfolio logo held the brand, the hard delete failed on
+     the foreign key and the brand was UN-DELETED. It reappeared in the
+     switcher, looking perfectly normal, with every one of its posts,
+     plans, campaigns, briefs and files already destroyed two lines
+     above. You deleted a brand, were told it was kept, and got back an
+     empty shell that looked alive.
+
+     Now: the rows and files are gone from the Calendar, and the brand
+     stays deleted here whether or not the row itself could go. Another
+     tool's reference is untouched and its own data is its own business —
+     it will clear it when somebody deletes the brand THERE. */
   const del=await sb.from("brands").delete().eq("id",id);
   const kept=!!del.error;
-  if(kept) await sb.from("brands").update({deleted_at:null}).eq("id",id);
+  if(kept){
+    /* the row survives because somebody else needs it — but it is
+       deleted in this tool, and the stamp is what says so */
+    await sb.from("brands").update({deleted_at:new Date().toISOString()}).eq("id",id);
+  }
 
-  toast((byRow.removed+byPrefix.removed)+" file(s) removed"+(kept?" · brand kept, still in use elsewhere":""));
+  /* LIMA: "kept" used to mean the brand came back. It now means the ROW
+     survives for another tool while the brand is still deleted here, and
+     the sentence has to say which — "kept" alone read as "nothing
+     happened", which was the opposite of the truth. */
+  toast((byRow.removed+byPrefix.removed)+" file(s) removed"
+    +(kept?" · removed from the Calendar; the brand record stays for another tool":""));
   return true;
 }
 
