@@ -5594,17 +5594,20 @@ function renderBrandPeople(){
   const can=canManagePeople(bid);
   const mem=membersOf(bid).slice()
     .sort((x,y)=>(y.am?1:0)-(x.am?1:0)||x.email.localeCompare(y.email));
+  const ROLE_LBL={admin:"Admin",account_manager:"Ac Manager",creator:"Creator",
+                  client_reviewer:"Client reviewer",client_viewer:"Client viewer"};
 
   /* THE TABLE MISSING IS A DIFFERENT FACT FROM THE BRAND BEING EMPTY,
      and the screen has to say which. Everywhere else in this app that
      collapsed the two, it lied — see the three states on the Branding
      list. */
-  if(!MEMBERS_OK){
+  if(!ASSIGN_OK){
     el.innerHTML=`<div class="brs-h"><b>People on ${escAttr(b.name)}</b>
         <button class="brs-x" onclick="closeM('brand-people')">&times;</button></div>
       <div style="padding:22px 20px;font-size:13px;line-height:1.65;color:var(--muted);">
-        Brand membership has not been set up on this database yet, so everybody
-        is on every brand. Nothing is broken — the Lucern migration adds it.</div>
+        The brand assignment list could not be read, so everybody is treated as
+        being on every brand. Nothing is broken and nothing is hidden — reload,
+        and if it persists it is a permissions rule on <b>user_brands</b>.</div>
       <div class="modal-foot"><button class="btn btn-g" onclick="closeM('brand-people')">Close</button></div>`;
     return;
   }
@@ -5614,17 +5617,16 @@ function renderBrandPeople(){
     const client=p&&p.role==="client";
     const me=String(ME.email||"").toLowerCase()===m.email;
     return `<div class="bp-r">
-      <span class="bp-av${client?" cli":""}">${escAttr(bpName(m.email).slice(0,2).toUpperCase())}</span>
-      <div class="bp-nm"><b>${escAttr(bpName(m.email))}${me?" <span class='bp-you'>you</span>":""}</b>
+      <span class="bp-av${client?" cli":""}">${escAttr((m.name||m.email).slice(0,2).toUpperCase())}</span>
+      <div class="bp-nm"><b>${escAttr(m.name||m.email)}${me?" <span class='bp-you'>you</span>":""}</b>
         <span>${escAttr(m.email)}</span></div>
       ${m.am?`<span class="bp-tag am">Ac Manager</span>`
-            :`<span class="bp-tag">${escAttr(client?"Client":(p?({admin:"Admin",team:"Team"}[p.role]||p.role):"—"))}</span>`}
-      ${can&&!client?`<button class="bp-b" title="${m.am?"Stop being the Ac Manager on this brand":"Make this person the Ac Manager on this brand"}"
-         onclick="bpToggleAM('${escAttr(m.email)}')">${m.am?"Unset AM":"Make AM"}</button>`:""}
-      ${can?`<button class="bp-x" title="Take off this brand"
+            :`<span class="bp-tag">${escAttr(ROLE_LBL[m.role]||m.role||"—")}</span>`}
+      ${m.always?`<span class="bp-tag" title="Set in CC Platform → People & access">Always all brands</span>`:""}
+      ${can&&!m.always?`<button class="bp-x" title="Take off this brand"
          onclick="bpRemove('${escAttr(m.email)}')">&times;</button>`:""}
     </div>`;
-  }).join("")||`<div class="bp-empty">Nobody is on this brand.</div>`;
+  }).join("")||`<div class="bp-empty">Nobody is on this brand yet.</div>`;
 
   const onIt=new Set(mem.map(m=>m.email));
   /* A CLIENT IS ONLY EVER OFFERED FOR THEIR OWN BRAND. Putting a client
@@ -5650,7 +5652,10 @@ function renderBrandPeople(){
       <button class="brs-x" onclick="closeM('brand-people')">&times;</button></div>
     <div class="brs-b" style="padding:0;">${rows}${add}</div>
     <div class="bp-note">${can
-      ? "Being on a brand is what lets someone edit its Brand Vision. It tidies the brand list — it does not lock anyone out of data they could already reach."
+      ? "The same list CC Platform writes — change it in either place. An <b>Account manager</b> "
+        + "who is on a brand is that brand's Ac Manager; there is no separate switch. "
+        + "<b>Always all brands</b> is set in CC Platform → People &amp; access and cannot be "
+        + "removed from here. Nothing is enforced yet — this decides what you see, not what you may reach."
       : "Only an admin or this brand's Ac Manager can change this list."}</div>
     <div class="modal-foot"><button class="btn btn-g" onclick="closeM('brand-people')">Done</button></div>`;
 }
@@ -5658,47 +5663,51 @@ async function bpAdd(){
   const bid=BP.brand; if(!canManagePeople(bid)) return;
   const sel=document.getElementById("bp-pick"); if(!sel||!sel.value) return;
   const email=String(sel.value).toLowerCase();
-  (MEMBERS[bid]=MEMBERS[bid]||[]).push({email,am:false});
+  const p=personByEmail(email); if(!p) return;
+  /* KEYED ON THE USER ID, not the email. brand_members was keyed on
+     email and user_brands is not — People & access has written user_id
+     since the day it shipped, and a second key for one relationship is
+     how the two lists would have drifted apart again. */
+  (ASSIGN[bid]=ASSIGN[bid]||[]).push(p.id);
   BP.adding=false; renderBrandPeople(); buildBrandPanel();
-  const r=await sb.from("brand_members").insert([{brand_id:bid,user_email:email,
-    is_ac_manager:false,added_by:ME.id||null}]);
-  if(r.error){ MEMBERS[bid]=membersOf(bid).filter(m=>m.email!==email);
+  const r=await sb.from("user_brands").insert([{user_id:p.id,brand_id:bid}]);
+  if(r.error){ ASSIGN[bid]=(ASSIGN[bid]||[]).filter(x=>x!==p.id);
     renderBrandPeople(); dbErr(r); return; }
-  toast(bpName(email)+" is on "+((brands[bid]||{}).name||"this brand"));
+  toast(p.name+" is on "+((brands[bid]||{}).name||"this brand"));
 }
 async function bpRemove(email){
   const bid=BP.brand; if(!canManagePeople(bid)) return;
   const e=String(email||"").toLowerCase();
   const row=membersOf(bid).find(m=>m.email===e); if(!row) return;
+  /* A STANDING EXCEPTION IS NOT REMOVED FROM ONE BRAND. Somebody
+     flagged "always all brands" is on this one by a rule, not a row —
+     deleting a row that does not exist would appear to do nothing, so
+     the button is absent and this is the second lock. */
+  if(row.always){
+    toast(row.name+" is on every brand — change that in CC Platform → People & access","err");
+    return;
+  }
   const mine=String(ME.email||"").toLowerCase()===e;
-  /* TAKING YOURSELF OFF IS ALLOWED AND IS WORTH ASKING ABOUT — if you
-     are the only Ac Manager, the only people left who can put you back
-     are the admins. Saying that is cheaper than an undo. */
   const lastAM=row.am&&membersOf(bid).filter(m=>m.am).length===1;
-  const warn=[mine?"That is you.":"",lastAM?"They are the only Ac Manager on this brand.":""]
+  const warn=[mine?"That is you.":"",lastAM?"They are the only Account manager on this brand.":""]
     .filter(Boolean).join(" ");
-  if(!confirm(`Take ${mine?"yourself":bpName(e)} off ${(brands[bid]||{}).name||"this brand"}? ${warn}
+  if(!confirm(`Take ${mine?"yourself":row.name} off ${(brands[bid]||{}).name||"this brand"}? ${warn}
 The brand disappears from their switcher. Nothing they have written is deleted.`)) return;
-  MEMBERS[bid]=membersOf(bid).filter(m=>m.email!==e);
+  ASSIGN[bid]=(ASSIGN[bid]||[]).filter(x=>x!==row.id);
   renderBrandPeople(); buildBrandPanel(); render();
-  const r=await sb.from("brand_members").delete().eq("brand_id",bid).eq("user_email",e);
-  if(r.error){ (MEMBERS[bid]=MEMBERS[bid]||[]).push(row); renderBrandPeople(); dbErr(r); return; }
+  const r=await sb.from("user_brands").delete().eq("brand_id",bid).eq("user_id",row.id);
+  if(r.error){ (ASSIGN[bid]=ASSIGN[bid]||[]).push(row.id); renderBrandPeople(); dbErr(r); return; }
   toast("Taken off "+((brands[bid]||{}).name||"the brand"));
 }
-async function bpToggleAM(email){
-  const bid=BP.brand; if(!canManagePeople(bid)) return;
-  const e=String(email||"").toLowerCase();
-  const row=membersOf(bid).find(m=>m.email===e); if(!row) return;
-  const was=row.am;
-  row.am=!was; renderBrandPeople();
-  const r=await sb.from("brand_members").update({is_ac_manager:row.am})
-    .eq("brand_id",bid).eq("user_email",e);
-  if(r.error){ row.am=was; renderBrandPeople(); dbErr(r); return; }
-  /* MORE THAN ONE AC MANAGER PER BRAND IS ALLOWED, deliberately. People
-     go on leave, and a rule that only one person may hold the flag turns
-     a fortnight in Goa into a locked brand. */
-  toast(row.am?bpName(e)+" is an Ac Manager on this brand":bpName(e)+" is no longer an Ac Manager here");
-}
+/* bpToggleAM IS GONE. It set brand_members.is_ac_manager, a second
+   place to say something the role already says. Chirag, 22 August:
+   an Account manager who is on a brand IS that brand's Ac Manager. To
+   change who that is, change their role in CC Platform or change who is
+   on the brand here — and there is no third answer to keep in step.
+
+   More than one per brand is still allowed, and now for free: assign two
+   Account managers. A rule of one turns a fortnight in Goa into a locked
+   brand. */
 function pickBrand(k){ closeAllPops(); const sel=document.getElementById("brand-sel"); if(sel) sel.value=k; setBrand(k); }
 function syncBrandTrig(){
   const nm=document.getElementById("brand-trig-nm"), dot=document.getElementById("brand-trig-dot");
@@ -5773,43 +5782,82 @@ async function savePref(bid,patch){
 function brandMuted(bid){ return !!prefFor(bid).muted; }
 function mutedBrandIds(){ return Object.keys(brands||{}).filter(brandMuted); }
 
-/* ══ LUCERN · WHO IS ON A BRAND ═════════════════════════════════════
-   Brand membership for staff did not exist before this. ME.brand_id is
-   one brand and is read for CLIENTS only; every staff member saw every
-   brand because nothing restricted them.
+/* ══ SÃO PAULO · STAGE 2 — ONE BRAND LIST, TWO DOORS ════════════════
+   Lucern built brand_members and it lasted a day. `user_brands` already
+   existed, People & access already wrote it, and the calendar had simply
+   never read it — so the brand picker on that screen has been writing
+   rows nobody obeyed since the day it shipped. Two half-systems: one
+   written and never read, one read and written in one place.
 
-   WITHOUT THE TABLE, EVERYBODY IS ON EVERYTHING. That is not a
-   convenience, it is the only safe answer: a missing brand_members must
-   not lock the Brand Vision or empty the brand switcher. The failure
-   mode of this feature has to be "no change", never "nobody can work". */
-let MEMBERS={};            // brandId -> [{email,am}]
-let MEMBERS_OK=false;      // false = no table; everybody is on every brand
-async function loadMembers(){
-  MEMBERS={}; MEMBERS_OK=false;
+   There is now one list, and two screens onto it.
+
+   A PERSON IS ON A BRAND IF EITHER IS TRUE:
+     · profiles.all_brands  — a standing "everything, including brands
+       that do not exist yet". All nine people carry it today, which is
+       why nobody noticed the picker doing nothing. Set only in People &
+       access, by Chirag's decision of 22 August.
+     · a user_brands row    — this person, this brand. Either screen.
+
+   WITHOUT user_brands, EVERYBODY IS ON EVERYTHING. Same failure rule
+   Lucern used and for the same reason: this must never be the thing that
+   stops somebody working. Stage 2 does not enforce anything anyway —
+   it makes the two screens agree. Stage 3 makes it binding, on its own
+   day, with a migration that refuses rather than strands. */
+let ASSIGN={};             // brandId -> [user id] explicitly assigned
+let ASSIGN_OK=false;       // false = unreadable; everybody is on everything
+async function loadAssignments(){
+  ASSIGN={}; ASSIGN_OK=false;
   try{
-    const r=await sb.from("brand_members").select("brand_id,user_email,is_ac_manager");
+    const r=await sb.from("user_brands").select("user_id,brand_id");
     if(r.error) return;
-    (r.data||[]).forEach(x=>{
-      (MEMBERS[x.brand_id]=MEMBERS[x.brand_id]||[]).push({
-        email:String(x.user_email||"").toLowerCase(), am:!!x.is_ac_manager});
-    });
-    MEMBERS_OK=true;
+    (r.data||[]).forEach(x=>{ (ASSIGN[x.brand_id]=ASSIGN[x.brand_id]||[]).push(x.user_id); });
+    ASSIGN_OK=true;
   }catch(e){}
 }
-function membersOf(bid){ return (bid&&MEMBERS[bid])||[]; }
-function isOnBrand(bid,email){
-  if(!MEMBERS_OK) return true;
-  const e=String(email==null?(ME.email||""):email).toLowerCase(); if(!e) return false;
-  return membersOf(bid).some(m=>m.email===e);
+function personById(id){ return (PEOPLE||[]).find(p=>p.id===id)||null; }
+function personByEmail(e){
+  const k=String(e||"").toLowerCase();
+  return (PEOPLE||[]).find(p=>String(p.email||"").toLowerCase()===k)||null;
 }
-/* "Ac Manager" has never been a role in this app — it is
-   branding_tasks.owner_id, per task. A person can be the Ac Manager on
-   Sangini and an ordinary team member on Jewelchic, which no role field
-   can say. The flag lives on the membership, which can. */
+/* THE ID IS THE KEY AND THE EMAIL IS THE FALLBACK. Looking yourself up
+   by id alone is right until your own row is not in the directory —
+   a truncated read, a grant that has not propagated — and then you are
+   on no brands, which reads as a permissions decision rather than the
+   outage it is. The email is the second way home. */
+function whoIsAsking(email){
+  if(email!=null) return personByEmail(email);
+  return personById(ME.id) || personByEmail(ME.email);
+}
+/* Everyone on the brand: the flag, plus the explicit rows. */
+function membersOf(bid){
+  if(!bid) return [];
+  const ids=ASSIGN[bid]||[];
+  return (PEOPLE||[]).filter(p=>p.allBrands||ids.indexOf(p.id)>-1).map(p=>({
+    id:p.id, email:String(p.email||"").toLowerCase(), name:p.name,
+    always:!!p.allBrands, role:p.toolRole||p.role,
+    /* AN ACCOUNT MANAGER WHO IS ON THIS BRAND *IS* ITS AC MANAGER.
+       Chirag, 22 August. That is the whole of what brand_members'
+       is_ac_manager column used to hold, expressed as a role plus an
+       assignment — two things that already existed and cannot disagree
+       with each other, because there is only one of them. */
+    am:(p.toolRole==="account_manager")
+  }));
+}
+function isOnBrand(bid,email){
+  if(!ASSIGN_OK) return true;
+  /* A DIRECTORY WE COULD NOT READ IS NOT AN EMPTY DIRECTORY. Without
+     PEOPLE there is no way to tell the flag from its absence, and
+     answering "no" would lock the Brand Vision for everybody on a bad
+     network. BA5 learned this the hard way with the @ menu. */
+  if(!(PEOPLE||[]).length) return true;
+  const p=whoIsAsking(email); if(!p) return false;
+  if(p.allBrands) return true;
+  return (ASSIGN[bid]||[]).indexOf(p.id)>-1;
+}
 function isBrandAM(bid,email){
-  if(!MEMBERS_OK) return false;
-  const e=String(email==null?(ME.email||""):email).toLowerCase(); if(!e) return false;
-  return membersOf(bid).some(m=>m.email===e&&m.am);
+  const p=whoIsAsking(email); if(!p) return false;
+  const role=(email==null?(ME.toolRole||p.toolRole):p.toolRole)||"";
+  return role==="account_manager" && isOnBrand(bid,p.email);
 }
 /* Chirag, 21 August — "Who manages people on a brand → admins, and that
    brand's Ac Manager." */
@@ -7759,7 +7807,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v75 — São Paulo: the calendar asks the matrix";
+const TOOL_VERSION="v76 — São Paulo: one brand list, two doors";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -8561,7 +8609,7 @@ async function loadPostFeedback(){
       loadCommentCounts(),
       loadTaskSeen(),
       loadPrefs(),
-      loadMembers()
+      loadAssignments()
     ]);
     loadPeople();
     FB_AVAILABLE=true;
@@ -9771,7 +9819,7 @@ let PEOPLE=[];                     // {id,email,name,role,brand_id}
 let PEOPLE_BLOCKED=false;   // true = we got a directory we know is truncated
 async function loadPeople(){
   try{
-    let r=await sb.from("people_directory").select("id,email,role,brand_id");
+    let r=await sb.from("people_directory").select("id,email,role,brand_id,tool_role,all_brands");
     if(r.error){
       // migration not applied yet — fall back so the app still runs
       r=await sb.from("profiles").select("id,email,role,brand_id");
@@ -9788,7 +9836,14 @@ async function loadPeople(){
        here rather than offered as an option that cannot be saved. */
     PEOPLE=(r.data||[]).filter(x=>x.id&&x.email&&x.role!=="pending").map(x=>({
       id:x.id, email:x.email, name:String(x.email).split("@")[0],
-      role:x.role, brand_id:x.brand_id
+    /* `role` is still the LEGACY field and is still what the mention
+       rules read, because "is this person a client" is the one question
+       it answers correctly. `toolRole` is the real grant — the thing CC
+       Platform shows you, and the reason pranav stopped appearing as
+       Team. Both are kept rather than one overwriting the other: they
+       answer different questions and Stage 3 will retire the first. */
+      role:x.role, toolRole:x.tool_role||null, allBrands:!!x.all_brands,
+      brand_id:x.brand_id
     }));
     /* If the only person we can see is ourselves, we are not looking at a
        small team — we are looking at a truncated read. Say so rather than
