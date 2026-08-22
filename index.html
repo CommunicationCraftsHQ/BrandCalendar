@@ -7807,7 +7807,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v76 — São Paulo: one brand list, two doors";
+const TOOL_VERSION="v77 — São Paulo: a brand is a wall";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -8609,9 +8609,18 @@ async function loadPostFeedback(){
       loadCommentCounts(),
       loadTaskSeen(),
       loadPrefs(),
-      loadAssignments()
+      loadAssignments(),
+      /* AWAITED FROM SÃO PAULO STAGE 3 ONWARD, and it was not before.
+         loadPeople() was fire-and-forget because the only thing that
+         wanted PEOPLE was the @ menu, which can afford to be late.
+         Membership cannot: noBrandsAtAll() reads PEOPLE, so an
+         unawaited load meant render() ran first, decided the person was
+         fine, drew a calendar — and nothing re-rendered when the truth
+         arrived. Somebody on no brands would have sat in front of an
+         empty calendar with no message, which is the exact failure
+         decision 5 exists to prevent. Caught by tests/sao-paulo/stage3.js. */
+      loadPeople()
     ]);
-    loadPeople();
     FB_AVAILABLE=true;
     POSTFB.comments={}; POSTFB.activity={}; POSTFB.reactions={}; FB_LOADED={};
     POSTFB.seen={};
@@ -14294,7 +14303,15 @@ function viewRoute(v){
     mplan:   {render:renderMonthPlanView, sidebar:null,                 needs:"brand"},
     evmgr:   {render:renderEvMgr,         sidebar:null,                 needs:"manage_events"},
     indmgr:  {render:renderIndMgr2,       sidebar:null,                 needs:"edit"},
-    history: {render:renderHistory,       sidebar:buildHistorySidebar}
+    history: {render:renderHistory,       sidebar:buildHistorySidebar},
+    /* SÃO PAULO — a row in the table, not an early return. The first
+       version of this called renderNoBrands() straight from render(),
+       and tests/capetown_routing.js failed it: "render() calls no
+       renderer directly — everything goes through the table." That rule
+       exists because the router's old final `else` drew the List for any
+       view it did not know, which looks exactly like a screen that
+       worked. A bypass is the same fault wearing a different hat. */
+    nobrands:{render:renderNoBrands,      sidebar:null}
   };
   return Object.prototype.hasOwnProperty.call(R,v) ? R[v] : null;
 }
@@ -14312,6 +14329,31 @@ function routeAllows(r){
 function syncTabs(){
   document.querySelectorAll(".tab-item").forEach(t=>t.classList.toggle("on",t.dataset.v===view));
 }
+function noBrandsAtAll(){
+  /* Not "no brands loaded" — that is still loading. Brands come back
+     before this ever runs, and a person on zero of them is a decision
+     somebody made, not a slow network. */
+  if(ME.role==="pending"||ME.role==="client") return false;
+  if(!G||!G.brs) return false;
+  const all=Object.keys(brands||{});
+  if(!all.length) return false;
+  return !all.some(k=>isOnBrand(k));
+}
+function renderNoBrands(){
+  const mc=document.getElementById("main"); if(!mc) return;
+  const sb=document.getElementById("sb-months"); if(sb) sb.innerHTML="";
+  const st=document.getElementById("sb-stats"); if(st) st.innerHTML="";
+  mc.innerHTML=`<div class="brl-empty" style="padding:70px 24px;">
+    <div style="font-size:30px;margin-bottom:12px;color:var(--subtle);"><i class="ti ti-tag-off"></i></div>
+    <div style="font-size:16px;font-weight:700;color:var(--text);">Nobody has put you on a brand yet</div>
+    <div style="font-size:13px;margin-top:8px;line-height:1.65;max-width:46ch;margin-left:auto;margin-right:auto;">
+      The calendar is empty because you are not on any brand — not because there is
+      no work. An admin, or the Account manager of the brand you should be on, can
+      add you in <b>CC Platform → People &amp; access</b>.</div>
+    <div style="font-size:12px;margin-top:14px;color:var(--subtle);">
+      Signed in as ${escHtml(ME.email||"")}${ME.toolRole?" · "+escHtml(ME.toolRole):""}</div></div>`;
+}
+
 function render(){
   const brandEl=document.getElementById("nav-brand-txt");
   if(brandEl) brandEl.innerHTML=`Marketing Calendar<span class="dot">.</span>`;
@@ -14327,6 +14369,25 @@ function render(){
   }
   if(!routeAllows(r)){ view="year"; r=viewRoute("year"); }
   syncTabs();
+
+
+  /* ══ SÃO PAULO · DECISION 5 — SAY SO, DO NOT SHOW NOTHING ═════════
+     Chirag, 22 August: on no brands, "nobody has put you on a brand yet",
+     never an empty calendar.
+
+     Stage 3 makes brand assignment binding in the database, so from that
+     day an unassigned person's queries come back empty — correctly, and
+     indistinguishably from a brand with no work in it. An empty screen
+     that is RIGHT looks exactly like one that is BROKEN, and the person
+     it happens to has no way to tell which, so they either sit waiting
+     or report a bug that is not one.
+
+     Only for staff. A client is scoped by profiles.brand_id and always
+     has been; if theirs is missing that is a different fault with a
+     different fix, and this message would send them to the wrong person. */
+  if(noBrandsAtAll()) view="nobrands";
+  else if(view==="nobrands") view="year";
+  r=viewRoute(view)||r;
 
   brSync();                     // Cape Town: fetch if BR is for another brand
   buildSidebar(); syncHeaderState(); syncLayerBar();
