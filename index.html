@@ -1113,10 +1113,16 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 /* What is about to be attempted, named and sized, before the comment is
    written. A bare count made a 240MB reel look like a 40KB logo. */
 .stagedfs{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-left:2px;}
+/* LIMA v78.1 — text-overflow on a FLEX ROW does nothing but clip. The
+   ellipsis never appeared; the size and the x were simply cut off the
+   end, so a staged file could be seen and not removed. The name is the
+   part that should give way, so the name is what truncates now. */
 .stagedf{display:inline-flex;align-items:center;gap:6px;max-width:230px;
   background:var(--surface);border:1px solid var(--div);border-radius:7px;
   padding:3px 5px 3px 9px;font-size:11.5px;font-weight:600;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  overflow:hidden;white-space:nowrap;}
+.stagedf .sfn{flex:1 1 auto;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;}
 .stagedf b{font-weight:600;color:var(--subtle);flex:none;}
 .stagedf i{font-style:normal;cursor:pointer;color:var(--subtle);font-size:14px;
   line-height:1;padding:0 3px;flex:none;}
@@ -1304,7 +1310,7 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .rvc{padding:9px 0;border-bottom:1px solid var(--div);}
 .rvch{display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:3px;}
 .rvch b{font-weight:700;} .rvch span{color:var(--subtle);font-size:11px;margin-left:auto;}
-.rvcb{font-size:13px;line-height:1.5;}
+.rvcb{font-size:13px;line-height:1.5;overflow-wrap:anywhere;}
 .rvempty{font-size:12.5px;color:var(--subtle);padding:8px 0;}
 
 /* ══ v46 — THE POST CARD AND THE THREAD ══════════════════════════════
@@ -1378,7 +1384,7 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .th46 .ch46{display:flex;align-items:baseline;gap:8px;margin-bottom:3px;flex-wrap:wrap}
 .th46 .who46{font-size:13.5px;font-weight:700}
 .th46 .when46{font-size:11.5px;color:var(--subtle)}
-.th46 .ct46{font-size:13.5px;line-height:1.6;color:var(--text)}
+.th46 .ct46{font-size:13.5px;line-height:1.6;color:var(--text);overflow-wrap:anywhere}
 .th46 .acts46{display:flex;align-items:center;gap:14px;margin-top:9px;min-height:20px;opacity:0;transition:opacity 120ms}
 .th46 .c46:hover .acts46,.th46 .c46:focus-within .acts46,.th46 .acts46.always{opacity:1}
 .th46 .acts46 button{border:none;background:none;padding:0;font-family:inherit;font-size:12px;color:var(--muted);
@@ -2013,7 +2019,9 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .th-kind.cli{background:#E6F1FB;color:#1B5A96;}
 .th-by{font-size:11.5px;color:var(--acc);font-weight:600;}
 .th-when{margin-left:auto;font-size:11.5px;color:var(--subtle);}
-.th-t{font-size:13.5px;line-height:1.6;color:var(--text);}
+/* LIMA v78.1 — nothing written in a message may leave the card. */
+.th-t{font-size:13.5px;line-height:1.6;color:var(--text);overflow-wrap:anywhere;}
+.fbl{color:#185FA5;text-decoration:underline;overflow-wrap:anywhere;}
 /* LUCERN — the actions. Hidden until you reach the message, exactly as
    the post chat does it, EXCEPT when a reaction already exists: a chip
    that appears on hover is a chip nobody knows is there. */
@@ -6899,7 +6907,14 @@ async function taskPostInner(){
   const t=brTask(); if(!t) return;
   const box=document.getElementById("th-in");
   const body=((box?box.value:TASK.draft)||"").trim();
-  if(!body) return;
+  /* LIMA v78.1 — A FILE ON ITS OWN IS A MESSAGE.
+     This returned on an empty box BEFORE it looked at what was staged,
+     so attaching a file and pressing Post did nothing whatsoever — no
+     row, no upload, not even a toast. It read as a dead button, and was
+     reported as one. The post chat has always had this right: 'a comment
+     with files but no words is still a comment worth having'. Same rule,
+     borrowed rather than reinvented. */
+  if(!body&&!TASK_STAGED.length) return;
   const asClient=TASK.asClient;
   if(asClient&&!ME.id){ toast("Cannot record who typed this — sign in again","err"); return; }
   const row={
@@ -6999,7 +7014,7 @@ function renderTask(){
                <button class="btn btn-p" style="margin-left:auto" onclick="taskPost()">Post</button>
              </div>
              ${TASK_STAGED.length?`<span class="stagedfs" style="margin-top:8px;">${
-               TASK_STAGED.map((f,i)=>`<span class="stagedf" title="${escAttr(f.name)}">${escHtml(f.name)}
+               TASK_STAGED.map((f,i)=>`<span class="stagedf" title="${escAttr(f.name)}"><span class="sfn">${escHtml(f.name)}</span>
                  <b>${kbmb(f.size)}</b>
                  <i onclick="taskUnstage(${i})" title="Remove">&times;</i></span>`).join("")
              }</span>`:""}
@@ -7023,6 +7038,13 @@ function renderTask(){
        </div>
      </div>
    </div>`;
+  /* LIMA v78.1 — THE TILES WERE NEVER SIGNED.
+     mediaBlock() draws a tile carrying data-sign, and hydrateMedia() is
+     what turns that into an <img> with a signed URL. Five screens call
+     it. This one never did, so every attachment in a task thread drew an
+     empty box and read as a file that had not arrived — when the row was
+     loaded, the markup was right, and only the last step was missing. */
+  hydrateMedia(mc);
 }
 
 function renderBranding(){
@@ -7821,7 +7843,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v78 — Lima: nothing is destroyed by looking";
+const TOOL_VERSION="v78.1 — Lima: files attach, and you can see them";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -8741,6 +8763,20 @@ async function loadArchived(month){
    of what was delivered once the video is gone.                        */
 
 const MEDIA_BUCKET   = "post-media";
+/* LIMA v78.1 — THE CEILING IS NOT OURS TO CHOOSE.
+   The post-media bucket sets no size limit of its own, so it inherits
+   the project-wide upload limit, and on this plan that is 50 MB and
+   cannot be raised — a per-bucket limit may never exceed the global one.
+   Raising THIS number without changing the plan does not let a bigger
+   file through; it just moves the same 413 back to where it was, at the
+   end of a long wait. */
+const UPLOAD_MAX     = 50*1024*1024;
+/* A whole number, or nothing. Used for the integer columns on `assets`. */
+function whole(n){
+  if(n==null||n==="") return null;
+  const v=Number(n);
+  return isFinite(v)?Math.round(v):null;
+}
 const THUMB_MAX      = 400;      // lists, rails
 const VIEW_MAX       = 1600;     // lightbox
 const IMG_TYPES      = ["image/jpeg","image/png","image/webp","image/gif","image/avif"];
@@ -8812,7 +8848,14 @@ async function pdfFirstPage(file){
     const c=document.createElement("canvas"); c.width=sv.width; c.height=sv.height;
     await page.render({canvasContext:c.getContext("2d"),viewport:sv}).promise;
     const view=await new Promise(r=>c.toBlob(r,"image/jpeg",.82));
-    return {view, thumb:view, pages:pdf.numPages, width:sv.width, height:sv.height};
+    /* LIMA v78.1 — pdf.js measures a page in POINTS, and points are
+       fractional: 562.535158... x 1.6 is 900.0562535158447, which is the
+       exact string Postgres refused on 24 August. assets.width and
+       .height are integer columns, so EVERY PDF in the tool failed here,
+       and the rollback then took the bytes away again — leaving a yellow
+       bar as the only evidence that anything had happened. */
+    return {view, thumb:view, pages:pdf.numPages,
+            width:Math.round(sv.width), height:Math.round(sv.height)};
   }catch(e){ return {}; }   // Word and PowerPoint land here, and that is fine
 }
 function loadScript(src){
@@ -8974,6 +9017,18 @@ async function uploadAsset(file,{ownerKind,ownerId,brandId,slideNo=null,onTick})
   const tick=(pct,state,reason)=>{ UPLOADS[id]={name:file.name,bytes:file.size,pct,state,reason:reason||""};
                                    noteUploadLive(ownerKind,ownerId,id,file,pct,state);
                                    if(onTick) onTick(id,UPLOADS[id]); };
+  /* LIMA v78.1 — SAY NO AT THE START, NOT AFTER THE WAIT.
+     Nothing checked the size, so a 118.7 MB reel was pushed all the way
+     up and refused at the end with a bare "status 413" — minutes of
+     somebody's connection, spent to be told no. The limit is known
+     before a single byte moves, so this is answerable instantly. */
+  if(file.size>UPLOAD_MAX){
+    const why="it is "+kbmb(file.size)+" and the limit is "+kbmb(UPLOAD_MAX)
+             +" — compress it, or paste a link to it instead";
+    tick(0,"failed",why);
+    noteUploadFail(ownerKind,ownerId,file,why);
+    return null;
+  }
   tick(0,"uploading");
   try{
     let d={};
@@ -9011,8 +9066,16 @@ async function uploadAsset(file,{ownerKind,ownerId,brandId,slideNo=null,onTick})
     const row={id,owner_kind:ownerKind,owner_id:ownerId,brand_id:brandId,kind,
       storage_path,thumb_path,view_path,poster_path,stream_uid:"",
       filename:file.name,mime:file.type||"",bytes:file.size,
-      width:d.width||null,height:d.height||null,
-      duration_s:d.duration||null,page_count:d.pages||null,
+      /* LIMA v78.1 — GUARDED TWICE, ON PURPOSE. The PDF builder is
+         already fixed above; this is the choke point every derivative
+         passes through, so the next one that returns a fraction cannot
+         do what pdfFirstPage just did. duration_s is left alone: it is
+         a numeric column and a video's length is genuinely fractional —
+         rounding it would throw away a real measurement to solve a
+         problem it never had. */
+      width:whole(d.width),height:whole(d.height),
+      duration_s:(d.duration==null||!isFinite(Number(d.duration)))?null:Number(d.duration),
+      page_count:whole(d.pages),
       slide_no:slideNo,status,fail_reason:"",
       created_by:(ME.email||"").toLowerCase(),created_at:new Date().toISOString()};
     const ins=await sb.from("assets").insert([row]);
@@ -9314,7 +9377,11 @@ function noteUploadFail(ownerKind,ownerId,file,reason){
 function dismissUploadFail(ownerKind,ownerId,id){
   const k=assetKey(ownerKind,ownerId);
   UPLOAD_FAILS[k]=(UPLOAD_FAILS[k]||[]).filter(f=>f.id!==id);
-  renderSocial();
+  /* LIMA v78.1 — REPAINT THE SCREEN YOU ARE ACTUALLY ON. This called
+     renderSocial() unconditionally, so the x on a yellow failure bar in a
+     task thread removed the record and left the bar on screen. The bar
+     only left when something else happened to repaint. */
+  if(view==="task") render(); else renderSocial();
 }
 function uploadFailBlock(ownerKind,ownerId){
   const list=UPLOAD_FAILS[assetKey(ownerKind,ownerId)]||[];
@@ -9750,11 +9817,47 @@ async function fbEnsureLoaded(postId){
 /* Comment bodies were escaped flat, so a paragraph break vanished and a
    pasted link stayed dead text. Escape FIRST (never trust the input),
    then re-introduce only the two things people actually type. */
+/* LIMA v78.1 — A LINK IS A DESTINATION, NOT A PARAGRAPH.
+   The whole address was printed as its own link text, and a OneDrive
+   share link is ~400 characters with not one space in it. It ran out of
+   the message, under the Milestones rail and off the card entirely.
+   The label is now the host plus the tail. NOTHING IS GUESSED AT and
+   nothing is lost: the full address is still the href and still the
+   title, so hovering shows it and copying the link copies all of it.
+   Built by walking the text rather than by replacing inside an escaped
+   string — slicing an escaped string can cut an &amp; in half. */
+function linkLabel(u){
+  const s=String(u).replace(/^https?:\/\//i,"").replace(/\/+$/,"");
+  if(s.length<=58) return s;
+  const at=s.indexOf("/");
+  /* No path at all, just a very long host: there is nothing to put on
+     the far side of an ellipsis, and "somehost/\u2026" would promise a
+     path that does not exist. */
+  if(at<0) return s.slice(0,55)+"\u2026";
+  const host=s.slice(0,at), rest=s.slice(at);
+  /* Cut at a separator, never through the middle of one. A tail of
+     "om%2FDocuments" reads as a rendering fault; "/Documents%2FBrand"
+     reads as a path, which is what it is. */
+  let tail="";
+  const seps=[]; const re=/(%2F|\/)/gi; let s2;
+  while((s2=re.exec(rest))!==null) seps.push(s2.index);
+  for(const i of seps){ if(rest.length-i<=30){ tail=rest.slice(i); break; } }
+  if(!tail) tail=rest.slice(-26);
+  return host+"/\u2026"+tail.replace(/^(%2F|\/)/i,"/");
+}
 function fbRich(text){
-  let h=escAttr(String(text||""));
-  h=h.replace(/(https?:\/\/[^\s<]+[^\s<.,:;"')\]])/g,
-    '<a href="$1" target="_blank" rel="noopener" style="color:#185FA5;text-decoration:underline;">$1</a>');
-  return fbHighlightMentions(h.replace(/\n/g,"<br>"));
+  const raw=String(text||"");
+  const re=/(https?:\/\/[^\s<]+[^\s<.,:;"')\]])/g;
+  let out="", last=0, m;
+  while((m=re.exec(raw))!==null){
+    out+=escAttr(raw.slice(last,m.index));
+    const u=m[1];
+    out+='<a href="'+escAttr(u)+'" target="_blank" rel="noopener" class="fbl" '
+        +'title="'+escAttr(u)+'">'+escAttr(linkLabel(u))+'</a>';
+    last=m.index+u.length;
+  }
+  out+=escAttr(raw.slice(last));
+  return fbHighlightMentions(out.replace(/\n/g,"<br>"));
 }
 function fbIsMine(c){
   const me=(ME.email||"").toLowerCase();
@@ -12732,7 +12835,7 @@ function fbPanelHtml(p){
           return `<span id="fb-staged-${p.id}" class="stagedn" style="display:${n?"inline-flex":"none"}"
             title="${n?n+" file"+(n>1?"s":"")+" ready — they upload when you post":""}">${n||""}</span>
           <span id="fb-stagednames-${p.id}" class="stagedfs" style="display:${n?"flex":"none"}">${
-            fs.map((f,i)=>`<span class="stagedf" title="${escAttr(f.name)}">${escHtml(f.name)}
+            fs.map((f,i)=>`<span class="stagedf" title="${escAttr(f.name)}"><span class="sfn">${escHtml(f.name)}</span>
               <b>${kbmb(f.size)}</b>
               <i onclick="fbUnstage('${escAttr(p.id)}',${i})" title="Remove">&times;</i></span>`).join("")
           }</span>`;})()}
