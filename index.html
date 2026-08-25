@@ -1201,6 +1201,18 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
   opacity:.7;padding:14px;user-select:none;}
 .mlbnav.l{left:8px;} .mlbnav.r{right:8px;}
 .mlbcap{position:absolute;bottom:16px;left:0;right:0;text-align:center;color:rgba(255,255,255,.75);font-size:12px;}
+/* LIMA v78.2 — A DOCUMENT VIEWER NEEDS A BOX, NOT A MAX-WIDTH.
+   `.mlb img` is sized by max-width/max-height, which works because an
+   image brings its own dimensions. An <iframe> does not: with no
+   height it collapses to the CSS default of 150px and shows a sliver
+   of page one — which looks exactly like the bug this replaces, and
+   would have shipped looking fixed. White ground, because a PDF page
+   is white and a transparent one over the dark scrim reads as grey
+   paper. */
+.mlb .mlbdoc{width:min(1100px,92vw);height:86vh;border:0;border-radius:10px;
+  background:#fff;box-shadow:0 24px 70px rgba(0,0,0,.5);}
+.rvstage .rvdoc{width:min(980px,100%);height:72vh;border:0;border-radius:10px;
+  background:#fff;box-shadow:0 24px 70px rgba(0,0,0,.5);}
 
 /* ══ NEW YORK · STAGE 2A — thread v2 ══════════════════════════════════
    Deliberately the LAST block in this stylesheet. Equal-specificity
@@ -7843,7 +7855,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v78.1 — Lima: files attach, and you can see them";
+const TOOL_VERSION="v78.2 — Lima: a PDF opens as a PDF";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -9317,6 +9329,17 @@ function stateBadge(a,up){
   return "";
 }
 const playable = a => a.kind==="video" && a.status==="ready" && !a.purged_at;
+/* LIMA v78.2 — A PDF IS TWO THINGS AT ONCE, and which one you want
+   depends on whether you are glancing or reading. Page one is stored
+   as a picture so a thread can show a thumbnail without fetching a
+   20 MB deck; the original is still sitting in the bucket. Until now
+   only the picture was ever opened, so a twelve-page brand guideline
+   was a single flat image you could not turn.
+   Matched on mime OR extension: a file arriving from a share sheet or
+   an older browser can land with an empty type, and the extension is
+   the only thing left. */
+const isPdf = a => !!a && a.kind==="doc" &&
+  (/^application\/pdf$/i.test(a.mime||"") || /\.pdf$/i.test(a.filename||""));
 
 /* ══ A REFUSED UPLOAD HAS TO APPEAR SOMEWHERE ════════════════════════
    THE BUG CHIRAG REPORTED. A failed upload wrote its reason into
@@ -9484,6 +9507,16 @@ function mediaBlock(list,opts){
       <div style="min-width:0;"><div class="dn">${escAttr(a.filename)}</div>
       <div class="ds">${docLabel(a)} · ${kbmb(a.bytes)}</div></div></div>`).join("");
 
+  /* LIMA v78.2 — COUNT WHAT IT IS, NOT WHERE IT IS DRAWN.
+     `vis` means "has something to show", and since v78.1 every PDF has
+     a page-one picture — so every PDF fell into it and a lone brand
+     guideline captioned itself "1 image". It is still DRAWN with the
+     pictures, which is right: the page-one thumbnail is the best thing
+     to show. It is COUNTED as what it is. */
+  const pics=vis.filter(a=>a.kind!=="doc");
+  const alldocs=live.filter(a=>a.kind==="doc");
+  const pgs=(alldocs.length===1&&alldocs[0].page_count>1)
+    ? " · "+alldocs[0].page_count+" pages" : "";
   /* A carousel is ONE deliverable with slides, never "N files" */
   const slides=vis.filter(a=>a.slide_no).length;
   /* STAGE 2A · A7 — Review is the release valve. It is what lets the
@@ -9495,9 +9528,9 @@ function mediaBlock(list,opts){
     ? `<span class="mrevbtn" data-review="${escAttr(vis[0].id)}" title="Open Review — large, with the thread beside it">⤢ Review</span>` : "";
   const caption = opts.quiet ? "" : `<div class="mcap">${
       slides>1 ? `<b>Carousel · ${slides} slides</b> · one deliverable, in order`
-      : vis.length===1&&vis[0].kind==="video" ? `<b>1 video</b>${vis[0].purged_at?" · removed by retention, poster kept":""}`
-      : vis.length ? `<b>${vis.length} ${vis.length===1?"image":"images"}</b>` : ""
-    }${docs.length?(vis.length?" · ":"")+`<b>${docs.length} document${docs.length>1?"s":""}</b>`:""}${reviewBtn}</div>`;
+      : pics.length===1&&pics[0].kind==="video" ? `<b>1 video</b>${pics[0].purged_at?" · removed by retention, poster kept":""}`
+      : pics.length ? `<b>${pics.length} ${pics.length===1?"image":"images"}</b>` : ""
+    }${alldocs.length?(pics.length?" · ":"")+`<b>${alldocs.length} document${alldocs.length>1?"s":""}</b>${pgs}`:""}${reviewBtn}</div>`;
 
   return `<div class="mw${isIn?" min":""}">
     ${isIn?`<div class="mlabin">◆ References <span class="pill" style="text-transform:none;letter-spacing:0;">input, not work</span></div>`:""}
@@ -9561,6 +9594,22 @@ async function paintLightbox(){
     body.innerHTML=`${u?`<img src="${escAttr(u)}" alt="">`:""}
       <div style="position:absolute;bottom:52px;left:0;right:0;text-align:center;color:rgba(255,255,255,.8);font-size:12.5px;">
         The video was removed by retention. This is the poster we kept.</div>`;
+  }else if(isPdf(a)&&a.storage_path){
+    /* LIMA v78.2 — THE ONE PLACE THIS FILE ALLOWS A DOWNLOAD.
+       Everything else here is deliberately look-only: the video player
+       carries controlsList="nodownload", Review says so in as many
+       words, and that constraint is what makes the whole media model
+       cheap. Chrome's PDF viewer comes with a download and a print
+       button and they cannot be turned off from here — #toolbar=0 is
+       ignored by Chrome's current viewer, and an extension-free page
+       renderer was the alternative.
+       Chirag chose this one on 24 August, knowing that. If the rule
+       ever has to hold for documents too, the answer is rendering the
+       pages ourselves — not a smaller iframe. */
+    const u=await signedUrl(a.storage_path);
+    body.innerHTML=u?`<iframe class="mlbdoc" src="${escAttr(u)}#view=FitH"
+                        title="${escAttr(a.filename)}"></iframe>`
+                    :`<div style="color:#fff;font-size:13px;">This document is not available.</div>`;
   }else{
     const u=await signedUrl(a.view_path||a.thumb_path||a.poster_path);
     body.innerHTML=u?`<img src="${escAttr(u)}" alt="">`
@@ -9647,6 +9696,16 @@ async function paintReview(){
       const u=await signedUrl(a.poster_path);
       stage.innerHTML=`${u?`<img src="${escAttr(u)}" alt="" style="transform:scale(${RV.zoom});">`:""}
         <div class="rvnote">The video was removed by retention. This is the poster we kept.</div>`;
+    }else if(isPdf(a)&&a.storage_path){
+      /* THE SAME CHANGE IN BOTH VIEWERS, IN THE SAME BATCH. Review and
+         the lightbox are two ways to look at one asset, and a fix that
+         reaches only one of them is how they drift into disagreeing
+         about what a file is. No zoom transform here — the viewer has
+         its own, and two zooms fight. */
+      const u=await signedUrl(a.storage_path);
+      stage.innerHTML=u?`<iframe class="rvdoc" src="${escAttr(u)}#view=FitH"
+                           title="${escAttr(a.filename)}"></iframe>`
+                      :`<div class="rvnone">This document is not available.</div>`;
     }else{
       const u=await signedUrl(a.view_path||a.thumb_path||a.poster_path);
       stage.innerHTML=u?`<img src="${escAttr(u)}" alt="" style="transform:scale(${RV.zoom});">`
