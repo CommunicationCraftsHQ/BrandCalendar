@@ -35,7 +35,7 @@
    Bump this with every batch that changes this file, the way every tool's
    TOOL_VERSION carries its batch name.
 
-   name="cc-tool-version" content="v62.0 — Santiago: the two rules every rail needs"
+   name="cc-tool-version" content="v63.0 — Rotterdam: the list treatment moves in"
 
    Source : webapp/site/index.html (v57.5 — Oslo: the sidebar counts formats, not the total twice)
             — where these rules were extracted from, the last time this
@@ -294,4 +294,107 @@ body .em2-page{height:calc(100vh - 60px - var(--cc-alarm-h,0px));}
   .overlay{align-items:flex-end;padding:0;}
   .nav-right{gap:5px;}
   .nav-btn{height:30px;padding:0 8px;font-size:10px;}
+}
+
+
+/* ══ THE LIST TREATMENT — ROTTERDAM, 25 August 2026 ═══════════════════
+   Chirag: "the headers of Wall, List and Talk Track should all be built
+   in the same style and treatment."
+
+   Every rule below was inside webapp/site/index.html — the Marketing
+   Calendar's own file — where no React tool could reach it. That is the
+   São Paulo problem exactly: a rule written down and impossible to
+   follow, which is why each tool grew its own version of a list.
+
+   COPIED VERBATIM out of index.html lines 1824-1883, except the three
+   marked NEW. tests/2026-08-25-talk-tracks-mockup-gate.mjs holds them
+   character-identical against a frozen copy in
+   tests/fixtures/2026-08-25-calendar-brl-rules.css, so the Calendar's
+   copy and this one cannot drift apart quietly. The Calendar keeps its
+   local copy for now — identical bytes, so nothing moves on its next
+   deploy — and a later batch deletes it, exactly as the page frame did.
+
+   NOT COPIED, ON PURPOSE: `.brl{--brlact}` / `.brl.acts`, Lucern's
+   optional eighth column. Tools using this write their columns out.
+   ═════════════════════════════════════════════════════════════════════ */
+.brl{background:var(--surface);border-radius:var(--rc);border:1px solid var(--div);overflow:hidden}
+.brl-hd,.brl-tr{display:grid;gap:11px;align-items:center;padding:11px 15px 11px 0}
+.brl-hd{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--subtle);
+  border-bottom:1px solid var(--div);font-weight:700;background:#FCFCFB}
+.brl-hd span,.brl-hd .c{white-space:nowrap}
+.brl-tr{border-bottom:1px solid #F4F4F2;cursor:pointer}
+.brl-tr:hover{background:#FAFAF9}
+.brl-sp{height:34px;border-radius:0 3px 3px 0;background:transparent}
+.brl-car{color:var(--subtle);font-size:17px;text-align:center}
+.brl-nm{font-weight:700;font-size:15px;letter-spacing:-.01em;color:var(--text);
+  display:flex;align-items:center;gap:8px;min-width:0}
+.brl-nm small{font-weight:400;color:var(--subtle);font-size:11.5px;white-space:nowrap}
+
+/* THE ONE THAT MAKES THE COLUMNS LINE UP. The meta columns are ONE
+   grid cell holding a sub-grid, in the header and in the row. A draft
+   that split them into separate top-level columns put the header
+   labels outside this rule, they lost `text-align:right`, and every
+   head sat left of its own numbers. Chirag reported it on both
+   tables. `.brl-grp` is not optional. */
+.brl-grp{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;font-size:12.5px;color:var(--muted)}
+.brl-grp .c{text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brl-grp .late{color:var(--acc);font-weight:700}.brl-grp .ok{color:#2F7A46}
+
+.brl-av{width:24px;height:24px;border-radius:50%;background:var(--text);color:#fff;font-size:9.5px;
+  font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+.brl-ph{background:#FCFCFB;border-bottom:1px solid var(--div)}
+.brl-ph .pl{padding:8px 15px 8px 4px;font-size:11.5px;font-weight:700;display:flex;align-items:center;gap:9px}
+.brl-ph .pl small{font-weight:400;color:var(--subtle)}
+.brl-empty{padding:52px 20px;text-align:center;color:var(--muted)}
+.brl-act{display:flex;gap:5px;padding-left:6px;}
+.brl-act i{font-style:normal;width:26px;height:26px;border-radius:6px;border:1px solid var(--div);
+  background:var(--surface);display:inline-flex;align-items:center;justify-content:center;
+  font-size:12px;color:var(--muted);cursor:pointer;}
+.brl-act i:hover{color:var(--text);border-color:var(--subtle);}
+.brl-lens{display:flex;background:#E7E6E1;border-radius:8px;padding:3px;gap:2px;height:34px;box-sizing:border-box}
+.brl-lens span{height:28px;padding:0 11px;border-radius:6px;display:flex;align-items:center;
+  font-size:12.5px;font-weight:600;cursor:pointer;color:var(--muted)}
+.brl-lens span.on{background:#fff;color:var(--text);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+/* ── NEW · an ellipsis on the row name ──────────────────────────────
+   `.brl-nm` is a flex box holding a bare text node with no clip — in
+   the Calendar too. Nobody hit it because a task is called "Brochure
+   Design"; a talk track is a whole sentence and it lands on top of the
+   next column. The rule above is left byte-identical and the title
+   gets a wrapper, which the Calendar can adopt whenever it likes. */
+.brl-nm .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* ── NEW · the content line, which the Calendar draws inline ────────
+   The "3 Branding tasks" row and the controls beside it are not a
+   class today — they are four inline styles inside a template string,
+   which is why every other tool has re-typed them slightly
+   differently. Same numbers, made reusable. */
+.pline-wrap{padding:0 32px 20px;}
+.pline{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px;}
+.pline-t{font-size:15px;font-weight:700;}
+.pline-t .sub{font-weight:400;color:var(--subtle);}
+.pline-a{display:flex;align-items:center;gap:10px;}
+
+/* ── the content line on a phone ────────────────────────────────────
+   `space-between` needs two things that fit. Below 768px they do not:
+   the count wrapped to four lines, the lens landed on top of it and the
+   primary button left the screen. The row becomes two rows, the lens
+   scrolls sideways rather than squashing, and the parenthetical after
+   the count goes — it is reassurance, and reassurance is what you drop
+   when there is no room. */
+@media(max-width:768px){
+  .pline-wrap{padding:0 14px 16px;}
+  .pline{flex-wrap:wrap;gap:10px;}
+  .pline-t{width:100%;}
+  .pline-t .sub{display:none;}
+  /* The controls wrap too. A first version put them all in ONE
+     side-scrolling strip, which pushed the primary button off the
+     screen — a button you have to scroll to find is not a primary
+     action. Only the lenses scroll; the button drops to its own line
+     and fills it. */
+  .pline-a{width:100%;gap:8px;flex-wrap:wrap;}
+  .pline-a .brl-lens{max-width:100%;overflow-x:auto;scrollbar-width:none;}
+  .pline-a .brl-lens::-webkit-scrollbar{display:none;}
+  .pline-a .brl-lens span{flex:none;}
+  .pline-a .btn{flex:1 0 auto;justify-content:center;}
 }
