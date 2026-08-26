@@ -889,7 +889,8 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .bpanel::-webkit-scrollbar-thumb{background:rgba(13,13,13,.18);border-radius:999px;}
 .bphead{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--subtle);padding:7px 10px 5px;}
 /* ── LUCERN — the switcher carries two new things per row ── */
-.brow .bgear{width:24px;height:24px;border-radius:6px;border:1px solid transparent;background:transparent;
+.brow .bgear,
+.brow .bmute{width:24px;height:24px;border-radius:6px;border:1px solid transparent;background:transparent;
   color:var(--subtle);font-size:13px;display:inline-flex;align-items:center;justify-content:center;
   cursor:pointer;font-family:inherit;margin-left:4px;flex:none;visibility:hidden;}
 /* THE SPACE IS ALWAYS THERE; ONLY THE INK APPEARS. display:none on a
@@ -914,7 +915,56 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
    `.bmuted` STAYS ON THE ROW with no styling of its own — it is the
    state hook the Lucern gate reads, and the honest place to hang
    anything else that ever needs to know. */
-.brow .bmute{display:inline-flex;align-items:center;color:var(--muted);}
+/* THE BELL SITS AFTER THE COUNT, and that ordering is load-bearing.
+   Everything to the right of the brand name is packed right, so a bell
+   placed BEFORE .bct slides sideways whenever the count does — and .bct
+   is empty on a brand with no posts. Photographed at 1500px with two
+   brands, one counted and one not, and the two bells did not line up.
+   .bct lives in the shared stylesheet and is not ours to widen, so the
+   fix is the order in buildBrandPanel, not a new rule here.
+
+   AND THE NOTE ABOUT IT LIVES HERE, not next to the markup: that markup
+   is inside a template literal, and the first draft of this paragraph
+   sat in an HTML comment there with backticks around the class names.
+   Backticks END a template literal. The whole switcher stopped
+   rendering, and the only reason it was not shipped is that the gate
+   opens the panel in a real browser and looks. */
+
+/* ══ BRUGES — THE BELL DOES NOT WAIT FOR A HOVER, AND IT IS A BUTTON
+   Chirag, 26 August: "the notification mute button is not visible or
+   operational on the Marketing calendar."
+
+   Both halves were true, and neither was a styling slip:
+
+   · IT WAS ONLY EVER IN THE BELL PANEL, on the heading that groups a
+     brand's unread messages. That heading only exists while the brand
+     HAS unread messages — so at an empty inbox there was no way to mute
+     anything at all. Lucern anticipated exactly half of this and drew
+     the muted footer so a mute could always be UNDONE; nothing made a
+     mute reachable in the first place.
+   · AND IT WAS invisible until the cursor was on that exact 22px row.
+
+   Lucern's reasoning for the placement still holds — you silence a
+   brand at the moment it is being noisy, without going anywhere — so
+   that bell stays and merely stops hiding. This one is the second door,
+   for the other moment: you are not being interrupted right now, you
+   are looking at the list of brands, and you want one of them quiet.
+
+   Rendered on EVERY row, not only muted ones. A control that appears
+   only once the state has changed cannot be the control that changes
+   it — which is the whole bug. Unmuted it is faint; muted it is the
+   crossed-out bell at full strength, still the whole signal, and the
+   name and the dot are still never dimmed (São Paulo v77.1). */
+/* NO COLOUR OF ITS OWN WHEN IT IS OFF. The rule above already sets
+   --subtle, and the first draft overrode it here with var(--faint) —
+   A TOKEN THAT DOES NOT EXIST. An unknown custom property makes the
+   whole declaration invalid, so it fell back to inherit and the quiet
+   bell rendered at full black: LOUDER than the muted one, which is the
+   signal backwards. Nothing in the source said so; the screenshot did.
+   Never name a token without grepping cc-suite.css for it first. */
+.brow .bmute{visibility:visible;}
+.brow.bmuted .bmute{color:var(--muted);}
+.brow .bmute:hover{color:var(--acc);border-color:var(--div);background:var(--surface);}
 .brow .bmute i{font-size:14px;}
 /* who is on a brand */
 .bp-r{display:flex;align-items:center;gap:11px;padding:10px 20px;border-bottom:1px solid var(--div);}
@@ -1016,11 +1066,12 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
    mute you cannot find is a mute you cannot undo. */
 .ngh .nmute{width:22px;height:22px;border-radius:6px;border:1px solid transparent;background:transparent;
   color:var(--subtle);font-size:12px;display:inline-flex;align-items:center;justify-content:center;
-  cursor:pointer;font-family:inherit;flex:none;visibility:hidden;}
-/* Same fault, same fix. Here it is the brand NAME that pays: it is an
-   anonymous flex item, so on a long name there is no slack and the text
-   itself compresses when the button takes its width. */
-.ngh:hover .nmute{visibility:visible;}
+  cursor:pointer;font-family:inherit;flex:none;}
+/* BRUGES — was `visibility:hidden` with a `.ngh:hover` rule to reveal
+   it, which is why Chirag could not find it. The box was always
+   reserved, so showing it moves NOTHING: the brand name is an anonymous
+   flex item with no slack, and it was already sized around this button.
+   Made visible, not re-laid-out — the geometry is Lucern's, unchanged. */
 .ngh .nmute:hover{color:var(--acc);border-color:rgba(13,13,13,.12);background:rgba(255,255,255,.75);}
 .npmuted{border-top:1px solid rgba(13,13,13,.07);background:rgba(13,13,13,.02);}
 .npmh{padding:9px 14px 4px;font-size:10px;font-weight:700;letter-spacing:.07em;
@@ -5582,8 +5633,10 @@ function buildBrandPanel(){
      .map(([k,b])=>`<div class="brow${activeBrand===k?" on":""}${brandMuted(k)?" bmuted":""}" onclick="pickBrand('${k}')">
         <span class="bdot" style="background:${b.color||"#6B6B6B"}"></span>
         <span class="bnm">${escAttr(b.name)}</span>
-        ${brandMuted(k)?`<span class="bmute" role="img" aria-label="Muted" title="Muted — turn it back on from the bell"><i class="ti ti-bell-off"></i></span>`:""}
         <span class="bct">${(b.posts||[]).length||""}</span>
+        <button class="bmute" aria-pressed="${brandMuted(k)?"true":"false"}"
+           title="${brandMuted(k)?`Muted — turn notifications back on for ${escAttr(b.name)}`:`Mute ${escAttr(b.name)} — just for you`}"
+           onclick="event.stopPropagation();notifMute('${k}',${brandMuted(k)?0:1})"><i class="ti ti-bell${brandMuted(k)?"-off":""}"></i></button>
         ${canEdit()?`<button class="bgear" title="Who is on this brand"
            onclick="event.stopPropagation();openBrandPeople('${k}')"><i class="ti ti-users"></i></button>`:""}
       </div>`).join("");
@@ -7855,7 +7908,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
   z.addEventListener("drop",e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleCalendarFile(f);});
 })();
 
-const TOOL_VERSION="v78.2 — Lima: a PDF opens as a PDF";
+const TOOL_VERSION="v79 — Bruges: the mute you can find";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -10236,8 +10289,15 @@ function notifMutedBlock(){
 async function notifMute(bid,on){
   const name=(brands[bid]||{}).name||"this brand";
   await savePref(bid,{muted:!!on});
-  buildNotifPanel(); syncBell(); render();
-  if(!PREFS_OK){ toast("Muting needs the Lucern migration — it is not saved yet","err"); return; }
+  /* BRUGES — the switcher is now a SECOND place this state is drawn, so
+     it has to be repainted too. It is safe to call with the panel shut:
+     buildBrandPanel writes innerHTML and does not open anything. Miss
+     it and the row you just clicked keeps the old bell until the panel
+     is closed and reopened, which reads as the click not working. */
+  buildNotifPanel(); buildBrandPanel(); syncBell(); render();
+  /* BRUGES — this used to name an internal batch at the person. It is a
+     sentence about what will happen to them, not about our week. */
+  if(!PREFS_OK){ toast("Muted for now — but this will come back when you reload","err"); return; }
   toast(on?`Muted ${name} — just for you`:`Notifications back on for ${name}`);
 }
 function buildNotifPanel(){
