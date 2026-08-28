@@ -1913,6 +1913,41 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .mpchip .rm{color:var(--subtle);cursor:pointer;font-size:11px;}
 .mpchip .rm:hover{color:var(--acc);}
 .mpchip.up{opacity:.75;}
+/* ══ MOTH v81.7 — A LINK IS AN ATTACHMENT, AND IT LOOKS LIKE ONE ═════
+   Tinted rather than merely differently iconed: a link and a file behave
+   differently when clicked — one leaves the tool — and the colour is the
+   part of a chip read BEFORE it is clicked. The host sits where a file's
+   size sits, so a row of chips still answers "how big / where to" in one
+   glance. */
+.mpchip.lk{background:rgba(24,95,165,.055);border-color:rgba(24,95,165,.22);}
+.mpchip.lk .sz{color:#185FA5;opacity:.8;}
+/* a production row's own files, indented under the row they belong to */
+.mpv-row-chips{margin:1px 0 9px 22px;}
+.mpv-row-chips:empty{display:none;margin:0;}
+/* ══ THE ATTACH MENU — THREE DOORS ═══════════════════════════════════
+   Opaque, per the suite rule about panels over content: this one hangs
+   over the month sheet, and a translucent panel over chips and words
+   reads as a rendering fault. It has been reported as one before. */
+.mpatt{position:absolute;z-index:1400;width:288px;background:var(--surface);
+  border:1px solid var(--div);border-radius:11px;box-shadow:0 14px 40px rgba(0,0,0,.16);
+  overflow:hidden;display:none;backdrop-filter:none;}
+.mpatt.open{display:block;}
+.mpatt .door{display:flex;align-items:center;gap:11px;padding:11px 14px;cursor:pointer;}
+.mpatt .door + .door{border-top:1px solid var(--div);}
+.mpatt .door:hover{background:rgba(13,13,13,.035);}
+.mpatt .door > i{font-size:17px;color:var(--muted);width:18px;text-align:center;flex:none;}
+.mpatt .door .t{font-size:13px;font-weight:600;color:var(--text);line-height:1.3;}
+.mpatt .door .s{font-size:11px;color:var(--subtle);line-height:1.35;margin-top:1px;}
+.mpatt .form{padding:13px 14px 14px;}
+.mpatt .form label{display:block;font-size:9.5px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--subtle);margin:0 0 5px;}
+.mpatt .form input{width:100%;box-sizing:border-box;height:32px;padding:0 9px;font:inherit;
+  font-size:12.5px;color:var(--text);background:var(--surface);border:1px solid var(--div);
+  border-radius:7px;outline:none;}
+.mpatt .form input:focus{border-color:var(--acc);}
+.mpatt .form .gap{height:10px;}
+.mpatt .form .acts{display:flex;gap:7px;margin-top:12px;}
+.mpatt .form .why{font-size:11px;color:var(--subtle);line-height:1.45;margin:9px 0 0;}
 /* ══ MOTH · v81 — THE MONTH STRIP MOVED INTO THE SIDEBAR ══════════
    It was a sticky bar across the top of the scroll pane. Chirag: "the
    month bar at the top extends all the way and the month plan itself is
@@ -8059,7 +8094,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v81.6 — Moth: the three tabs are always there";
+const TOOL_VERSION="v81.7 — Moth: the two doors it never had";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -13724,17 +13759,40 @@ async function exportPptBlob(rows){
       if(head) p.addText(head,{x:0.75,y:1.0,w:11.8,h:0.8,fontSize:32,color:"0D0D0D",bold:true,fontFace:"Arial"});
       if(body) p.addText(body,{x:0.75,y:1.95,w:11.8,h:3.2,fontSize:13,color:"3A3A3A",
         valign:"top",lineSpacing:20,fontFace:"Arial"});
+      /* ══ MOTH v81.7 — THE GOALS ARE CARDS, AND THEY ARE HIS WORDS ════
+         The mockup drew three big numbers — 1500 / Instagram followers —
+         and I talked Chirag out of building them, which is the right way
+         round for a drawing I made up the numbers for.
+
+         A goal is one line of free text he types: "Insta 1500 New
+         Followers", "50+ total comments". There is no target field
+         behind it. Printing 1500 large means guessing which number in
+         the sentence is the target and what the remaining words mean.
+         That works on those two and fails on "Grow reach in Surat by a
+         third" — silently, in a deck already in front of a client.
+
+         So the cards carry the sentence and give it the weight the
+         drawing was really asking for. Nothing is parsed, so nothing can
+         be parsed wrong. */
       if(goals.length){
         p.addText("GOALS",{x:0.75,y:5.35,w:11.8,h:0.25,fontSize:9,color:"AAAAAA",bold:true,charSpacing:2,fontFace:"Arial"});
-        p.addText(goals.slice(0,6).map(g=>({text:mpPlain(g.label),options:{breakLine:true}})),
-          {x:0.75,y:5.65,w:6.4,h:1.4,fontSize:12,color:"0D0D0D",valign:"top",fontFace:"Arial"});
+        const show=goals.slice(0,6);
+        const CW=2.45, GAP=0.25, CH=0.62;
+        show.forEach((g,n)=>{
+          const col=n%3, row=Math.floor(n/3);
+          const x=0.75+col*(CW+GAP), y=5.62+row*(CH+0.08);
+          p.addShape("rect",{x,y,w:CW,h:CH,fill:{color:"F8F7F4"},line:{color:"E6E4DE",width:0.75}});
+          p.addText(mpPlain(g.label),{x,y,w:CW,h:CH,margin:7,fontSize:10.5,color:"0D0D0D",
+            valign:"middle",align:"left",fontFace:"Arial",shrinkText:true});
+        });
       }
       const tail=[];
       if(prod.length) tail.push(`${prod.length} shoot${prod.length===1?"":"s"}`);
       if(mp.influencer_target>0) tail.push(`${infl.length} of ${mp.influencer_target} influencers`);
       else if(infl.length) tail.push(`${infl.length} influencer${infl.length===1?"":"s"}`);
+      /* moved right to clear the cards, which now claim the left 7.85in */
       if(tail.length) p.addText(tail.join("   ·   "),
-        {x:7.4,y:5.65,w:5.2,h:0.4,fontSize:12,color:"6B6B6B",fontFace:"Arial"});
+        {x:9.0,y:5.62,w:3.6,h:0.62,fontSize:12,color:"6B6B6B",valign:"middle",fontFace:"Arial"});
       /* NEVER SILENTLY SHORTEN A LIST — the same rule as the carousel. */
       if(goals.length>6) p.addText(`6 of ${goals.length} goals`,
         {x:0.75,y:7.05,w:4,h:0.3,fontSize:9,color:"8A6A2F",fontFace:"Arial"});
@@ -15390,6 +15448,23 @@ async function ensureMonthPlanAssets(months){
     const by={};
     r.data.forEach(a=>{ (by[a.owner_id]=by[a.owner_id]||[]).push(a); });
     Object.keys(by).forEach(id=>{ ASSETS[assetKey("month_plan",id)]=by[id]; });
+    /* ══ MOTH v81.7 — AND THE ROWS' OWN FILES ═════════════════════════
+       A second query rather than a second round trip per row: a year of
+       production rows is a few dozen ids, and the alternative is one
+       request per shoot on every visit to the month plan. Empty means
+       empty — a month with no production rows asks nothing. */
+    const itemIds=[];
+    months.forEach(m=>((monthPlanFor(activeBrand,YEAR,m).items)||[])
+      .forEach(i=>{ if(i.category==="production"&&i.id) itemIds.push(i.id); }));
+    if(itemIds.length){
+      const ri=await sb.from("assets").select("*").eq("owner_kind","month_item")
+        .in("owner_id",itemIds).is("deleted_at",null);
+      if(!ri.error&&ri.data){
+        const byI={};
+        ri.data.forEach(a=>{ (byI[a.owner_id]=byI[a.owner_id]||[]).push(a); });
+        Object.keys(byI).forEach(id=>{ ASSETS[assetKey("month_item",id)]=byI[id]; });
+      }
+    }
     months.forEach(m=>mpDrawChips(m));
   }catch(e){}
 }
@@ -15433,14 +15508,21 @@ function mpvItemRow(i,cat,m,canE){
       `<span><i class="ti ${ic}" style="color:${c}"></i><input class="fi" placeholder="${ph}"
          value="${escAttr(i[k]||"")}" onchange="mpvSetLink('${escAttr(i.id)}',${m},'${k}',this.value)"></span>`
     ).join("")}</div>`:"";
+  /* MOTH v81.7 — the clip on a PRODUCTION row, and only there.
+     `data-mpv-att` is the flag mpBarShow already reads to decide whether
+     to offer the paperclip; setting it here is the whole of "Production:
+     Yes". A goal never gets it, which is the whole of "Goals: No". */
+  const att=(cat==="production"&&canE)?` data-mpv-att="item"`:"";
+  const chips=cat==="production"
+    ? `<div class="mpv-row-chips" data-item="${escAttr(i.id)}"></div>` : "";
   return `<div class="mpv-row">
-    <span class="nm"${canE?` contenteditable="true" data-mpv-m="${m}" data-mpv-i="${escAttr(i.id)}"
+    <span class="nm"${canE?` contenteditable="true" data-mpv-m="${m}" data-mpv-i="${escAttr(i.id)}"${att}
       onfocus="mpvFocus(this)" onblur="mpvBlurSave(this)"`:""}>${mpRender(i.label)}</span>
     ${cat==="influencer"&&!canE?mpInflLinkIcons(i):""}
     ${canE?`<select class="mpv-stage" onchange="mpvSetItemStatus('${escAttr(i.id)}',${m},this.value)">${opts}</select>`
           :mpvStageChip(cat,i.status)}
     ${canE?`<i class="ti ti-x rm" title="Remove" onclick="mpvDel('${escAttr(i.id)}',${m})"></i>`:""}
-  </div>${links}`;
+  </div>${chips}${links}`;
 }
 
 /* a section label, with the add control the popup used to own */
@@ -15705,21 +15787,117 @@ function mpBarHide(){ const b=document.getElementById("mp-bar"); if(b) b.classLi
    rollback-on-failure and the size refusal. So this is a door onto a
    room that was already furnished — no migration, no new table.
 
-   LINKS ARE NOT CHIPS, AND THAT IS DELIBERATE. The drawing showed
-   "Add a link" in this sheet, which would have needed somewhere to
-   store a link — and `assets` is a store of FILES. Rather than invent a
-   table, a link is made where it belongs: in the sentence, with the
-   link button, so it reads as words instead of a chip beside them. A
-   url typed in plain also becomes a link on its own now. */
+   ══ MOTH v81.7 — AND THE COMMENT BELOW THIS ONE WAS WRONG ═══════════
+   It used to read: "LINKS ARE NOT CHIPS, AND THAT IS DELIBERATE …
+   `assets` is a store of FILES … a link is made where it belongs: in
+   the sentence, with the link button."
+
+   That reasoning was sound about a link inside a paragraph and blind
+   about the case the tool actually creates. Twenty lines above, the
+   size refusal tells somebody holding a 214 MB PSD to "paste a link to
+   it, or flatten it first" — a link that STANDS IN FOR a file, at the
+   exact moment the file cannot be uploaded. That link has no sentence
+   to live in. It belongs where the file would have been.
+
+   So there are now two kinds of link and they are different things:
+     · in the prose, via the toolbar's link button — a reference inside
+       a sentence, unchanged;
+     · as a chip, via this menu — the file that could not come.
+   The migration of 28 August gives the second one somewhere to live:
+   kind 'link', an empty storage_path and the address in `url`, sharing
+   the removal machinery and the policies with every other attachment. */
 function mpPlanId(m){
   const mp=monthPlanFor(activeBrand,YEAR,m);
   if(!mp.id){ mp.id=newMonthPlanId(); }
   return mp.id;
 }
+
+/* WHERE THE ATTACHMENT IS GOING, read off the field that has focus.
+   The theme's clip fills the month; a production row's clip fills that
+   row. Nothing else offers one — a goal is one line and Chirag said no.
+   Returned as data so the three doors share one answer instead of each
+   working it out and one of them getting it wrong. */
+let MP_UP_TARGET=null;
+function mpAttTarget(){
+  const el=MPBAR_FOR; if(!el) return null;
+  const m=Number(el.dataset.mpvM);
+  if(!m) return null;
+  if(el.dataset.mpvAtt==="item"&&el.dataset.mpvI)
+    return {m,ownerKind:"month_item",itemId:el.dataset.mpvI,
+            label:"this production row"};
+  if(el.dataset.mpvF==="key_theme")
+    return {m,ownerKind:"month_plan",itemId:"",label:MN[m]};
+  return null;
+}
+function mpAttEl(){
+  let el=document.getElementById("mp-att");
+  if(el) return el;
+  el=document.createElement("div"); el.id="mp-att"; el.className="mpatt";
+  document.body.appendChild(el);
+  return el;
+}
+function mpAttClose(){ const e=document.getElementById("mp-att"); if(e) e.classList.remove("open"); }
+/* A click anywhere else closes it. It cannot be closed from mpBarHide:
+   opening the link form focuses an input, which blurs the field, which
+   hides the bar — so hiding the bar and closing this menu are not the
+   same event, and tying them together shut the form the instant it
+   opened. Registered once; a second registration would close it twice
+   and the second close would fight the first open. */
+if(!window.__mpAttGuard){
+  window.__mpAttGuard=true;
+  document.addEventListener("mousedown",e=>{
+    const p=document.getElementById("mp-att");
+    if(!p||!p.classList.contains("open")) return;
+    if(p.contains(e.target)) return;
+    const bar=document.getElementById("mp-bar");
+    if(bar&&bar.contains(e.target)) return;
+    mpAttClose();
+  },true);
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape") mpAttClose(); });
+}
+
+/* The menu is positioned against the TOOLBAR, not the field: the bar
+   already solved "above or below" by measuring, and a menu that made its
+   own choice would sometimes disagree with the button that opened it. */
+function mpAttPlace(){
+  const el=mpAttEl(), bar=document.getElementById("mp-bar");
+  if(!bar) return;
+  const r=bar.getBoundingClientRect();
+  const vw=window.innerWidth||1200, vh=window.innerHeight||800;
+  el.classList.add("open");
+  const h=el.offsetHeight||150, w=el.offsetWidth||288;
+  const below=r.bottom+6, above=r.top-h-6;
+  const top=(below+h<vh-8)?below:Math.max(8,above);
+  el.style.left=Math.round(Math.max(8,Math.min(r.left,vw-w-8))+window.scrollX)+"px";
+  el.style.top =Math.round(top+window.scrollY)+"px";
+}
 function mpAttachOpen(ev){
   if(ev){ ev.preventDefault(); ev.stopPropagation(); }
-  const el=MPBAR_FOR; if(!el) return false;
-  const m=Number(el.dataset.mpvM);
+  const t=mpAttTarget(); if(!t) return false;
+  MP_UP_TARGET=t;
+  const el=mpAttEl();
+  el.innerHTML=`
+    <div class="door" onmousedown="return mpAttFile(event)">
+      <i class="ti ti-upload"></i>
+      <div><div class="t">Upload a file</div>
+           <div class="s">image · video · pdf · document</div></div></div>
+    <div class="door" onmousedown="return mpAttLinkForm(event)">
+      <i class="ti ti-link"></i>
+      <div><div class="t">Add a link</div>
+           <div class="s">SharePoint, Drive, anything</div></div></div>
+    <div class="door" onmousedown="return mpAttPaste(event)">
+      <i class="ti ti-clipboard"></i>
+      <div><div class="t">Paste from clipboard</div>
+           <div class="s">an image or a link you have copied</div></div></div>`;
+  mpAttPlace();
+  return false;
+}
+
+/* ── door 1 · the file picker, which is what the clip used to be ───── */
+function mpAttFile(ev){
+  if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+  const t=MP_UP_TARGET; if(!t) return false;
+  mpAttClose();
   let inp=document.getElementById("mp-file");
   if(!inp){
     inp=document.createElement("input"); inp.type="file"; inp.id="mp-file";
@@ -15728,16 +15906,145 @@ function mpAttachOpen(ev){
   inp.onchange=async()=>{
     const files=[...(inp.files||[])]; inp.value="";
     if(!files.length) return;
-    const planId=mpPlanId(m);
-    /* the plan row must EXIST before a file can point at it */
-    await dbSaveMonthPlan(activeBrand,YEAR,m);
-    for(const f of files){
-      await uploadAsset(f,{ownerKind:"month_plan",ownerId:planId,brandId:activeBrand,
-        onTick:()=>mpDrawChips(m)});
-    }
-    mpDrawChips(m);
+    await mpUploadTo(t,files);
   };
   inp.click();
+  return false;
+}
+
+/* the owner has to EXIST before a row can point at it — the plan row for
+   a month attachment, and for a production row the item itself, which is
+   saved on blur and may not have reached the database yet. */
+async function mpUploadTo(t,files){
+  if(t.ownerKind==="month_plan") await dbSaveMonthPlan(activeBrand,YEAR,t.m);
+  const ownerId=t.ownerKind==="month_plan"?mpPlanId(t.m):t.itemId;
+  if(!ownerId){ toast("Save this row first, then attach to it","err"); return; }
+  for(const f of files){
+    await uploadAsset(f,{ownerKind:t.ownerKind,ownerId,brandId:activeBrand,
+      onTick:()=>mpDrawChips(t.m)});
+  }
+  mpDrawChips(t.m);
+}
+
+/* ── door 2 · a link, named once and pre-filled ────────────────────── */
+/* Chirag chose "ask once, pre-filled": Enter accepts the guess, and a
+   better name costs one line of typing. The guess is the last piece of
+   the path with its extension and its %20s undone, because that is
+   nearly always what somebody would have typed anyway —
+   .../Shared%20Documents/Brand%20Deck.pptx becomes "Brand Deck". */
+function mpLinkGuess(u){
+  let s="";
+  try{
+    const url=new URL(String(u).trim());
+    const seg=url.pathname.split("/").filter(Boolean).pop()||"";
+    s=decodeURIComponent(seg).replace(/\.[a-z0-9]{1,5}$/i,"")
+       .replace(/[-_+]+/g," ").replace(/\s+/g," ").trim();
+    if(!s) s=url.hostname.replace(/^www\./,"");
+  }catch(e){ s=""; }
+  return s.slice(0,90);
+}
+function mpAttLinkForm(ev){
+  if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+  const t=MP_UP_TARGET; if(!t) return false;
+  const el=mpAttEl();
+  el.innerHTML=`<div class="form">
+    <label>Address</label>
+    <input id="mp-att-url" placeholder="https://…" oninput="mpAttGuess()">
+    <div class="gap"></div>
+    <label>Name on the chip</label>
+    <input id="mp-att-nm" placeholder="pick a short name">
+    <p class="why">Attached to <b>${escHtml(t.label)}</b>. Nothing is uploaded — the plan just remembers where it is.</p>
+    <div class="acts">
+      <button class="btn btn-w btn-sm" onmousedown="return mpAttLinkSave(event)">Add the link</button>
+      <button class="btn btn-s btn-sm" onmousedown="return (mpAttClose(),false)">Cancel</button>
+    </div></div>`;
+  mpAttPlace();
+  const u=document.getElementById("mp-att-url");
+  if(u){ u.focus();
+    /* Enter in either box means "done" — Chirag's "accept it with Enter" */
+    ["mp-att-url","mp-att-nm"].forEach(id=>{
+      const f=document.getElementById(id);
+      if(f) f.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); mpAttLinkSave(null); }
+                             if(e.key==="Escape"){ e.preventDefault(); mpAttClose(); } };
+    });
+  }
+  return false;
+}
+/* the name follows the address until the moment it is typed in by hand,
+   and then it stops — nothing is more irritating than a field that
+   rewrites what you just wrote */
+function mpAttGuess(){
+  const u=document.getElementById("mp-att-url"), n=document.getElementById("mp-att-nm");
+  if(!u||!n) return;
+  if(n.dataset.touched==="1") return;
+  n.value=mpLinkGuess(u.value);
+  n.oninput=()=>{ n.dataset.touched="1"; };
+}
+async function mpAttLinkSave(ev){
+  if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+  const t=MP_UP_TARGET; if(!t) return false;
+  const uEl=document.getElementById("mp-att-url"), nEl=document.getElementById("mp-att-nm");
+  const url=String(uEl?uEl.value:"").trim();
+  if(!url){ toast("Paste an address first","err"); return false; }
+  if(!MP_SAFE_HREF.test(url)){ toast("Only http, https and mailto links","err"); return false; }
+  const name=String(nEl?nEl.value:"").trim()||mpLinkGuess(url)||mpLinkHost(url);
+  mpAttClose();
+  if(t.ownerKind==="month_plan") await dbSaveMonthPlan(activeBrand,YEAR,t.m);
+  const ownerId=t.ownerKind==="month_plan"?mpPlanId(t.m):t.itemId;
+  if(!ownerId){ toast("Save this row first, then attach to it","err"); return false; }
+  const id="a"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36);
+  const row={id,owner_kind:t.ownerKind,owner_id:ownerId,brand_id:activeBrand,
+             kind:"link",url,filename:name,mime:"",bytes:0,status:"ready",
+             storage_path:"",thumb_path:"",view_path:"",poster_path:"",
+             created_by:(ME&&ME.email)||""};
+  const r=await sb.from("assets").insert([row]);
+  if(r.error){ toast("Could not add that link — "+r.error.message,"err"); return false; }
+  const k=assetKey(t.ownerKind,ownerId);
+  ASSETS[k]=(ASSETS[k]||[]).concat([row]);
+  mpDrawChips(t.m);
+  toast("Link added");
+  return false;
+}
+
+/* ── door 3 · the clipboard ────────────────────────────────────────── */
+/* An image becomes an upload; a copied address becomes the link form,
+   already filled in. Anything else says what it found rather than
+   failing silently — a clipboard door that does nothing visible is
+   indistinguishable from a broken one. */
+async function mpAttPaste(ev){
+  if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+  const t=MP_UP_TARGET; if(!t) return false;
+  if(!navigator.clipboard||!navigator.clipboard.read){
+    toast("This browser will not hand over the clipboard — use Upload a file","err");
+    return false;
+  }
+  try{
+    const items=await navigator.clipboard.read();
+    for(const it of items){
+      const type=(it.types||[]).find(x=>/^image\//.test(x));
+      if(!type) continue;
+      const blob=await it.getType(type);
+      const ext=(type.split("/")[1]||"png").replace("jpeg","jpg").replace("svg+xml","svg");
+      const d=new Date(), p=n=>String(n).padStart(2,"0");
+      const name=`Pasted ${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}.${p(d.getMinutes())}.${ext}`;
+      mpAttClose();
+      await mpUploadTo(t,[new File([blob],name,{type})]);
+      return false;
+    }
+    /* no picture — an address is the other thing people copy */
+    let txt="";
+    try{ txt=(await navigator.clipboard.readText()||"").trim(); }catch(e){}
+    if(txt&&MP_SAFE_HREF.test(txt)){
+      mpAttLinkForm(null);
+      const u=document.getElementById("mp-att-url");
+      if(u){ u.value=txt; mpAttGuess();
+             const n=document.getElementById("mp-att-nm"); if(n) n.focus(); }
+      return false;
+    }
+    toast(txt?"The clipboard has text, not an image or a link":"Nothing on the clipboard to attach");
+  }catch(e){
+    toast("Chrome would not release the clipboard — use Upload a file instead","err");
+  }
   return false;
 }
 
@@ -15749,9 +16056,11 @@ const MP_KIND_ICON={
   pdf:["ti-file-type-pdf","#C0392B"], doc:["ti-file-description","#2B6CB0"],
   sheet:["ti-file-spreadsheet","#2E6B3D"], slides:["ti-presentation","#C77700"],
   design:["ti-vector","#2B6CB0"], archive:["ti-file-zip","#8A6A2F"],
+  link:["ti-link","#185FA5"],
   file:["ti-file","#6B6B6B"]
 };
 function mpFileKind(a){
+  if(a.kind==="link")  return "link";
   if(a.kind==="image") return "image";
   if(a.kind==="video") return "video";
   const e=String(a.filename||"").split(".").pop().toLowerCase();
@@ -15763,13 +16072,21 @@ function mpFileKind(a){
   if(["zip","rar","7z","tar","gz"].includes(e)) return "archive";
   return "file";
 }
+/* The host, and only the host — a chip is 250px wide and a SharePoint
+   address is not. "sharepoint.com" answers the one question a person has
+   about a link they did not paste themselves. */
+function mpLinkHost(u){
+  try{ return new URL(String(u)).hostname.replace(/^www\./,""); }
+  catch(e){ return "link"; }
+}
 function mpChipHtml(a,canE){
+  const isLink=a.kind==="link";
   const k=mpFileKind(a), ic=MP_KIND_ICON[k]||MP_KIND_ICON.file;
-  const size=a.bytes?kbmb(a.bytes):"";
-  return `<span class="mpchip" title="${escAttr(a.filename||"")}">
+  const meta=isLink?mpLinkHost(a.url):(a.bytes?kbmb(a.bytes):"");
+  return `<span class="mpchip${isLink?" lk":""}" title="${escAttr(isLink?(a.url||""):(a.filename||""))}">
     <i class="ti ${ic[0]}" style="color:${ic[1]}"></i>
-    <span class="cn" onclick="mpOpenAsset('${escAttr(a.id)}')">${escAttr(a.filename||"file")}</span>
-    ${size?`<span class="sz">${size}</span>`:""}
+    <span class="cn" onclick="mpOpenAsset('${escAttr(a.id)}')">${escAttr(a.filename||(isLink?"link":"file"))}</span>
+    ${meta?`<span class="sz">${escAttr(meta)}</span>`:""}
     ${canE?`<i class="ti ti-x rm" title="Remove" onclick="mpRemoveAsset('${escAttr(a.id)}',${Number(a.__m)||0})"></i>`:""}
   </span>`;
 }
@@ -15778,28 +16095,77 @@ function mpAssetsFor(m){
   if(!mp.id) return [];
   return (assetsFor("month_plan",mp.id)||[]).filter(a=>!a.deleted_at);
 }
+/* ══ MOTH v81.7 — A PRODUCTION ROW CARRIES ITS OWN FILES ═════════════
+   Chirag, asked whether goals and production should have the paperclip:
+   "Goals: No. Production: Yes."
+
+   So a reference cut for the September shoot belongs to the shoot, not
+   to September — where it used to sit beside the brand deck and the tone
+   note with nothing saying which of the two shoots it was for. */
+function mpItemAssetsFor(id){
+  return id?(assetsFor("month_item",id)||[]).filter(a=>!a.deleted_at):[];
+}
+/* Every attachment on this month, whoever owns it. The chip carries its
+   own owner_kind and owner_id, so removal and opening never have to
+   guess which store a chip came out of — a guess that would delete the
+   wrong row the first time a month and an item held the same file. */
+function mpAllAssetsFor(m){
+  const mp=monthPlanFor(activeBrand,YEAR,m);
+  const out=mpAssetsFor(m).slice();
+  ((mp&&mp.items)||[]).forEach(i=>{ out.push(...mpItemAssetsFor(i.id)); });
+  return out;
+}
 function mpDrawChips(m){
-  const host=document.querySelector(`.mpv-sheet[data-month="${m}"] .mpchips`);
-  if(!host) return;
+  const sheet=document.querySelector(`.mpv-sheet[data-month="${m}"]`);
+  if(!sheet) return;
   const canE=canEdit();
-  const list=mpAssetsFor(m).map(a=>Object.assign({},a,{__m:m}));
   const live=Object.values(UPLOADS||{}).filter(u=>u&&u.state==="uploading");
-  host.innerHTML=list.map(a=>mpChipHtml(a,canE)).join("")
-    + live.map(u=>`<span class="mpchip up"><i class="ti ti-loader"></i>
+  const upHtml=live.map(u=>`<span class="mpchip up"><i class="ti ti-loader"></i>
         <span class="cn">${escAttr(u.name)}</span><span class="sz">${u.pct}%</span></span>`).join("");
+  /* THE PROGRESS CHIPS GO WHERE THE UPLOAD WAS STARTED, not on the month
+     strip regardless. UPLOADS is global, so drawing it in both places
+     would show one upload twice and make it look like two. */
+  const upTo=MP_UP_TARGET&&MP_UP_TARGET.m===m?MP_UP_TARGET.itemId||"__month":"__month";
+
+  const host=sheet.querySelector(".mpchips");
+  if(host){
+    const list=mpAssetsFor(m).map(a=>Object.assign({},a,{__m:m}));
+    host.innerHTML=list.map(a=>mpChipHtml(a,canE)).join("")
+      + (upTo==="__month"?upHtml:"");
+  }
+  sheet.querySelectorAll(".mpv-row-chips").forEach(box=>{
+    const iid=box.dataset.item||"";
+    const list=mpItemAssetsFor(iid).map(a=>Object.assign({},a,{__m:m}));
+    box.innerHTML=list.map(a=>mpChipHtml(a,canE)).join("")
+      + (upTo===iid?upHtml:"");
+  });
 }
 async function mpOpenAsset(id){
-  const all=[]; for(let m=1;m<=12;m++) all.push(...mpAssetsFor(m));
+  const all=[]; for(let m=1;m<=12;m++) all.push(...mpAllAssetsFor(m));
   const a=all.find(x=>x.id===id); if(!a) return;
-  if(a.view_path||a.thumb_path||a.poster_path||isPdf(a)) openLightbox(id,all);
+  /* A LINK LEAVES THE TOOL, and does so only if it is a link this tool
+     would have written. MP_SAFE_HREF is the same test the link button in
+     the toolbar uses; a javascript: url stored by any other route dies
+     here rather than running. */
+  if(a.kind==="link"){
+    const u=String(a.url||"").trim();
+    if(!u||!MP_SAFE_HREF.test(u)){ toast("That link cannot be opened","err"); return; }
+    window.open(u,"_blank","noopener,noreferrer");
+    return;
+  }
+  const pics=all.filter(x=>x.kind!=="link");
+  if(a.view_path||a.thumb_path||a.poster_path||isPdf(a)) openLightbox(id,pics);
   else toast("No preview for this kind of file — it is stored and can be downloaded from the thread");
 }
 async function mpRemoveAsset(id,m){
   if(!canEdit()){ toast("View-only account","err"); return; }
-  const a=mpAssetsFor(m).find(x=>x.id===id); if(!a) return;
-  if(!confirm('Remove "'+(a.filename||"this file")+'"?\n\nThe file is deleted immediately and cannot be recovered.')) return;
-  const mp=monthPlanFor(activeBrand,YEAR,m);
-  if(await deleteAsset(id,"month_plan",mp.id)) { toast("Removed"); mpDrawChips(m); }
+  const a=mpAllAssetsFor(m).find(x=>x.id===id); if(!a) return;
+  const what=a.kind==="link"?"link":"file";
+  if(!confirm('Remove "'+(a.filename||"this "+what)+'"?\n\n'+(a.kind==="link"
+      ? "The link is removed from the plan. Nothing at the other end is touched."
+      : "The file is deleted immediately and cannot be recovered."))) return;
+  /* the row's OWN owner, never a re-derived one */
+  if(await deleteAsset(id,a.owner_kind,a.owner_id)) { toast("Removed"); mpDrawChips(m); }
 }
 
 /* ── the Social card, rebuilt as a SLICE ──────────────────────────────
