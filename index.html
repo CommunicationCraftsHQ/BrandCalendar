@@ -8056,7 +8056,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v81.2 — Moth: the deck, the plan card and the popup";
+const TOOL_VERSION="v81.3 — Moth: the picture that was too big";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -13360,6 +13360,38 @@ function exSlideList(post){
    stands — but it does NOT get to be silent. The suite's own rule, from a
    real deletion that got buried: never cap a list without saying so. The
    total travels back with the images so the slide can print "6 of 10". */
+/* ══ MOTH v81.3 — THE BUG THAT WAS NEVER A CAROUSEL BUG ══════════════
+   Every picture over roughly 100 KB has been silently missing from every
+   deck and every Word file, and it took four wrong diagnoses and a
+   session in Chirag's own browser to see it.
+
+   The line was:
+     btoa(String.fromCharCode(...new Uint8Array(buf)))
+
+   The spread turns a byte array into ARGUMENTS. A 370 KB creative is
+   369,762 arguments to one function call, and the engine answers
+   "RangeError: Maximum call stack size exceeded" — measured, in the live
+   tool, on Addressbox's 29 August carousel. That throw landed in
+   exMedia's catch, whose comment reads "one unreachable file must not
+   lose the whole export", so all five images vanished and the slide drew
+   the grey CAROUSEL placeholder. The export was not broken for
+   carousels; it was broken for BIG FILES, and carousels are simply where
+   several big files sit together.
+
+   WHY NO GATE SAW IT: my deck fixture serves PNGs a few hundred bytes
+   long. Real creatives are a third of a megabyte. The rule was already
+   written down after Brazil — "a fixture of only short values passes a
+   gate that should fail" — and I wrote another one anyway.
+
+   64 KB at a time is well inside every engine's argument limit and costs
+   nothing measurable. */
+function bufToB64(buf){
+  const bytes=new Uint8Array(buf);
+  let bin="";
+  for(let i=0;i<bytes.length;i+=0x8000) bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
+  return btoa(bin);
+}
+
 const EX_SLIDE_CAP=6;
 async function exMedia(post){
   const out=[];
@@ -13391,8 +13423,17 @@ async function exMedia(post){
                 /* a video still being made has no poster; the export used
                    to draw the grey placeholder and say nothing */
                 processing:a.kind==="video"&&a.status==="processing",
-                b64:"data:image/png;base64,"+btoa(String.fromCharCode(...new Uint8Array(buf)))});
-    }catch(e){ /* one unreachable file must not lose the whole export */ }
+                b64:"data:image/png;base64,"+bufToB64(buf)});
+    }catch(e){
+      /* MOTH v81.3 — A DROPPED IMAGE NOW LEAVES A MARK. This catch was
+         empty, so the RangeError above disappeared without a trace and
+         a five-picture carousel exported as a grey box that said only
+         "CAROUSEL". The export still survives one bad file — that part
+         was right — but it now says which file and why, in the slot the
+         picture would have had. Silence is what made this take days. */
+      out.push({placeholder:true,video:false,processing:false,
+                name:(a.filename||"image")+" — "+(e&&e.name||"could not be read")});
+    }
   }
   return out;
 }
@@ -13715,9 +13756,34 @@ async function exportPptBlob(rows){
       }
       CX=10.35; CW=2.65; CS=13;
     }
-    s.addText(r.caption||"(caption to come)",{x:CX,y:1.5,w:CW,h:2.7,fontSize:CS,color:"0D0D0D",
+    /* ══ MOTH v81.3 — THE CAPTION STOPPED SITTING ON THE HASHTAGS ═════
+       The caption had a FIXED box — y:1.5, h:2.7 — and the hashtags were
+       nailed to y:4.3 underneath it. PowerPoint does not clip an
+       overflowing text box, it spills, so any caption longer than about
+       six lines printed straight through the hashtags. Chirag saw it on
+       several slides at once and it is plainly visible in the file.
+
+       Nothing is truncated to fix it — the suite's rule is never to cap
+       silently, and a client's caption is the last thing to trim. The
+       type shrinks until it fits (down to 11pt, which is still legible
+       at presentation size) and the hashtags are then placed BELOW
+       wherever the caption actually ended, rather than at a constant. */
+    const capTxt=r.caption||"(caption to come)";
+    let capFs=CS, capH=0;
+    const capLines=fs=>{
+      /* ~1.85 characters per point of width per inch is the Arial
+         average; the +1 per paragraph counts its own line break */
+      const perLine=Math.max(8,Math.floor(CW*96/(fs*0.52)));
+      return String(capTxt).split("\n").reduce((n,par)=>
+        n+Math.max(1,Math.ceil(par.length/perLine)),0);
+    };
+    const AVAIL=r.hashtags?4.4:5.2;          /* down to the footer line */
+    while(capFs>11 && capLines(capFs)*(capFs*1.34/72) > AVAIL) capFs--;
+    capH=Math.min(AVAIL, capLines(capFs)*(capFs*1.34/72)+0.1);
+    s.addText(capTxt,{x:CX,y:1.5,w:CW,h:capH,fontSize:capFs,color:"0D0D0D",
       valign:"top",italic:!r.caption,fontFace:"Arial"});
-    if(r.hashtags) s.addText(r.hashtags,{x:CX,y:4.3,w:CW,h:0.6,fontSize:CS-4,color:"185FA5",fontFace:"Arial"});
+    if(r.hashtags) s.addText(r.hashtags,{x:CX,y:Math.min(6.2,1.5+capH+0.18),w:CW,h:0.8,
+      fontSize:Math.max(10,capFs-4),color:"185FA5",valign:"top",fontFace:"Arial"});
     s.addText(`Post ${r.n}   ·   ${r.dateLabel} · ${r.dayName}`,{x:CX,y:6.8,w:CW,h:0.4,fontSize:11,color:"6B6B6B",fontFace:"Arial"});
   }
   return pptx.write("blob");
@@ -15058,7 +15124,29 @@ function mpvMonthsWithPlan(){
   const out=[];
   for(let m=12;m>=1;m--){
     const mp=monthPlanFor(activeBrand,YEAR,m);
-    const has=(String(mp.key_theme||"").trim()!=="")||mpvItems(mp,"goal").length
+    /* ══ MOTH v81.3 — A STARTED MONTH IS A MONTH WITH A PLAN ══════════
+       Chirag, on a brand with nothing planned: "No typing is possible in
+       a quiet month, no cursor to type available."
+
+       He was right and the cause is this line. It asked "does this month
+       have CONTENT" — a theme, or an item. `mpvStart` creates the plan
+       ROW and then hands over to this function, which looked at a row
+       with an empty theme and no items and said no. So the sheet never
+       drew, there was no contenteditable to focus, and on a brand with
+       zero plans the screen said "open a month from the calendar" for
+       ever with no way to start one from here at all.
+
+       `mp.id` is the honest question. monthPlanFor returns id:null for a
+       month that has no row, so a non-null id means somebody started
+       this month deliberately — which is exactly what should put an
+       empty sheet on screen, waiting to be typed into.
+
+       THIS IS THE FIRST-RUN STATE, and I had already written the rule:
+       "ask what the screen offers in its EMPTY state, its first-run
+       state and its all-done state, not only in the populated fixture
+       everybody writes." Every fixture I built had content in it. */
+    const has=!!mp.id
+      ||(String(mp.key_theme||"").trim()!=="")||mpvItems(mp,"goal").length
       ||mpvItems(mp,"influencer").length||mpvItems(mp,"production").length
       ||mpvItems(mp,"target").length||(mp.influencer_target>0);
     if(has) out.push(m);
@@ -15158,7 +15246,7 @@ function renderMonthPlanView(){
       ${months.length
         ? months.map(m=>mpvSheetHtml(m,canE)).join("")
         : `<div class="mpv-sheet"><div class="mpv-body"><div class="mpv-empty" style="padding:26px 0;">
-            No month has a plan yet for ${YEAR}.${canE?" Open a month from the calendar to start one.":""}</div></div></div>`}
+            No month has a plan yet for ${YEAR}.${canE?" Click a month in the panel on the left to start one.":""}</div></div></div>`}
     </div>
   </div>`;
   /* MOTH — the sheets are in the DOM now, so the chips can be drawn into
