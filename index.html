@@ -1100,6 +1100,9 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
   text-transform:uppercase;color:var(--subtle);}
 .nsec.men{color:var(--acc);}
 .ntabs{display:flex;gap:3px;padding:9px 12px;border-bottom:1px solid var(--div);background:rgba(13,13,13,.02);}
+/* a tab with nothing behind it is still a tab — quieter, not absent */
+.ntab.zero{opacity:.5;}
+.ntab.zero.on{opacity:1;}
 .ntab{height:26px;padding:0 11px;border-radius:7px;font-size:11.5px;font-weight:600;color:var(--muted);
   cursor:pointer;display:inline-flex;align-items:center;gap:5px;}
 .ntab.on{background:var(--text);color:#fff;}
@@ -8056,7 +8059,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v81.5 — Moth: the row you just added";
+const TOOL_VERSION="v81.6 — Moth: the three tabs are always there";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -10553,11 +10556,22 @@ function buildNotifPanel(){
   const all=notifItems();
   const mentions=all.filter(i=>i.mention);
   const clients=all.filter(i=>i.c.author_kind==="client");
-  /* A tab that would be empty is not offered. Nobody wants to click
-     "Mentions" to be told there are none. */
-  const tabs=[["all","All",all.length]]
-    .concat(mentions.length?[["mention","Mentions",mentions.length]]:[])
-    .concat(clients.length?[["client","Clients",clients.length]]:[]);
+  /* ══ MOTH v81.6 — THE THREE TABS ARE ALWAYS THERE ═══════════════════
+     I wrote "a tab that would be empty is not offered — nobody wants to
+     click Mentions to be told there are none", and it sounded sensible.
+     What it actually did was make the entire feature invisible on
+     Chirag's real inbox: fifteen unread, no mentions among them, no
+     client comments, so the panel drew brand groups and nothing else —
+     exactly what it drew before Moth. He approved a mockup with three
+     tabs across the top and then never saw one.
+
+     A count of zero is information. "Mentions 0" tells you at a glance
+     that nobody is waiting on you, which is worth more than a tab that
+     appears and disappears depending on the week. The tabs are the
+     panel's structure, not a reward for having the right data. */
+  const tabs=[["all","All",all.length],
+              ["mention","Mentions",mentions.length],
+              ["client","Clients",clients.length]];
   if(!tabs.some(t=>t[0]===NOTIF_TAB)) NOTIF_TAB="all";
   const head=`<div class="nphead"><b>Notifications</b>
       ${all.length?`<span class="mark" onclick="notifMarkAll()">Mark all read</span>`:""}</div>`;
@@ -10567,14 +10581,18 @@ function buildNotifPanel(){
     return;
   }
 
-  const tabBar=tabs.length>1?`<div class="ntabs">${tabs.map(([k,label,n])=>
-      `<span class="ntab${NOTIF_TAB===k?" on":""}" onclick="notifSetTab('${k}')">${label} <span class="c">${n}</span></span>`
-    ).join("")}</div>`:"";
+  const tabBar=`<div class="ntabs">${tabs.map(([k,label,n])=>
+      `<span class="ntab${NOTIF_TAB===k?" on":""}${n?"":" zero"}" onclick="notifSetTab('${k}')">${label} <span class="c">${n}</span></span>`
+    ).join("")}</div>`;
 
   /* ── a filtered tab is a flat list; there is nothing to group by ── */
   if(NOTIF_TAB!=="all"){
     const list=(NOTIF_TAB==="mention"?mentions:clients);
-    el.innerHTML=head+tabBar+list.map(it=>notifRowHtml(it,it.brandId)).join("")
+    el.innerHTML=head+tabBar
+      +(list.length?list.map(it=>notifRowHtml(it,it.brandId)).join("")
+        :`<div class="npempty">${NOTIF_TAB==="mention"
+            ?"Nobody has mentioned you in what is loaded."
+            :"No client has commented in what is loaded."}</div>`)
       +notifTruncHtml()+notifMutedBlock();
     return;
   }
