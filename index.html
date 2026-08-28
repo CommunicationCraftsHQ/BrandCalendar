@@ -8056,7 +8056,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v81.4 — Moth: the video plays";
+const TOOL_VERSION="v81.5 — Moth: the row you just added";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -15096,10 +15096,28 @@ function openMonthPlanView(m){
   if(!activeBrand||!brands[activeBrand]) return;
   mpvMonth=m; setView("mplan");
 }
-const mpvItems=(mp,cat,disc)=>(mp.items||[])
-  .filter(i=>i.category===cat&&(i.label||"").trim())
+/* ══ MOTH v81.5 — A ROW THAT EXISTS HAS TO BE ON THE SCREEN ══════════
+   Chirag: "the add buttons on production goals is not working." It was
+   working perfectly. It created the row, saved it to the database, and
+   then the renderer hid it, because `mpvItems` drops anything with an
+   empty label — and a row you have just created is empty by definition.
+
+   So every click added an invisible row. His September plan had
+   EIGHTEEN of them by the time he reported it, each one a click he made
+   trying to get the button to respond.
+
+   This is the same shape as v81.3's empty month: I taught the sheet that
+   a STARTED MONTH must draw even with no content, and did not carry the
+   thought one level down to a STARTED ROW. `mpvItems` still filters, and
+   is still what the deck, Word and the counts use — an empty row is not
+   content. `mpvRows` is what the EDITOR draws, and it keeps everything,
+   because you cannot type into a row you cannot see. */
+const mpvRows=(mp,cat,disc)=>(mp.items||[])
+  .filter(i=>i.category===cat)
   .filter(i=>disc===undefined ? true : (disc===null ? !i.discipline : i.discipline===disc))
   .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+
+const mpvItems=(mp,cat,disc)=>mpvRows(mp,cat,disc).filter(i=>(i.label||"").trim());
 
 function mpvTagHtml(d){
   const k=d||"all";
@@ -15127,19 +15145,39 @@ function mpvBandHtml(d,mp,mpvBandMonth,canBandEdit){
      treats null as "untagged", so the filter is the same call; only the
      DOM/fold key needs a string. */
   const key=d.id||"unassigned";
-  const lists=d.lists.map(cat=>({cat,items:mpvItems(mp,cat,d.id)}));
-  const goals=mpvItems(mp,"goal",d.id);
+  const lists=d.lists.map(cat=>({cat,items:mpvRows(mp,cat,d.id)}));
+  const goals=mpvRows(mp,"goal",d.id);
   /* brand-wide GOALS are pinned at the top of the plan, so the
      unassigned band must not count or repeat them — it is only about
      work that has no discipline yet. */
   const countGoals=d.id?goals.length:0;
   const total=countGoals+lists.reduce((a,l)=>a+l.items.length,0);
-  if(!total) return "";
+  /* ══ MOTH v81.5 — THE BAND YOU ADD INTO CANNOT BE THE BAND THAT HIDES
+     Chirag: "in influencers, there is no way to add influencers as add
+     button is not even visible."
+
+     Two filters conspired. A band with nothing in it was not drawn at
+     all, and within a drawn band a LIST with nothing in it was dropped
+     from `cols`. Influencers is empty on every plan he has, so its
+     column never appeared — and the Add button lives on that column's
+     label. The only way to get the button was to already have what the
+     button adds.
+
+     `discipline` is never set by anything (see the note by DISCIPLINES),
+     so "Not assigned yet" is the only band that can ever hold work. It
+     is now always drawn for someone who can edit, with BOTH its lists,
+     so there is always somewhere to put a first influencer. The tagged
+     bands still appear only when they have something — they would
+     otherwise be three permanently empty headings. */
+  const alwaysOpen = canBandEdit && !d.id;
+  if(!total && !alwaysOpen) return "";
   const bits=[];
   if(countGoals) bits.push(countGoals+" goal"+(countGoals===1?"":"s"));
   lists.forEach(l=>{ if(l.items.length) bits.push(l.items.length+" "+l.cat+(l.items.length===1?"":"s")); });
   const dots=lists.map(l=>mpvDotsHtml(l.items,l.cat)).join("");
-  const cols=lists.filter(l=>l.items.length||d.lists.length===1);
+  /* an editor sees every list this band owns; a viewer only the ones
+     with something in them */
+  const cols=canBandEdit ? lists : lists.filter(l=>l.items.length||d.lists.length===1);
   return `<div class="mpv-band${mpvIsShut(key)?" shut":""}" data-band="${key}">
     <div class="mpv-bh" onclick="mpvToggle('${key}')">
       <i class="ti ti-chevron-down cv"></i><i class="ti ${d.icon}" style="font-size:14px;color:var(--muted)"></i>
@@ -15219,7 +15257,7 @@ function mpvStatusCtl(m,mp,canE){
 
 function mpvSheetHtml(m,canE){
   const mp=monthPlanFor(activeBrand,YEAR,m);
-  const goalsAll=mpvItems(mp,"goal");
+  const goalsAll=canE?mpvRows(mp,"goal"):mpvItems(mp,"goal");   /* an editor sees the row it just made */
   const targets=mpvItems(mp,"target");
   const bands=DISCIPLINES.map(d=>mpvBandHtml(d,mp,m,canE)).filter(Boolean).join("");
   const untagged=goalsAll.filter(g=>!g.discipline);
@@ -15518,6 +15556,26 @@ async function mpvBlurSave(el){
   mpBarHide();
   const m=Number(el.dataset.mpvM);
   const clean=mpClean(el.innerHTML).trim();
+  /* MOTH v81.5 — THIS HAS TO COME BEFORE THE "nothing typed" RETURN.
+     The first version of this cleanup sat below it and never ran once: a
+     row you have just added has `was` empty and `clean` empty, so they
+     match, so the function returned before reaching it. Caught by the
+     gate, not by reading it back. */
+  /* ONLY ON A REAL BLUR. `el.isConnected` is false when the element was
+     destroyed by a re-render rather than left by a person — and a
+     repaint must never be read as "they walked away without typing".
+     Found by the gate: ticking a goal repaints the sheet, which blurred
+     the row added a moment earlier and deleted it mid-test. The
+     save-on-detach path below is deliberately NOT guarded this way; it
+     is the net that rescues text typed just before a redraw. */
+  if(el.dataset.mpvI && !clean && el.isConnected){
+    const gone=el.dataset.mpvI;
+    const mpx=monthPlanFor(activeBrand,YEAR,m);
+    mpx.items=(mpx.items||[]).filter(x=>x.id!==gone);
+    dbDeleteMonthItem(gone);
+    mpvRepaint();
+    return;
+  }
   if(clean===String(el.dataset.was||"").trim()) return;   // nothing typed
   el.innerHTML=clean||"";
   const mp=monthPlanFor(activeBrand,YEAR,m);
