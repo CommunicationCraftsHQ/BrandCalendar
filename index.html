@@ -8056,7 +8056,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v81.3 — Moth: the picture that was too big";
+const TOOL_VERSION="v81.4 — Moth: the video plays";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -13392,6 +13392,13 @@ function bufToB64(buf){
   return btoa(bin);
 }
 
+/* A reel is a couple of megabytes; a deck of them should stay mailable.
+   Both numbers are deliberately generous against Chirag's real files
+   (1.1–2.5 MB each) so nothing he has today is ever refused. */
+const EX_VIDEO_MAX=40*1024*1024;      /* one video */
+const EX_VIDEO_BUDGET=250*1024*1024;  /* one deck */
+let EX_VIDEO_SPENT={n:0};
+
 const EX_SLIDE_CAP=6;
 async function exMedia(post){
   const out=[];
@@ -13419,7 +13426,41 @@ async function exMedia(post){
         im.onload=()=>{ clearTimeout(tm); go({w:im.naturalWidth||1080,h:im.naturalHeight||1350}); };
         im.onerror=()=>{ clearTimeout(tm); go({w:1080,h:1350}); };
         im.src=u; });
-      out.push({buf,w:dim.w,h:dim.h,video:a.kind==="video",
+      /* ══ MOTH v81.4 — THE VIDEO IS THE VIDEO ═════════════════════════
+         Chirag, twice: "the video content is not getting included", then
+         "still not showing as video but just an image + play button."
+         I told him PowerPoint could not do it. That was WRONG — I had
+         not checked. pptxgenjs has embedded media since long before this
+         version, and a `cover` image since 3.9, so a slide can carry the
+         real mp4 AND show the creative's own first frame.
+
+         The bytes come from `storage_path` — the ORIGINAL upload, not a
+         derivative — because a poster is a picture of a video and this
+         needs the video. Measured on his data first: his reels are
+         1.1, 1.9 and 2.5 MB, so a month of them adds single-digit
+         megabytes to a deck. That is why this is worth doing rather
+         than a nice idea about doing it.
+
+         Above the cap it falls back to the still, and SAYS SO. A deck
+         that quietly grew to 400 MB would be its own bug report. */
+      let videoData=null, videoSkip="";
+      if(a.kind==="video" && a.storage_path){
+        if((a.bytes||0) > EX_VIDEO_MAX){
+          videoSkip=kbmb(a.bytes)+" — too large to embed";
+        } else if(EX_VIDEO_SPENT.n + (a.bytes||0) > EX_VIDEO_BUDGET){
+          videoSkip="the deck's video budget is full";
+        } else {
+          try{
+            const vu=await signedUrl(a.storage_path);
+            if(vu){
+              const vb=await (await fetch(vu)).arrayBuffer();
+              videoData="data:"+(a.mime||"video/mp4")+";base64,"+bufToB64(vb);
+              EX_VIDEO_SPENT.n+=vb.byteLength;
+            }
+          }catch(e){ videoSkip="it could not be read"; }
+        }
+      }
+      out.push({buf,w:dim.w,h:dim.h,video:a.kind==="video",videoData,videoSkip,
                 /* a video still being made has no poster; the export used
                    to draw the grey placeholder and say nothing */
                 processing:a.kind==="video"&&a.status==="processing",
@@ -13626,6 +13667,7 @@ async function exEnsureSlides(rows){
 
 async function exportPptBlob(rows){
   const Pg=await loadExportLib("pptxgenjs");
+  EX_VIDEO_SPENT={n:0};          /* the budget is per deck, not per session */
   await exEnsureSlides(rows);
   const pptx=new Pg();
   pptx.defineLayout({name:"CC169",width:13.33,height:7.5}); pptx.layout="CC169";
@@ -13695,7 +13737,15 @@ async function exportPptBlob(rows){
     const ir=m.w/m.h, pr=w/h;
     const nw=ir>pr?w:h*ir, nh=ir>pr?w/ir:h;
     const px=x+(w-nw)/2, py=y+(h-nh)/2;
-    s.addImage({data:m.b64,x:px,y:py,w:nw,h:nh});
+    /* MOTH v81.4 — a real embedded video where we have one, with the
+       creative's own first frame as its cover. `addMedia` writes the mp4
+       into ppt/media and a videoFile relationship, so it plays in
+       PowerPoint rather than being a picture of a video. */
+    if(m.videoData){
+      s.addMedia({type:"video",data:m.videoData,cover:m.b64,x:px,y:py,w:nw,h:nh});
+    } else {
+      s.addImage({data:m.b64,x:px,y:py,w:nw,h:nh});
+    }
     return {x:px,y:py,w:nw,h:nh}; };
 
   /* ══ MOTH — THE PLAY BADGE, ON EVERY VIDEO ════════════════════════
@@ -13733,7 +13783,12 @@ async function exportPptBlob(rows){
         fontSize:26,color:"AAAAAA",bold:true,charSpacing:4,fontFace:"Arial"});
     } else if(shots.length===1){
       const box=fit(s,shots[0],0,0,PW,H);
-      if(shots[0].video&&!shots[0].placeholder) playBadge(s,box);
+      /* the badge marks a STILL that stands in for a video. A real
+         embedded one has PowerPoint's own controls and does not need a
+         painted triangle on top of them. */
+      if(shots[0].video&&!shots[0].placeholder&&!shots[0].videoData) playBadge(s,box);
+      if(shots[0].videoSkip) s.addText("Video not embedded — "+shots[0].videoSkip,
+        {x:0,y:H-0.42,w:PW,h:0.3,align:"center",fontSize:9,color:"8A6A2F",fontFace:"Arial"});
       if(shots[0].processing&&!shots[0].placeholder) processingNote(s,box);
     } else {
       const MX=0.34,GX=0.16,AW=9.9-MX,AH=H-0.68;
@@ -13744,7 +13799,7 @@ async function exportPptBlob(rows){
         const rowW=ncol*cw+(ncol-1)*GX;
         const x0=row===1?MX+((AW-MX)-rowW)/2:MX;
         const box=fit(s,m,x0+col*(cw+GX),0.34+row*(ch+GX),cw,ch);
-        if(m.video&&!m.placeholder) playBadge(s,box);
+        if(m.video&&!m.placeholder&&!m.videoData) playBadge(s,box);
         if(m.processing&&!m.placeholder) processingNote(s,box);
       });
       /* MOTH — SAY WHEN SOMETHING WAS LEFT OUT. Six per slide is
