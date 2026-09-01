@@ -3071,6 +3071,13 @@ let socialLayer=false; // calendar overlay: show planned social posts
 let CUSTOM={}; // user-created events by month — in-memory source of truth (browser storage is only a cache)
 let fromNow=true; // default: show current + upcoming months (user can switch to Full year)
 let staleBrandFiles=new Set(); // files of brands deleted/renamed this session — cleaned up on next save
+/* PORTO 3.6 — brands ADDED IN THIS TOOL, this session. `brands.status`
+   defaults to 'lapsed' so an import of history can never flood this
+   switcher; a brand somebody types in here is the opposite of history,
+   and without this it would disappear the moment it was saved. Only
+   the new ones carry it: an upsert that set status on every brand
+   would silently re-activate anything marked lapsed in Portfolio. */
+let newBrandIds=new Set();
 
 function visibleMonths(){
   if(!fromNow) return Array.from({length:12},(_,i)=>i+1);
@@ -5322,6 +5329,7 @@ function saveBrand(){
   if(!name){toast("Brand name required","err");return;}
   if(!bmInds.length){toast("Select at least one industry","err");return;}
   const k=bmKey||crypto.randomUUID();
+  if(!bmKey) newBrandIds.add(k);   // created here, so: active
   let evIds;
   const thisYearIds=new Set(); for(let m2=1;m2<=12;m2++)(evs[m2]||[]).forEach(e=>thisYearIds.add(e.id));
   const keepOtherYears=((brands[bmKey]||{}).evIds||[]).filter(x=>!thisYearIds.has(x));
@@ -8094,7 +8102,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v81.7 — Moth: the two doors it never had";
+const TOOL_VERSION="v81.8 — Porto: only the brands we work with now";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -8484,7 +8492,15 @@ async function loadAll(showToast){
   const [inds,evts,brs,bevs,tags,posts,briefs,social,monthPlans,monthItems]=await Promise.all([
     sb.from("industries").select("*").order("pos"),
     sb.from("events").select("*").is("deleted_at",null),
-    sb.from("brands").select("*").is("deleted_at",null),
+    sb.from("brands").select("*").is("deleted_at",null).eq("status","active"),  /* PORTO 3.6 — only the brands we work with now. Portfolio is the
+     record of every brand there has ever been (400 and counting);
+     this switcher wants the 40-50 that are live. `status` is set by
+     hand on the Portfolio Clients screen, never derived here.
+     BOTH reads filter — the first load AND the realtime refetch —
+     because a refetch that disagreed would quietly repopulate the
+     switcher a moment after the load had trimmed it. The Trash read
+     below is deliberately NOT filtered: a lapsed brand still has to
+     be restorable. */
     sb.from("brand_events").select("*").is("deleted_at",null),
     sb.from("brand_tags").select("*"),
     sb.from("brand_posts").select("*"),
@@ -8691,7 +8707,8 @@ function dbSyncBrandData(){ // debounced sync of brands + their events/tags/post
     const prevBev={}; ((G&&G.bevs)||[]).forEach(r=>{prevBev[r.id]=r;});
     const prevBrief={}; ((G&&G.briefs)||[]).forEach(r=>{prevBrief[r.brand_id+"|"+r.event_id]=r;});
     for(const [id,b] of Object.entries(brands)){
-      dbErr(await upsertBrand({id,name:b.name,inds:b.inds||[],audience:b.audience||[],brief:b.brief||{}}));
+      dbErr(await upsertBrand(Object.assign({id,name:b.name,inds:b.inds||[],audience:b.audience||[],brief:b.brief||{}},
+                                            newBrandIds.has(id)?{status:"active"}:{})));
       const customIds=new Set();
       const bevRows=[];
       for(let m=1;m<=12;m++)(evs[m]||[]).forEach(e=>{
@@ -11075,7 +11092,15 @@ async function rtRefetchCalendar(){
   try{
     const [evts,brs,bevs,tags]=await Promise.all([
       sb.from("events").select("*").is("deleted_at",null),
-      sb.from("brands").select("*").is("deleted_at",null),
+      sb.from("brands").select("*").is("deleted_at",null).eq("status","active"),  /* PORTO 3.6 — only the brands we work with now. Portfolio is the
+     record of every brand there has ever been (400 and counting);
+     this switcher wants the 40-50 that are live. `status` is set by
+     hand on the Portfolio Clients screen, never derived here.
+     BOTH reads filter — the first load AND the realtime refetch —
+     because a refetch that disagreed would quietly repopulate the
+     switcher a moment after the load had trimmed it. The Trash read
+     below is deliberately NOT filtered: a lapsed brand still has to
+     be restorable. */
       sb.from("brand_events").select("*").is("deleted_at",null),
       sb.from("brand_tags").select("*"),
     ]);
