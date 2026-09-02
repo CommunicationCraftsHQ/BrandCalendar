@@ -137,7 +137,7 @@ body.planning .mc-day:hover{box-shadow:0 0 0 2px #0EA5A5 inset;border-radius:5px
 .evl-pill .c{font-size:10.5px;color:var(--subtle);font-weight:700;}
 .evl-pill.on{background:var(--surface);color:var(--text);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.09);}
 .evl-sel{height:30px;width:auto;padding:0 8px;font-size:12px;}
-.evl-wrap{margin:0 32px 8px;background:var(--surface);border:1px solid var(--div);border-radius:var(--rc);overflow:hidden;}
+.evl-wrap{margin:0 32px 8px;background:var(--surface);border:1px solid var(--div);border-radius:var(--rc);overflow-x:auto;}
 .evl-tbl{width:100%;border-collapse:collapse;font-size:12.5px;}
 .evl-tbl th{font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
   color:var(--subtle);text-align:left;padding:9px 12px;border-bottom:1px solid var(--div);}
@@ -145,17 +145,21 @@ body.planning .mc-day:hover{box-shadow:0 0 0 2px #0EA5A5 inset;border-radius:5px
 .evl-tbl tr:last-child td{border-bottom:none;}
 .evl-row{cursor:pointer;}
 .evl-row:hover td{background:var(--bg);}
-.evl-mth{background:#FAFAF8;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
-  color:var(--muted);padding:7px 12px;}
+.evl-mth{background:#EDECE6;font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--text);padding:10px 12px;border-top:2px solid var(--div);}
 .evl-d{font-weight:800;width:56px;}
 .evl-d small{font-weight:600;color:var(--subtle);font-size:10px;margin-left:4px;}
 .evl-nm{font-weight:600;white-space:normal;}
 .evl-row.off .evl-nm{color:var(--subtle);}
 .evl-row.off td{background:#FBFBF9;}
 .evl-cat{font-size:10px;font-weight:700;padding:2px 7px;border-radius:9px;white-space:nowrap;margin-right:4px;}
-.evl-relc{white-space:normal;max-width:260px;}
+.evl-relc{white-space:normal;}
+/* a td's max-width is advisory in auto table layout — the inner div is
+   what actually holds the chips to their column */
+.evl-relw{max-width:320px;display:flex;flex-wrap:wrap;gap:3px;align-items:center;}
 .evl-rel{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:9px;background:#DCFCE7;color:#166534;margin:1px 4px 1px 0;display:inline-block;}
 .evl-rel.md{background:#FEF9C3;color:#854D0E;}
+.evl-rel.more{background:var(--bg);color:var(--muted);}
 .evl-src{font-size:11px;color:var(--subtle);}
 .evl-src b{color:var(--muted);font-weight:600;}
 .evl-rst{height:24px;padding:0 10px;margin-left:6px;border-radius:7px;border:1px solid var(--div);background:var(--surface);
@@ -5023,9 +5027,10 @@ function renderList(){
   else { const h=document.createElement("div"); h.className="year-head";
     h.innerHTML=`<div class="year-headtxt"><div class="year-title"><span>Events</span>. ${YEAR}</div></div>`; mc.appendChild(h); }
 
-  /* one pass over the year — every master event, plus this brand's own */
+  /* one pass over the visible months — the Past months toggle in the
+     black bar governs this list exactly as it governs the calendar */
   const rows=[]; const q=evQ.trim().toLowerCase();
-  for(let m=1;m<=12;m++)(evs[m]||[]).forEach(e=>{
+  for(const m of visibleMonths())(evs[m]||[]).forEach(e=>{
     if(e._isPost) return;
     if(e._custom&&(!b||e._brandId&&e._brandId!==activeBrand&&e._brandOnly)) return;
     if(e._custom&&b&&!(b.evIds||[]).includes(e.id)&&e._brandId!==activeBrand) return;
@@ -5075,10 +5080,14 @@ function renderList(){
   const catChip=e=>{const c=CATS[gc(e)]||CATS.cat1;
     return `<span class="evl-cat" style="background:${c.color}1A;color:${c.color};">${c.short}</span>`
       +(e.shopping?`<span class="evl-cat" style="background:#FDECEA;color:#C62828;">Shopping moment</span>`:"");};
+  /* Master reading only — inside a brand the question is "is it on this
+     brand", not "who else might care", so the column goes entirely. */
   const relChips=e=>{const rel=e.relevance||{};
-    return Object.entries(rel).filter(([,v])=>v==="high"||v==="medium")
-      .map(([k,v])=>{const row=indById(k); if(!row) return "";
-        return `<span class="evl-rel${v==="medium"?" md":""}">${escAttr(row.label)}</span>`;}).join("");};
+    const rated=Object.entries(rel).filter(([,v])=>v==="high"||v==="medium")
+      .map(([k,v])=>({row:indById(k),v})).filter(x=>x.row);
+    const chips=rated.slice(0,3)
+      .map(x=>`<span class="evl-rel${x.v==="medium"?" md":""}">${escAttr(x.row.label)}</span>`).join("");
+    return chips+(rated.length>3?`<span class="evl-rel more">+${rated.length-3}</span>`:"");};
   const srcCell=r=>{
     const st=stateOf(r);
     if(!b) return `<span class="evl-src">${emBrandsUsing(r.e.id)||0} brand${emBrandsUsing(r.e.id)===1?"":"s"}</span>`;
@@ -5097,9 +5106,10 @@ function renderList(){
   };
 
   const wrap=document.createElement("div"); wrap.className="evl-wrap";
+  const cols=b?5:6;
   let body="", lastM=0;
   shown.slice().sort((a,c)=>(a.m-c.m)||(a.e.date-c.e.date)||String(a.e.name).localeCompare(String(c.e.name))).forEach(r=>{
-    if(r.m!==lastM){ lastM=r.m; body+=`<tr><td class="evl-mth" colspan="6">${MN[r.m]} ${YEAR}</td></tr>`; }
+    if(r.m!==lastM){ lastM=r.m; body+=`<tr><td class="evl-mth" colspan="${cols}">${MN[r.m]} ${YEAR}</td></tr>`; }
     const st=stateOf(r); const off=b&&!(st==="auto"||st==="added"||st==="custom");
     const dt=`${r.e.date}${r.e.endDate&&r.e.endDate!==r.e.date?"–"+r.e.endDate:""}`;
     const dow=DOW[new Date(YEAR,r.m-1,r.e.date).getDay()]||"";
@@ -5107,14 +5117,14 @@ function renderList(){
       <td class="evl-d">${dt}<small>${dow}</small></td>
       <td class="evl-nm">${escAttr(r.e.name)}${r.e.mega?" ⭐":""}</td>
       <td>${catChip(r.e)}</td>
-      <td class="evl-relc">${relChips(r.e)}</td>
+      ${b?"":`<td class="evl-relc"><div class="evl-relw">${relChips(r.e)}</div></td>`}
       <td>${srcCell(r)}</td>
       <td class="evl-tglc">${tglCell(r)}</td>
     </tr>`;
   });
-  if(!shown.length) body=`<tr><td colspan="6" class="evl-none">Nothing matches those filters.</td></tr>`;
+  if(!shown.length) body=`<tr><td colspan="${cols}" class="evl-none">Nothing matches those filters.</td></tr>`;
   wrap.innerHTML=`<table class="evl-tbl"><thead><tr>
-      <th>Date</th><th>Event</th><th>Category</th><th>Relevant for</th>
+      <th>Date</th><th>Event</th><th>Category</th>${b?"":"<th>Relevant for</th>"}
       <th>${b?"How it got here":"Used by"}</th><th></th>
     </tr></thead><tbody>${body}</tbody></table>`;
   mc.appendChild(wrap);
@@ -8248,7 +8258,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v82 — Warsaw: the calendar learns the sectors";
+const TOOL_VERSION="v82.1 — Warsaw: the list minds its months";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
