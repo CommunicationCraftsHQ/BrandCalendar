@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v82.3 — Warsaw: the brief joins the conversation"/>
+<meta name="cc-tool-version" content="v82.4 — Warsaw: the boxes behave"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -1636,6 +1636,10 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .bfimg img{width:100%;height:100%;object-fit:cover;display:block;}
 /* a rich field's placeholder — contenteditables have no placeholder attr */
 .rt:empty::before{content:attr(data-ph);color:var(--subtle);pointer-events:none;}
+/* v82.4 — one focus line, not two: the rich fields draw their own border,
+   so the suite-wide contenteditable outline stands down for them */
+.rt[contenteditable="true"]:focus{outline:none;}
+.ta-grow{overflow:hidden;resize:none;}
 .th46 .send46{width:38px;height:38px;border-radius:10px;border:none;background:#0D0D0D;color:#fff;cursor:pointer;
   font-size:16px;display:flex;align-items:center;justify-content:center;flex:none}
 .th46 .cextra{display:flex;gap:8px;align-items:center;margin:9px 0 0 39px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
@@ -3852,6 +3856,10 @@ function socialFieldEdit(id,field,value,platform){
     else if(field==="notes") logActivity(id,"updated the design brief");
   },600);
 }
+/* v82.4 — Chirag: "the caption should be showing expanded at least in
+   the edit view, so you don't have to scroll while typing." The box
+   sizes itself to its words — plain textarea, no inner scrollbar. */
+function taGrow(el){ if(!el) return; el.style.height="auto"; el.style.height=(el.scrollHeight+2)+"px"; }
 function showSavedCue(id){const el=document.getElementById("sv-"+id);if(!el)return;el.style.opacity="1";clearTimeout(el._t);el._t=setTimeout(()=>{el.style.opacity="0";},1200);}
 // Reschedule a post to a different date (inline, Edit mode). Stays within the selected year.
 function socialDateEdit(id,value){
@@ -4231,7 +4239,7 @@ function stSelect(id,val){return `<select class="fi" style="height:30px;font-siz
 function variantFields(p,platform){
   const v=p.content[platform]||emptyVariant();
   return `<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Caption</div>
-    <textarea class="fi ta" style="min-height:44px;font-size:12px;margin-bottom:8px;" placeholder="Write a caption…" oninput="socialFieldEdit('${p.id}','caption',this.value,'${platform}')">${seEsc(v.caption)}</textarea>
+    <textarea class="fi ta ta-grow" style="min-height:44px;font-size:12px;margin-bottom:8px;" placeholder="Write a caption…" oninput="socialFieldEdit('${p.id}','caption',this.value,'${platform}');taGrow(this)">${seEsc(v.caption)}</textarea>
     <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Hashtags</div>
     <input class="fi" style="height:30px;font-size:12px;color:#185FA5;margin-bottom:8px;" placeholder="#hashtags" value="${escAttr(v.hashtags)}" oninput="socialFieldEdit('${p.id}','hashtags',this.value,'${platform}')"/>
     <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Design</div>
@@ -4324,7 +4332,7 @@ function socialEditForm(p){
   if(synced){
     const v=p.content.instagram;
     body=`${conceptField}<div class="fl2">Caption</div>
-      <textarea class="fi ta" style="min-height:52px;font-size:12px;margin-bottom:11px;" placeholder="Write a caption…" oninput="socialFieldEdit('${p.id}','caption',this.value)">${seEsc(v.caption)}</textarea>
+      <textarea class="fi ta ta-grow" style="min-height:52px;font-size:12px;margin-bottom:11px;" placeholder="Write a caption…" oninput="socialFieldEdit('${p.id}','caption',this.value);taGrow(this)">${seEsc(v.caption)}</textarea>
       <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:9px;">
         <div><div class="fl2">Hashtags</div><input class="fi" style="height:32px;font-size:12px;color:#185FA5;" placeholder="#hashtags" value="${escAttr(v.hashtags)}" oninput="socialFieldEdit('${p.id}','hashtags',this.value)"/></div>
         <div><div class="fl2">Format</div>${fmtSelect(p.id,p.format)}</div>
@@ -4580,6 +4588,7 @@ function renderSocial(){
     posts.map(p=>contentMode==="edit"?socialEditForm(p):socialViewCard(p)).join("")+`</div>`;
   /* NEW YORK: signed URLs cannot live in markup — they expire. Paint first,
      then hydrate, so a slow signature never holds up the thread. */
+  list.querySelectorAll("textarea.ta-grow").forEach(taGrow);   /* v82.4 */
   hydrateMedia(list);
   /* STAGE 2A · A8 — the cards' own creative. One query for the whole
      month, not one per card: the post already carries current_round_id,
@@ -8372,7 +8381,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v82.3 — Warsaw: the brief joins the conversation";
+const TOOL_VERSION="v82.4 — Warsaw: the boxes behave";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -13619,7 +13628,7 @@ function fbPanelHtml(p){
 
   const composer=canComment()?`<div class="comp46">
       <div class="crow46">${av(actorName(),actorKind())}
-        <div id="fb-new-${p.id}" class="cin46 rt" contenteditable="true" data-ph="Write a comment"
+        <div id="fb-new-${p.id}" class="cin46 rt" contenteditable="true" data-ph="Write a comment" data-att="comment" data-post="${p.id}"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();fbAddComment('${p.id}',null);}"
           oninput="fbMentionKey(event,'fb-new-${p.id}','${p.brand_id||activeBrand}')"
           onfocus="rtFocus(this)"
@@ -13628,7 +13637,6 @@ function fbPanelHtml(p){
       </div>
       <div class="cextra">
         <input type="file" id="fb-files-${p.id}" multiple style="display:none;" onchange="fbStageFiles('${p.id}',this.files)">
-        <button onclick="document.getElementById('fb-files-${p.id}').click()"><i class="ti ti-paperclip" style="font-size:14px;"></i> Attach</button>
         ${(()=>{const fs=FB_STAGED[p.id]||[]; const n=fs.length;
           return `<span id="fb-staged-${p.id}" class="stagedn" style="display:${n?"inline-flex":"none"}"
             title="${n?n+" file"+(n>1?"s":"")+" ready — they upload when you post":""}">${n||""}</span>
@@ -16111,7 +16119,7 @@ function mpBarShow(el){
 
   /* the clip is only offered where an attachment is allowed */
   const clip=bar.querySelector('[title^="Attach"]');
-  if(clip) clip.style.display=(el.dataset.mpvF==="key_theme"||el.dataset.mpvAtt)?"":"none";
+  if(clip) clip.style.display=(el.dataset.mpvF==="key_theme"||el.dataset.mpvAtt||el.dataset.att)?"":"none";
 }
 function mpBarHide(){ const b=document.getElementById("mp-bar"); if(b) b.classList.remove("open"); MPBAR_FOR=null; }
 
@@ -16248,6 +16256,15 @@ function mpAttPlace(){
 }
 function mpAttachOpen(ev){
   if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+  /* v82.4 — on a comment the clip IS the old Attach button: it opens the
+     same staged-files input, and the chips under the composer still show
+     what is waiting. One control for attaching, everywhere. */
+  const f=MPBAR_FOR;
+  if(f&&f.dataset&&f.dataset.att==="comment"){
+    const inp=document.getElementById("fb-files-"+f.dataset.post);
+    if(inp) inp.click();
+    return false;
+  }
   const t=mpAttTarget(); if(!t) return false;
   MP_UP_TARGET=t;
   const el=mpAttEl();
