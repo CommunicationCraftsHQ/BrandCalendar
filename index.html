@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v82.2 — Warsaw: dates can be tentative"/>
+<meta name="cc-tool-version" content="v82.3 — Warsaw: the brief joins the conversation"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -152,8 +152,21 @@ body.planning .mc-day:hover{box-shadow:0 0 0 2px #0EA5A5 inset;border-radius:5px
 .evl-row:hover td{background:var(--bg);}
 .evl-mth{background:#EDECE6;font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
   color:var(--text);padding:10px 12px;border-top:2px solid var(--div);}
-.evl-d{font-weight:800;width:56px;}
-.evl-d small{font-weight:600;color:var(--subtle);font-size:10px;margin-left:4px;}
+/* v82.3 — the date cell is a rigid grid: [day 22px right][range 30px left]
+   inside a date box, weekday at a fixed x after it. A tentative date wears
+   the SAME dashed amber cell as the year view (.mc-day.tent) — one look,
+   both views; the ~ survives only in the Excel export. */
+.evl-d{width:116px;}
+.evl-d .din{display:inline-flex;align-items:center;}
+.evl-d .dbox{display:inline-grid;grid-template-columns:22px 30px;align-items:baseline;padding:2px 4px;border-radius:5px;}
+.evl-d .dbox.tent{background:#FEF3E2;outline:1.5px dashed #F5C97B;outline-offset:-1.5px;}
+.evl-d .day{text-align:right;font-weight:800;}
+.evl-d .sfx{text-align:left;font-weight:800;}
+.evl-d .dow{font-weight:600;color:var(--subtle);font-size:10px;margin-left:4px;}
+/* narrow windows: the tail columns bow out, the switch never gets cut */
+.evl-foldcat{display:none;margin-top:4px;}
+@media (max-width:900px){.evl-srcc,.evl-src-th{display:none;}}
+@media (max-width:700px){.evl-catc,.evl-cat-th{display:none;}.evl-foldcat{display:block;}}
 .evl-nm{font-weight:600;white-space:normal;}
 .evl-row.off .evl-nm{color:var(--subtle);}
 .evl-row.off td{background:#FBFBF9;}
@@ -169,7 +182,7 @@ body.planning .mc-day:hover{box-shadow:0 0 0 2px #0EA5A5 inset;border-radius:5px
 .evl-src b{color:var(--muted);font-weight:600;}
 .evl-rst{height:24px;padding:0 10px;margin-left:6px;border-radius:7px;border:1px solid var(--div);background:var(--surface);
   font-size:11px;font-weight:700;color:var(--text);display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-family:inherit;}
-.evl-tglc{text-align:right;width:52px;}
+.evl-tglc{width:52px;}
 .evl-tgl{width:36px;height:20px;border-radius:10px;background:#111;position:relative;border:0;cursor:pointer;display:inline-block;vertical-align:middle;padding:0;}
 .evl-tgl::after{content:"";position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:8px;background:#fff;}
 .evl-tgl.off{background:#D8D8D4;}
@@ -1550,6 +1563,10 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
   padding-bottom:4px;margin-bottom:-4px}
 .pc46 .pccap.can{outline:none;border-radius:6px}
 .pc46 .pccap.can:focus{-webkit-line-clamp:unset;display:block;background:#fff;box-shadow:0 0 0 2px rgba(214,40,40,.25);padding:4px 6px;margin:-4px -6px}
+/* v82.3 — opening the conversation lifts the caption's three-line clamp */
+.pc46.thopen .pcbody{height:auto;min-height:132px;}
+.pc46.thopen .pcimg{align-self:flex-start;}
+.pc46.thopen .pccap{-webkit-line-clamp:unset;display:block;}
 .pc46 .pctags{color:#185FA5;font-size:12.5px;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* D3 — the brief is invisible until you reach for the card. No divider,
    no label, no colour. It is a note to whoever makes the picture. */
@@ -1606,6 +1623,19 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .th46 .cin46{flex:1;min-height:38px;padding:9px 12px;border:1.5px solid var(--div);border-radius:10px;
   background:#fff;font-size:13.5px;font-family:inherit;color:var(--text);outline:none;resize:vertical;line-height:1.5}
 .th46 .cin46:focus{border-color:var(--acc)}
+/* v82.3 — the brief block at the top of the thread */
+.th46 .brief46{border:1px solid #EDE9DF;background:#FBFAF6;border-radius:10px;padding:10px 12px;
+  margin-bottom:11px;display:flex;gap:11px;align-items:flex-start;}
+.th46 .brief46 .ref{flex:none;width:56px;height:56px;border-radius:8px;overflow:hidden;
+  background:#F4F1E9;cursor:zoom-in;}
+.th46 .brief46 .ref img{width:100%;height:100%;object-fit:cover;display:block;}
+.th46 .brief46 .bl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+  color:#8A6D00;display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.th46 .brief46 .bl .tm{background:#F1EAD8;border-radius:999px;padding:1px 7px;}
+.th46 .brief46 .bt{font-size:12.5px;line-height:1.5;color:#5A4A12;}
+.bfimg img{width:100%;height:100%;object-fit:cover;display:block;}
+/* a rich field's placeholder — contenteditables have no placeholder attr */
+.rt:empty::before{content:attr(data-ph);color:var(--subtle);pointer-events:none;}
 .th46 .send46{width:38px;height:38px;border-radius:10px;border:none;background:#0D0D0D;color:#fff;cursor:pointer;
   font-size:16px;display:flex;align-items:center;justify-content:center;flex:none}
 .th46 .cextra{display:flex;gap:8px;align-items:center;margin:9px 0 0 39px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
@@ -4058,7 +4088,7 @@ function fbPanelHtml(p){
       feed+=`<div class="mrdiv">
           <span class="rchip${cur?" cur":""}">Round ${r.round_no}${cur?" · current":""} · ${escAttr(r.submitted_name||"")} · ${when}</span>
           <span class="ln"></span></div>`;
-      if(r.note) feed+=`<div class="rnote">${fbRich(r.note)}</div>`;
+      if(r.note) feed+=`<div class="rnote">${fbBody(r.note)}</div>`;
       /* the round's OWN assets — this is the post's creative. Superseded
          rounds collapse to a strip: same content, a quarter of the height,
          because history should be visible without competing. */
@@ -4173,7 +4203,7 @@ function fbApplyToCaption(postId,commentId){
   if(!canEditCaption()) return;
   const c=fbCommentsFor(postId).find(x=>x.id===commentId); if(!c) return;
   const box=document.getElementById("pcap-"+postId); if(!box) return;
-  const sug=captionSuggestion(c.body); if(!sug) return;
+  const sug=captionSuggestion(mpPlain(c.body)); if(!sug) return;
   CAP_PREV[postId]=capRead(box);
   capWrite(box,sug);
   box.classList.add("flash");
@@ -4235,17 +4265,56 @@ function statusChipSm(p){
     <select onchange="socialStatusEdit('${p.id}',this.value)" style="border:none;background:transparent;font-size:10px;font-weight:700;color:${chip[1]};font-family:inherit;cursor:pointer;outline:none;padding:0;">${Object.entries(SOCIAL_STATUS).map(([k,v])=>`<option value="${k}" ${p.status===k?"selected":""}>${v[0]}</option>`).join("")}</select>
   </span>`;
 }
+/* ══ v82.3 — THE BRIEF BLOCK, CLEANED ═══════════════════════════════
+   Chirag: the heading and "upload soon" were clutter (the standing rule),
+   and the upload box did nothing. One image slot now: the dashed box
+   invites the upload, then becomes the thumbnail with its remove ×.
+   NOTHING NEW UNDERNEATH — owner_kind 'post_brief' has been in the
+   assets CHECK since New York, so the same pipeline that stores comment
+   files stores this one. No migration.
+   The brief itself is a rich field now: the one writing bar (bold,
+   italic, bullets, links), stored through mpClean, rendered through
+   mpRender — old plain-text briefs keep reading exactly as before. */
+function briefAssetOf(postId){
+  return (assetsFor("post_brief",postId)||[]).filter(a=>!a.deleted_at)[0]||null;
+}
 function designBriefBlock(p,withImage){
+  const a=briefAssetOf(p.id);
+  const slot=a
+    ?`<div style="flex-shrink:0;position:relative;"><div class="bfimg" data-sign="${escAttr(a.thumb_path||a.poster_path||a.view_path||"")}" style="width:88px;height:88px;border-radius:8px;overflow:hidden;background:#F4F1E9;cursor:zoom-in;" onclick="openLightbox('${a.id}',assetsFor('post_brief','${p.id}'))"></div><span title="Remove" onclick="briefRemoveImage('${p.id}','${a.id}')" style="position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;">×</span></div>`
+    :`<div style="flex-shrink:0;"><label for="bfup-${p.id}" style="width:88px;height:88px;border:1px dashed #D6CBB0;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#B5A47A;gap:3px;background:#fff;cursor:pointer;"><i class="ti ti-upload" style="font-size:18px;"></i><span style="font-size:9px;">Image</span></label><input id="bfup-${p.id}" type="file" accept="image/*,.pdf" style="display:none;" onchange="briefUploadImage('${p.id}',this.files)"></div>`;
   return `<div style="border:1px solid #EDE9DF;background:#FBFAF6;border-radius:10px;padding:11px;margin-top:12px;">
-    <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#8A6D00;margin-bottom:7px;display:flex;align-items:center;gap:5px;"><i class="ti ti-photo-cog"></i> Visuals for the design team</div>
     <div style="display:flex;gap:11px;">
-      ${withImage?`<div style="flex-shrink:0;"><div style="width:88px;height:88px;border:1px dashed #D6CBB0;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#B5A47A;gap:3px;background:#fff;"><i class="ti ti-upload" style="font-size:18px;"></i><span style="font-size:9px;">Image</span></div><div style="font-size:8px;color:#B5A47A;text-align:center;margin-top:3px;">upload soon</div></div>`:""}
+      ${slot}
       <div style="flex:1;min-width:0;">
         <div class="fl2" style="color:#8A6D00;">Design brief</div>
-        <textarea class="fi ta" style="min-height:${withImage?"64":"46"}px;font-size:12px;background:#fff;" placeholder="e.g. bright flat-lay, 3 product shots, logo bottom-right, warm tone…" oninput="socialFieldEdit('${p.id}','notes',this.value)">${seEsc(p.notes||"")}</textarea>
+        <div class="fi ta rt" contenteditable="true" data-ph="e.g. bright flat-lay, 3 product shots, logo bottom-right, warm tone…" style="min-height:${withImage?"64":"46"}px;font-size:12px;background:#fff;" onfocus="rtFocus(this)" onblur="mpBarHide()" oninput="socialFieldEdit('${p.id}','notes',mpClean(this.innerHTML).trim())">${mpRender(p.notes||"")}</div>
       </div>
     </div>
   </div>`;
+}
+async function briefUploadImage(postId,files){
+  if(!files||!files.length) return;
+  if(!canEdit()){ toast("View-only account","err"); return; }
+  const b=brands[activeBrand]; const p=b&&(b.social||[]).find(x=>x.id===postId); if(!p) return;
+  const r=await uploadAsset(files[0],{ownerKind:"post_brief",ownerId:postId,
+    brandId:p.brand_id||activeBrand,onTick:()=>{}});
+  if(r){ logActivity(postId,"attached a brief reference"); toast("Reference attached"); }
+  renderSocial();
+}
+async function briefRemoveImage(postId,assetId){
+  if(!canEdit()){ toast("View-only account","err"); return; }
+  if(!confirm("Remove this reference image?\n\nThe file is deleted immediately and cannot be recovered.")) return;
+  if(await deleteAsset(assetId,"post_brief",postId)){ toast("Removed"); renderSocial(); }
+}
+/* the brief images for the posts on screen — one query, once per post */
+let BRIEFS_TRIED={};
+async function ensureBriefAssets(posts){
+  const need=(posts||[]).map(p=>p.id).filter(id=>id&&!BRIEFS_TRIED[id]);
+  if(!need.length) return;
+  need.forEach(id=>{ BRIEFS_TRIED[id]=true; });
+  await loadAssetsFor("post_brief",need);
+  if(need.some(id=>(assetsFor("post_brief",id)||[]).length)) renderSocial();
 }
 function socialEditForm(p){
   const synced=p.synced!==false;
@@ -4517,6 +4586,7 @@ function renderSocial(){
      so this is a single `in` over the rounds on screen. Still per-view —
      nothing is fetched for a month nobody is looking at. */
   ensureLeadAssets(posts);
+  ensureBriefAssets(posts);   /* v82.3 — same rule, the brief references */
 }
 
 /* Loads the current round's assets for the posts on screen, once. Returns
@@ -5132,21 +5202,32 @@ function renderList(){
   shown.slice().sort((a,c)=>(a.m-c.m)||(a.e.date-c.e.date)||String(a.e.name).localeCompare(String(c.e.name))).forEach(r=>{
     if(r.m!==lastM){ lastM=r.m; body+=`<tr><td class="evl-mth" colspan="${cols}">${MN[r.m]} ${YEAR}</td></tr>`; }
     const st=stateOf(r); const off=b&&!(st==="auto"||st==="added"||st==="custom");
-    const dt=`${r.e.date}${r.e.endDate&&r.e.endDate!==r.e.date?"–"+r.e.endDate:""}`;
+    const d2=r.e.endDate&&r.e.endDate!==r.e.date?"–"+r.e.endDate:"";
     const dow=DOW[new Date(YEAR,r.m-1,r.e.date).getDay()]||"";
-    body+=`<tr class="evl-row${off?" off":""}" data-ev="${r.e.id}" onclick="evlOpenMaster('${r.e.id}',${r.m})">
-      <td class="evl-d">${r.e.tentative?'<span class="tent-tilde">~</span>':""}${dt}<small>${dow}</small></td>
-      <td class="evl-nm">${escAttr(r.e.name)}${r.e.mega?" ⭐":""}</td>
-      <td>${catChip(r.e)}${r.e.tentative?'<span class="tent-chip">Tentative</span>':""}</td>
-      ${b?"":`<td class="evl-relc"><div class="evl-relw">${relChips(r.e)}</div></td>`}
-      <td>${srcCell(r)}</td>
+    /* v82.3 — four fixed slots so 4, 14, ~14 and 23–25 all line up; the
+       tentative box is the year view's dashed amber cell, not a new sign */
+    const dCell=`<td class="evl-d"><span class="din"><span class="dbox${r.e.tentative?" tent":""}"><span class="day">${r.e.date}</span><span class="sfx">${d2}</span></span><span class="dow">${dow}</span></span></td>`;
+    body+=b
+      ?`<tr class="evl-row${off?" off":""}" data-ev="${r.e.id}" onclick="evlOpenMaster('${r.e.id}',${r.m})">
+      ${dCell}
+      <td class="evl-nm">${escAttr(r.e.name)}${r.e.mega?" ⭐":""}<div class="evl-foldcat">${catChip(r.e)}</div></td>
       <td class="evl-tglc">${tglCell(r)}</td>
+      <td class="evl-catc">${catChip(r.e)}</td>
+      <td class="evl-srcc">${srcCell(r)}</td>
+    </tr>`
+      :`<tr class="evl-row" data-ev="${r.e.id}" onclick="evlOpenMaster('${r.e.id}',${r.m})">
+      ${dCell}
+      <td class="evl-nm">${escAttr(r.e.name)}${r.e.mega?" ⭐":""}</td>
+      <td>${catChip(r.e)}</td>
+      <td class="evl-relc"><div class="evl-relw">${relChips(r.e)}</div></td>
+      <td>${srcCell(r)}</td>
+      <td class="evl-tglc"></td>
     </tr>`;
   });
   if(!shown.length) body=`<tr><td colspan="${cols}" class="evl-none">Nothing matches those filters.</td></tr>`;
   wrap.innerHTML=`<table class="evl-tbl"><thead><tr>
-      <th>Date</th><th>Event</th><th>Category</th>${b?"":"<th>Relevant for</th>"}
-      <th>${b?"How it got here":"Used by"}</th><th></th>
+      ${b?`<th>Date</th><th>Event</th><th></th><th class="evl-cat-th">Category</th><th class="evl-src-th">How it got here</th>`
+         :`<th>Date</th><th>Event</th><th>Category</th><th>Relevant for</th><th>Used by</th><th></th>`}
     </tr></thead><tbody>${body}</tbody></table>`;
   mc.appendChild(wrap);
   const foot=document.createElement("div"); foot.className="evl-foot";
@@ -8291,7 +8372,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v82.2 — Warsaw: dates can be tentative";
+const TOOL_VERSION="v82.3 — Warsaw: the brief joins the conversation";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -10192,7 +10273,7 @@ async function paintReview(){
       ? cs.map(c=>`<div class="rvc">
           <div class="rvch"><b>${escAttr(c.author_name)}</b>
             <span>${fbTimeLabel(c.created_at)}</span></div>
-          <div class="rvcb">${fbRich(c.body)}</div></div>`).join("")
+          <div class="rvcb">${fbBody(c.body)}</div></div>`).join("")
       : `<div class="rvempty">No comments on this round yet.</div>`;
   }
 }
@@ -10448,7 +10529,7 @@ function fbStartEdit(id){ fbEditing=id; renderSocial(); }
 function fbCancelEdit(){ fbEditing=null; renderSocial(); }
 async function fbSaveEdit(postId,commentId){
   const el=document.getElementById("fb-edit-"+commentId); if(!el) return;
-  const body=(el.value||"").trim(); if(!body) return;
+  const body=rtValue(el); if(!body) return;
   const c=fbCommentsFor(postId).find(x=>x.id===commentId); if(!c||!fbIsMine(c)) return;
   const now=new Date().toISOString();
   c.body=body; c.edited_at=now;
@@ -10571,7 +10652,7 @@ function fbHighlightMentions(h){
 let mentionBox=null;
 function fbMentionKey(e,inputId,brandId,teamOnly){
   const el=document.getElementById(inputId); if(!el) return;
-  const upto=el.value.slice(0,el.selectionStart||0);
+  const upto=el.isContentEditable?rtTextUptoCaret(el):el.value.slice(0,el.selectionStart||0);
   const m=upto.match(/@([A-Za-z0-9._-]*)$/);
   closeMentionBox();
   if(!m) return;
@@ -10600,6 +10681,21 @@ function closeMentionBox(){ if(mentionBox){ mentionBox.remove(); mentionBox=null
 function fbPickMention(ev,inputId,name){
   ev.preventDefault();
   const el=document.getElementById(inputId); if(!el) return;
+  if(el.isContentEditable){
+    /* replace the "@par" being typed with the picked name, at the caret */
+    el.focus();
+    const upto=rtTextUptoCaret(el);
+    const m=upto.match(/@([A-Za-z0-9._-]*)$/);
+    const back=m?m[0].length:0;
+    try{
+      const sel=getSelection();
+      for(let i=0;i<back;i++) sel.modify("extend","backward","character");
+    }catch(e){}
+    document.execCommand("insertText",false,"@"+name+" ");
+    closeMentionBox();
+    el.dispatchEvent(new Event("input",{bubbles:true}));
+    return;
+  }
   const pos=el.selectionStart||el.value.length;
   const before=el.value.slice(0,pos).replace(/@([A-Za-z0-9._-]*)$/,"@"+name+" ");
   el.value=before+el.value.slice(pos);
@@ -10619,6 +10715,12 @@ function fbPickMention(ev,inputId,name){
 function mentionStart(inputId){
   const el=document.getElementById(inputId); if(!el) return;
   el.focus();
+  if(el.isContentEditable){
+    const pre=rtTextUptoCaret(el);
+    document.execCommand("insertText",false,(!pre||/\s$/.test(pre))?"@":" @");
+    el.dispatchEvent(new Event("input",{bubbles:true}));
+    return;
+  }
   const pos=el.selectionStart==null?el.value.length:el.selectionStart;
   const pre=el.value.slice(0,pos);
   const ins=(!pre||/\s$/.test(pre))?"@":" @";
@@ -10773,7 +10875,7 @@ function notifRowHtml(it,bid){
   return `<div class="nrow unread${it.mention?" men":""}" onclick="notifOpen('${bid}','${it.kind}','${escAttr(target)}')">
     <span class="nav-av${it.c.author_kind==="client"?" client":""}">${escAttr(String(it.c.author_name||"?").slice(0,2).toUpperCase())}</span>
     <div class="nbody">
-      <div class="msg">${fbRich(String(it.c.body||"").slice(0,160))}</div>
+      <div class="msg">${fbRich(mpPlain(String(it.c.body||"")).slice(0,160))}</div>
       <div class="attr"><span class="who">${escAttr(it.c.author_name)}</span>${it.c.author_kind==="client"?` <span class="nkind">· client</span>`:""} ${verb} ·
         ${where}<span class="when">${fbTimeLabel(it.c.created_at)}</span></div>
     </div></div>`;
@@ -10985,7 +11087,7 @@ async function fbAddComment(postId,parentId){
 async function fbAddCommentInner(postId,parentId){
   const inputId=parentId?("fb-reply-"+parentId):("fb-new-"+postId);
   const el=document.getElementById(inputId); if(!el) return;
-  const body=(el.value||"").trim();
+  const body=rtValue(el);
   const staged=(!parentId&&FB_STAGED[postId])||[];
   /* a comment with files but no words is still a comment worth having */
   if(!body&&!staged.length) return;
@@ -11000,7 +11102,7 @@ async function fbAddCommentInner(postId,parentId){
     resolved:false,resolved_by:"",resolved_at:null,created_at:new Date().toISOString()};
   (POSTFB.comments[postId]=POSTFB.comments[postId]||[]).push(row);
   dbErr(await sb.from("post_comments").insert([row]));
-  el.value="";
+  rtClear(el);
   renderSocial();                      // the comment appears at once…
   if(staged.length){                   // …then the files fill in behind it
     FB_STAGED[postId]=[];
@@ -13312,13 +13414,13 @@ function socialViewCard(p){
     ? `<div id="pcap-${p.id}" class="pccap${canCap?" can":""}" ${canCap?'contenteditable="true" spellcheck="true" oninput="fbCaptionInput(\''+p.id+'\')"':""}>${escAttr(cap)}</div>`
     : `<div class="pccap" style="color:var(--muted);">${idea?escAttr(idea):`<span style="color:var(--subtle);">Nothing written yet</span>`}</div>`;
 
-  return `<div class="pc pc46">
+  return `<div class="pc pc46${isOpen?" thopen":""}">
     <div class="pchead">
       <span style="font-weight:700;color:var(--text);">${shortDate(p.month,p.date)}</span>
       ${p.time?`<span style="display:flex;align-items:center;gap:4px;"><i class="ti ti-clock" style="font-size:12px;"></i> ${escAttr(p.time)}</span>`:""}
       <span class="pc-ig" style="color:#D4537E;"><i class="ti ti-brand-instagram" style="font-size:13px;"></i></span><span class="pc-fb" style="color:#185FA5;margin-left:-4px;"><i class="ti ti-brand-facebook" style="font-size:13px;"></i></span>
       ${varied?`<span style="font-size:9px;color:#993C1D;background:#FAECE7;padding:1px 6px;border-radius:999px;font-weight:700;">varied</span>`:""}
-      ${brief?`<span title="Design brief: ${escAttr(brief)}" style="color:#8A6D00;cursor:help;"><i class="ti ti-photo-cog" style="font-size:13px;"></i></span>`:""}
+      ${brief?`<span title="Design brief: ${escAttr(mpPlain(brief))}" style="color:#8A6D00;cursor:help;"><i class="ti ti-photo-cog" style="font-size:13px;"></i></span>`:""}
       <span style="margin-left:auto;display:flex;align-items:center;gap:6px;color:var(--muted);">
         <span style="display:flex;align-items:center;gap:4px;margin-right:4px;"><i class="ti ${fmtIcon}" style="font-size:12px;"></i> ${p.format.charAt(0).toUpperCase()+p.format.slice(1)}</span>
         ${fbToggleHtml}
@@ -13432,7 +13534,7 @@ function fbPanelHtml(p){
   /* one comment. No box, no border, no buttons until you reach it. */
   const row=c=>{
     if(fbEditing===c.id) return `<div class="c46">${av(c.author_name,c.author_kind)}
-      <div class="cb46"><textarea id="fb-edit-${c.id}" class="cin46" style="width:100%;">${escAttr(c.body)}</textarea>
+      <div class="cb46"><div id="fb-edit-${c.id}" class="cin46 rt" contenteditable="true" style="width:100%;box-sizing:border-box;" onfocus="rtFocus(this)" onblur="mpBarHide()">${mpRender(c.body)}</div>
         <div style="display:flex;gap:6px;margin-top:6px;">
           <button class="btn btn-p btn-sm" onclick="fbSaveEdit('${p.id}','${c.id}')">Save</button>
           <button class="btn btn-g btn-sm" onclick="fbCancelEdit()">Cancel</button></div></div></div>`;
@@ -13446,7 +13548,7 @@ function fbPanelHtml(p){
         <div class="ch46"><span class="who46">${escAttr(c.author_name)}</span>
           ${c.author_kind==="client"?`<span style="font-size:10px;font-weight:700;color:#378ADD;">Client</span>`:""}
           <span class="when46">${fbTimeLabel(c.created_at)}${c.edited_at?" · edited":""}</span></div>
-        <div class="ct46">${fbRich(c.body)}</div>
+        <div class="ct46">${fbBody(c.body)}</div>
         ${mediaBlock(assetsFor("comment",c.id))}${uploadLiveBlock("comment",c.id)}${uploadFailBlock("comment",c.id)}
         <div class="acts46${hasRx?" always":""}">${rx(c)}<span class="rgt">${own}
           <button onclick="fbCopyLink('${p.id}','${c.id}')">Link</button>${resolve}</span></div>
@@ -13458,7 +13560,7 @@ function fbPanelHtml(p){
   const resLine=t=>`<div class="res46" onclick="fbToggleResolve('${p.id}','${t.top.id}')"
       title="Settled — click to reopen">
       <i class="ti ti-circle-check"></i>
-      <span class="txt"><b>${escAttr(t.top.author_name)}</b> ${escAttr((t.top.body||"").replace(/\s+/g," ").slice(0,140))}</span>
+      <span class="txt"><b>${escAttr(t.top.author_name)}</b> ${escAttr(mpPlain(t.top.body||"").replace(/\s+/g," ").slice(0,140))}</span>
       <span class="by">resolved${t.replies.length?" · "+t.replies.length+(t.replies.length===1?" reply":" replies"):""}</span></div>`;
 
   /* FLAT. Basecamp and Trello are both flat and for the same reason: the
@@ -13482,7 +13584,7 @@ function fbPanelHtml(p){
     rounds.forEach((r,i)=>{
       const cur=(i===rounds.length-1);
       feed+=`<div class="mrdiv"><span class="rchip${cur?" cur":""}">Round ${r.round_no}${cur?" · current":""} · ${escAttr(r.submitted_name||"")} · ${fbTimeLabel(r.submitted_at)}</span><span class="ln"></span></div>`;
-      if(r.note) feed+=`<div class="rnote">${fbRich(r.note)}</div>`;
+      if(r.note) feed+=`<div class="rnote">${fbBody(r.note)}</div>`;
       feed+=mediaBlock(roundAssets(r.id),{history:!cur,emphasise:cur});
       feed+=ordered.filter(t=>t.top.round_id===r.id).map(blockFor).join("");
     });
@@ -13496,6 +13598,18 @@ function fbPanelHtml(p){
     ${actOpen?`<div class="actlist46">${acts.slice().sort((x,y)=>new Date(x.created_at)-new Date(y.created_at)).map(a=>
       `<div><b style="color:var(--muted);font-weight:600;">${escAttr(a.actor_name)}</b> ${escAttr(a.action)} <span style="color:#C6C4BF;">· ${fbTimeLabel(a.created_at)}</span></div>`).join("")}</div>`:""}`:"";
 
+  /* v82.3 — the brief is the first thing in the conversation. STAFF
+     ONLY, Chirag's call: it is instructions to the design team, and a
+     client reading them mid-approval invites confusion. */
+  const bAsset=(assetsFor("post_brief",p.id)||[]).filter(a=>!a.deleted_at&&(a.thumb_path||a.poster_path||a.view_path))[0];
+  const briefHtml=(actorKind()!=="client"&&((p.notes||"").trim()||bAsset))?`<div class="brief46">
+      ${bAsset?`<div class="ref" data-sign="${escAttr(bAsset.thumb_path||bAsset.poster_path||bAsset.view_path)}" onclick="openLightbox('${bAsset.id}',assetsFor('post_brief','${p.id}'))"></div>`:""}
+      <div style="flex:1;min-width:0;">
+        <div class="bl"><i class="ti ti-photo-cog"></i> Design brief <span class="tm">Team only</span></div>
+        ${(p.notes||"").trim()?`<div class="bt">${mpRender(p.notes)}</div>`:""}
+      </div>
+    </div>`:"";
+
   const curR=currentRound(p.id);
   const bar=`<div class="tbar">
       <b>${openN?openN+(openN===1?" open":" open"):"Nothing open"}</b>
@@ -13505,10 +13619,11 @@ function fbPanelHtml(p){
 
   const composer=canComment()?`<div class="comp46">
       <div class="crow46">${av(actorName(),actorKind())}
-        <textarea id="fb-new-${p.id}" class="cin46" rows="1" placeholder="Write a comment"
+        <div id="fb-new-${p.id}" class="cin46 rt" contenteditable="true" data-ph="Write a comment"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();fbAddComment('${p.id}',null);}"
           oninput="fbMentionKey(event,'fb-new-${p.id}','${p.brand_id||activeBrand}')"
-          onblur="setTimeout(closeMentionBox,150)"></textarea>
+          onfocus="rtFocus(this)"
+          onblur="mpBarHide();setTimeout(closeMentionBox,150)"></div>
         <button class="send46" onclick="fbAddComment('${p.id}',null)" title="Post"><i class="ti ti-arrow-up"></i></button>
       </div>
       <div class="cextra">
@@ -13526,6 +13641,7 @@ function fbPanelHtml(p){
     </div>`:"";
 
   return `<div class="th46">
+    ${briefHtml}
     ${bar}
     ${feed||`<div class="empty46">${threads.length?"Everything here is settled.":"Nothing yet."}</div>`}
     ${activityHtml}
@@ -15998,6 +16114,46 @@ function mpBarShow(el){
   if(clip) clip.style.display=(el.dataset.mpvF==="key_theme"||el.dataset.mpvAtt)?"":"none";
 }
 function mpBarHide(){ const b=document.getElementById("mp-bar"); if(b) b.classList.remove("open"); MPBAR_FOR=null; }
+
+/* ══ v82.3 — ONE WRITING BAR FOR THE SUITE ═══════════════════════════
+   The Monthly Plan's bar stops being the Monthly Plan's. Any field that
+   declares itself rich (contenteditable + rtFocus) gets the identical
+   bar, identical sanitising (mpClean), identical rendering (mpRender /
+   fbBody). The CAPTION is deliberately NOT one of them — Instagram and
+   Facebook flatten formatting, so a styled caption would be a lie.
+
+   And the bar FOLLOWS THE CARET: Chirag — "if you move into next line
+   while typing you end up typing blind behind the box." mpBarShow
+   already measures against the caret; nothing re-ran it after focus.
+   One listener, every keystroke, every rich field at once. */
+function rtFocus(el){ el.dataset.was=el.innerHTML; mpBarShow(el); }
+document.addEventListener("input",e=>{
+  if(MPBAR_FOR&&e.target===MPBAR_FOR) mpBarShow(MPBAR_FOR);
+},true);
+/* what a rich field holds, ready to store: cleaned HTML when there is
+   formatting, and the same string either way — a plain sentence has no
+   tags, so mpIsRich stays false and every old reader keeps working */
+function rtValue(el){
+  if(!el) return "";
+  if(!el.isContentEditable) return (el.value||"").trim();
+  const html=mpClean(el.innerHTML).trim();
+  if(!mpPlain(html).trim()) return "";
+  return html;
+}
+function rtClear(el){ if(!el) return; if(el.isContentEditable) el.innerHTML=""; else el.value=""; }
+/* a comment's body may be either era: plain text (every comment before
+   today) or this editor's HTML. One reader for both. */
+function fbBody(text){
+  return mpIsRich(text) ? fbHighlightMentions(mpClean(text)) : fbRich(text);
+}
+/* text before the caret inside a contenteditable — the @ matcher needs it */
+function rtTextUptoCaret(el){
+  try{
+    const sel=getSelection(); if(!sel||!sel.rangeCount) return "";
+    const r=sel.getRangeAt(0).cloneRange(); r.collapse(true);
+    r.setStart(el,0); return r.toString();
+  }catch(e){ return ""; }
+}
 
 /* ══ MOTH · ATTACHING A FILE TO A MONTH PLAN ═════════════════════════
    NOTHING NEW WAS BUILT FOR THIS. `assets` has accepted owner_kind
