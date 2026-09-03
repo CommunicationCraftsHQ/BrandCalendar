@@ -8,6 +8,11 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png"/>
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png"/>
 <link rel="apple-touch-icon" sizes="180x180" href="favicon-180.png"/>
+<!-- The deploy guard reads THIS marker (first 8KB). Without it the guard
+     guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
+     Keep it in step with TOOL_VERSION on every batch — dotted, always:
+     a bare "vNN" is invisible to the guard's parser. -->
+<meta name="cc-tool-version" content="v82.2 — Warsaw: dates can be tentative"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -170,6 +175,12 @@ body.planning .mc-day:hover{box-shadow:0 0 0 2px #0EA5A5 inset;border-radius:5px
 .evl-tgl.off{background:#D8D8D4;}
 .evl-tgl.off::after{right:auto;left:2px;}
 .evl-none{padding:20px 12px;font-size:12.5px;color:var(--muted);}
+/* TENTATIVE DATES — Eid, Diwali, every lunar-calendar day: pencilled in
+   until confirmed. One flag on the event; the sign follows it everywhere. */
+.tent-chip{font-size:10px;font-weight:700;padding:2px 7px;border-radius:9px;white-space:nowrap;
+  background:#FEF3E2;color:#B45309;border:1px dashed #F5C97B;margin-left:4px;}
+.tent-tilde{color:#B45309;font-weight:800;margin-right:1px;}
+.mc-day.tent{outline:1.5px dashed #F5C97B;outline-offset:-1.5px;background:#FEF3E2;}
 .evl-foot{padding:10px 44px 26px;font-size:11.5px;color:var(--muted);}
 
 /* LIST VIEW (retired layout — the day cards still borrow its row classes) */
@@ -2695,6 +2706,9 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin-top:6px;">
             <input id="ee-shop" type="checkbox" style="width:15px;height:15px;accent-color:var(--acc);"/> Shopping moment
           </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin-top:6px;">
+            <input id="ee-tent" type="checkbox" style="width:15px;height:15px;accent-color:var(--acc);"/> Tentative date (~)
+          </label>
         </div>
       </div>
     </div>
@@ -4699,6 +4713,7 @@ function buildMini(m){
         const hasSoc=socPosts.length>0;
         let cellClass="mc-day";
         if(hasEvs||camp||hasSoc) cellClass+=" has-ev";
+        if(realEvs.some(e=>e.tentative)) cellClass+=" tent";
         if(isToday) cellClass+=" today";
         // Paint campaigns: shade per campaign, gap at boundaries, lanes when overlapping
         let campStyle="", campBadge="";
@@ -4878,7 +4893,7 @@ function buildDayCard(ev,evM,day,expanded){
   head.innerHTML=`<div style="display:flex;align-items:flex-start;gap:8px;flex:1;min-width:0;">
       <div style="width:8px;height:8px;border-radius:50%;background:${dotCol};flex-shrink:0;margin-top:5px;"></div>
       <div style="min-width:0;">
-        <div style="font-size:13px;font-weight:700;color:${isCamp?"#9D174D":"var(--text)"};">${isPost?ev._type+" Post":ev.name}${rangeStr}</div>
+        <div style="font-size:13px;font-weight:700;color:${isCamp?"#9D174D":"var(--text)"};">${isPost?ev._type+" Post":ev.name}${rangeStr}${ev.tentative&&!isPost?'<span class="tent-chip">Tentative</span>':""}</div>
         <div style="font-size:10px;font-weight:700;color:${dotCol};text-transform:uppercase;letter-spacing:.05em;margin-top:2px;">${isPost?"Regular Post":isCamp?"Brand Campaign":cat.short}</div>
       </div>
     </div>
@@ -4915,6 +4930,11 @@ function buildDayCard(ev,evM,day,expanded){
     if(canEdit()){
       const isBrandOnly=!!ev._brandOnly;
       let btns=`<button class="btn btn-p btn-sm" onclick="closeM('day-pop');openEdit(${evM},'${ev.id}')">Edit</button>`;
+      /* Confirming keeps the date and drops the mark everywhere at once —
+         master and every brand — because the event is one shared row.
+         Moving the date goes through Edit, which clears the flag there. */
+      if(ev.tentative&&!ev._custom&&canCap("manage_events"))
+        btns=`<button class="btn btn-s btn-sm" onclick="confirmTentative(${evM},'${ev.id}')"><i class="ti ti-calendar-check"></i> Confirm this date</button>`+btns;
       if(isBrandOnly)
         btns=`<button class="btn btn-d btn-sm" onclick="detailDeleteEv(${evM},'${ev.id}','brand')">Delete</button>`+btns;
       else if(brandActive)
@@ -4977,6 +4997,7 @@ function openNewEvDay(m,day){
   document.getElementById("ee-notes").value="";
   document.getElementById("ee-mega").checked=false;
   if(document.getElementById("ee-shop")) document.getElementById("ee-shop").checked=false;
+  if(document.getElementById("ee-tent")) document.getElementById("ee-tent").checked=false;
   document.getElementById("ee-del").style.display="none";
   setCat5Allowed(isBrand);
   const cat=isBrand?"cat5":"cat1";
@@ -5114,9 +5135,9 @@ function renderList(){
     const dt=`${r.e.date}${r.e.endDate&&r.e.endDate!==r.e.date?"–"+r.e.endDate:""}`;
     const dow=DOW[new Date(YEAR,r.m-1,r.e.date).getDay()]||"";
     body+=`<tr class="evl-row${off?" off":""}" data-ev="${r.e.id}" onclick="evlOpenMaster('${r.e.id}',${r.m})">
-      <td class="evl-d">${dt}<small>${dow}</small></td>
+      <td class="evl-d">${r.e.tentative?'<span class="tent-tilde">~</span>':""}${dt}<small>${dow}</small></td>
       <td class="evl-nm">${escAttr(r.e.name)}${r.e.mega?" ⭐":""}</td>
-      <td>${catChip(r.e)}</td>
+      <td>${catChip(r.e)}${r.e.tentative?'<span class="tent-chip">Tentative</span>':""}</td>
       ${b?"":`<td class="evl-relc"><div class="evl-relw">${relChips(r.e)}</div></td>`}
       <td>${srcCell(r)}</td>
       <td class="evl-tglc">${tglCell(r)}</td>
@@ -5152,6 +5173,7 @@ function openEdit(m,id){
   document.getElementById("ee-notes").value=ev.notes||"";
   document.getElementById("ee-mega").checked=!!ev.mega;
   if(document.getElementById("ee-shop")) document.getElementById("ee-shop").checked=!!ev.shopping;
+  if(document.getElementById("ee-tent")) document.getElementById("ee-tent").checked=!!ev.tentative;
   document.getElementById("ee-del").style.display="none"; // deleting happens in the day dialog, where scope is explicit
   // No master checkbox when editing
   const mRow=document.getElementById("ee-master-chk-row");
@@ -5239,6 +5261,7 @@ function saveEv(){
   const notes=document.getElementById("ee-notes").value.trim();
   const mega=document.getElementById("ee-mega").checked;
   const shopping=!!(document.getElementById("ee-shop")||{}).checked;
+  const tentative=!!(document.getElementById("ee-tent")||{}).checked;
   if(!name){toast("Event name required","err");return;}
   if(!date||date<1||date>31){toast("Enter valid day 1–31","err");return;}
   // Only collect relevance if adding to master calendar (or editing)
@@ -5248,7 +5271,7 @@ function saveEv(){
   const isBrandOnly=eeMode==="brand"||cat==="cat5"; // campaigns are always brand-only
   const rel=isBrandOnly?{}:getRelFromForm();
   const industries=Object.entries(rel).filter(([,v])=>v==="high"||v==="medium").map(([k])=>k);
-  const evData={name,date,cat,notes,mega,shopping,industries,relevance:rel,_brandOnly:isBrandOnly};
+  const evData={name,date,cat,notes,mega,shopping,tentative,industries,relevance:rel,_brandOnly:isBrandOnly};
   if(endDate) evData.endDate=endDate;
   if(endMonth) evData.endMonth=endMonth;
   if(!canEdit()){toast("View-only account","err");return;}
@@ -5341,6 +5364,7 @@ function openNewEv(){
   document.getElementById("ee-notes").value="";
   document.getElementById("ee-mega").checked=false;
   if(document.getElementById("ee-shop")) document.getElementById("ee-shop").checked=false;
+  if(document.getElementById("ee-tent")) document.getElementById("ee-tent").checked=false;
   document.getElementById("ee-del").style.display="none";
   document.getElementById("ee-cat").value=cat;
   const mRow=document.getElementById("ee-master-chk-row");
@@ -5522,6 +5546,15 @@ function detailDeleteEv(m,id,mode){
     if(!ev._custom) dbDeleteMasterEvent(id); else dbTrashBrandEvent(id);
     saveEvsLS(); closeM("day-pop"); render(); toast("Moved to trash");
   }
+}
+
+function confirmTentative(m,id){
+  if(!canCap("manage_events")) return capDenied("Confirming a date");
+  const ev=(evs[m]||[]).find(e=>e.id===id); if(!ev||!ev.tentative) return;
+  ev.tentative=false;
+  dbPushMasterEvent(m,ev);
+  if(G){const gr=G.evts.find(r=>r.id===id); if(gr) gr.tentative=false;}
+  closeM("day-pop"); render(); toast("Date confirmed");
 }
 
 function removeFromBrand(evId){
@@ -5866,7 +5899,7 @@ function exportXLSX(){
         const highInds=Object.entries(rel).filter(([,v])=>v==="high").map(([id])=>INDS.find(x=>x.id===id)?.label||id).join(", ");
         const medInds=Object.entries(rel).filter(([,v])=>v==="medium").map(([id])=>INDS.find(x=>x.id===id)?.label||id).join(", ");
         const cat=CATS[gc(ev)]?.label||gc(ev);
-        const row=[ev.date,dow,MN[m],"Festival / Event",ev.name,"",cat,ev.mega?"Yes":"",highInds,medInds,ev.notes||""];
+        const row=[ev.tentative?("~"+ev.date):ev.date,dow,MN[m],"Festival / Event",ev.name+(ev.tentative?" (tentative)":""),"",cat,ev.mega?"Yes":"",highInds,medInds,ev.notes||""];
         if(hasBrand){
           const saved=(brand.notes||{})[ev.id]||{};
           const note=typeof saved==="string"?saved:(saved.note||"");
@@ -8258,7 +8291,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v82.1 — Warsaw: the list minds its months";
+const TOOL_VERSION="v82.2 — Warsaw: dates can be tentative";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -8719,7 +8752,7 @@ function buildYearView(){
        brand-event mapping just below always had them, which is what
        made the gap easy to miss. */
     (RAW[r.month]=RAW[r.month]||[]).push({id:r.id,date:r.date,name:r.name,cat:r.cat,notes:r.notes,relevance:r.relevance,mega:r.mega,
-      shopping:!!r.shopping,endMonth:r.end_month||undefined,endDate:r.end_date||undefined,_uat:r.updated_at||null});
+      shopping:!!r.shopping,tentative:!!r.tentative,endMonth:r.end_month||undefined,endDate:r.end_date||undefined,_uat:r.updated_at||null});
   });
   CUSTOM={};
   G.bevs.forEach(r=>{
@@ -12336,7 +12369,10 @@ async function carryForward(){
   const srcRows=G.evts.filter(r=>(r.year||2026)===YEAR);
   if(!srcRows.length){toast("No events in "+YEAR+" to copy","err");return;}
   const existing=new Set(G.evts.filter(r=>(r.year||2026)===target).map(r=>r.id));
-  const rows=srcRows.map(r=>({id:"y"+target+"_"+r.id,year:target,month:r.month,date:r.date,name:r.name,cat:r.cat,notes:r.notes||"",relevance:r.relevance||{},mega:!!r.mega})).filter(r=>!existing.has(r.id));
+  /* A copied year is a guess by definition — lunar dates shift, fixed
+     dates mostly hold. EVERYTHING starts tentative; confirming is one
+     click per event as the real dates are announced. */
+  const rows=srcRows.map(r=>({id:"y"+target+"_"+r.id,year:target,month:r.month,date:r.date,name:r.name,cat:r.cat,notes:r.notes||"",relevance:r.relevance||{},mega:!!r.mega,shopping:!!r.shopping,tentative:true})).filter(r=>!existing.has(r.id));
   if(!rows.length){toast(target+" already has these events","err");return;}
   if(!confirm("Copy "+rows.length+" master events from "+YEAR+" into "+target+"?\n\nDates stay the same as a starting point — review and correct them with the Excel workflow afterwards. Brands get the new year's events automatically by industry.")) return;
   const r1=await sb.from("events").upsert(rows);
@@ -12645,7 +12681,7 @@ function saveIndRate(){
 async function dbPushMasterEvent(m,e){
   if(!canEdit()) return;
   return rtChain("events:"+e.id,async()=>{
-    const row={id:e.id,year:YEAR,month:m,date:e.date,name:e.name,cat:e.cat||"cat1",notes:e.notes||"",relevance:e.relevance||{},mega:!!e.mega};
+    const row={id:e.id,year:YEAR,month:m,date:e.date,name:e.name,cat:e.cat||"cat1",notes:e.notes||"",relevance:e.relevance||{},mega:!!e.mega,shopping:!!e.shopping,tentative:!!e.tentative};
     // Sydney: single-event edits are conflict-guarded (bulk import/carry-forward
     // paths stay as whole-file upserts — they replace by design and reload after).
     if(e._uat){
@@ -14648,7 +14684,7 @@ async function dbPushMasterEvent(m,e){
   if(!canEdit()) return;
   return rtChain("events:"+e.id,async()=>{
     const row={id:e.id,year:YEAR,month:m,date:e.date,name:e.name,cat:e.cat||"cat1",
-      notes:e.notes||"",relevance:e.relevance||{},mega:!!e.mega,shopping:!!e.shopping,
+      notes:e.notes||"",relevance:e.relevance||{},mega:!!e.mega,shopping:!!e.shopping,tentative:!!e.tentative,
       /* D1: these two were missing. Written as null rather than omitted,
          so clearing a range actually clears it instead of leaving the
          old end date behind. */
