@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v82.4 — Warsaw: the boxes behave"/>
+<meta name="cc-tool-version" content="v83.0 — Kazan: the brands find their places"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -959,6 +959,12 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .bpanel::-webkit-scrollbar-track{background:transparent;margin:14px 0;}
 .bpanel::-webkit-scrollbar-thumb{background:rgba(13,13,13,.18);border-radius:999px;}
 .bphead{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--subtle);padding:7px 10px 5px;}
+/* KAZAN — the switcher's search */
+.bp-q{display:flex;align-items:center;gap:7px;margin:4px 4px 6px;padding:0 10px;height:34px;
+  background:var(--surface);border:1px solid var(--div);border-radius:9px;}
+.bp-q i{font-size:13px;color:var(--subtle);}
+.bp-q input{flex:1;border:none;background:transparent;font-size:12.5px;font-family:inherit;outline:none;color:var(--text);}
+.bp-none{padding:12px;font-size:12px;color:var(--subtle);}
 /* ── LUCERN — the switcher carries two new things per row ── */
 .brow .bgear,
 .brow .bmute{width:24px;height:24px;border-radius:6px;border:1px solid transparent;background:transparent;
@@ -2804,6 +2810,17 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
           <label class="fl">Industries *</label>
           <div id="bf-ind-grid" style="margin-top:4px;"></div>
         </div>
+        <div class="field"><label class="fl">Part of</label>
+          <select class="fi" id="bf-parent" style="height:36px;"></select>
+        </div>
+        <!-- KAZAN — a brand needs two things to exist: a name and its
+             industries. Everything else is optional and folds away, so
+             adding a brand is two fields, not a wall. -->
+        <div class="field" style="margin-top:2px;">
+          <button type="button" class="btn btn-g btn-sm" id="bf-more-t"
+            onclick="const m=document.getElementById('bf-more');m.hidden=!m.hidden;this.innerHTML=(m.hidden?'More options &#9662;':'Fewer options &#9652;')">More options &#9662;</button>
+        </div>
+        <div id="bf-more" hidden>
         <div class="field"><label class="fl">Target audience <span style="font-weight:400;text-transform:none;letter-spacing:0;">(press Enter after each)</span></label>
           <div class="tag-box" id="bf-aud-box" onclick="document.getElementById('bf-aud-in').focus()">
             <input class="tag-in" id="bf-aud-in" placeholder="e.g. Brides, Women 25–45…" onkeydown="handleAudKey(event)"/>
@@ -2828,6 +2845,7 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
           <div id="bp-list" style="border:1px solid var(--div);border-radius:var(--r);background:var(--surface);max-height:220px;overflow-y:auto;">
             <div style="padding:14px;text-align:center;font-size:12px;color:var(--muted);" id="bp-empty">No posting dates added yet. Click "Pick dates" to select from the calendar.</div>
           </div>
+        </div><!-- /bf-more -->
         </div>
       </div>
     </div>
@@ -3287,7 +3305,7 @@ const CAMP_PINK="#FAD2E7", CAMP_PINK_DEEP="#F0A3CC";
 const campSort=(a,b)=>(a.sM-b.sM)||(a.sD-b.sD)||(a.eM-b.eM)||(a.eD-b.eD)||String(a.e.id).localeCompare(String(b.e.id));
 function campaignsCovering(m,day){return allCampaigns().filter(c=>campCovers(c,m,day));}
 const escAttr=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
-let selInds=[], selCats=[], eeKey=null, bmKey=null, bmAud=[], bmCats=[], bmInds=[], bmPosts=[];
+let selInds=[], selCats=[], eeKey=null, bmKey=null, bmAud=[], bmCats=[], bmInds=[], bmPosts=[], bmParent=null;
 
 // Fingerprint id: survives CSV row reordering; only changes if the event's own month/date/name change
 function nameHash(s){let h=0;s=String(s||"");for(let i=0;i<s.length;i++){h=((h<<5)-h+s.charCodeAt(i))|0;}return (h>>>0).toString(36);}
@@ -5531,12 +5549,34 @@ function buildBfIndGrid(){
 
 /* buildBfEvList and its tickbox list are retired — the Events view owns add/remove now. */
 
+/* ══ KAZAN — SUB-BRANDS, GROUP ONLY ═══════════════════════════════════
+   Chirag's calls: no inheritance, and a sub-brand is a fully independent
+   brand — its own events, prefs, posts, people. The parent does nothing
+   but gather its children in the switcher. One level deep: a brand that
+   has children cannot itself move under a parent, and a brand with a
+   parent is never offered as one. */
+function brandChildren(k){ return Object.entries(brands).filter(([,b])=>b.parent_id===k).map(([id])=>id); }
+function buildBfParentSel(){
+  const sel=document.getElementById("bf-parent"); if(!sel) return;
+  const hasKids=bmKey?brandChildren(bmKey).length>0:false;
+  const opts=Object.entries(brands)
+    .filter(([k,b])=>!b.parent_id&&k!==bmKey)
+    .sort((a,b)=>String(a[1].name).localeCompare(String(b[1].name)))
+    .map(([k,b])=>`<option value="${k}"${bmParent===k?" selected":""}>${escAttr(b.name)}</option>`).join("");
+  sel.innerHTML=`<option value="">Independent brand</option>`+ (hasKids?"":opts);
+  sel.disabled=hasKids;
+  sel.title=hasKids?"This brand has sub-brands of its own":"";
+  sel.onchange=()=>{ bmParent=sel.value||null; };
+}
+
 function startNewBrand(){
   if(!can("manage_brands")) return capDenied("Creating a brand");
-  bmKey=null;bmAud=[];bmInds=[];bmPosts=[];
+  bmKey=null;bmAud=[];bmInds=[];bmPosts=[];bmParent=null;
   document.getElementById("bm-form-title").textContent="New brand";
   document.getElementById("bf-name").value="";
-  buildBfIndGrid(); renderAudTags(); renderBpList();
+  buildBfIndGrid(); renderAudTags(); renderBpList(); buildBfParentSel();
+  const more=document.getElementById("bf-more"); if(more){ more.hidden=true;
+    const t=document.getElementById("bf-more-t"); if(t) t.innerHTML="More options &#9662;"; }
   document.getElementById("bm-form-sub").textContent="Name it, pick its industries, and the calendar fills in automatically";
   openM("brand-form");
 }
@@ -5544,10 +5584,14 @@ function startNewBrand(){
 function editBrand(k){
   const b=brands[k]; if(!b) return;
   bmKey=k; bmAud=[...(b.audience||[])]; bmInds=[...(b.inds||[])];
-  bmPosts=JSON.parse(JSON.stringify(b.posts||[]));
+  bmPosts=JSON.parse(JSON.stringify(b.posts||[])); bmParent=b.parent_id||null;
   document.getElementById("bm-form-title").textContent=`Editing: ${b.name}`;
   document.getElementById("bf-name").value=b.name;
-  buildBfIndGrid(); renderAudTags(); renderBpList();
+  buildBfIndGrid(); renderAudTags(); renderBpList(); buildBfParentSel();
+  const more=document.getElementById("bf-more"); if(more){
+    more.hidden=!(bmAud.length||bmPosts.length);
+    const t=document.getElementById("bf-more-t");
+    if(t) t.innerHTML=more.hidden?"More options &#9662;":"Fewer options &#9652;"; }
   document.getElementById("bm-form-sub").textContent="Changes save when you press Save brand";
   openM("brand-form");
 }
@@ -5572,7 +5616,7 @@ function saveBrand(){
      dropped: this line used to rebuild the brand from only the form's
      fields, which left b.brief undefined and the very next sync writing
      brief:{} over the Brand Vision. */
-  brands[k]={...existing,name,inds:[...bmInds],audience:[...bmAud],
+  brands[k]={...existing,name,parent_id:bmParent||null,inds:[...bmInds],audience:[...bmAud],
              evIds:existing.evIds||[],notes:existing.notes||{},posts:[...bmPosts],
              prefs:existing.prefs||{}};
   refreshBrandEvIds(brands[k]);
@@ -6063,11 +6107,40 @@ function brandCount(k){
   const b=brands[k]; if(!b) return 0;
   return (b.evIds?b.evIds.length:0)+((b.posts||[]).length);
 }
+/* ══ KAZAN — THE SWITCHER STOPS BEING ONE LONG SCROLL ════════════════
+   Chirag: "the brand switcher dropdown has become too long." Three
+   answers, one panel: a search box that filters as you type, the
+   brands you opened most recently pinned first, and sub-brands
+   indented under their parent. Recents are per-browser
+   (localStorage) — a convenience, not a record. */
+let BRQ="";
+function brandRecents(){ try{ return JSON.parse(localStorage.getItem("cc-cal-recents")||"[]"); }catch(e){ return []; } }
+function noteBrandRecent(k){
+  if(!k) return;
+  try{ const r=[k,...brandRecents().filter(x=>x!==k)].slice(0,4);
+       localStorage.setItem("cc-cal-recents",JSON.stringify(r)); }catch(e){}
+}
+function brSearchKey(v){ BRQ=v; buildBrandPanel();
+  const i=document.getElementById("brl-q"); if(i){ i.focus(); i.setSelectionRange(i.value.length,i.value.length); } }
+function brandRowHtml(k,b,indent){
+  return `<div class="brow${activeBrand===k?" on":""}${brandMuted(k)?" bmuted":""}"${indent?` style="padding-left:26px;"`:""} onclick="pickBrand('${k}')">
+        <span class="bdot" style="background:${b.color||"#6B6B6B"}"></span>
+        <span class="bnm">${escAttr(b.name)}</span>
+        <span class="bct">${(b.posts||[]).length||""}</span>
+        <button class="bmute" aria-pressed="${brandMuted(k)?"true":"false"}"
+           title="${brandMuted(k)?`Muted — turn notifications back on for ${escAttr(b.name)}`:`Mute ${escAttr(b.name)} — just for you`}"
+           onclick="event.stopPropagation();notifMute('${k}',${brandMuted(k)?0:1})"><i class="ti ti-bell${brandMuted(k)?"-off":""}"></i></button>
+        ${canEdit()?`<button class="bgear" title="Who is on this brand"
+           onclick="event.stopPropagation();openBrandPeople('${k}')"><i class="ti ti-users"></i></button>`:""}
+      </div>`;
+}
 function buildBrandPanel(){
   const el=document.getElementById("brand-panel"); if(!el) return;
   const canSeeAll=ME.role!=="client";
   const list=Object.entries(brands).sort((a,b)=>String(a[1].name).localeCompare(String(b[1].name)));
   let h="";
+  h+=`<div class="bp-q"><i class="ti ti-search"></i><input id="brl-q" placeholder="Find a brand…"
+        value="${escAttr(BRQ)}" oninput="brSearchKey(this.value)" onclick="event.stopPropagation()"></div>`;
   if(canSeeAll){
     h+=`<div class="bphead">Viewing</div>
         <div class="brow${activeBrand?"":" on"}" onclick="pickBrand('')">
@@ -6085,17 +6158,34 @@ function buildBrandPanel(){
      wall means brand-scoped policies on tasks, posts, comments and
      assets — its own batch, with its own way to lock somebody out of
      their own work. */
-  h+=list.filter(([k])=>k===activeBrand||isOnBrand(k))
-     .map(([k,b])=>`<div class="brow${activeBrand===k?" on":""}${brandMuted(k)?" bmuted":""}" onclick="pickBrand('${k}')">
-        <span class="bdot" style="background:${b.color||"#6B6B6B"}"></span>
-        <span class="bnm">${escAttr(b.name)}</span>
-        <span class="bct">${(b.posts||[]).length||""}</span>
-        <button class="bmute" aria-pressed="${brandMuted(k)?"true":"false"}"
-           title="${brandMuted(k)?`Muted — turn notifications back on for ${escAttr(b.name)}`:`Mute ${escAttr(b.name)} — just for you`}"
-           onclick="event.stopPropagation();notifMute('${k}',${brandMuted(k)?0:1})"><i class="ti ti-bell${brandMuted(k)?"-off":""}"></i></button>
-        ${canEdit()?`<button class="bgear" title="Who is on this brand"
-           onclick="event.stopPropagation();openBrandPeople('${k}')"><i class="ti ti-users"></i></button>`:""}
-      </div>`).join("");
+  const visible=list.filter(([k])=>k===activeBrand||isOnBrand(k));
+  const q=BRQ.trim().toLowerCase();
+  if(q){
+    /* searching flattens the panel — matches only, no groups, no recents */
+    h+=visible.filter(([,b])=>String(b.name||"").toLowerCase().includes(q))
+      .map(([k,b])=>brandRowHtml(k,b,false)).join("")
+      ||`<div class="bp-none">Nothing matches.</div>`;
+  } else {
+    const vis=new Set(visible.map(([k])=>k));
+    const recents=brandRecents().filter(k=>vis.has(k)&&brands[k]);
+    if(recents.length){
+      h+=`<div class="bphead">Recent</div>`
+        +recents.map(k=>brandRowHtml(k,brands[k],false)).join("")
+        +`<div class="bpsep"></div>`;
+    }
+    /* parents first, their children indented beneath; a child whose
+       parent is not on this account's list rises to the top level */
+    const placed=new Set();
+    visible.forEach(([k,b])=>{
+      if(placed.has(k)) return;
+      if(b.parent_id&&vis.has(b.parent_id)) return;   // rendered under its parent
+      h+=brandRowHtml(k,b,false); placed.add(k);
+      visible.forEach(([ck,cb])=>{
+        if(placed.has(ck)||cb.parent_id!==k) return;
+        h+=brandRowHtml(ck,cb,true); placed.add(ck);
+      });
+    });
+  }
   if(canEdit()){
     h+=`<div class="bpsep"></div>
         <div class="brow act" onclick="closeAllPops();openM('brand-mgr');startNewBrand()"><i class="ti ti-plus"></i><span class="bnm">New brand</span></div>
@@ -6194,12 +6284,7 @@ function renderBrandPeople(){
   el.innerHTML=`<div class="brs-h"><b>People on ${escAttr(b.name)}</b>
       <button class="brs-x" onclick="closeM('brand-people')">&times;</button></div>
     <div class="brs-b" style="padding:0;">${rows}${add}</div>
-    <div class="bp-note">${can
-      ? "The same list CC Platform writes — change it in either place. An <b>Account manager</b> "
-        + "who is on a brand is that brand's Ac Manager; there is no separate switch. "
-        + "<b>Always all brands</b> is set in CC Platform → People &amp; access and cannot be "
-        + "removed from here. Nothing is enforced yet — this decides what you see, not what you may reach."
-      : "Only an admin or this brand's Ac Manager can change this list."}</div>
+    ${can?"":`<div class="bp-note">Only an admin or this brand's Ac Manager can change this list.</div>`}
     <div class="modal-foot"><button class="btn btn-g" onclick="closeM('brand-people')">Done</button></div>`;
 }
 async function bpAdd(){
@@ -6251,7 +6336,7 @@ The brand disappears from their switcher. Nothing they have written is deleted.`
    More than one per brand is still allowed, and now for free: assign two
    Account managers. A rule of one turns a fortnight in Goa into a locked
    brand. */
-function pickBrand(k){ closeAllPops(); const sel=document.getElementById("brand-sel"); if(sel) sel.value=k; setBrand(k); }
+function pickBrand(k){ closeAllPops(); noteBrandRecent(k); BRQ=""; const sel=document.getElementById("brand-sel"); if(sel) sel.value=k; setBrand(k); }
 function syncBrandTrig(){
   const nm=document.getElementById("brand-trig-nm"), dot=document.getElementById("brand-trig-dot");
   if(!nm) return;
@@ -8381,7 +8466,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v82.4 — Warsaw: the boxes behave";
+const TOOL_VERSION="v83.0 — Kazan: the brands find their places";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -8853,7 +8938,7 @@ function buildYearView(){
       type:"custom",_custom:true,_brandId:r.brand_id,_uat:r.updated_at||null});
   });
   brands={};
-  G.brs.forEach(r=>{brands[r.id]={name:r.name,inds:r.inds||[],audience:r.audience||[],brief:r.brief||{},evIds:[],notes:{},posts:[],social:[],monthPlans:{}};});
+  G.brs.forEach(r=>{brands[r.id]={name:r.name,parent_id:r.parent_id||null,inds:r.inds||[],audience:r.audience||[],brief:r.brief||{},evIds:[],notes:{},posts:[],social:[],monthPlans:{}};});
   (G.prefs||[]).forEach(p=>{const b=brands[p.brand_id]; if(b)(b.prefs=b.prefs||{})[p.event_id]={state:p.state,by:p.set_by||"",at:p.set_at||""};});
   G.bevs.forEach(r=>{if(brands[r.brand_id]&&!brands[r.brand_id].evIds.includes(r.id))brands[r.brand_id].evIds.push(r.id);});
   G.posts.forEach(p=>{if(brands[p.brand_id])brands[p.brand_id].posts.push({id:p.id,month:p.month,date:p.date,type:p.type,notes:p.notes,year:p.year||2026});});
@@ -8990,7 +9075,7 @@ function dbSyncBrandData(){ // debounced sync of brands + their events/tags/post
     const prevBev={}; ((G&&G.bevs)||[]).forEach(r=>{prevBev[r.id]=r;});
     const prevBrief={}; ((G&&G.briefs)||[]).forEach(r=>{prevBrief[r.brand_id+"|"+r.event_id]=r;});
     for(const [id,b] of Object.entries(brands)){
-      dbErr(await upsertBrand(Object.assign({id,name:b.name,inds:b.inds||[],audience:b.audience||[],brief:b.brief||{}},
+      dbErr(await upsertBrand(Object.assign({id,name:b.name,parent_id:b.parent_id||null,inds:b.inds||[],audience:b.audience||[],brief:b.brief||{}},
                                             newBrandIds.has(id)?{status:"active"}:{})));
       const customIds=new Set();
       const bevRows=[];
