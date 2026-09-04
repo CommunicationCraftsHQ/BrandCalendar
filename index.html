@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v83.6 — Surendranagar: one window for a day, one editor for a post"/>
+<meta name="cc-tool-version" content="v83.7 — Surendranagar: the post opens where it lives"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -713,6 +713,11 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .ev-row:hover .ev-row-actions,.ev-row:focus-within .ev-row-actions{opacity:1;}
 
 /* ---- CONTENT VIEW + POST CARDS (C3) ---- */
+/* SURENDRANAGAR — a post you were sent to says so, once, and then stops
+   saying it. Long enough to catch the eye at the end of a scroll. */
+@keyframes pcardHi{0%{box-shadow:0 0 0 3px rgba(14,165,165,.55);}100%{box-shadow:0 0 0 3px rgba(14,165,165,0);}}
+.pcard-hi{animation:pcardHi 1.8s ease-out 1;border-radius:12px;}
+@media (prefers-reduced-motion:reduce){.pcard-hi{animation:none;}}
 .pc{
   background:rgba(255,255,255,.92)!important;
   border-color:rgba(255,255,255,.95)!important;
@@ -3064,9 +3069,8 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
      The Instagram-preview window taught a second way to do the same job,
      and the two drifted: the inline form has Focus, the design brief and
      a status chip; the preview window does not. One form, two places. -->
-<div class="overlay" id="ov-post-edit" onclick="if(event.target===this)closePostEdit()">
-  <div class="modal" style="max-width:640px;"><div id="pe-body"></div></div>
-</div>
+<!-- the post editor was a modal here. It edits in the list now; see
+     SURENDRANAGAR beside openSocialEditorById. -->
 
 <!-- PLANNING DAY PLANNER -->
 <!-- SURENDRANAGAR — the one question "+ Add post" has to ask. -->
@@ -3849,32 +3853,51 @@ let contentMonth=null, contentMode="view";
    openSocialEditor stays for the NEW-post path, which needs a date and a
    brand before a post exists to edit. */
 let PE_ID=null;
+/* ══ SURENDRANAGAR · EDITING HAPPENS IN THE LIST, NOT OVER IT ═══════
+   Chirag: "when you click the edit button on any post, that also opens
+   that post in a pop-up; instead it should become editable right there
+   in the list" — and, of the new-post flow, "it should go to that
+   particular date in the entire list and get highlighted, so you know
+   where you are… everything else should still remain in view mode, and
+   only that post should be in edit mode."
+
+   A modal answered the question "what am I editing" by hiding the
+   answer. The list already knew how to draw a card either way — the
+   View/Edit switch flips ALL of them — so one post's worth of that is
+   the same renderer with a narrower condition. No second screen, and no
+   third copy of the form.
+
+   PE_ID is now "the one post being edited in the list". renderSocial
+   scrolls to it and flashes it so you can see where you landed. */
 function openSocialEditorById(id){
   const b=brands[activeBrand]; if(!b) return;
   const p=(b.social||[]).find(x=>x.id===id); if(!p) return;
   if(!canEdit()) return openPreview(id);
   PE_ID=id;
-  renderPostEdit();
-  openM("post-edit");
+  PE_JUMP=id;
+  contentMonth=p.month;
+  closeM("day-pop");
+  /* the list only exists on the Content view, so a post opened from the
+     Calendar takes you to where its list is */
+  if(view!=="content"){ socialLayer=true; setView("content"); }
+  else renderSocial();
 }
-function renderPostEdit(){
-  const b=brands[activeBrand]; if(!b||!PE_ID) return;
-  const p=(b.social||[]).find(x=>x.id===PE_ID); if(!p) return;
-  const el=document.getElementById("pe-body"); if(!el) return;
-  el.innerHTML=`
-   <div class="modal-top" style="padding:18px 20px 14px;">
-     <div class="modal-title" style="font-size:17px;">Edit post
-       <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${escAttr(b.name)} · ${shortDate(p.month,p.date)} ${(MN[p.month]||"").slice(0,3)}</span></div>
-     <button class="modal-x" onclick="closePostEdit()">✕</button>
-   </div>
-   <div class="modal-body" style="padding:14px 18px 18px;">${socialEditForm(p)}
-     <div style="font-size:11px;color:var(--subtle);margin-top:12px;">Changes save as you type.</div>
-   </div>`;
-}
-function closePostEdit(){
-  closeM("post-edit"); PE_ID=null;
-  /* the card behind it has to catch up with what was just typed */
+function endInlineEdit(){
+  PE_ID=null;
   if(view==="content") renderSocial(); else render();
+}
+/* Set when a jump has been asked for and cleared once it has happened,
+   so a plain re-render does not keep yanking the page around. */
+let PE_JUMP=null;
+function jumpToEditedCard(){
+  if(!PE_JUMP) return;
+  const el=document.getElementById("pcard-"+PE_JUMP);
+  PE_JUMP=null;
+  if(!el) return;
+  el.scrollIntoView({behavior:"smooth",block:"center"});
+  el.classList.remove("pcard-hi");
+  void el.offsetWidth;            /* restart the animation on a re-jump */
+  el.classList.add("pcard-hi");
 }
 function socialDateLabel(m,d){
   const dt=new Date(YEAR,m-1,d);
@@ -4467,6 +4490,7 @@ function socialEditForm(p){
       <span style="margin-left:auto;display:flex;align-items:center;gap:10px;">
         ${statusChipEditable(p)}
         <span style="font-size:11px;font-weight:700;color:#0E8A8A;cursor:pointer;" onclick="openPreview('${p.id}')"><i class="ti ti-eye"></i> Preview</span>
+        ${(contentMode!=="edit"&&p.id===PE_ID)?`<span style="font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;" onclick="endInlineEdit()" title="Stop editing this post — everything is already saved"><i class="ti ti-check"></i> Done</span>`:""}
         <i class="ti ti-trash" style="font-size:14px;color:#C62828;cursor:pointer;" onclick="deleteContentPost('${p.id}')"></i>
       </span>
     </div>
@@ -4694,8 +4718,12 @@ function renderSocial(){
     list.innerHTML=`<div style="text-align:center;padding:40px 20px;color:var(--muted);"><div style="font-size:28px;margin-bottom:8px;color:var(--subtle);"><i class="ti ti-photo-plus"></i></div><div style="font-size:14px;">${monthTotal?"No posts match this filter.":"No posts planned for "+MN[contentMonth]+"."}</div><div style="font-size:12px;margin-top:4px;">Click any date on the calendar above to plan a post.</div></div>`;
     return;
   }
+  /* ONE POST CAN BE IN EDIT MODE WHILE THE REST ARE NOT. The wrapper
+     carries the id so the page can scroll to it and flash it. */
   list.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));gap:12px;align-items:start;">`+
-    posts.map(p=>contentMode==="edit"?socialEditForm(p):socialViewCard(p)).join("")+`</div>`;
+    posts.map(p=>`<div id="pcard-${p.id}">`+
+      ((contentMode==="edit"||p.id===PE_ID)?socialEditForm(p):socialViewCard(p))+
+      `</div>`).join("")+`</div>`;
   /* NEW YORK: signed URLs cannot live in markup — they expire. Paint first,
      then hydrate, so a slow signature never holds up the thread. */
   list.querySelectorAll("textarea.ta-grow").forEach(taGrow);   /* v82.4 */
@@ -4706,6 +4734,7 @@ function renderSocial(){
      nothing is fetched for a month nobody is looking at. */
   ensureLeadAssets(posts);
   ensureBriefAssets(posts);   /* v82.3 — same rule, the brief references */
+  jumpToEditedCard();
 }
 
 /* Loads the current round's assets for the posts on screen, once. Returns
@@ -4983,12 +5012,9 @@ function openDay(m,day,expandId){
   /* MOTH — AN EMPTY DAY IS STILL A DAY. It used to skip the panel and
      drop you into a New Event form; now it says so and offers the same
      three doors as any other day. */
-  if(!allDayEvs.length&&!socPosts.length){
-    const e=document.createElement("div");
-    e.style.cssText="padding:22px 0 6px;text-align:center;color:var(--subtle);font-size:13px;";
-    e.textContent="Nothing on this day yet.";
-    body.appendChild(e);
-  }
+  /* "Nothing on this day yet." stood here and took a whole band of a
+     small window to say that a window you can see is empty. Chirag:
+     "the space on top is wasted… this doesn't require any mention." */
 
   /* MOTH — the actions, in the panel, for anyone who may use them.
      "Plan several" is the bulk planner that used to BE the whole
@@ -5012,19 +5038,29 @@ function openDay(m,day,expandId){
   const hasActs=!!(canEdit()&&activeBrand&&brands[activeBrand]);
   if(hasActs){
     PLAN={m,day};
-    PLANROWS=[{format:"static",idea:""}];
+    /* ══ ONE CONTROL, ONE MEANING ═══════════════════════════════════
+       Chirag, on the version before this: "there are buttons to add
+       another idea or plan post… then below that there are two more
+       buttons and then again one more button, another row, so this whole
+       process is quite complicated."
+
+       He was right, and the rows of buttons were the symptom rather than
+       the disease. The disease was TWO WAYS TO MAKE A POST in one small
+       window — type an idea, or open the editor — each needing its own
+       control, and the idea you had typed thrown away if you pressed the
+       wrong one.
+
+       So there is one way now. Type, press Enter or Add, and it joins
+       the day's posts above. To write one properly you press Edit on the
+       line already in front of you, which is how every post in this tool
+       is opened. Nothing to choose between, and nothing to lose. */
     const plan=document.createElement("div");
     plan.innerHTML=`
-      <div style="height:1px;background:var(--div);margin:14px 0 12px;"></div>
-      <div id="dp-plan-rows">${dayPlanRowsHtml()}</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-        <span onclick="planAddRow()" style="display:inline-flex;align-items:center;gap:6px;color:#0E8A8A;font-size:12px;font-weight:700;cursor:pointer;"><i class="ti ti-plus" style="font-size:14px;"></i> Add another idea</span>
-        <button class="btn btn-p btn-sm" id="dp-plan-btn" style="height:34px;padding:0 15px;" onclick="planCreate()"><i class="ti ti-check"></i> ${PLANROWS.length>1?"Plan "+PLANROWS.length+" posts":"Plan post"}</button>
-      </div>
-      <div style="height:1px;background:var(--div);margin:14px 0 11px;"></div>
-      <div style="display:flex;gap:20px;flex-wrap:wrap;">
-        <span onclick="dayAddPost(${m},${day})" style="display:inline-flex;align-items:center;gap:6px;color:#0E8A8A;font-size:12px;font-weight:700;cursor:pointer;"><i class="ti ti-pencil" style="font-size:14px;"></i> + Add post</span>
-        <span onclick="closeM('day-pop');openNewEvDay(${m},${day})" style="display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;"><i class="ti ti-calendar-plus" style="font-size:14px;"></i> Add an event</span>
+      <div style="height:1px;background:var(--div);margin:${socPosts.length||allDayEvs.length?"14px":"2px"} 0 12px;"></div>
+      <input id="dp-idea" class="fi" style="height:38px;font-size:13px;margin-bottom:9px;" placeholder="One line idea — press Enter to add" onkeydown="if(event.key==='Enter'){event.preventDefault();dayIdeaAdd();}"/>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <span id="dp-fmts">${dayFmtChipsHtml()}</span>
+        <button class="btn btn-p btn-sm" style="height:34px;padding:0 15px;margin-left:auto;" onclick="dayIdeaAdd()"><i class="ti ti-plus"></i> Add</button>
       </div>`;
     body.appendChild(plan);
   }
@@ -5032,9 +5068,15 @@ function openDay(m,day,expandId){
      duplicate: the actions row already says "Add an event". It stays
      for the cases the actions row is not drawn at all — a view-only
      account, or no brand picked — where it is the only way to add one. */
+  /* ADDING AN EVENT LIVES IN THE FOOTER NOW, beside Close, where the
+     window's own furniture is. It used to be hidden whenever the
+     actions row was drawn — and this batch deleted that row, which for
+     one build left no way at all to add an event to a day. Caught by
+     the gate rather than by him, which is the first time this week. */
   const dpAdd=document.getElementById("dp-add-btn");
   dpAdd.onclick=()=>{closeM("day-pop");openNewEvDay(m,day);};
-  dpAdd.style.display=hasActs?"none":"";
+  dpAdd.innerHTML='<i class="ti ti-calendar-plus"></i> Add an event';
+  dpAdd.style.display="";
   openM("day-pop");
 }
 function socialDayCardHtml(p){
@@ -8593,7 +8635,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v83.6 — Surendranagar: one window for a day, one editor for a post";
+const TOOL_VERSION="v83.7 — Surendranagar: the post opens where it lives";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -12466,51 +12508,29 @@ function createSocialPlaceholder(m,day,opts){
   brands[activeBrand].social=brands[activeBrand].social||[];
   brands[activeBrand].social.push(p); dbSaveSocialPost(p); render(); return p;
 }
-/* Each row = one post to plan: a format and a one-line idea. The rows
-   live inside the day window now, so every one of these paints
-   #dp-plan-rows rather than a modal of their own. */
-let PLANROWS=[{format:"static",idea:""}];
-function dayPlanRowsHtml(){
-  return PLANROWS.map((r,i)=>{
-    const chips=SOCIAL_FORMATS.map(f=>`<span onclick="setPlanRowFormat(${i},'${f}')" style="padding:5px 13px;border-radius:999px;border:1px solid ${r.format===f?'#0D0D0D':'var(--div)'};background:${r.format===f?'#0D0D0D':'#fff'};color:${r.format===f?'#fff':'var(--muted)'};font-size:11px;font-weight:600;cursor:pointer;">${f.charAt(0).toUpperCase()+f.slice(1)}</span>`).join("");
-    return `<div style="position:relative;border:1px solid var(--div);border-radius:11px;padding:12px;margin-bottom:10px;">
-      ${i>0?`<i class="ti ti-x" title="Remove" onclick="planRemoveRow(${i})" style="position:absolute;top:9px;right:10px;font-size:14px;color:var(--subtle);cursor:pointer;"></i>`:""}
-      <input id="plan-idea-${i}" class="fi" style="height:34px;font-size:12.5px;margin-bottom:10px;" placeholder="One line idea — what's this post about?" value="${escAttr(r.idea)}" onkeydown="if(event.key==='Enter'){event.preventDefault();planCreate();}"/>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">${chips}</div>
-    </div>`;
-  }).join("");
+/* ONE IDEA, ONE FORMAT, ONE BUTTON. PLANROWS and its five helpers stood
+   here — an array of rows, each with its own remove ×, painted into a
+   modal of their own. The day window adds one idea at a time now and
+   shows what it added directly above the box, so the rows had nothing
+   left to do. */
+let DAY_FMT="static";
+function dayFmtChipsHtml(){
+  return SOCIAL_FORMATS.map(f=>`<span onclick="dayFmtSet('${f}')" style="padding:5px 12px;border-radius:999px;border:1px solid ${DAY_FMT===f?'#0D0D0D':'var(--div)'};background:${DAY_FMT===f?'#0D0D0D':'#fff'};color:${DAY_FMT===f?'#fff':'var(--muted)'};font-size:11px;font-weight:600;cursor:pointer;">${f.charAt(0).toUpperCase()+f.slice(1)}</span>`).join("");
 }
-function renderDayPlan(){
-  const el=document.getElementById("dp-plan-rows"); if(!el) return;
-  el.innerHTML=dayPlanRowsHtml();
-  const btn=document.getElementById("dp-plan-btn");
-  if(btn) btn.innerHTML=`<i class="ti ti-check"></i> ${PLANROWS.length>1?"Plan "+PLANROWS.length+" posts":"Plan post"}`;
+function dayFmtSet(f){
+  DAY_FMT=f;
+  const el=document.getElementById("dp-fmts"); if(el) el.innerHTML=dayFmtChipsHtml();
 }
-function syncPlanRows(){ PLANROWS.forEach((r,i)=>{const el=document.getElementById("plan-idea-"+i); if(el) r.idea=el.value;}); }
-function setPlanRowFormat(i,f){ syncPlanRows(); if(PLANROWS[i]) PLANROWS[i].format=f; renderDayPlan(); }
-function planAddRow(){ syncPlanRows(); PLANROWS.push({format:"static",idea:""}); renderDayPlan(); const el=document.getElementById("plan-idea-"+(PLANROWS.length-1)); if(el) el.focus(); }
-function planRemoveRow(i){ syncPlanRows(); PLANROWS.splice(i,1); if(!PLANROWS.length) PLANROWS=[{format:"static",idea:""}]; renderDayPlan(); }
-/* THE WINDOW STAYS OPEN. You planned a post for this day; the next
-   thought is usually the next post for the same day. It reopens on the
-   same date, with the new post now listed above and an empty row ready. */
-function planCreate(){
-  syncPlanRows();
-  const rows=PLANROWS.filter(r=>(r.idea||"").trim()||PLANROWS.length===1);
-  let n=0; rows.forEach(r=>{ createSocialPlaceholder(PLAN.m,PLAN.day,{format:r.format,concept:(r.idea||"").trim()}); n++; });
-  if(!n) return;
-  const {m,day}=PLAN;
-  toast(n+" post"+(n!==1?"s":"")+" planned");
-  openDay(m,day);
-}
-/* "+ Add post" ON A DAY — the date is the thing you just clicked, so it
-   is not asked for again. The post is made and the REAL editor opens on
-   it, the same editor Edit opens on any existing card. */
-function dayAddPost(m,day){
+/* THE WINDOW STAYS OPEN and the idea appears above the box, because the
+   next thought is usually the next post for the same day. */
+function dayIdeaAdd(){
   if(!canEdit()||!activeBrand||!brands[activeBrand]) return;
-  const p=createSocialPlaceholder(m,day);
-  closeM("day-pop");
-  contentMonth=m;
-  openSocialEditorById(p.id);
+  const el=document.getElementById("dp-idea");
+  const idea=((el&&el.value)||"").trim();
+  const {m,day}=PLAN;
+  createSocialPlaceholder(m,day,{format:DAY_FMT,concept:idea});
+  openDay(m,day);
+  const again=document.getElementById("dp-idea"); if(again) again.focus();
 }
 /* renderPlanner() stood here — it painted a modal of its own for the
    same rows the day window now shows without one. */
