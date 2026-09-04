@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v83.3 — Chennai: the queue keeps what you dropped"/>
+<meta name="cc-tool-version" content="v83.4 — Chennai: the cross lands on the composer you can see"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -11267,25 +11267,38 @@ function fbStageFiles(postId,files){
    A count, in the same red the new-comment badge uses, next to the thing
    it is counting. */
 function paintStaged(postId){
-  const el=document.getElementById("fb-staged-"+postId); if(!el) return;
+  /* CHENNAI v83.4 — EVERY MATCH, NOT THE FIRST.
+     Chirag: "the cross appears only after something else is clicked."
+
+     A post can have TWO composers in the document at once — the card's
+     feedback block and the thread view — and they carry the same element
+     ids. getElementById returns the first one in the document, which is
+     not always the one on screen, so the chips were painted onto the
+     hidden twin. The visible composer caught up on the next full render,
+     which is to say: after you clicked something else.
+
+     Two ids collide, so the fix is not to paint one of them harder. It
+     paints every element carrying the id — querySelectorAll with an
+     attribute selector, because getElementById cannot return a list. */
+  const badges=[...document.querySelectorAll('[id="fb-staged-'+postId+'"]')];
+  if(!badges.length) return;
   const files=FB_STAGED[postId]||[];
   const n=files.length;
-  el.textContent=n?String(n):"";
+  badges.forEach(el=>{ el.textContent=n?String(n):"";
   /* A COUNT IS NOT ENOUGH WHEN THE THING THAT FAILS IS SIZE. "1 ready"
      looks identical for a 40KB logo and a 240MB reel, so the one that was
      never going to be accepted looked exactly like the one that was. The
      names and sizes go beside it — before the comment is written, not
      after it is posted. */
   el.title=n?(n+" file"+(n>1?"s":"")+" ready — they upload when you post"):"";
-  el.style.display=n?"inline-flex":"none";
-  const nm=document.getElementById("fb-stagednames-"+postId);
-  if(nm){
+  el.style.display=n?"inline-flex":"none"; });
+  document.querySelectorAll('[id="fb-stagednames-'+postId+'"]').forEach(nm=>{
     nm.innerHTML=files.map((f,i)=>
       `<span class="stagedf" title="${escAttr(f.name)}">${escHtml(f.name)}
          <b>${kbmb(f.size)}</b>
          <i onclick="fbUnstage('${escAttr(postId)}',${i})" title="Remove">&times;</i></span>`).join("");
     nm.style.display=n?"flex":"none";
-  }
+  });
 }
 function fbUnstage(postId,i){
   const files=FB_STAGED[postId]||[];
