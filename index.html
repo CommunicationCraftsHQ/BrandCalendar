@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v83.5 — Chennai: the page and the marker say the same thing"/>
+<meta name="cc-tool-version" content="v83.6 — Surendranagar: one window for a day, one editor for a post"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -1487,7 +1487,6 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 
 /* the card finally shows the work instead of a grey placeholder */
 .pc-thumb img{width:100%;height:100%;object-fit:cover;display:block;border-radius:7px;}
-#se-body [data-sign]>img{width:100%;height:100%;object-fit:cover;display:block;}
 
 /* ── Review mode ── */
 .mrev{position:fixed;inset:0;background:rgba(13,13,13,.94);-webkit-backdrop-filter:blur(10px);
@@ -3050,9 +3049,8 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
   <div class="modal" style="max-width:560px;"><div id="br-task-body"></div></div>
 </div>
 
-<div class="overlay" id="ov-social-edit" onclick="if(event.target===this)closeM('social-edit')">
-  <div class="modal" style="max-width:420px;"><div id="se-body"></div></div>
-</div>
+<!-- the mocked-up new-post window stood here; see SURENDRANAGAR in the
+     script below for why nothing replaced it. -->
 
 <!-- LISBON 6 — the importer. Two fields, one confirm screen, a log. -->
 <div class="overlay" id="ov-import" onclick="if(event.target===this)closeM('import')">
@@ -3071,8 +3069,25 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 </div>
 
 <!-- PLANNING DAY PLANNER -->
-<div class="overlay" id="ov-planner" onclick="if(event.target===this)closeM('planner')">
-  <div class="modal" style="max-width:500px;width:100%;"><div id="planner-body"></div></div>
+<!-- SURENDRANAGAR — the one question "+ Add post" has to ask. -->
+<div class="overlay" id="ov-new-post-date" onclick="if(event.target===this)closeM('new-post-date')">
+  <div class="day-popup" style="max-width:420px;">
+    <div class="modal-top">
+      <div class="modal-title">New post <span id="npd-brand" style="color:var(--acc);font-size:13px;font-weight:600;"></span></div>
+      <button class="modal-x" onclick="closeM('new-post-date')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fl" style="margin-bottom:6px;">Which day?</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <input class="fi" type="date" id="npd-date" style="height:34px;width:172px;font-size:12.5px;font-weight:600;" oninput="npdHint()" onkeydown="if(event.key==='Enter'){event.preventDefault();newPostDateGo();}"/>
+        <span id="npd-hint" style="font-size:11.5px;color:var(--muted);"></span>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-g" onclick="closeM('new-post-date')">Cancel</button>
+      <button class="btn btn-p" onclick="newPostDateGo()">Continue</button>
+    </div>
+  </div>
 </div>
 
 <!-- POST PREVIEW -->
@@ -3902,6 +3917,15 @@ function socialDateEdit(id,value){
   if(mo!==contentMonth){ contentMonth=mo; if(typeof toast==="function") toast(`Moved to ${d} ${(MN[mo]||"").slice(0,3)}`); }
   renderSocial(); buildContentSidebar();
 }
+function socialEventEdit(id,value){
+  const b=brands[activeBrand]; if(!b)return;
+  const p=(b.social||[]).find(x=>x.id===id); if(!p)return;
+  p.event_id=value||"";
+  dbSaveSocialPost(p);
+  showSavedCue(id);
+  const nm=(brandEventOptions(activeBrand).find(o=>o.id===value)||{}).name;
+  logActivity(id,value?`linked the post to ${nm||"a campaign"}`:"unlinked the post from its campaign");
+}
 function socialStatusEdit(id,value){
   socialFieldEdit(id,"status",value);
   const dot=document.getElementById("stdot-"+id); if(dot) dot.style.background=(SOCIAL_STATUS[value]||["","#888"])[1];
@@ -3940,7 +3964,53 @@ function deleteContentPost(id){
   if(postHasContent(p)&&!confirm("This post has content. Delete it?"))return;
   b.social=b.social.filter(x=>x.id!==id); dbTrashSocialPost(id); renderSocial();
 }
-function addContentPost(){ createSocialPlaceholder(contentMonth||curMonth||1,1); contentMode="edit"; renderSocial(); }
+/* ══ SURENDRANAGAR · "+ ADD POST" ASKS WHICH DAY ═══════════════════
+   It used to create a post on the 1ST OF THE MONTH — always, whatever
+   today was and wherever you were looking — and then flip the WHOLE
+   page into edit mode, every card on screen becoming an editor. Every
+   post made that way started life on the wrong day, and you had to go
+   and find it to fix that.
+
+   It is the only route to a new post that cannot know a date, so it is
+   the only one that asks. Nothing is created until Continue. */
+function addContentPost(){
+  if(!canEdit()||!activeBrand||!brands[activeBrand]) return;
+  const m=contentMonth||curMonth||1;
+  const t=new Date();
+  /* TODAY, BUT ONLY IF TODAY IS IN THE MONTH YOU ARE LOOKING AT.
+     Otherwise the 1st — "today" in a month you are not viewing is not a
+     default, it is a wrong answer that looks like one. */
+  const here=(YEAR===t.getFullYear())&&(m===t.getMonth()+1);
+  const d=here?t.getDate():1;
+  const inp=document.getElementById("npd-date");
+  if(inp){ inp.min=YEAR+"-01-01"; inp.max=YEAR+"-12-31";
+           inp.value=YEAR+"-"+String(m).padStart(2,"0")+"-"+String(d).padStart(2,"0"); }
+  const bn=document.getElementById("npd-brand");
+  if(bn) bn.textContent="· "+((brands[activeBrand]||{}).name||"");
+  npdHint();
+  openM("new-post-date");
+  setTimeout(()=>{ if(inp) inp.focus(); },50);
+}
+function npdHint(){
+  const inp=document.getElementById("npd-date"), out=document.getElementById("npd-hint");
+  if(!inp||!out) return;
+  const v=(inp.value||"").split("-").map(Number);
+  if(!v[1]||!v[2]){ out.textContent=""; return; }
+  const t=new Date();
+  const isToday=(YEAR===t.getFullYear())&&(v[1]===t.getMonth()+1)&&(v[2]===t.getDate());
+  out.textContent=shortDate(v[1],v[2])+" "+(MN[v[1]]||"").slice(0,3)+(isToday?" · today":"");
+}
+function newPostDateGo(){
+  const inp=document.getElementById("npd-date");
+  const v=inp&&inp.value; if(!v) return;
+  const [,mo,d]=v.split("-").map(Number);
+  if(!mo||!d) return;
+  if(!canEdit()||!activeBrand||!brands[activeBrand]) return;
+  const p=createSocialPlaceholder(mo,d);
+  closeM("new-post-date");
+  contentMonth=mo;
+  openSocialEditorById(p.id);
+}
 function socialViewCard(p){
   const cap=p.content.instagram.caption||p.content.facebook.caption||"";
   const tags=p.content.instagram.hashtags||p.content.facebook.hashtags||"";
@@ -4381,6 +4451,17 @@ function socialEditForm(p){
   return `<div style="background:var(--surface);border:1.5px solid #0EA5A5;border-radius:12px;overflow:hidden;">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 14px;background:var(--surface2);border-bottom:1px solid var(--div);">
       <label title="Move this post to another date" style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;"><i class="ti ti-calendar-event" style="font-size:14px;color:#0E8A8A;"></i><input class="fi" type="date" style="height:28px;font-size:12px;font-weight:600;width:152px;padding:0 8px;" min="${YEAR}-01-01" max="${YEAR}-12-31" value="${YEAR}-${String(p.month).padStart(2,"0")}-${String(p.date).padStart(2,"0")}" onchange="socialDateEdit('${p.id}',this.value)"/></label>
+      <!-- SURENDRANAGAR — LINKED CAMPAIGN CAME ACROSS. It lived only in
+           the mocked-up new-post window, so deleting that window would
+           have quietly removed the only way to tie a post to a campaign.
+           A batch that tidies up is not allowed to cost a feature. -->
+      <label title="Tie this post to a campaign or event" style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;">
+        <i class="ti ti-flag" style="font-size:13px;color:#9D174D;"></i>
+        <select class="fi" style="height:28px;font-size:11.5px;font-weight:600;max-width:190px;padding:0 6px;" onchange="socialEventEdit('${p.id}',this.value)">
+          <option value="">— no campaign —</option>
+          ${brandEventOptions(activeBrand).map(o=>`<option value="${escAttr(o.id)}" ${p.event_id===o.id?"selected":""}>${o.camp?"◆ ":""}${escAttr(o.name)}</option>`).join("")}
+        </select>
+      </label>
       <label style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;cursor:pointer;" onclick="socialToggleSyncInline('${p.id}')"><span style="width:26px;height:15px;border-radius:999px;background:${synced?"var(--acc)":"#C9C7BF"};position:relative;flex-shrink:0;"><span style="width:11px;height:11px;border-radius:50%;background:#fff;position:absolute;top:2px;${synced?"right:2px;":"left:2px;"}"></span></span> Same for both</label>
       <span id="sv-${p.id}" style="font-size:10px;color:#0E8A8A;font-weight:700;opacity:0;transition:opacity 200ms;">Saved</span>
       <span style="margin-left:auto;display:flex;align-items:center;gap:10px;">
@@ -4913,14 +4994,39 @@ function openDay(m,day,expandId){
      "Plan several" is the bulk planner that used to BE the whole
      experience when a switch happened to be on. Same rows, one step
      further in, and reachable in every state. */
+  /* ══ SURENDRANAGAR · THE DAY WINDOW IS THE ONLY WINDOW A DATE HAS ═══
+     Chirag: "when you click a calendar date it should open directly into
+     the planner mode to type one line idea with an option to add another
+     one line idea or write a post starting with a date, or add an event."
+
+     Before this, a day offered THREE BUTTONS and each opened a different
+     screen: a mocked-up Instagram window for one post, the rows window
+     for several, and the event form. Three doors for one day, and the
+     first of them led somewhere that looked nothing like the editor you
+     get when you open that same post again a minute later.
+
+     Now the rows ARE the day window — no button to press before you can
+     type — and the two rarer choices are links underneath. What is
+     already on the day stays above them, because this window is also how
+     somebody reads a day they did not intend to write on. */
   const hasActs=!!(canEdit()&&activeBrand&&brands[activeBrand]);
   if(hasActs){
-    const acts=document.createElement("div");
-    acts.className="dp-acts";
-    acts.innerHTML=`<button class="btn btn-w btn-sm" onclick="closeM('day-pop');openSocialEditor(activeBrand,null,{month:${m},date:${day}})"><i class="ti ti-plus"></i> Add a post</button>
-      <button class="btn btn-s btn-sm" onclick="closeM('day-pop');openPlanner(${m},${day})"><i class="ti ti-list-details"></i> Plan several</button>
-      <button class="btn btn-s btn-sm" onclick="closeM('day-pop');openNewEvDay(${m},${day})"><i class="ti ti-calendar-plus"></i> Add an event</button>`;
-    body.appendChild(acts);
+    PLAN={m,day};
+    PLANROWS=[{format:"static",idea:""}];
+    const plan=document.createElement("div");
+    plan.innerHTML=`
+      <div style="height:1px;background:var(--div);margin:14px 0 12px;"></div>
+      <div id="dp-plan-rows">${dayPlanRowsHtml()}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <span onclick="planAddRow()" style="display:inline-flex;align-items:center;gap:6px;color:#0E8A8A;font-size:12px;font-weight:700;cursor:pointer;"><i class="ti ti-plus" style="font-size:14px;"></i> Add another idea</span>
+        <button class="btn btn-p btn-sm" id="dp-plan-btn" style="height:34px;padding:0 15px;" onclick="planCreate()"><i class="ti ti-check"></i> ${PLANROWS.length>1?"Plan "+PLANROWS.length+" posts":"Plan post"}</button>
+      </div>
+      <div style="height:1px;background:var(--div);margin:14px 0 11px;"></div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;">
+        <span onclick="dayAddPost(${m},${day})" style="display:inline-flex;align-items:center;gap:6px;color:#0E8A8A;font-size:12px;font-weight:700;cursor:pointer;"><i class="ti ti-pencil" style="font-size:14px;"></i> + Add post</span>
+        <span onclick="closeM('day-pop');openNewEvDay(${m},${day})" style="display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;"><i class="ti ti-calendar-plus" style="font-size:14px;"></i> Add an event</span>
+      </div>`;
+    body.appendChild(plan);
   }
   /* …and the footer's "+ Add event to this date" was the SECOND
      duplicate: the actions row already says "Add an event". It stays
@@ -8487,7 +8593,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v83.5 — Chennai: the page and the marker say the same thing";
+const TOOL_VERSION="v83.6 — Surendranagar: one window for a day, one editor for a post";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -12286,7 +12392,6 @@ function bdImportXLSX(){
 }
 
 // ── SOCIAL POST EDITOR ──────────────────────────────────────
-let SE=null;
 const SOCIAL_STATUS={drafting:["Drafting","#EF9F27"],review:["Review","#378ADD"],approved:["Approved","#639922"]};
 const SOCIAL_FORMATS=["static","carousel","reel","story","video"];
 const seEsc=s=>escAttr(s);
@@ -12300,142 +12405,20 @@ function brandEventOptions(brandId){
   });
   return out.sort((a,b)=>(b.camp?1:0)-(a.camp?1:0));
 }
-function openSocialEditor(brandId,post,ctx){
-  brandId=brandId||activeBrand;
-  if(!brandId||!brands[brandId]){toast("Open a brand first","err");return;}
-  const ro=!canEdit();
-  if(post){
-    SE={brandId,id:post.id,isNew:false,readOnly:ro,tab:"instagram",
-      year:post.year||YEAR,month:post.month,date:post.date,time:post.time||"",
-      format:post.format||"static",status:post.status||"drafting",synced:post.synced!==false,event_id:post.event_id||"",
-      content:{facebook:{...emptyVariant(),...(post.content.facebook||{})},instagram:{...emptyVariant(),...(post.content.instagram||{})},concept:(post.content&&post.content.concept)||""}};
-  } else {
-    const t=new Date();
-    SE={brandId,id:null,isNew:true,readOnly:ro,tab:"instagram",
-      year:YEAR,month:(ctx&&ctx.month)||curMonth||t.getMonth()+1,date:(ctx&&ctx.date)||t.getDate(),
-      time:"",format:"static",status:"drafting",synced:true,event_id:"",
-      content:{facebook:emptyVariant(),instagram:emptyVariant(),concept:""}};
-  }
-  renderSocialEditor(); openM("social-edit");
-}
-function readSocialFields(){
-  if(!SE||SE.readOnly) return;
-  const g=id=>document.getElementById(id);
-  const fmt=g("se-format"),st=g("se-status"),tm=g("se-time"),ev=g("se-event"),dt=g("se-date"),cap=g("se-caption"),tag=g("se-hashtags");
-  if(fmt)SE.format=fmt.value; if(st)SE.status=st.value; if(tm)SE.time=tm.value; if(ev)SE.event_id=ev.value;
-  if(dt&&dt.value){const p=dt.value.split("-").map(Number); SE.year=p[0]; SE.month=p[1]; SE.date=p[2];}
-  if(cap||tag){
-    const c=cap?cap.value:"", h=tag?tag.value:"";
-    if(SE.synced){SE.content.facebook.caption=c;SE.content.instagram.caption=c;SE.content.facebook.hashtags=h;SE.content.instagram.hashtags=h;}
-    else{SE.content[SE.tab].caption=c;SE.content[SE.tab].hashtags=h;}
-  }
-}
-function socialToggleSync(){
-  readSocialFields();
-  if(SE.synced){ SE.synced=false; SE.tab="instagram"; }
-  else{
-    const fb=SE.content.facebook, ig=SE.content.instagram;
-    if((fb.caption!==ig.caption||fb.hashtags!==ig.hashtags)&&!confirm("Merge into one shared version? The Instagram content will be used for both platforms.")) return;
-    SE.content.facebook={...ig}; SE.synced=true;
-  }
-  renderSocialEditor();
-}
-function socialSetTab(p){ readSocialFields(); SE.tab=p; renderSocialEditor(); }
-function renderPostCard(platform,bn,ro){
-  const handle=seHandle(bn), initial=(bn&&bn[0]?bn[0]:"B").toUpperCase();
-  const v=SE.content[platform]||emptyVariant();
-  const capTA=`<textarea id="se-caption" placeholder="Write a caption…" ${ro?"readonly":""} style="width:100%;border:none;outline:none;resize:none;font-family:inherit;font-size:13px;line-height:1.5;background:transparent;min-height:52px;color:var(--text);">${seEsc(v.caption)}</textarea>`;
-  const tagTA=`<textarea id="se-hashtags" placeholder="#hashtags" ${ro?"readonly":""} style="width:100%;border:none;outline:none;resize:none;font-family:inherit;font-size:13px;line-height:1.5;background:transparent;min-height:22px;color:#185FA5;">${seEsc(v.hashtags)}</textarea>`;
-  /* STAGE 2A — the preview showed a grey box while the post had a real
-     approved design sitting in its current round. Show the work. */
-  const seLead=SE&&SE.id?(leadAssetFromRound((currentRound(SE.id)||{}).id)||postLeadAsset(SE.id)):null;
-  const imgStub=seLead
-    ? `<div style="aspect-ratio:1;background:#FAFAFA;border-top:1px solid #EFEFEF;border-bottom:1px solid #EFEFEF;overflow:hidden;"
-            data-sign="${escAttr(seLead.view_path||seLead.thumb_path||seLead.poster_path||"")}"></div>`
-    : `<div style="aspect-ratio:1;background:#FAFAFA;border-top:1px solid #EFEFEF;border-bottom:1px solid #EFEFEF;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--subtle);"><i class="ti ti-photo" style="font-size:28px;"></i><div style="font-size:11px;">No design submitted yet</div></div>`;
-  if(platform==="facebook"){
-    return `<div style="border:1px solid #DBDBDB;border-radius:10px;overflow:hidden;background:#fff;">
-      <div style="display:flex;align-items:center;gap:8px;padding:10px;">
-        <div style="width:32px;height:32px;border-radius:50%;background:#185FA5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">${initial}</div>
-        <div><div style="font-size:12px;font-weight:700;">${seEsc(bn)}</div><div style="font-size:10px;color:var(--muted);">Scheduled · ${SE.date} ${(MN[SE.month]||"").slice(0,3)} · <i class="ti ti-world" style="font-size:10px;"></i></div></div>
-      </div>
-      <div style="padding:0 10px 8px;">${capTA}${tagTA}</div>
-      ${imgStub}
-      <div style="display:flex;justify-content:space-around;padding:8px 4px;font-size:12px;color:var(--muted);border-top:1px solid #EFEFEF;"><span><i class="ti ti-thumb-up"></i> Like</span><span><i class="ti ti-message-circle"></i> Comment</span><span><i class="ti ti-share"></i> Share</span></div>
-    </div>`;
-  }
-  return `<div style="border:1px solid #DBDBDB;border-radius:10px;overflow:hidden;background:#fff;">
-    <div style="display:flex;align-items:center;gap:9px;padding:10px 12px;">
-      <div style="width:32px;height:32px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">${initial}</div>
-      <div style="font-size:13px;font-weight:700;">${handle}</div>
-      <div style="margin-left:auto;color:#262626;"><i class="ti ti-dots"></i></div>
-    </div>
-    ${imgStub}
-    <div style="display:flex;align-items:center;gap:14px;padding:10px 12px 4px;font-size:20px;color:#262626;"><i class="ti ti-heart"></i><i class="ti ti-message-circle"></i><i class="ti ti-send"></i><i class="ti ti-bookmark" style="margin-left:auto;"></i></div>
-    <div style="padding:2px 12px 12px;"><div style="font-size:13px;font-weight:700;margin-bottom:2px;">${handle}</div>${capTA}${tagTA}</div>
-  </div>`;
-}
-function renderSocialEditor(){
-  const b=brands[SE.brandId]; const bn=b?b.name:"Brand"; const ro=SE.readOnly; const dis=ro?"disabled":"";
-  const fmtOpts=SOCIAL_FORMATS.map(f=>`<option value="${f}" ${SE.format===f?"selected":""}>${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join("");
-  const stOpts=Object.entries(SOCIAL_STATUS).map(([k,v])=>`<option value="${k}" ${SE.status===k?"selected":""}>${v[0]}</option>`).join("");
-  const evOpts=`<option value="">— none —</option>`+brandEventOptions(SE.brandId).map(o=>`<option value="${o.id}" ${SE.event_id===o.id?"selected":""}>${o.camp?"◆ ":""}${seEsc(o.name)}</option>`).join("");
-  const dateVal=`${SE.year}-${sePad(SE.month)}-${sePad(SE.date)}`;
-  const toggle=`<div style="display:flex;align-items:center;gap:9px;padding:8px 11px;background:var(--surface2);border:1px solid var(--div);border-radius:8px;margin-bottom:14px;${ro?"opacity:.6;":""}">
-     <div ${ro?"":'onclick="socialToggleSync()"'} style="width:34px;height:20px;border-radius:999px;background:${SE.synced?"var(--acc)":"#C9C7BF"};position:relative;flex-shrink:0;cursor:${ro?"default":"pointer"};"><div style="width:16px;height:16px;border-radius:50%;background:#fff;position:absolute;top:2px;${SE.synced?"right:2px;":"left:2px;"}"></div></div>
-     <div style="font-size:12px;font-weight:600;">Same content for both</div>
-     <div style="margin-left:auto;font-size:15px;color:var(--muted);display:flex;gap:7px;"><i class="ti ti-brand-instagram"></i><i class="ti ti-brand-facebook"></i></div>
-   </div>`;
-  let tabs="";
-  if(!SE.synced){
-    const tb=(p,ic,lbl)=>`<div ${ro?"":`onclick="socialSetTab('${p}')"`} style="flex:1;text-align:center;font-size:11px;font-weight:700;padding:7px;border-radius:7px;cursor:${ro?"default":"pointer"};background:${SE.tab===p?"var(--text)":"var(--acc2)"};color:${SE.tab===p?"#fff":"var(--muted)"};display:flex;align-items:center;justify-content:center;gap:5px;"><i class="ti ${ic}"></i> ${lbl}</div>`;
-    tabs=`<div style="display:flex;gap:4px;margin-bottom:10px;">${tb("instagram","ti-brand-instagram","Instagram")}${tb("facebook","ti-brand-facebook","Facebook")}</div>`;
-  }
-  const card=renderPostCard(SE.synced?"instagram":SE.tab,bn,ro);
-  const foot=ro
-    ? `<button class="btn btn-g" onclick="closeM('social-edit')">Close</button>`
-    : `${SE.isNew?"":'<button class="btn btn-d btn-sm" onclick="deleteSocialPost()">Delete</button>'}<button class="btn btn-g" onclick="closeM('social-edit')">Cancel</button><button class="btn btn-p" onclick="saveSocialEditor()">Save post</button>`;
-  document.getElementById("se-body").innerHTML=`
-   <div class="modal-top" style="padding:18px 20px 14px;">
-     <div class="modal-title" style="font-size:17px;">${SE.isNew?"New post":(ro?"Post":"Edit post")} <span style="color:var(--acc);">· ${seEsc(bn)}</span></div>
-     <button class="modal-x" onclick="closeM('social-edit')">✕</button>
-   </div>
-   <div class="modal-body" style="padding:16px 20px;">
-     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
-       <div><div class="fl" style="margin-bottom:4px;">Format</div><select class="fi" id="se-format" style="height:32px;font-size:12px;" ${dis}>${fmtOpts}</select></div>
-       <div><div class="fl" style="margin-bottom:4px;">Linked campaign</div><select class="fi" id="se-event" style="height:32px;font-size:12px;" ${dis}>${evOpts}</select></div>
-     </div>
-     ${toggle}${tabs}${card}
-     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px;">
-       <div><div class="fl" style="margin-bottom:4px;">Date</div><input class="fi" id="se-date" type="date" min="${YEAR}-01-01" max="${YEAR}-12-31" value="${dateVal}" style="height:32px;font-size:12px;" ${dis}></div>
-       <div><div class="fl" style="margin-bottom:4px;">Time</div><input class="fi" id="se-time" type="time" value="${SE.time}" style="height:32px;font-size:12px;" ${dis}></div>
-       <div><div class="fl" style="margin-bottom:4px;">Status</div><select class="fi" id="se-status" style="height:32px;font-size:12px;" ${dis}>${stOpts}</select></div>
-     </div>
-   </div>
-   <div class="modal-foot" style="padding:12px 20px;">${foot}</div>`;
-  /* the preview's design comes from the current round, and signed URLs
-     have to be minted after the markup exists */
-  hydrateMedia(document.getElementById("se-body"));
-}
-function saveSocialEditor(){
-  if(!SE||SE.readOnly){closeM("social-edit");return;}
-  readSocialFields();
-  const b=brands[SE.brandId]; if(!b)return;
-  const post=normalizeSocial({id:SE.id||newSocialId(),brand_id:SE.brandId,event_id:SE.event_id,year:SE.year,month:SE.month,date:SE.date,
-    time:SE.time,format:SE.format,status:SE.status,synced:SE.synced,content:SE.content,notes:""});
-  b.social=b.social||[];
-  const i=b.social.findIndex(p=>p.id===post.id);
-  if(i>-1&&b.social[i]&&b.social[i]._uat&&!post._uat) post._uat=b.social[i]._uat; // Sydney: keep the known server version for the conflict guard
-  if(i>-1)b.social[i]=post; else b.social.push(post);
-  dbSaveSocialPost(post);
-  const wasNew=SE.isNew; closeM("social-edit"); toast(wasNew?"Post created":"Post saved"); render();
-}
-function deleteSocialPost(){
-  if(!SE||!SE.id||SE.readOnly)return;
-  if(!confirm("Delete this post?"))return;
-  const b=brands[SE.brandId]; if(b)b.social=(b.social||[]).filter(p=>p.id!==SE.id);
-  dbTrashSocialPost(SE.id); closeM("social-edit"); toast("Post deleted"); render();
-}
+/* ══ SURENDRANAGAR · THE MOCKED-UP NEW-POST WINDOW IS GONE ══════════
+   openSocialEditor / renderSocialEditor / renderPostCard /
+   readSocialFields / socialToggleSync / socialSetTab /
+   saveSocialEditor / deleteSocialPost stood here.
+
+   Lisbon 4 replaced this window for EDITING a post — "Edit on a post
+   card opened a mocked-up Instagram window with its own fields; it now
+   opens the REAL form" — and left the NEW-post path on it. So for four
+   months a post you had just made and the same post a minute later were
+   two different screens with two different sets of fields, one of them
+   with a Save button and one saving as you type.
+
+   Everything it offered lives in the real editor now, Linked campaign
+   included. Nothing opens this, so nothing is left of it. */
 
 // ── PLANNING MODE: click dates to plan, day planner popover ──
 let PLAN={m:0,day:0};
@@ -12483,64 +12466,12 @@ function createSocialPlaceholder(m,day,opts){
   brands[activeBrand].social=brands[activeBrand].social||[];
   brands[activeBrand].social.push(p); dbSaveSocialPost(p); render(); return p;
 }
-// Planning-mode day click always opens the planner, where you pick format + a one-line concept.
-function planningDayClick(m,day){ openPlanner(m,day); }
-// Each planner row = one post to plan (a format + a one-line idea). Plan several at once.
+/* Each row = one post to plan: a format and a one-line idea. The rows
+   live inside the day window now, so every one of these paints
+   #dp-plan-rows rather than a modal of their own. */
 let PLANROWS=[{format:"static",idea:""}];
-function openPlanner(m,day){ PLAN={m,day}; PLANROWS=[{format:"static",idea:""}]; renderPlanner(); openM("planner"); }
-function syncPlanRows(){ PLANROWS.forEach((r,i)=>{const el=document.getElementById("plan-idea-"+i); if(el) r.idea=el.value;}); }
-function setPlanRowFormat(i,f){ syncPlanRows(); if(PLANROWS[i]) PLANROWS[i].format=f; renderPlanner(); }
-function planAddRow(){ syncPlanRows(); PLANROWS.push({format:"static",idea:""}); renderPlanner(); const el=document.getElementById("plan-idea-"+(PLANROWS.length-1)); if(el) el.focus(); }
-function planRemoveRow(i){ syncPlanRows(); PLANROWS.splice(i,1); if(!PLANROWS.length) PLANROWS=[{format:"static",idea:""}]; renderPlanner(); }
-function planCreate(){
-  syncPlanRows();
-  let n=0; PLANROWS.forEach(r=>{ createSocialPlaceholder(PLAN.m,PLAN.day,{format:r.format,concept:(r.idea||"").trim()}); n++; });
-  closeM("planner"); toast(n+" post"+(n!==1?"s":"")+" planned");
-}
-function addPlannerPost(){ createSocialPlaceholder(PLAN.m,PLAN.day); renderPlanner(); }
-function deletePlannerPost(id){
-  const b=brands[activeBrand]; if(!b)return;
-  const p=(b.social||[]).find(x=>x.id===id); if(!p)return;
-  if(postHasContent(p)&&!confirm("This post has content. Delete it?"))return;
-  b.social=b.social.filter(x=>x.id!==id); dbTrashSocialPost(id); render();
-  const left=socialForBrandYear(activeBrand,YEAR).filter(x=>x.month===PLAN.m&&x.date===PLAN.day);
-  if(left.length===0) closeM("planner"); else renderPlanner();
-}
-function renderPlanner(){
-  const {m,day}=PLAN;
-  const evsHere=filtered(m).filter(e=>e.date===day&&!e._isPost);
-  const covering=campaignsCovering(m,day).filter(c=>!evsHere.some(e=>e.id===c.e.id));
-  const ctx=[];
-  evsHere.forEach(e=>ctx.push({name:e.name,camp:gc(e)==="cat5",color:(CATS[gc(e)]||{}).color||"#3B82F6"}));
-  covering.forEach(c=>ctx.push({name:c.e.name,camp:true,color:"#D4537E"}));
-  const posts=socialForBrandYear(activeBrand,YEAR).filter(p=>p.month===m&&p.date===day)
-    .sort((a,b)=>String(a.time||"").localeCompare(String(b.time||"")));
-  let ctxHtml="";
-  if(ctx.length){
-    ctxHtml=`<div style="padding:12px 18px 4px;">
-      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9D174D;margin-bottom:7px;">On this day</div>`+
-      ctx.map(c=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">${c.camp
-        ?`<span style="width:12px;height:8px;background:${c.color};border-radius:2px;flex-shrink:0;"></span>`
-        :`<span style="width:8px;height:8px;background:${c.color};border-radius:50%;flex-shrink:0;"></span>`}<span style="font-size:12px;">${escAttr(c.name)}<span style="color:var(--subtle);"> · ${c.camp?"campaign":"event"}</span></span></div>`).join("")+
-      `</div><div style="height:1px;background:var(--div);margin:8px 18px;"></div>`;
-  }
-  const stShortMap={drafting:"Draft",review:"Review",approved:"Approved"};
-  const postRows=posts.map(p=>{
-    const concept=(p.content.concept||"").trim();
-    const cap=p.content.instagram.caption||p.content.facebook.caption||"";
-    const label=concept||cap; const empty=!label.trim();
-    const stKey=p.status||""; const stColor=(SOCIAL_STATUS[stKey]||["","#888"])[1]; const stShort=stShortMap[stKey]||(SOCIAL_STATUS[stKey]||[""])[0]||"";
-    const fmt=(p.format||"static"); const fmtLbl=fmt.charAt(0).toUpperCase()+fmt.slice(1);
-    return `<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--bg);">
-      <span onclick="closeM('planner');openSocialEditorById('${p.id}')" style="flex:1;min-width:0;cursor:pointer;display:flex;align-items:center;gap:9px;">
-        <span style="font-size:9px;font-weight:700;color:#5F5E5A;background:#F1EFE8;padding:2px 7px;border-radius:999px;flex-shrink:0;">${fmtLbl}</span>
-        <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;${empty?"color:var(--subtle);font-style:italic;":"color:var(--text);"}">${empty?"No idea yet":escAttr(label)}</span>
-      </span>
-      <span style="display:flex;align-items:center;gap:4px;flex-shrink:0;"><span style="width:6px;height:6px;border-radius:50%;background:${stColor};"></span><span style="font-size:11px;font-weight:600;color:${stColor};">${stShort}</span></span>
-      <i class="ti ti-trash" style="cursor:pointer;color:#C62828;font-size:14px;flex-shrink:0;" onclick="deletePlannerPost('${p.id}')"></i>
-    </div>`;
-  }).join("");
-  const builder=PLANROWS.map((r,i)=>{
+function dayPlanRowsHtml(){
+  return PLANROWS.map((r,i)=>{
     const chips=SOCIAL_FORMATS.map(f=>`<span onclick="setPlanRowFormat(${i},'${f}')" style="padding:5px 13px;border-radius:999px;border:1px solid ${r.format===f?'#0D0D0D':'var(--div)'};background:${r.format===f?'#0D0D0D':'#fff'};color:${r.format===f?'#fff':'var(--muted)'};font-size:11px;font-weight:600;cursor:pointer;">${f.charAt(0).toUpperCase()+f.slice(1)}</span>`).join("");
     return `<div style="position:relative;border:1px solid var(--div);border-radius:11px;padding:12px;margin-bottom:10px;">
       ${i>0?`<i class="ti ti-x" title="Remove" onclick="planRemoveRow(${i})" style="position:absolute;top:9px;right:10px;font-size:14px;color:var(--subtle);cursor:pointer;"></i>`:""}
@@ -12548,22 +12479,41 @@ function renderPlanner(){
       <div style="display:flex;gap:6px;flex-wrap:wrap;">${chips}</div>
     </div>`;
   }).join("");
-  const n=PLANROWS.length; const planLbl=n>1?`Plan ${n} posts`:`Plan post`;
-  document.getElementById("planner-body").innerHTML=`
-   <div class="modal-top" style="padding:16px 18px 12px;">
-     <div class="modal-title" style="font-size:16px;">${day} ${MN[m]} ${YEAR}</div>
-     <button class="modal-x" onclick="closeM('planner')">✕</button>
-   </div>
-   ${ctxHtml}
-   <div style="padding:${ctx.length?"4px":"12px"} 18px 18px;">
-     ${posts.length?`<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#0E8A8A;margin-bottom:6px;display:flex;align-items:center;gap:5px;"><i class="ti ti-photo" style="font-size:11px;"></i> Posts</div>${postRows}<div style="height:16px;"></div>`:""}
-     ${builder}
-     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:2px;">
-       <span onclick="planAddRow()" style="display:inline-flex;align-items:center;gap:6px;color:#0E8A8A;font-size:12px;font-weight:600;cursor:pointer;"><i class="ti ti-plus" style="font-size:14px;"></i> Add another post</span>
-       <button class="btn btn-p btn-sm" style="height:36px;padding:0 16px;" onclick="planCreate()"><i class="ti ti-check"></i> ${planLbl}</button>
-     </div>
-   </div>`;
 }
+function renderDayPlan(){
+  const el=document.getElementById("dp-plan-rows"); if(!el) return;
+  el.innerHTML=dayPlanRowsHtml();
+  const btn=document.getElementById("dp-plan-btn");
+  if(btn) btn.innerHTML=`<i class="ti ti-check"></i> ${PLANROWS.length>1?"Plan "+PLANROWS.length+" posts":"Plan post"}`;
+}
+function syncPlanRows(){ PLANROWS.forEach((r,i)=>{const el=document.getElementById("plan-idea-"+i); if(el) r.idea=el.value;}); }
+function setPlanRowFormat(i,f){ syncPlanRows(); if(PLANROWS[i]) PLANROWS[i].format=f; renderDayPlan(); }
+function planAddRow(){ syncPlanRows(); PLANROWS.push({format:"static",idea:""}); renderDayPlan(); const el=document.getElementById("plan-idea-"+(PLANROWS.length-1)); if(el) el.focus(); }
+function planRemoveRow(i){ syncPlanRows(); PLANROWS.splice(i,1); if(!PLANROWS.length) PLANROWS=[{format:"static",idea:""}]; renderDayPlan(); }
+/* THE WINDOW STAYS OPEN. You planned a post for this day; the next
+   thought is usually the next post for the same day. It reopens on the
+   same date, with the new post now listed above and an empty row ready. */
+function planCreate(){
+  syncPlanRows();
+  const rows=PLANROWS.filter(r=>(r.idea||"").trim()||PLANROWS.length===1);
+  let n=0; rows.forEach(r=>{ createSocialPlaceholder(PLAN.m,PLAN.day,{format:r.format,concept:(r.idea||"").trim()}); n++; });
+  if(!n) return;
+  const {m,day}=PLAN;
+  toast(n+" post"+(n!==1?"s":"")+" planned");
+  openDay(m,day);
+}
+/* "+ Add post" ON A DAY — the date is the thing you just clicked, so it
+   is not asked for again. The post is made and the REAL editor opens on
+   it, the same editor Edit opens on any existing card. */
+function dayAddPost(m,day){
+  if(!canEdit()||!activeBrand||!brands[activeBrand]) return;
+  const p=createSocialPlaceholder(m,day);
+  closeM("day-pop");
+  contentMonth=m;
+  openSocialEditorById(p.id);
+}
+/* renderPlanner() stood here — it painted a modal of its own for the
+   same rows the day window now shows without one. */
 
 /* A CREATOR COULD DELETE A BRAND. Not a hypothetical and not a
    decision anybody took — canEdit() is admin-or-team and team is both
