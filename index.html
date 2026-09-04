@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v83.0 — Kazan: the brands find their places"/>
+<meta name="cc-tool-version" content="v83.1 — Chennai: the menu answers the keyboard"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2011,6 +2011,12 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .mpchip .rm{color:var(--subtle);cursor:pointer;font-size:11px;}
 .mpchip .rm:hover{color:var(--acc);}
 .mpchip.up{opacity:.75;}
+/* CHENNAI — WHERE A FILE MAY BE DROPPED, SAID WHILE IT IS BEING DRAGGED.
+   A drop target nobody can see is a feature people find by accident. The
+   outline appears only while a drag is over the composer, and it uses
+   the suite's own accent rather than a colour of this file's own. */
+.dz-on{outline:2px dashed var(--acc);outline-offset:3px;border-radius:8px;background:rgba(214,40,40,.04);}
+
 /* ══ MOTH v81.7 — A LINK IS AN ATTACHMENT, AND IT LOOKS LIKE ONE ═════
    Tinted rather than merely differently iconed: a link and a file behave
    differently when clicked — one leaves the tool — and the colour is the
@@ -4049,7 +4055,7 @@ function fbPanelHtml(p){
     const c=t.top;
     const replyBox=fbReplyOpen[c.id]?`<div style="display:flex;gap:7px;margin-top:9px;">
         <input id="fb-reply-${c.id}" class="fi" style="height:32px;font-size:12px;flex:1;" placeholder="Reply…  @ to mention"
-        onkeydown="if(event.key==='Enter'){closeMentionBox();fbAddComment('${p.id}','${c.id}');}"
+        onkeydown="if(mentionKeyNav(event))return;if(event.key==='Enter'){closeMentionBox();fbAddComment('${p.id}','${c.id}');}"
         oninput="fbMentionKey(event,'fb-reply-${c.id}','${p.brand_id||activeBrand}')"
         onblur="setTimeout(closeMentionBox,150)"/>
         <button class="btn btn-sm" style="background:#0D0D0D;color:#fff;border-color:#0D0D0D;" onclick="fbAddComment('${p.id}','${c.id}')">Reply</button>
@@ -4161,7 +4167,7 @@ function fbPanelHtml(p){
       <div style="flex:1;display:flex;gap:7px;">
         <textarea id="fb-new-${p.id}" class="fi ta" rows="1" style="min-height:34px;font-size:13px;flex:1;resize:vertical;"
           placeholder="Add a comment…  (Enter to post, Shift+Enter for a new line)"
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();fbAddComment('${p.id}',null);}"
+          onkeydown="if(mentionKeyNav(event))return;if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();fbAddComment('${p.id}',null);}"
           oninput="fbMentionKey(event,'fb-new-${p.id}','${p.brand_id||activeBrand}')"
           onblur="setTimeout(closeMentionBox,150)"></textarea>
         <button class="btn btn-sm" style="background:#0D0D0D;color:#fff;border-color:#0D0D0D;" onclick="fbAddComment('${p.id}',null)">Post</button>
@@ -4169,7 +4175,7 @@ function fbPanelHtml(p){
     </div>
     <!-- NEW YORK: attach. Files are held until the comment is posted, so a
          stray drop never becomes an orphan row with nothing pointing at it. -->
-    <div style="display:flex;gap:8px;align-items:center;margin:8px 0 0 35px;flex-wrap:wrap;">
+    <div data-drop="comment:${p.id}" style="display:flex;gap:8px;align-items:center;margin:8px 0 0 35px;flex-wrap:wrap;">
       <input type="file" id="fb-files-${p.id}" multiple style="display:none;"
              onchange="fbStageFiles('${p.id}',this.files)">
       <span class="btn btn-sm" style="cursor:pointer;" onclick="document.getElementById('fb-files-${p.id}').click()">📎 Attach</span>
@@ -4309,7 +4315,7 @@ function designBriefBlock(p,withImage){
   const slot=a
     ?`<div style="flex-shrink:0;position:relative;"><div class="bfimg" data-sign="${escAttr(a.thumb_path||a.poster_path||a.view_path||"")}" style="width:88px;height:88px;border-radius:8px;overflow:hidden;background:#F4F1E9;cursor:zoom-in;" onclick="openLightbox('${a.id}',assetsFor('post_brief','${p.id}'))"></div><span title="Remove" onclick="briefRemoveImage('${p.id}','${a.id}')" style="position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;">×</span></div>`
     :`<div style="flex-shrink:0;"><label for="bfup-${p.id}" style="width:88px;height:88px;border:1px dashed #D6CBB0;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#B5A47A;gap:3px;background:#fff;cursor:pointer;"><i class="ti ti-upload" style="font-size:18px;"></i><span style="font-size:9px;">Image</span></label><input id="bfup-${p.id}" type="file" accept="image/*,.pdf" style="display:none;" onchange="briefUploadImage('${p.id}',this.files)"></div>`;
-  return `<div style="border:1px solid #EDE9DF;background:#FBFAF6;border-radius:10px;padding:11px;margin-top:12px;">
+  return `<div data-drop="brief:${p.id}" style="border:1px solid #EDE9DF;background:#FBFAF6;border-radius:10px;padding:11px;margin-top:12px;">
     <div style="display:flex;gap:11px;">
       ${slot}
       <div style="flex:1;min-width:0;">
@@ -6111,15 +6117,15 @@ function brandCount(k){
    Chirag: "the brand switcher dropdown has become too long." Three
    answers, one panel: a search box that filters as you type, the
    brands you opened most recently pinned first, and sub-brands
-   indented under their parent. Recents are per-browser
-   (localStorage) — a convenience, not a record. */
+   indented under their parent.
+
+   CHENNAI, 4 September: THE RECENTS ARE GONE, and it is worth saying
+   why, because they were added to solve this same complaint. Pinning
+   four brands at the top does not shorten a list — it lengthens it by
+   four, and every pinned brand then appears twice, once at the top and
+   once in its real group. The search box was the answer; the recents
+   were a second answer working against it. */
 let BRQ="";
-function brandRecents(){ try{ return JSON.parse(localStorage.getItem("cc-cal-recents")||"[]"); }catch(e){ return []; } }
-function noteBrandRecent(k){
-  if(!k) return;
-  try{ const r=[k,...brandRecents().filter(x=>x!==k)].slice(0,4);
-       localStorage.setItem("cc-cal-recents",JSON.stringify(r)); }catch(e){}
-}
 function brSearchKey(v){ BRQ=v; buildBrandPanel();
   const i=document.getElementById("brl-q"); if(i){ i.focus(); i.setSelectionRange(i.value.length,i.value.length); } }
 function brandRowHtml(k,b,indent){
@@ -6167,12 +6173,12 @@ function buildBrandPanel(){
       ||`<div class="bp-none">Nothing matches.</div>`;
   } else {
     const vis=new Set(visible.map(([k])=>k));
-    const recents=brandRecents().filter(k=>vis.has(k)&&brands[k]);
-    if(recents.length){
-      h+=`<div class="bphead">Recent</div>`
-        +recents.map(k=>brandRowHtml(k,brands[k],false)).join("")
-        +`<div class="bpsep"></div>`;
-    }
+    /* CHENNAI — THE RECENT BLOCK IS GONE. Chirag, 4 September: "remove
+       the four recent brands option — it's making the list longer."
+       Four rows at the top, repeated further down under their real
+       group, so the list you scroll is four rows longer and two of every
+       recent brand appear in it. The search box above is the faster way
+       to the brand you were just on. */
     /* parents first, their children indented beneath; a child whose
        parent is not on this account's list rises to the top level */
     const placed=new Set();
@@ -6336,7 +6342,7 @@ The brand disappears from their switcher. Nothing they have written is deleted.`
    More than one per brand is still allowed, and now for free: assign two
    Account managers. A rule of one turns a fortnight in Goa into a locked
    brand. */
-function pickBrand(k){ closeAllPops(); noteBrandRecent(k); BRQ=""; const sel=document.getElementById("brand-sel"); if(sel) sel.value=k; setBrand(k); }
+function pickBrand(k){ closeAllPops(); BRQ=""; const sel=document.getElementById("brand-sel"); if(sel) sel.value=k; setBrand(k); }
 function syncBrandTrig(){
   const nm=document.getElementById("brand-trig-nm"), dot=document.getElementById("brand-trig-dot");
   if(!nm) return;
@@ -7075,6 +7081,7 @@ function brRenderEditor(){
       <div class="brf one"><div class="fld"><label>Brief</label>
         <div class="brbox">
           <textarea id="bt-brief" rows="3" placeholder="What the client asked for. Type @ to tag someone."
+                    onkeydown="mentionKeyNav(event)"
                     oninput="brSet('brief',this.value);fbMentionKey(event,'bt-brief',activeBrand,true)"
                     onblur="closeMentionBox()">${escHtml(BT.brief)}</textarea>
           <div class="brbar">
@@ -7609,9 +7616,10 @@ function renderTask(){
            <span class="th-av">${escHtml(brInitials(ME.id)||"··")}</span>
            <div style="flex:1">
              <textarea id="th-in" rows="2" placeholder="${TASK.asClient?"What the client said…":"Write a message…"}"
+               onkeydown="mentionKeyNav(event)"
                oninput="TASK.draft=this.value;fbMentionKey(event,'th-in',activeBrand,true)"
                onblur="closeMentionBox()">${escHtml(TASK.draft||"")}</textarea>
-             <div class="th-cb">
+             <div class="th-cb" data-drop="task:">
                <button class="th-chip" onclick="mentionStart('th-in')">@ Tag someone</button>
                <input type="file" id="th-files" multiple style="display:none;"
                       onchange="taskStageFiles(this.files)">
@@ -8466,7 +8474,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v83.0 — Kazan: the brands find their places";
+const TOOL_VERSION="v83.1 — Chennai: the menu answers the keyboard";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -10742,8 +10750,74 @@ function fbHighlightMentions(h){
     '$1<span style="color:var(--acc);font-weight:700;">@$2</span>');
 }
 
-/* ── the @ autocomplete ── */
-let mentionBox=null;
+/* ══ CHENNAI · DROP A FILE WHERE YOU CAN ALREADY ATTACH ONE ═══════════
+   Chirag, 4 September: "drag and drop for uploading, on the fields where
+   attach already exists."
+
+   ONE LISTENER, NOT FIVE. Each composer marks itself with
+   data-drop="<what>" and the document does the rest, so a new composer
+   gets this by adding one attribute — and there is one place to look
+   when a drop does nothing.
+
+   IT FEEDS THE SAME FUNCTIONS THE FILE PICKER FEEDS. Nothing new is
+   uploaded here, nothing new is stored, and the staged-files list, the
+   size limits and the "held until posted" rule are all unchanged. A
+   second upload path would be a second set of rules to keep in step,
+   and this file has paid for that before.
+
+   THE WHOLE WINDOW HAS TO REFUSE THE DEFAULT. A browser's own answer to
+   a dropped image is to leave the page and open the file, losing an
+   unsent comment on the way — so dragover is cancelled everywhere, and
+   only a marked composer does anything with the drop. */
+function dzTarget(ev){
+  let el=ev.target;
+  while(el&&el!==document.body){ if(el.dataset&&el.dataset.drop) return el; el=el.parentElement; }
+  return null;
+}
+function dzFiles(ev){
+  const dt=ev.dataTransfer; if(!dt) return [];
+  return dt.files&&dt.files.length?[...dt.files]:[];
+}
+document.addEventListener("dragover",e=>{
+  e.preventDefault();
+  const el=dzTarget(e);
+  document.querySelectorAll(".dz-on").forEach(n=>{ if(n!==el) n.classList.remove("dz-on"); });
+  if(el) el.classList.add("dz-on");
+});
+document.addEventListener("dragleave",e=>{
+  if(!e.relatedTarget) document.querySelectorAll(".dz-on").forEach(n=>n.classList.remove("dz-on"));
+});
+document.addEventListener("drop",e=>{
+  e.preventDefault();
+  const el=dzTarget(e);
+  document.querySelectorAll(".dz-on").forEach(n=>n.classList.remove("dz-on"));
+  if(!el) return;
+  const files=dzFiles(e);
+  if(!files.length) return;   /* dragged text or a link, not a file */
+  const [what,arg]=String(el.dataset.drop).split(":");
+  if(what==="comment")      fbStageFiles(arg,files);
+  else if(what==="task")    taskStageFiles(files);
+  else if(what==="brief")   briefUploadImage(arg,files);
+  /* The message pane's clip opens the comment composer's own input — see
+     mpAttachOpen — so it is already covered by "comment" above. No branch
+     for it here: an untested branch that never runs is a thing somebody
+     later has to work out the purpose of. */
+});
+
+/* ── the @ autocomplete ──
+   CHENNAI, 4 September 2026 — IT HAD NO KEYBOARD.
+   Chirag: "if I type @pra and Pranav is the first result, pressing Enter
+   should tag Pranav. Currently the message gets sent with @pra."
+
+   Exactly so: the menu was mouse-only. Enter was bound to send, and the
+   send handler closed the menu first, so the half-typed name went out as
+   text. A picker you cannot reach from the keyboard is a picker you have
+   to remember to reach for.
+
+   `mentionSel` is the highlighted row. It resets to 0 on every rebuild —
+   the list changes on each keystroke, so keeping a stale index would
+   sometimes tag the wrong person, which is worse than tagging nobody. */
+let mentionBox=null, mentionHits=[], mentionInput=null, mentionSel=0;
 function fbMentionKey(e,inputId,brandId,teamOnly){
   const el=document.getElementById(inputId); if(!el) return;
   const upto=el.isContentEditable?rtTextUptoCaret(el):el.value.slice(0,el.selectionStart||0);
@@ -10753,6 +10827,7 @@ function fbMentionKey(e,inputId,brandId,teamOnly){
   const q=m[1].toLowerCase();
   const pool=teamOnly?brMentionables():mentionablesFor(brandId);
   const hits=pool.filter(pp=>pp.name.toLowerCase().startsWith(q)).slice(0,6);
+  mentionHits=hits; mentionInput=inputId; mentionSel=0;
   /* BA5: an empty menu used to be indistinguishable from a directory we are
      not allowed to read — which is exactly how the admin-only mention bug
      stayed invisible. If the directory came back truncated, say so. */
@@ -10761,7 +10836,7 @@ function fbMentionKey(e,inputId,brandId,teamOnly){
   box.className="ms-drop open"; box.id="mention-box";
   box.style.cssText="position:absolute;z-index:9000;min-width:190px;padding:4px;";
   box.innerHTML=hits.length
-    ? hits.map(pp=>`<div class="brow" onmousedown="fbPickMention(event,'${inputId}','${pp.name}')">
+    ? hits.map((pp,i)=>`<div class="brow${i===0?" on":""}" data-mi="${i}" onmousedown="fbPickMention(event,'${inputId}','${pp.name}')">
       <span class="nav-av${pp.role==="client"?" client":""}" style="width:20px;height:20px;font-size:9px;">${escAttr(pp.name.slice(0,2).toUpperCase())}</span>
       <span class="bnm">${escAttr(pp.name)}</span>
       <span style="font-size:10px;color:var(--subtle);">${pp.role==="client"?"client":"team"}</span></div>`).join("")
@@ -10771,7 +10846,38 @@ function fbMentionKey(e,inputId,brandId,teamOnly){
   box.style.left=r.left+"px"; box.style.top=(r.bottom+4)+"px"; box.style.position="fixed";
   document.body.appendChild(box); mentionBox=box;
 }
-function closeMentionBox(){ if(mentionBox){ mentionBox.remove(); mentionBox=null; } }
+function closeMentionBox(){ if(mentionBox){ mentionBox.remove(); mentionBox=null; }
+  mentionHits=[]; mentionInput=null; mentionSel=0; }
+
+/* Called from every composer's onkeydown BEFORE its own Enter handling,
+   and it says whether it took the key. Down/Up walk, Enter and Tab pick,
+   Escape closes without sending — which is the only way to get a literal
+   "@pra" out of the box now, and somebody will want that one day.
+
+   RETURNS TRUE ONLY WHEN THE MENU IS OPEN. With no menu this is a no-op
+   and Enter still sends, because the composer's own handler runs next.
+   That is why it is a guard rather than a replacement: the send logic
+   stays exactly where it was, in the markup, next to the button that
+   does the same thing. */
+function mentionKeyNav(e){
+  if(!mentionBox||!mentionHits.length) return false;
+  const k=e.key;
+  if(k==="ArrowDown"||k==="ArrowUp"){
+    e.preventDefault();
+    mentionSel=(mentionSel+(k==="ArrowDown"?1:-1)+mentionHits.length)%mentionHits.length;
+    [...mentionBox.querySelectorAll("[data-mi]")].forEach(el=>
+      el.classList.toggle("on", Number(el.dataset.mi)===mentionSel));
+    return true;
+  }
+  if(k==="Enter"||k==="Tab"){
+    e.preventDefault();
+    const pp=mentionHits[mentionSel]; const id=mentionInput;
+    if(pp&&id) fbPickMention({preventDefault(){}},id,pp.name);
+    return true;
+  }
+  if(k==="Escape"){ e.preventDefault(); closeMentionBox(); return true; }
+  return false;
+}
 function fbPickMention(ev,inputId,name){
   ev.preventDefault();
   const el=document.getElementById(inputId); if(!el) return;
@@ -13714,13 +13820,13 @@ function fbPanelHtml(p){
   const composer=canComment()?`<div class="comp46">
       <div class="crow46">${av(actorName(),actorKind())}
         <div id="fb-new-${p.id}" class="cin46 rt" contenteditable="true" data-ph="Write a comment" data-att="comment" data-post="${p.id}"
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();fbAddComment('${p.id}',null);}"
+          onkeydown="if(mentionKeyNav(event))return;if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();fbAddComment('${p.id}',null);}"
           oninput="fbMentionKey(event,'fb-new-${p.id}','${p.brand_id||activeBrand}')"
           onfocus="rtFocus(this)"
           onblur="mpBarHide();setTimeout(closeMentionBox,150)"></div>
         <button class="send46" onclick="fbAddComment('${p.id}',null)" title="Post"><i class="ti ti-arrow-up"></i></button>
       </div>
-      <div class="cextra">
+      <div class="cextra" data-drop="comment:${p.id}">
         <input type="file" id="fb-files-${p.id}" multiple style="display:none;" onchange="fbStageFiles('${p.id}',this.files)">
         ${(()=>{const fs=FB_STAGED[p.id]||[]; const n=fs.length;
           return `<span id="fb-staged-${p.id}" class="stagedn" style="display:${n?"inline-flex":"none"}"
