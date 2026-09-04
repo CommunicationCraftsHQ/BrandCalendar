@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v83.7 — Surendranagar: the post opens where it lives"/>
+<meta name="cc-tool-version" content="v83.9 — Surendranagar: the editor header is one line again"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3940,15 +3940,6 @@ function socialDateEdit(id,value){
   if(mo!==contentMonth){ contentMonth=mo; if(typeof toast==="function") toast(`Moved to ${d} ${(MN[mo]||"").slice(0,3)}`); }
   renderSocial(); buildContentSidebar();
 }
-function socialEventEdit(id,value){
-  const b=brands[activeBrand]; if(!b)return;
-  const p=(b.social||[]).find(x=>x.id===id); if(!p)return;
-  p.event_id=value||"";
-  dbSaveSocialPost(p);
-  showSavedCue(id);
-  const nm=(brandEventOptions(activeBrand).find(o=>o.id===value)||{}).name;
-  logActivity(id,value?`linked the post to ${nm||"a campaign"}`:"unlinked the post from its campaign");
-}
 function socialStatusEdit(id,value){
   socialFieldEdit(id,"status",value);
   const dot=document.getElementById("stdot-"+id); if(dot) dot.style.background=(SOCIAL_STATUS[value]||["","#888"])[1];
@@ -4473,20 +4464,23 @@ function socialEditForm(p){
   }
   return `<div style="background:var(--surface);border:1.5px solid #0EA5A5;border-radius:12px;overflow:hidden;">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 14px;background:var(--surface2);border-bottom:1px solid var(--div);">
-      <label title="Move this post to another date" style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;"><i class="ti ti-calendar-event" style="font-size:14px;color:#0E8A8A;"></i><input class="fi" type="date" style="height:28px;font-size:12px;font-weight:600;width:152px;padding:0 8px;" min="${YEAR}-01-01" max="${YEAR}-12-31" value="${YEAR}-${String(p.month).padStart(2,"0")}-${String(p.date).padStart(2,"0")}" onchange="socialDateEdit('${p.id}',this.value)"/></label>
-      <!-- SURENDRANAGAR — LINKED CAMPAIGN CAME ACROSS. It lived only in
-           the mocked-up new-post window, so deleting that window would
-           have quietly removed the only way to tie a post to a campaign.
-           A batch that tidies up is not allowed to cost a feature. -->
-      <label title="Tie this post to a campaign or event" style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;">
-        <i class="ti ti-flag" style="font-size:13px;color:#9D174D;"></i>
-        <select class="fi" style="height:28px;font-size:11.5px;font-weight:600;max-width:190px;padding:0 6px;" onchange="socialEventEdit('${p.id}',this.value)">
-          <option value="">— no campaign —</option>
-          ${brandEventOptions(activeBrand).map(o=>`<option value="${escAttr(o.id)}" ${p.event_id===o.id?"selected":""}>${o.camp?"◆ ":""}${escAttr(o.name)}</option>`).join("")}
-        </select>
-      </label>
+      <label title="Move this post to another date" style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;"><i class="ti ti-calendar-event" style="font-size:14px;color:#0E8A8A;"></i><input class="fi" type="date" style="height:28px;font-size:12px;font-weight:600;width:136px;padding:0 8px;" min="${YEAR}-01-01" max="${YEAR}-12-31" value="${YEAR}-${String(p.month).padStart(2,"0")}-${String(p.date).padStart(2,"0")}" onchange="socialDateEdit('${p.id}',this.value)"/></label>
+      <!-- ══ LINKED CAMPAIGN WAS HERE FOR ONE AFTERNOON ═══════════
+           I moved it in from the deleted new-post window rather than
+           lose a feature with it. Chirag: "I don't know where this came
+           from. This is unnecessary selection… all this makes this the
+           header two lines instead of one."
+
+           He is right and my caution was misplaced. A post's event_id is
+           WRITTEN and STORED and never read: no view shows it, nothing
+           filters on it, no export carries it. It was a control feeding
+           a field with no reader, and it cost a second header line to do
+           it. The field stays in the database, where it is harmless; the
+           control does not, and neither does the flag icon that labelled
+           it. Rescuing a feature nobody can see is not rescuing a
+           feature. -->
       <label style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;cursor:pointer;" onclick="socialToggleSyncInline('${p.id}')"><span style="width:26px;height:15px;border-radius:999px;background:${synced?"var(--acc)":"#C9C7BF"};position:relative;flex-shrink:0;"><span style="width:11px;height:11px;border-radius:50%;background:#fff;position:absolute;top:2px;${synced?"right:2px;":"left:2px;"}"></span></span> Same for both</label>
-      <span id="sv-${p.id}" style="font-size:10px;color:#0E8A8A;font-weight:700;opacity:0;transition:opacity 200ms;">Saved</span>
+      <span id="sv-${p.id}" title="Saved" style="font-size:13px;color:#0E8A8A;font-weight:700;opacity:0;transition:opacity 200ms;flex-shrink:0;"><i class="ti ti-check"></i></span>
       <span style="margin-left:auto;display:flex;align-items:center;gap:10px;">
         ${statusChipEditable(p)}
         <span style="font-size:11px;font-weight:700;color:#0E8A8A;cursor:pointer;" onclick="openPreview('${p.id}')"><i class="ti ti-eye"></i> Preview</span>
@@ -5001,7 +4995,7 @@ function openDay(m,day,expandId){
        every state, so leaving this one here offered the same door twice
        in one small panel — once beside the heading and once at the
        bottom. One row, one place to look. */
-    sec.innerHTML=`<div style="display:flex;align-items:center;gap:6px;margin:0 0 8px;"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#0E8A8A;display:flex;align-items:center;gap:6px;"><i class="ti ti-photo"></i> Social posts</span></div>`+socPosts.map(socialDayCardHtml).join("");
+    sec.innerHTML=socPosts.map(socialDayCardHtml).join("");
     body.appendChild(sec);
     if(allDayEvs.length){const div=document.createElement("div");div.style.cssText="height:1px;background:var(--div);margin:14px 0;";body.appendChild(div);}
   }
@@ -5079,24 +5073,43 @@ function openDay(m,day,expandId){
   dpAdd.style.display="";
   openM("day-pop");
 }
+/* ══ SURENDRANAGAR · A PLANNED IDEA IS ONE LINE ════════════════════
+   Chirag, on the first build of this: "when you've added a one line
+   idea this is what shows, not what we agreed."
+
+   What showed was the old day card — a full-width panel with both
+   platform icons, a status pill and an Edit button, saying "(no caption
+   yet)". Two things wrong with that. It is the wrong SIZE for a window
+   whose whole point was to stop wasting space, and it read the CAPTION,
+   so the one line he had just typed was the one thing not on screen.
+
+   A planned post at this stage is a format and an idea. That is the
+   row. */
 function socialDayCardHtml(p){
-  const st=SOCIAL_STATUS[p.status]||["",""];
-  const chip=SOCIAL_CHIP[p.status]||["#F1EFE8","#5F5E5A"];
-  const cap=p.content.instagram.caption||p.content.facebook.caption||"(no caption yet)";
-  const varied=p.synced===false;
-  const label=canEdit()?"Edit post":"View post";
-  return `<div style="background:var(--surface);border:1px solid var(--div);border-radius:10px;padding:11px 13px;margin-bottom:8px;">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
-      <span style="font-size:15px;color:#D4537E;"><i class="ti ti-brand-instagram"></i></span>
-      <span style="font-size:15px;color:#185FA5;"><i class="ti ti-brand-facebook"></i></span>
-      ${varied?`<span style="font-size:9px;color:#993C1D;background:#FAECE7;padding:1px 7px;border-radius:999px;font-weight:700;">varied</span>`:""}
-      <span style="font-size:10px;color:var(--muted);background:var(--bg);padding:1px 7px;border-radius:999px;">${p.format.charAt(0).toUpperCase()+p.format.slice(1)}</span>
-      ${p.time?`<span style="font-size:10px;color:var(--subtle);">${escAttr(p.time)}</span>`:""}
-      <span style="margin-left:auto;height:22px;padding:0 9px;border-radius:999px;font-size:11px;font-weight:700;background:${chip[0]};color:${chip[1]};display:flex;align-items:center;gap:5px;"><span style="width:6px;height:6px;border-radius:50%;background:${st[1]};"></span>${st[0]}</span>
-    </div>
-    <div style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${escAttr(cap)}</div>
-    <div style="text-align:right;"><button class="btn btn-s btn-sm" onclick="closeM('day-pop');openSocialEditorById('${p.id}')">${label}</button></div>
+  const st=SOCIAL_STATUS[p.status]||["","#888"];
+  const short={drafting:"Draft",review:"Review",approved:"Approved"}[p.status]||st[0]||"";
+  const idea=(p.content.concept||"").trim()
+    ||(p.content.instagram.caption||p.content.facebook.caption||"").trim();
+  const fmt=(p.format||"static");
+  const canE=canEdit();
+  return `<div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--bg);">
+    <span style="font-size:9px;font-weight:700;color:#5F5E5A;background:#F1EFE8;padding:2px 7px;border-radius:999px;flex-shrink:0;">${fmt.charAt(0).toUpperCase()+fmt.slice(1)}</span>
+    <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;${idea?"":"color:var(--subtle);font-style:italic;"}">${idea?escAttr(idea):"No idea yet"}</span>
+    <span style="display:flex;align-items:center;gap:4px;flex-shrink:0;"><span style="width:6px;height:6px;border-radius:50%;background:${st[1]};"></span><span style="font-size:11px;font-weight:600;color:${st[1]};">${short}</span></span>
+    <span onclick="openSocialEditorById('${p.id}')" style="font-size:11px;font-weight:700;color:${canE?"var(--muted)":"#0E8A8A"};cursor:pointer;flex-shrink:0;">${canE?"Edit":"View"}</span>
+    ${canE?`<i class="ti ti-trash" title="Delete" style="font-size:14px;color:#C62828;cursor:pointer;flex-shrink:0;" onclick="dayDeletePost('${p.id}')"></i>`:""}
   </div>`;
+}
+/* Deleting from the day window puts the day back, not the month list —
+   deleteContentPost re-renders a Content view that may not be on screen. */
+function dayDeletePost(id){
+  if(!canCap("delete_post")) return capDenied("Deleting a post");
+  const b=brands[activeBrand]; if(!b) return;
+  const p=(b.social||[]).find(x=>x.id===id); if(!p) return;
+  if(postHasContent(p)&&!confirm("This post has content. Delete it?")) return;
+  b.social=b.social.filter(x=>x.id!==id); dbTrashSocialPost(id);
+  render();
+  openDay(PLAN.m,PLAN.day);
 }
 
 function evDetailHtml(m,ev){
@@ -8635,7 +8648,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v83.7 — Surendranagar: the post opens where it lives";
+const TOOL_VERSION="v83.9 — Surendranagar: the editor header is one line again";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -12439,14 +12452,6 @@ const SOCIAL_FORMATS=["static","carousel","reel","story","video"];
 const seEsc=s=>escAttr(s);
 const sePad=n=>String(n).padStart(2,"0");
 function seHandle(name){return (name||"brand").toLowerCase().replace(/[^a-z0-9]/g,"")||"brand";}
-function brandEventOptions(brandId){
-  const b=brands[brandId]; if(!b) return [];
-  const ids=new Set(b.evIds||[]); const out=[]; const seen=new Set();
-  for(let m=1;m<=12;m++)(evs[m]||[]).forEach(e=>{
-    if((ids.has(e.id)||e._brandId===brandId)&&!seen.has(e.id)){seen.add(e.id);out.push({id:e.id,name:e.name,camp:e.cat==="cat5"});}
-  });
-  return out.sort((a,b)=>(b.camp?1:0)-(a.camp?1:0));
-}
 /* ══ SURENDRANAGAR · THE MOCKED-UP NEW-POST WINDOW IS GONE ══════════
    openSocialEditor / renderSocialEditor / renderPostCard /
    readSocialFields / socialToggleSync / socialSetTab /
