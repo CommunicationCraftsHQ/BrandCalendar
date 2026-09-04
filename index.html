@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v83.2 — Chennai: the zone is the composer"/>
+<meta name="cc-tool-version" content="v83.3 — Chennai: the queue keeps what you dropped"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -1296,9 +1296,14 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .stagedf .sfn{flex:1 1 auto;min-width:0;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap;}
 .stagedf b{font-weight:600;color:var(--subtle);flex:none;}
-.stagedf i{font-style:normal;cursor:pointer;color:var(--subtle);font-size:14px;
-  line-height:1;padding:0 3px;flex:none;}
-.stagedf i:hover{color:var(--acc);}
+/* CHENNAI — THE × WAS THERE AND NOBODY FOUND IT. Chirag: "there's no way
+   to delete an attachment before uploading". There was, at 14px in the
+   palest grey the file has, with no hit area of its own. A control that
+   is only discoverable by hovering the exact glyph is a control that
+   does not exist. Bigger, darker, and with room around it. */
+.stagedf i{font-style:normal;cursor:pointer;color:var(--muted);font-size:16px;
+  line-height:1;padding:2px 4px;border-radius:4px;margin:-2px -3px -2px 0;flex:none;}
+.stagedf i:hover{color:var(--acc);background:#FDEDED;}
 /* In progress. Quiet — this is the normal case, not an alarm. */
 .uplive{margin:8px 0 0;display:flex;flex-direction:column;gap:7px;}
 .uplive-r{background:var(--surface);border:1px solid var(--div);border-radius:9px;padding:8px 11px;}
@@ -7494,14 +7499,16 @@ async function taskSend(){
    of attachment for every screen to learn about, for nothing gained. */
 let TASK_STAGED=[];
 function taskStageFiles(files){
-  const seen=new Set(), out=[], dupes=[];
+  /* CHENNAI — adds, as fbStageFiles now does. Same bug, same reason:
+     written against a `multiple` picker, met one drop at a time. */
+  const seen=new Set(TASK_STAGED.map(f=>f.name+"|"+f.size)), out=TASK_STAGED.slice(), dupes=[];
   [...(files||[])].forEach(f=>{
     const k=f.name+"|"+f.size;
     if(seen.has(k)){ dupes.push(f.name); return; }
     seen.add(k); out.push(f);
   });
   TASK_STAGED=out;
-  if(dupes.length) toast(`"${dupes[0]}" was picked twice — keeping one`);
+  if(dupes.length) toast(`"${dupes[0]}" is already attached — keeping one`);
   render();
 }
 function taskUnstage(i){ TASK_STAGED.splice(i,1); render(); }
@@ -8480,7 +8487,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v83.2 — Chennai: the zone is the composer";
+const TOOL_VERSION="v83.3 — Chennai: the queue keeps what you dropped";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -11233,7 +11240,18 @@ function fbStageFiles(postId,files){
      blocked, and must not be: sending the same logo twice in a thread is
      a real thing to want. What stops those duplicates is the progress bar
      above, not a rule about filenames. */
-  const seen=new Set(), out=[], dupes=[];
+  /* CHENNAI — IT ADDS TO THE QUEUE. It used to replace it.
+     `FB_STAGED[postId]=out` was written for the file picker, which is
+     `multiple` and hands over everything in one call, so replacing was
+     the same as adding and nobody could tell. Drag and drop arrives one
+     drop at a time: the second image silently threw away the first.
+     Reported the day drop shipped.
+
+     The duplicate rule now spans what is ALREADY staged as well as what
+     just arrived, which is the same rule it always meant — the same file
+     twice in one comment is a mistake either way. */
+  const have=FB_STAGED[postId]||[];
+  const seen=new Set(have.map(f=>f.name+"|"+f.size)), out=have.slice(), dupes=[];
   [...(files||[])].forEach(f=>{
     const k=f.name+"|"+f.size;
     if(seen.has(k)){ dupes.push(f.name); return; }
@@ -11241,8 +11259,8 @@ function fbStageFiles(postId,files){
   });
   FB_STAGED[postId]=out;
   if(dupes.length) toast(dupes.length===1
-    ? `"${dupes[0]}" was picked twice — keeping one`
-    : `${dupes.length} files were picked twice — keeping one of each`);
+    ? `"${dupes[0]}" is already attached — keeping one`
+    : `${dupes.length} files were already attached — keeping one of each`);
   paintStaged(postId);
 }
 /* v46: the sentence in pale grey said the most and was seen the least.
