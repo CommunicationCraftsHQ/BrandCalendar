@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v83.9 — Surendranagar: the editor header is one line again"/>
+<meta name="cc-tool-version" content="v84.0 — Kota: everyone gets a face"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2655,6 +2655,7 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
         <!-- Refresh is gone. The calendar has synced in real time since
              Sydney; a Refresh button says we do not trust our own sync,
              and it sat one row above Sign out. -->
+        <div class="brow" onclick="closeAllPops();openEmojiPicker()"><span id="acct-emoji-row" style="font-size:15px;width:16px;text-align:center;line-height:1;">🙂</span><span class="bnm">Your emoji</span></div>
         <div class="brow" onclick="closeAllPops();showSetPass()"><i class="ti ti-key"></i><span class="bnm">Change password</span></div>
         <div class="brow" onclick="signOut()"><i class="ti ti-logout"></i><span class="bnm">Sign out</span></div>
       </div>
@@ -3073,6 +3074,28 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
      SURENDRANAGAR beside openSocialEditorById. -->
 
 <!-- PLANNING DAY PLANNER -->
+<!-- KOTA — the picker. -->
+<div class="overlay" id="ov-emoji" onclick="if(event.target===this)closeM('emoji')">
+  <div class="day-popup" style="max-width:470px;">
+    <div class="modal-top" style="gap:10px;">
+      <span id="em-current" style="font-size:23px;line-height:1;">🙂</span>
+      <div class="modal-title" style="flex:1;">Your emoji</div>
+      <button class="btn btn-s btn-sm" onclick="emojiSurprise()"><i class="ti ti-dice-5"></i> Surprise me</button>
+      <button class="modal-x" onclick="closeM('emoji')">✕</button>
+    </div>
+    <div class="modal-body" id="em-body" style="padding-top:6px;"></div>
+    <!-- THE NAME FOLLOWS THE POINTER. One line, so 72 of them can be on
+         screen at once without 72 captions. It is reserved height, not
+         conditional height — a caption that appears on hover would make
+         the whole window jump. -->
+    <div id="em-cap" style="padding:4px 18px 0;min-height:30px;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);"></div>
+    <div class="modal-foot">
+      <button class="btn btn-s btn-sm" onclick="emojiPick('')">Use my initials</button>
+      <button class="btn btn-g" style="margin-left:auto;" onclick="closeM('emoji')">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- SURENDRANAGAR — the one question "+ Add post" has to ask. -->
 <div class="overlay" id="ov-new-post-date" onclick="if(event.target===this)closeM('new-post-date')">
   <div class="day-popup" style="max-width:420px;">
@@ -3598,8 +3621,15 @@ function syncAccount(){
   const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
   set("acct-name",nm||"Signed in");
   set("acct-role",{admin:"Admin",team:"Team",client:"Client",pending:"Awaiting access"}[ME.role]||ME.role||"");
-  set("acct-av",(nm||"?").slice(0,1).toUpperCase());
+  /* YOUR OWN BUTTON. textContent everywhere else in syncAccount, so the
+     emoji goes in the same way — it is a character, not markup. */
+  const av=document.getElementById("acct-av");
+  if(av){
+    if(ME.emoji){ av.textContent=ME.emoji; av.style.fontSize="17px"; }
+    else { av.textContent=(nm||"?").slice(0,1).toUpperCase(); av.style.fontSize=""; }
+  }
   set("acct-email",ME.email||"");
+  paintMyEmojiRow();
 }
 
 function buildSidebar(){
@@ -4081,7 +4111,7 @@ function fbPanelHtml(p){
   const acts=POSTFB.activity[p.id]||[];
   const openN=threads.filter(t=>!t.top.resolved).length;
   const doneN=threads.length-openN;
-  const avatar=(name,kind)=>`<span style="width:24px;height:24px;border-radius:50%;background:${kind==="client"?"#378ADD":"#0D0D0D"};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${escAttr((name||"?").slice(0,2).toUpperCase())}</span>`;
+  const avatar=(name,kind)=>`<span style="width:24px;height:24px;border-radius:50%;background:${kind==="client"?"#378ADD":"#0D0D0D"};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${avatarInner(name,escAttr((name||"?").slice(0,2).toUpperCase()))}</span>`;
   const roleTag=kind=>kind==="client"
     ?`<span style="font-size:10px;font-weight:700;color:#378ADD;background:#E6F1FB;padding:1px 6px;border-radius:999px;">Client</span>`
     :`<span style="font-size:10px;font-weight:700;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:999px;">Team</span>`;
@@ -6428,7 +6458,7 @@ function renderBrandPeople(){
     const client=p&&p.role==="client";
     const me=String(ME.email||"").toLowerCase()===m.email;
     return `<div class="bp-r">
-      <span class="bp-av${client?" cli":""}">${escAttr((m.name||m.email).slice(0,2).toUpperCase())}</span>
+      <span class="bp-av${client?" cli":""}">${avatarInner(m.email||m.name,escAttr((m.name||m.email).slice(0,2).toUpperCase()))}</span>
       <div class="bp-nm"><b>${escAttr(m.name||m.email)}${me?" <span class='bp-you'>you</span>":""}</b>
         <span>${escAttr(m.email)}</span></div>
       ${m.am?`<span class="bp-tag am">Ac Manager</span>`
@@ -8648,7 +8678,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v83.9 — Surendranagar: the editor header is one line again";
+const TOOL_VERSION="v84.0 — Kota: everyone gets a face";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -9471,6 +9501,10 @@ async function loadPostFeedback(){
          decision 5 exists to prevent. Caught by tests/sao-paulo/stage3.js. */
       loadPeople()
     ]);
+    /* AFTER loadPeople, never before: it needs the directory to know
+       which emoji are already spoken for. Not awaited — nobody should
+       wait on a cosmetic write, and it repaints itself when it lands. */
+    assignEmojiIfNone();
     FB_AVAILABLE=true;
     POSTFB.comments={}; POSTFB.activity={}; POSTFB.reactions={}; FB_LOADED={};
     POSTFB.seen={};
@@ -10843,7 +10877,204 @@ function fbCopyLink(postId,commentId){
    does not have (a provider, a verified domain).
    ══════════════════════════════════════════════════════════════════ */
 
-let PEOPLE=[];                     // {id,email,name,role,brand_id}
+/* ══ KOTA · THE CAST LIST ═══════════════════════════════════════════
+   Eight tribes of nine. Grouped the way people describe themselves in a
+   studio rather than the way an emoji keyboard is ordered, and each one
+   named — you are choosing who you are on a thread, not which picture
+   you like. The names live HERE and nowhere else: a comment shows 🦉,
+   never "The night owl".
+
+   THE ONE RULE THAT DECIDED THE LIST: legible at 24px, which is the
+   size these actually render at. It is why there is no 🎞️, no 🪡 and
+   no 🧵 in here, however well they fit an agency. */
+const EMOJI_TRIBES=[
+  ["The night shift",[
+    ["🦉","The night owl","Ships at 2am, apologises at 11."],
+    ["🌙","The late one","Best work happens after dinner."],
+    ["🔦","The torch","Finds the file nobody else can."],
+    ["🥱","Running on fumes","Still here. Barely."],
+    ["🕯️","The vigil","Stays till it is done."],
+    ["⏰","The alarm","Reminds everyone what day it is."],
+    ["🌃","After hours","The office is empty. The work is not."],
+    ["🪫","Low battery","Give it an hour."],
+    ["🛌","Off the clock","Answers tomorrow, properly."]]],
+  ["Fuel",[
+    ["☕","The coffee","Do not speak before the second one."],
+    ["🍵","The chai","Four a day, minimum."],
+    ["🥤","The cold one","Ice, always, even in January."],
+    ["🧃","The juice","Wholesome. Suspiciously so."],
+    ["🍫","The sugar","Solves problems at 4pm."],
+    ["🍕","Late night order","Deadline food, no apologies."],
+    ["🌶️","Spicy takes","Feedback arrives hot."],
+    ["🥥","Fresh","Somehow never tired."],
+    ["🧋","The bubble tea","One meeting, one cup."]]],
+  ["Tools of the trade",[
+    ["✏️","The pencil","Sketches before opening anything."],
+    ["🖌️","The brush","Makes it beautiful, then argues about it."],
+    ["🖍️","The scribbler","Marks up everything."],
+    ["✂️","The cutter","Half the words, twice the punch."],
+    ["📐","The exact one","Nothing is 3px off on their watch."],
+    ["🎨","The colourist","Has opinions about that red."],
+    ["📷","The shooter","Would rather show than tell."],
+    ["🎬","The director","Sees the cut before the shoot."],
+    ["🎙️","The voice","Reads every line out loud first."]]],
+  ["Round seven",[
+    ["🔁","Round seven","Has seen this layout before. Twice."],
+    ["🚩","The flag","Spots the thing nobody wanted spotted."],
+    ["🍿","The spectator","Not on this one. Reading every comment anyway."],
+    ["🫡","On it","Replies before finishing the sentence."],
+    ["🥁","The drumroll","Never sends work without a build-up."],
+    ["🏁","Ship it","Good is good. Send it."],
+    ["🎯","Nailed the brief","First time. Every time. Allegedly."],
+    ["📌","The pin","Remembers what was agreed in March."],
+    ["🧾","The receipts","Has the thread. Has the date."]]],
+  ["Deadline weather",[
+    ["🔥","On fire","Either going very well or very badly."],
+    ["🌪️","Friday 6pm","Arrives with the brief and the deadline together."],
+    ["⚡","The quick one","Turnaround measured in minutes."],
+    ["🌊","The wave","Everything at once, then nothing."],
+    ["☔","The drizzle","Small notes, all day."],
+    ["🌈","After the storm","Stays for the calm bit."],
+    ["❄️","Cool head","Everything is fine. It usually is."],
+    ["🌋","The eruption","Quiet, quiet, quiet, opinion."],
+    ["☀️","The bright side","Finds one. Always."]]],
+  ["Where ideas come from",[
+    ["💡","The idea","Says it out loud before it is ready."],
+    ["🧠","The thinker","Two days quiet, then the answer."],
+    ["🪄","The fixer","Was broken. Isn't now. Won't explain."],
+    ["🧪","The experiment","Tries the thing nobody asked for."],
+    ["🔮","The oracle","Knew what the client would say."],
+    ["🎲","The gambler","Backs the risky route."],
+    ["🧩","The puzzler","Enjoys the brief that makes no sense."],
+    ["🗝️","The unlock","Finds the one line that cracks it."],
+    ["🪁","The kite","High concept, needs holding."]]],
+  ["Studio creatures",[
+    ["🐙","Eight at once","Four brands, three rounds, one hand free."],
+    ["🦊","The sly fix","Solved it, quietly, an hour ago."],
+    ["🐝","The busy one","Never not doing something."],
+    ["🐢","Slow and right","Late. Correct. Unbothered."],
+    ["🦅","The big picture","Sees the year, not the week."],
+    ["🐆","Fast turnaround","Blink and it is done."],
+    ["🦩","The standout","Would not blend in if paid to."],
+    ["🦔","Prickly in reviews","Means well. Sounds sharp."],
+    ["🐧","The team player","Goes where the group goes."]]],
+  ["Showing off",[
+    ["✨","The polish","Last 5% is theirs."],
+    ["🪩","The disco","Turns a status update into an event."],
+    ["🕶️","Too cool","Unbothered by the deadline."],
+    ["🎈","The lift","Makes a bad Monday tolerable."],
+    ["🧿","The guard","Keeps the bad brief away."],
+    ["🦄","The rare one","Does the thing nobody else can."],
+    ["🛼","The roll","Never stops moving."],
+    ["🏆","The winner","Awards shelf, personally curated."],
+    ["👑","The boss","Self-appointed, universally accepted."]]],
+];
+const EMOJI_ALL=EMOJI_TRIBES.flatMap(t=>t[1].map(e=>e[0]));
+const EMOJI_NAME=Object.fromEntries(EMOJI_TRIBES.flatMap(t=>t[1].map(e=>[e[0],[e[1],e[2]]])));
+
+/* ── the picker ────────────────────────────────────────────────────
+   Compact on his call: no explanatory paragraph, tribe labels doing the
+   work a sentence would have done, and the name of whatever you are
+   pointing at on one reserved line at the bottom. */
+function emojiTaken(){
+  const t={};
+  (PEOPLE||[]).forEach(pp=>{ if(pp.emoji&&pp.email!==ME.email) t[pp.emoji]=pp.name||pp.email; });
+  return t;
+}
+function renderEmojiPicker(){
+  const el=document.getElementById("em-body"); if(!el) return;
+  const taken=emojiTaken();
+  el.innerHTML=EMOJI_TRIBES.map(([tribe,list])=>
+    `<div style="font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#0E8A8A;margin:8px 0 4px;display:flex;align-items:center;gap:8px;">${escAttr(tribe)}<span style="flex:1;height:1px;background:var(--div);"></span></div>
+     <div style="display:grid;grid-template-columns:repeat(9,1fr);gap:3px;">`+
+      list.map(([e])=>{
+        const who=taken[e];
+        return `<span onclick="emojiPick('${e}')" onmouseenter="emojiHint('${e}')" title="${who?escAttr(who+" has this one"):""}"
+          style="height:32px;display:flex;align-items:center;justify-content:center;font-size:19px;line-height:1;border-radius:7px;cursor:pointer;border:1px solid ${ME.emoji===e?"var(--acc)":"transparent"};background:${ME.emoji===e?"#FDEDED":"transparent"};${who?"opacity:.4;":""}">${e}</span>`;
+      }).join("")+`</div>`).join("");
+  const cur=document.getElementById("em-current");
+  if(cur) cur.textContent=ME.emoji||"🙂";
+  emojiHint(ME.emoji||"");
+}
+function emojiHint(e){
+  const cap=document.getElementById("em-cap"); if(!cap) return;
+  const n=EMOJI_NAME[e];
+  cap.innerHTML=n
+    ? `<span style="font-size:19px;line-height:1;">${e}</span><span><b style="color:#0E8A8A;">${escAttr(n[0])}.</b> ${escAttr(n[1])}</span>`
+    : `<span style="color:var(--subtle);">Faded ones are somebody else's — you can still take one.</span>`;
+}
+function openEmojiPicker(){ renderEmojiPicker(); openM("emoji"); }
+/* One nobody has taken, so the button is worth pressing twice. */
+function emojiSurprise(){
+  const taken=emojiTaken();
+  const free=EMOJI_ALL.filter(e=>!taken[e]&&e!==ME.emoji);
+  const pool=free.length?free:EMOJI_ALL;
+  emojiPick(pool[Math.floor(Math.random()*pool.length)],true);
+}
+async function emojiPick(e,stay){
+  const before=ME.emoji||"";
+  ME.emoji=e||"";
+  /* painted first, saved second: the round trip is a network hop and
+     the grid should not wait for it to show what you clicked */
+  renderEmojiPicker(); syncAccount(); paintMyEmojiRow();
+  const mine=(PEOPLE||[]).find(x=>x.email===ME.email); if(mine) mine.emoji=ME.emoji;
+  const r=await sb.rpc("set_my_emoji",{e:ME.emoji});
+  if(r&&r.error){
+    ME.emoji=before; renderEmojiPicker(); syncAccount(); paintMyEmojiRow();
+    toast("That did not save — "+(r.error.message||"try again"),"err");
+    return;
+  }
+  render();
+  if(!stay) closeM("emoji");
+}
+function paintMyEmojiRow(){
+  const el=document.getElementById("acct-emoji-row");
+  if(el) el.textContent=ME.emoji||"🙂";
+}
+/* ══ EVERYONE ON THE TEAM STARTS WITH A FACE ═══════════════════════
+   Chirag: "for the team, there should be one randomly assigned to
+   everyone which they can change or bring it to their initials."
+
+   Done here rather than in a signup trigger, because it then covers
+   the 240 people who already exist AND everybody who arrives later,
+   with one mechanism instead of two that can disagree. Clients are
+   left alone: they pick if they want to.
+
+   It runs once per person, ever — the moment it succeeds they have an
+   emoji, so the condition is false from then on. */
+async function assignEmojiIfNone(){
+  try{
+    if(!ME.id||ME.emoji||ME.role==="client"||ME.role==="pending") return;
+    const taken=emojiTaken();
+    const free=EMOJI_ALL.filter(e=>!taken[e]);
+    const pool=free.length?free:EMOJI_ALL;
+    const pick=pool[Math.floor(Math.random()*pool.length)];
+    const r=await sb.rpc("set_my_emoji",{e:pick});
+    if(r&&r.error) return;              /* migration not run yet — initials */
+    ME.emoji=pick;
+    const mine=(PEOPLE||[]).find(x=>x.email===ME.email); if(mine) mine.emoji=pick;
+    syncAccount(); paintMyEmojiRow(); render();
+  }catch(e){}
+}
+
+/* Everyone else's, by the name a comment carries — which is the email's
+   local part, the same string PEOPLE is built with. Falls back to
+   nothing, and nothing means initials. */
+function emojiFor(nameOrEmail){
+  const k=String(nameOrEmail||"").toLowerCase().split("@")[0];
+  if(!k) return "";
+  if(ME.email&&k===String(ME.email).toLowerCase().split("@")[0]) return ME.emoji||"";
+  const p=(PEOPLE||[]).find(x=>String(x.name||"").toLowerCase()===k);
+  return (p&&p.emoji)||"";
+}
+/* The one shape every avatar in the file now goes through. Same circle,
+   same colour, same size — the emoji replaces the LETTERS, never the
+   ring, because the ring is how you tell a client from the team. */
+function avatarInner(nameOrEmail,letters){
+  const e=emojiFor(nameOrEmail);
+  return e?`<span style="font-size:1.55em;line-height:1;">${e}</span>`:letters;
+}
+let PEOPLE=[];                     // {id,email,name,role,brand_id,emoji}
 /* BA5 — read the DIRECTORY, not the profiles table.
    `profiles` is readable only by an admin (or someone with manage_users), so
    every other user got back exactly one row — their own — and since you are
@@ -10855,7 +11086,7 @@ let PEOPLE=[];                     // {id,email,name,role,brand_id}
 let PEOPLE_BLOCKED=false;   // true = we got a directory we know is truncated
 async function loadPeople(){
   try{
-    let r=await sb.from("people_directory").select("id,email,role,brand_id,tool_role,all_brands");
+    let r=await sb.from("people_directory").select("id,email,role,brand_id,tool_role,all_brands,emoji");
     if(r.error){
       // migration not applied yet — fall back so the app still runs
       r=await sb.from("profiles").select("id,email,role,brand_id");
@@ -10879,7 +11110,7 @@ async function loadPeople(){
        Team. Both are kept rather than one overwriting the other: they
        answer different questions and Stage 3 will retire the first. */
       role:x.role, toolRole:x.tool_role||null, allBrands:!!x.all_brands,
-      brand_id:x.brand_id
+      brand_id:x.brand_id, emoji:x.emoji||""
     }));
     /* If the only person we can see is ourselves, we are not looking at a
        small team — we are looking at a truncated read. Say so rather than
@@ -11011,7 +11242,7 @@ function fbMentionKey(e,inputId,brandId,teamOnly){
   box.style.cssText="position:absolute;z-index:9000;min-width:190px;padding:4px;";
   box.innerHTML=hits.length
     ? hits.map((pp,i)=>`<div class="brow${i===0?" on":""}" data-mi="${i}" onmousedown="fbPickMention(event,'${inputId}','${pp.name}')">
-      <span class="nav-av${pp.role==="client"?" client":""}" style="width:20px;height:20px;font-size:9px;">${escAttr(pp.name.slice(0,2).toUpperCase())}</span>
+      <span class="nav-av${pp.role==="client"?" client":""}" style="width:20px;height:20px;font-size:9px;">${avatarInner(pp.email||pp.name,escAttr(pp.name.slice(0,2).toUpperCase()))}</span>
       <span class="bnm">${escAttr(pp.name)}</span>
       <span style="font-size:10px;color:var(--subtle);">${pp.role==="client"?"client":"team"}</span></div>`).join("")
     : `<div style="padding:8px 10px;font-size:11.5px;color:var(--subtle);line-height:1.45;">
@@ -11247,7 +11478,7 @@ function notifRowHtml(it,bid){
      only thing that changed was one word in `.attr`, which is the
      smallest and greyest text on the row. */
   return `<div class="nrow unread${it.mention?" men":""}" onclick="notifOpen('${bid}','${it.kind}','${escAttr(target)}')">
-    <span class="nav-av${it.c.author_kind==="client"?" client":""}">${escAttr(String(it.c.author_name||"?").slice(0,2).toUpperCase())}</span>
+    <span class="nav-av${it.c.author_kind==="client"?" client":""}">${avatarInner(it.c.author_name,escAttr(String(it.c.author_name||"?").slice(0,2).toUpperCase()))}</span>
     <div class="nbody">
       <div class="msg">${fbRich(mpPlain(String(it.c.body||"")).slice(0,160))}</div>
       <div class="attr"><span class="who">${escAttr(it.c.author_name)}</span>${it.c.author_kind==="client"?` <span class="nkind">· client</span>`:""} ${verb} ·
@@ -13514,9 +13745,9 @@ async function boot(){
     authMsg("That is not a Communication Crafts mailbox. Sign in with your email and password below.");
     return;
   }
-  const {data:prof,error}=await sb.from("profiles").select("role,brand_id,email").eq("id",session.user.id).single();
+  const {data:prof,error}=await sb.from("profiles").select("role,brand_id,email,emoji").eq("id",session.user.id).single();
   if(error){authMsg(error.message);document.getElementById("auth-screen").style.display="flex";return;}
-  ME={id:session.user.id,role:prof.role,brand_id:prof.brand_id,email:prof.email||session.user.email};
+  ME={id:session.user.id,role:prof.role,brand_id:prof.brand_id,email:prof.email||session.user.email,emoji:prof.emoji||""};
   /* ACCESS STAGE 2 — the calendar starts reading the consolidated model,
      with the legacy field as a LIVE fallback. See resolveAccess(). */
   await resolveAccess(session.user.id, prof.role);
@@ -13725,7 +13956,7 @@ function fbPanelHtml(p){
   const openN=threads.filter(t=>!t.top.resolved).length;
   const doneN=threads.length-openN;
 
-  const av=(name,kind)=>`<span class="av46${kind==="client"?" cl":""}">${escAttr((name||"?").slice(0,2).toUpperCase())}</span>`;
+  const av=(name,kind)=>`<span class="av46${kind==="client"?" cl":""}">${avatarInner(name,escAttr((name||"?").slice(0,2).toUpperCase()))}</span>`;
 
   /* reactions show only what exists; adding one lives with the actions,
      which are hidden until you reach the comment */
