@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v83.1 — Chennai: the menu answers the keyboard"/>
+<meta name="cc-tool-version" content="v83.2 — Chennai: the zone is the composer"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -4162,7 +4162,7 @@ function fbPanelHtml(p){
         ${tagText?`<div style="font-size:12px;line-height:1.5;color:#185FA5;margin-top:5px;">${escAttr(tagText)}</div>`:""}
       </div>
     </div>`;
-  const composer=canComment()?`<div style="display:flex;gap:9px;align-items:flex-start;margin-top:10px;">
+  const composer=canComment()?`<div data-drop="comment:${p.id}" style="display:flex;gap:9px;align-items:flex-start;margin-top:10px;">
       ${avatar(actorName(),actorKind())}
       <div style="flex:1;display:flex;gap:7px;">
         <textarea id="fb-new-${p.id}" class="fi ta" rows="1" style="min-height:34px;font-size:13px;flex:1;resize:vertical;"
@@ -6148,11 +6148,17 @@ function buildBrandPanel(){
   h+=`<div class="bp-q"><i class="ti ti-search"></i><input id="brl-q" placeholder="Find a brand…"
         value="${escAttr(BRQ)}" oninput="brSearchKey(this.value)" onclick="event.stopPropagation()"></div>`;
   if(canSeeAll){
-    h+=`<div class="bphead">Viewing</div>
-        <div class="brow${activeBrand?"":" on"}" onclick="pickBrand('')">
+    /* CHENNAI — THE TWO HEADINGS GO TOO. "Viewing" sat above a single
+       row and "Brands" above a list of brands in a panel titled with a
+       brand: both said what the reader could already see, and both cost
+       a line in the list he asked to make shorter. The rule stays the
+       same everywhere in this file — a label that repeats its content is
+       not a label. The separator stays: All brands IS a different kind
+       of row, and that is worth a line. */
+    h+=`<div class="brow${activeBrand?"":" on"}" onclick="pickBrand('')">
           <span class="bdot" style="background:var(--text)"></span>
           <span class="bnm">All brands</span><span class="bct">${brandCount("")}</span></div>
-        <div class="bpsep"></div><div class="bphead">Brands</div>`;
+        <div class="bpsep"></div>`;
   }
   /* LUCERN — A BRAND YOU ARE NOT ON DROPS OUT OF THIS LIST, and the one
      you are looking at never does. Being removed from a brand while
@@ -7612,14 +7618,14 @@ function renderTask(){
      <div class="tk-grid">
        <div class="tk-thread">
          ${body}
-         <div class="th-c">
+         <div class="th-c" data-drop="task:">
            <span class="th-av">${escHtml(brInitials(ME.id)||"··")}</span>
            <div style="flex:1">
              <textarea id="th-in" rows="2" placeholder="${TASK.asClient?"What the client said…":"Write a message…"}"
                onkeydown="mentionKeyNav(event)"
                oninput="TASK.draft=this.value;fbMentionKey(event,'th-in',activeBrand,true)"
                onblur="closeMentionBox()">${escHtml(TASK.draft||"")}</textarea>
-             <div class="th-cb" data-drop="task:">
+             <div class="th-cb">
                <button class="th-chip" onclick="mentionStart('th-in')">@ Tag someone</button>
                <input type="file" id="th-files" multiple style="display:none;"
                       onchange="taskStageFiles(this.files)">
@@ -8474,7 +8480,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v83.1 — Chennai: the menu answers the keyboard";
+const TOOL_VERSION="v83.2 — Chennai: the zone is the composer";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -13817,7 +13823,15 @@ function fbPanelHtml(p){
       <span class="sp">${doneN?`<button class="tog${showDone?" on":""}" onclick="fbToggleDone('${p.id}')">${doneN} resolved</button>`:""}</span>
     </div>`;
 
-  const composer=canComment()?`<div class="comp46">
+  /* CHENNAI, corrected the same day: THE ZONE IS THE WHOLE COMPOSER.
+     It was on .cextra — the thin strip of staged-file chips BELOW the
+     text box — so dropping on the text box, which is where anybody
+     would drop, walked up from a sibling and found nothing. Reported
+     within the hour as "drag and drop not working", and it was.
+
+     .comp46 wraps the avatar, the text box, the send button and that
+     strip, so every part of the composer is the target. */
+  const composer=canComment()?`<div class="comp46" data-drop="comment:${p.id}">
       <div class="crow46">${av(actorName(),actorKind())}
         <div id="fb-new-${p.id}" class="cin46 rt" contenteditable="true" data-ph="Write a comment" data-att="comment" data-post="${p.id}"
           onkeydown="if(mentionKeyNav(event))return;if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();fbAddComment('${p.id}',null);}"
@@ -13826,7 +13840,7 @@ function fbPanelHtml(p){
           onblur="mpBarHide();setTimeout(closeMentionBox,150)"></div>
         <button class="send46" onclick="fbAddComment('${p.id}',null)" title="Post"><i class="ti ti-arrow-up"></i></button>
       </div>
-      <div class="cextra" data-drop="comment:${p.id}">
+      <div class="cextra">
         <input type="file" id="fb-files-${p.id}" multiple style="display:none;" onchange="fbStageFiles('${p.id}',this.files)">
         ${(()=>{const fs=FB_STAGED[p.id]||[]; const n=fs.length;
           return `<span id="fb-staged-${p.id}" class="stagedn" style="display:${n?"inline-flex":"none"}"
