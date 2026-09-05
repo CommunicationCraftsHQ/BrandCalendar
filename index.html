@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v86.1 — Wasp: the frame is a page"/>
+<meta name="cc-tool-version" content="v87.0 — Wasp: the shoot has a conversation"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -129,24 +129,38 @@ body.planning .mc-day:hover{box-shadow:0 0 0 2px #0EA5A5 inset;border-radius:5px
    wash owns the fill. */
 /* the request form, in a frame. Solid, not the .92 panel — this
    overhangs the month plan and a blurred form reads as a fault. */
-.overlay.prodframe .pf-box{width:min(1180px,96vw);height:min(880px,92vh);background:#fff;
+.overlay.prodframe .pf-box{width:min(1120px,94vw);height:auto;max-height:92vh;background:#fff;
   border-radius:20px;overflow:hidden;box-shadow:0 24px 70px rgba(13,13,13,.28);}
-.overlay.prodframe iframe{width:100%;height:100%;border:0;display:block;}
+.overlay.prodframe iframe{width:100%;border:0;display:block;transition:height 140ms;}
 /* the month plan's Production section */
 .prodbb .prow{display:flex;align-items:center;gap:11px;padding:8px 11px;border-top:1px solid var(--div);}
 .prodbb .prow:first-child{border-top:none;}
-.prodbb .pst{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
-  border-radius:999px;padding:2px 8px;flex:none;width:78px;text-align:center;}
+.prodbb .pst{font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+  border-radius:999px;padding:2px 8px;flex:none;width:88px;text-align:center;white-space:nowrap;}
 .prodbb .pst.req{background:#FCEBEB;color:#8E2323;}
 .prodbb .pst.sch{background:#E8F0FE;color:#1D4ED8;}
 .prodbb .pst.nod{background:#EFEDF6;color:#5C5077;}
 .prodbb .pst.done{background:#EAF3DE;color:#3B6D11;}
 .prodbb .pst.canc{background:#F0F0EE;color:#8A8A85;}
-.prodbb .pwhen{font-size:12.5px;font-weight:700;width:130px;flex:none;font-variant-numeric:tabular-nums;}
+.prodbb .pwhen{font-size:12.5px;font-weight:700;width:142px;flex:none;font-variant-numeric:tabular-nums;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .prodbb .pwhen.soft{color:var(--subtle);font-weight:600;}
 .prodbb .pwhat{flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .prodbb .pwhat s{text-decoration:none;color:var(--muted);}
 .prodbb .pgo{font-size:11.5px;font-weight:700;color:var(--acc);white-space:nowrap;cursor:pointer;}
+.prodbb .psaid{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;
+  color:#5C5077;background:#EFEDF6;border:1px solid #E1DDF0;border-radius:999px;
+  padding:1px 7px;flex:none;line-height:1.5;}
+/* the files belong to the shoot described on the line above, so they
+   start where that description starts — 11 padding + 78 status + 11
+   gap + 142 when + 11 gap. Indented to the DATE column, as they were,
+   they read as a second row of their own. */
+.prodbb .pfiles{display:flex;flex-wrap:wrap;gap:5px;padding:0 12px 8px 263px;margin-top:-2px;}
+.prodbb .pfile{display:inline-flex;align-items:center;gap:5px;max-width:220px;font-size:11px;
+  font-weight:600;color:var(--muted);border:1px solid var(--div);border-radius:7px;
+  padding:3px 8px;background:var(--surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.prodbb .pfile.k-image{border-color:#CFE0F6;} .prodbb .pfile.k-video{border-color:#E4CFF6;}
+.prodbb .pfile.more{color:var(--subtle);}
 .prodbb .pdiv{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
   color:var(--subtle);padding:9px 11px 4px;border-top:1px solid var(--div);}
 .prodbb .prodfoot{display:flex;justify-content:flex-end;padding:10px 11px 4px;}
@@ -8729,7 +8743,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v86.1 — Wasp: the frame is a page";
+const TOOL_VERSION="v87.0 — Wasp: the shoot has a conversation";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -9141,6 +9155,35 @@ async function loadProductions(){
     PRODS=(r.error||!r.data)?[]:r.data;
   }catch(e){ PRODS=[]; }
 }
+/* WASP — a shoot's moodboards, scripts and references. Read once with
+   the shoots, keyed by the shoot they hang off, so the month plan can
+   show them without a request per row. Staff only: the migration's
+   policy refuses these to a client, and a refused read comes back
+   empty, which is the right answer for them. */
+let PRODFILES={};
+async function loadProductionFiles(){
+  try{
+    const r=await sb.from("assets").select("*")
+      .in("owner_kind",["production","production_comment"]).is("deleted_at",null);
+    PRODFILES={};
+    (r.data||[]).forEach(a=>{ (PRODFILES[a.owner_id]=PRODFILES[a.owner_id]||[]).push(a); });
+  }catch(e){ PRODFILES={}; }
+}
+/* everything on the shoot itself plus everything said in its thread */
+function prodFilesFor(p,commentIds){
+  const out=(PRODFILES[p.id]||[]).slice();
+  (commentIds||[]).forEach(cid=>(PRODFILES[cid]||[]).forEach(a=>out.push(a)));
+  return out;
+}
+let PRODCOMMENTS={};
+async function loadProductionComments(){
+  try{
+    const r=await sb.from("post_comments").select("id,production_id,body,author_name,created_at")
+      .not("production_id","is",null).is("deleted_at",null).order("created_at");
+    PRODCOMMENTS={};
+    (r.data||[]).forEach(c=>{ (PRODCOMMENTS[c.production_id]=PRODCOMMENTS[c.production_id]||[]).push(c); });
+  }catch(e){ PRODCOMMENTS={}; }
+}
 const prodDated=p=>!!(p.date_year&&p.date_month&&p.date_day);
 const prodIsRequest=p=>!!p.requested_by&&!prodDated(p);
 /* every day a shoot covers, so a three-day shoot marks three days */
@@ -9223,6 +9266,8 @@ async function loadAll(showToast){
   G={inds:inds.data,evts:evts.data,brs:brs.data,bevs:bevs.data,prefs:prefs.data||[],posts:posts.data,briefs:briefs.data,social:social.data,monthPlans:monthPlans.data,monthItems:monthItems.data};
   await loadProductions();  // Minsk: non-fatal — the day mark and the
                             // month plan's Production section both read it
+  await loadProductionComments();  // Wasp
+  await loadProductionFiles();     // Wasp
   await loadPostFeedback(); // Atlas: non-fatal — panel hides if tables absent
   await loadBranding(activeBrand); // Cape Town: non-fatal, same contract
   buildYearView();
@@ -12292,6 +12337,10 @@ function startRealtime(){
        request you sent yourself, from this page. This covers all of
        them, including changes made by somebody else entirely. */
     on("productions",rtProduction);
+    /* Wasp — a moodboard added in the Planner shows up here without a
+       reload, the same way the shoot itself does. */
+    on("post_comments",async()=>{ await loadProductionComments(); rerenderAfterProd(); });
+    on("assets",async()=>{ await loadProductionFiles(); rerenderAfterProd(); });
     ch.subscribe();
     RT_CHANNEL=ch;
   }catch(e){}
@@ -12995,7 +13044,7 @@ function openProdInPlanner(id){
 function prodFrameOpen(url){
   const w=document.createElement("div");
   w.className="overlay open prodframe"; w.id="prodframe";
-  w.innerHTML=`<div class="pf-box"><iframe src="${escAttr(url)}" title="Request a production"></iframe></div>`;
+  w.innerHTML=`<div class="pf-box"><iframe src="${escAttr(url)}" title="Request a production" style="height:700px"></iframe></div>`;
   w.addEventListener("mousedown",e=>{ if(e.target===w) prodFrameClose(); });
   document.body.appendChild(w);
 }
@@ -13005,6 +13054,12 @@ function prodFrameClose(){
 window.addEventListener("message",async e=>{
   if(e.origin!==PLANNER_ORIGIN) return;
   const d=e.data; if(!d||d.cc!=="minsk") return;
+  /* the height message arrives FIRST and often — it must be handled
+     before the close, or the frame shuts itself the moment it has
+     measured itself. Caught by the gate on the first run. */
+  if(d.height){ const f=document.querySelector("#prodframe iframe");
+    if(f) f.style.height=Math.min(d.height, Math.round(window.innerHeight*0.92))+"px";
+    return; }
   prodFrameClose();
   if(d.saved){ await loadProductions(); toast("Request sent"); rerenderAfterProd(); }
 });
@@ -16432,12 +16487,21 @@ function mpvProdRow(p){
   const pl=(p.locations||[]); if(pl.length) bits.push(pl.join(", "));
   const crew=(p.team||[]).filter(Boolean); if(crew.length) bits.push(crew.length>2?crew[0]+" +"+(crew.length-1):crew.join(", "));
   if(prodIsRequest(p)&&p.requested_email) bits.push("asked by "+escHtml(String(p.requested_email).split("@")[0]));
+  const cids=(PRODCOMMENTS[p.id]||[]).map(c=>c.id);
+  const files=prodFilesFor(p,cids);
+  const said=(PRODCOMMENTS[p.id]||[]).length;
+  const chips=files.length?`<div class="pfiles">${files.slice(0,6).map(a=>
+      `<span class="pfile k-${escAttr(a.kind)}" title="${escAttr(a.filename||"")}"><i class="ti ${
+        a.kind==="image"?"ti-photo":a.kind==="video"?"ti-video":"ti-file"}"></i>${
+        escHtml(a.filename||"file")}</span>`).join("")}${
+      files.length>6?`<span class="pfile more">+${files.length-6}</span>`:""}</div>`:"";
   return `<div class="prow">
     <span class="pst ${st[0]}">${st[1]}</span>
     <span class="pwhen${prodDated(p)?"":" soft"}">${escHtml(prodWhen(p))}</span>
     <span class="pwhat">${escHtml(bits.shift())}<s>${bits.length?" · "+escHtml(bits.join(" · ")):""}</s></span>
+    ${said?`<span class="psaid" title="${said} message${said===1?"":"s"}"><i class="ti ti-message-2"></i>${said}</span>`:""}
     <span class="pgo" onclick="openProdInPlanner('${escAttr(p.id)}')">Open ›</span>
-  </div>`;
+  </div>${chips}`;
 }
 function mpvProductionHtml(m,canE){
   if(!activeBrand||!brands[activeBrand]) return "";
