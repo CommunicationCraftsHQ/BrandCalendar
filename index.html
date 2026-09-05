@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v84.2 — Kota: the face lands on the tag"/>
+<meta name="cc-tool-version" content="v84.3 — Kota: nothing you did not choose says anything about you"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -8678,7 +8678,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v84.2 — Kota: the face lands on the tag";
+const TOOL_VERSION="v84.3 — Kota: nothing you did not choose says anything about you";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -10970,6 +10970,26 @@ const EMOJI_TRIBES=[
     ["👑","The boss","Self-appointed, universally accepted."]]],
 ];
 const EMOJI_ALL=EMOJI_TRIBES.flatMap(t=>t[1].map(e=>e[0]));
+/* ══ KOTA v84.3 · NOTHING THAT READS AS A JUDGEMENT IS EVER HANDED OUT
+   Chirag: "I'm a little worried that someone may carry a wrong message
+   from an assigned emoji — for example Dhwanit is assigned a bed, he
+   should not think that this is what the system or the agency thinks
+   about him."
+
+   He is right, and it is a distinction I did not make. Self-deprecation
+   is funny when you CHOOSE it and an insult when somebody hands it to
+   you — and in a 240-person agency an automatic handout arrives looking
+   like it came from management.
+
+   So these stay in the picker, where anybody who finds them funny can
+   take one, and they are never given to anyone: not by the first-load
+   handout, and not by Surprise me either, which is random rather than
+   chosen and would land exactly the same way.
+
+   The test for this list is not "is it negative" but "would a person
+   wonder whether somebody meant it". */
+const EMOJI_NEVER_ASSIGN=new Set(["🥱","🛌","🪫","🐢","🦔","🕶️","🍿","👑","🌋","🌪️"]);
+const EMOJI_ASSIGNABLE=EMOJI_ALL.filter(e=>!EMOJI_NEVER_ASSIGN.has(e));
 const EMOJI_NAME=Object.fromEntries(EMOJI_TRIBES.flatMap(t=>t[1].map(e=>[e[0],[e[1],e[2]]])));
 
 /* ── the picker ────────────────────────────────────────────────────
@@ -11007,8 +11027,8 @@ function openEmojiPicker(){ renderEmojiPicker(); openM("emoji"); }
 /* One nobody has taken, so the button is worth pressing twice. */
 function emojiSurprise(){
   const taken=emojiTaken();
-  const free=EMOJI_ALL.filter(e=>!taken[e]&&e!==ME.emoji);
-  const pool=free.length?free:EMOJI_ALL;
+  const free=EMOJI_ASSIGNABLE.filter(e=>!taken[e]&&e!==ME.emoji);
+  const pool=free.length?free:EMOJI_ASSIGNABLE;
   emojiPick(pool[Math.floor(Math.random()*pool.length)],true);
 }
 async function emojiPick(e,stay){
@@ -11046,8 +11066,8 @@ async function assignEmojiIfNone(){
   try{
     if(!ME.id||ME.emoji||ME.role==="client"||ME.role==="pending") return;
     const taken=emojiTaken();
-    const free=EMOJI_ALL.filter(e=>!taken[e]);
-    const pool=free.length?free:EMOJI_ALL;
+    const free=EMOJI_ASSIGNABLE.filter(e=>!taken[e]);
+    const pool=free.length?free:EMOJI_ASSIGNABLE;
     const pick=pool[Math.floor(Math.random()*pool.length)];
     const r=await sb.rpc("set_my_emoji",{e:pick});
     if(r&&r.error) return;              /* migration not run yet — initials */
@@ -11185,9 +11205,15 @@ function brMentions(body){
    column any signed-in person can write to, and eight characters is
    enough to open a tag. Nothing in the app trusts it. */
 function fbHighlightMentions(h){
+  /* KOTA v84.3 — RED MEANS YOU. Every mention was the accent colour, so
+     five in a row shouted equally and none of them meant anything. The
+     emoji does the identifying now, which frees the colour to say the
+     one thing worth saying on a busy thread: this one is about you. */
+  const mine=String(ME.email||"").toLowerCase().split("@")[0];
   return h.replace(/(^|\s)@([A-Za-z0-9._-]+)/g,(m,pre,name)=>{
     const e=emojiFor(name);
-    return pre+'<span style="color:var(--acc);font-weight:700;white-space:nowrap;">'+
+    const isMe=mine&&String(name).toLowerCase()===mine;
+    return pre+'<span style="color:'+(isMe?"var(--acc)":"var(--text)")+';font-weight:700;white-space:nowrap;">'+
       (e?'<span style="font-style:normal;">'+escAttr(e)+'</span>\u00a0':'')+
       '@'+name+'</span>';
   });
