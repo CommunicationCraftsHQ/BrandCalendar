@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v84.3 — Kota: nothing you did not choose says anything about you"/>
+<meta name="cc-tool-version" content="v84.4 — Kota: nothing in the picker is dimmed"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -8678,7 +8678,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v84.3 — Kota: nothing you did not choose says anything about you";
+const TOOL_VERSION="v84.4 — Kota: nothing in the picker is dimmed";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -10995,7 +10995,14 @@ const EMOJI_NAME=Object.fromEntries(EMOJI_TRIBES.flatMap(t=>t[1].map(e=>[e[0],[e
 /* ── the picker ────────────────────────────────────────────────────
    Compact on his call: no explanatory paragraph, tribe labels doing the
    work a sentence would have done, and the name of whatever you are
-   pointing at on one reserved line at the bottom. */
+   pointing at on one reserved line at the bottom.
+
+   NOTHING IS DIMMED. The taken ones were drawn at 40% so you could see
+   they were spoken for. Chirag: "there is no need to reduce visibility
+   of any emoji, everything should be appearing normal — since I am
+   myself, I'm going to select now." Fading them made a picker of 72
+   look like a picker of 60, and dissuaded people from a choice that was
+   never actually blocked. Who holds one is still on the hover. */
 function emojiTaken(){
   const t={};
   (PEOPLE||[]).forEach(pp=>{ if(pp.emoji&&pp.email!==ME.email) t[pp.emoji]=pp.name||pp.email; });
@@ -11010,7 +11017,7 @@ function renderEmojiPicker(){
       list.map(([e])=>{
         const who=taken[e];
         return `<span onclick="emojiPick('${e}')" onmouseenter="emojiHint('${e}')" title="${who?escAttr(who+" has this one"):""}"
-          style="height:32px;display:flex;align-items:center;justify-content:center;font-size:19px;line-height:1;border-radius:7px;cursor:pointer;border:1px solid ${ME.emoji===e?"var(--acc)":"transparent"};background:${ME.emoji===e?"#FDEDED":"transparent"};${who?"opacity:.4;":""}">${e}</span>`;
+          style="height:32px;display:flex;align-items:center;justify-content:center;font-size:19px;line-height:1;border-radius:7px;cursor:pointer;border:1px solid ${ME.emoji===e?"var(--acc)":"transparent"};background:${ME.emoji===e?"#FDEDED":"transparent"};">${e}</span>`;
       }).join("")+`</div>`).join("");
   const cur=document.getElementById("em-current");
   if(cur) cur.textContent=ME.emoji||"🙂";
