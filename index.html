@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v84.0 — Kota: everyone gets a face"/>
+<meta name="cc-tool-version" content="v84.1 — Kota: the face comes out of the hole"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3625,8 +3625,8 @@ function syncAccount(){
      emoji goes in the same way — it is a character, not markup. */
   const av=document.getElementById("acct-av");
   if(av){
-    if(ME.emoji){ av.textContent=ME.emoji; av.style.fontSize="17px"; }
-    else { av.textContent=(nm||"?").slice(0,1).toUpperCase(); av.style.fontSize=""; }
+    if(ME.emoji){ av.textContent=ME.emoji; av.style.fontSize="17px"; av.style.background="transparent"; av.style.color="inherit"; }
+    else { av.textContent=(nm||"?").slice(0,1).toUpperCase(); av.style.fontSize=""; av.style.background=""; av.style.color=""; }
   }
   set("acct-email",ME.email||"");
   paintMyEmojiRow();
@@ -4111,7 +4111,7 @@ function fbPanelHtml(p){
   const acts=POSTFB.activity[p.id]||[];
   const openN=threads.filter(t=>!t.top.resolved).length;
   const doneN=threads.length-openN;
-  const avatar=(name,kind)=>`<span style="width:24px;height:24px;border-radius:50%;background:${kind==="client"?"#378ADD":"#0D0D0D"};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${avatarInner(name,escAttr((name||"?").slice(0,2).toUpperCase()))}</span>`;
+  const avatar=(name,kind)=>`<span style="width:24px;height:24px;border-radius:50%;background:${kind==="client"?"#378ADD":"#0D0D0D"};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;${avatarSkin(name,kind==="client")}">${avatarInner(name,escAttr((name||"?").slice(0,2).toUpperCase()))}</span>`;
   const roleTag=kind=>kind==="client"
     ?`<span style="font-size:10px;font-weight:700;color:#378ADD;background:#E6F1FB;padding:1px 6px;border-radius:999px;">Client</span>`
     :`<span style="font-size:10px;font-weight:700;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:999px;">Team</span>`;
@@ -6458,7 +6458,7 @@ function renderBrandPeople(){
     const client=p&&p.role==="client";
     const me=String(ME.email||"").toLowerCase()===m.email;
     return `<div class="bp-r">
-      <span class="bp-av${client?" cli":""}">${avatarInner(m.email||m.name,escAttr((m.name||m.email).slice(0,2).toUpperCase()))}</span>
+      <span class="bp-av${client?" cli":""}" style="${avatarSkin(m.email||m.name,client)}">${avatarInner(m.email||m.name,escAttr((m.name||m.email).slice(0,2).toUpperCase()))}</span>
       <div class="bp-nm"><b>${escAttr(m.name||m.email)}${me?" <span class='bp-you'>you</span>":""}</b>
         <span>${escAttr(m.email)}</span></div>
       ${m.am?`<span class="bp-tag am">Ac Manager</span>`
@@ -8678,7 +8678,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v84.0 — Kota: everyone gets a face";
+const TOOL_VERSION="v84.1 — Kota: the face comes out of the hole";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -11074,6 +11074,24 @@ function avatarInner(nameOrEmail,letters){
   const e=emojiFor(nameOrEmail);
   return e?`<span style="font-size:1.55em;line-height:1;">${e}</span>`:letters;
 }
+/* ══ KOTA v84.1 · THE DISC GOES WHEN THE EMOJI ARRIVES ══════════════
+   Chirag: "my emoji comes on a black background, why?"
+
+   Because I kept the circle. My reasoning was that the coloured disc is
+   how a client is told apart from the team, so the emoji should replace
+   the LETTERS and leave the ring — and as a rule that is right. It is
+   wrong for the specific case: a fox on a black disc is a fox in a hole.
+   Letters need a dark field to be readable on; a full-colour emoji does
+   not, and fighting one is what makes it look pasted on.
+
+   So the fill goes and the client signal moves to a ring drawn INSIDE
+   the same circle — same size, same position, still blue, still the
+   thing you read at a glance. Nobody with initials is touched. */
+function avatarSkin(nameOrEmail,isClient){
+  if(!emojiFor(nameOrEmail)) return "";
+  return "background:transparent;color:inherit;"+
+         (isClient?"box-shadow:inset 0 0 0 2px #378ADD;":"");
+}
 let PEOPLE=[];                     // {id,email,name,role,brand_id,emoji}
 /* BA5 — read the DIRECTORY, not the profiles table.
    `profiles` is readable only by an admin (or someone with manage_users), so
@@ -11242,7 +11260,7 @@ function fbMentionKey(e,inputId,brandId,teamOnly){
   box.style.cssText="position:absolute;z-index:9000;min-width:190px;padding:4px;";
   box.innerHTML=hits.length
     ? hits.map((pp,i)=>`<div class="brow${i===0?" on":""}" data-mi="${i}" onmousedown="fbPickMention(event,'${inputId}','${pp.name}')">
-      <span class="nav-av${pp.role==="client"?" client":""}" style="width:20px;height:20px;font-size:9px;">${avatarInner(pp.email||pp.name,escAttr(pp.name.slice(0,2).toUpperCase()))}</span>
+      <span class="nav-av${pp.role==="client"?" client":""}" style="width:20px;height:20px;font-size:9px;${avatarSkin(pp.email||pp.name,pp.role==="client")}">${avatarInner(pp.email||pp.name,escAttr(pp.name.slice(0,2).toUpperCase()))}</span>
       <span class="bnm">${escAttr(pp.name)}</span>
       <span style="font-size:10px;color:var(--subtle);">${pp.role==="client"?"client":"team"}</span></div>`).join("")
     : `<div style="padding:8px 10px;font-size:11.5px;color:var(--subtle);line-height:1.45;">
@@ -11478,7 +11496,7 @@ function notifRowHtml(it,bid){
      only thing that changed was one word in `.attr`, which is the
      smallest and greyest text on the row. */
   return `<div class="nrow unread${it.mention?" men":""}" onclick="notifOpen('${bid}','${it.kind}','${escAttr(target)}')">
-    <span class="nav-av${it.c.author_kind==="client"?" client":""}">${avatarInner(it.c.author_name,escAttr(String(it.c.author_name||"?").slice(0,2).toUpperCase()))}</span>
+    <span class="nav-av${it.c.author_kind==="client"?" client":""}" style="${avatarSkin(it.c.author_name,it.c.author_kind==="client")}">${avatarInner(it.c.author_name,escAttr(String(it.c.author_name||"?").slice(0,2).toUpperCase()))}</span>
     <div class="nbody">
       <div class="msg">${fbRich(mpPlain(String(it.c.body||"")).slice(0,160))}</div>
       <div class="attr"><span class="who">${escAttr(it.c.author_name)}</span>${it.c.author_kind==="client"?` <span class="nkind">· client</span>`:""} ${verb} ·
@@ -13956,7 +13974,7 @@ function fbPanelHtml(p){
   const openN=threads.filter(t=>!t.top.resolved).length;
   const doneN=threads.length-openN;
 
-  const av=(name,kind)=>`<span class="av46${kind==="client"?" cl":""}">${avatarInner(name,escAttr((name||"?").slice(0,2).toUpperCase()))}</span>`;
+  const av=(name,kind)=>`<span class="av46${kind==="client"?" cl":""}" style="${avatarSkin(name,kind==="client")}">${avatarInner(name,escAttr((name||"?").slice(0,2).toUpperCase()))}</span>`;
 
   /* reactions show only what exists; adding one lives with the actions,
      which are hidden until you reach the comment */
@@ -16588,6 +16606,25 @@ function rtValue(el){
   if(!el.isContentEditable) return (el.value||"").trim();
   const html=mpClean(el.innerHTML).trim();
   if(!mpPlain(html).trim()) return "";
+  /* ══ KOTA v84.1 · THE &nbsp; THAT REACHED THE READER ══════════════
+     A contenteditable serialises a trailing space as the ENTITY
+     &nbsp;, and picking a mention inserts "@name " — so every comment
+     that ended on a mention was stored as "@harsh.s&nbsp;".
+
+     The reader then decides how to draw a comment by asking whether it
+     contains a tag. This one does not: it is plain words plus five
+     literal characters. So it took the plain-text path, escaped them,
+     and showed "&nbsp;" to the reader as text.
+
+     Nothing rich survived the clean, so it was never rich text. Take
+     the words, decode what the editor encoded, and store that. */
+  if(!mpIsRich(html)){
+    try{
+      const d=new DOMParser().parseFromString("<div id=r>"+html+"</div>","text/html");
+      const t=(d.getElementById("r").textContent||"").replace(/\u00a0/g," ");
+      return t.replace(/[ \t]+\n/g,"\n").trim();
+    }catch(e){ return html; }
+  }
   return html;
 }
 function rtClear(el){ if(!el) return; if(el.isContentEditable) el.innerHTML=""; else el.value=""; }
