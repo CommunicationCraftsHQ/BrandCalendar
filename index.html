@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v84.1 — Kota: the face comes out of the hole"/>
+<meta name="cc-tool-version" content="v84.2 — Kota: the face lands on the tag"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -8678,7 +8678,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v84.1 — Kota: the face comes out of the hole";
+const TOOL_VERSION="v84.2 — Kota: the face lands on the tag";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -11168,9 +11168,29 @@ function brMentions(body){
   });
   return [...new Set(out)];
 }
+/* ══ KOTA v84.2 · THE TAG IS WHERE THE EMOJI WAS ALWAYS MEANT TO BE ══
+   His original words, which I answered only half of: "instead of colour
+   we can let each person choose an emoji to represent in front of their
+   name SO WHEN THEY ARE TAGGED the emoji becomes their identity."
+
+   I put it on the avatars — the circle beside a comment — and never on
+   the tag itself, which is the place he actually described. A thread
+   full of red @names is exactly the wall of text a face is supposed to
+   break up, and it was still a wall.
+
+   One function, so every mention gets it: comment bodies, thread
+   messages and the notification list all render through here.
+
+   THE EMOJI IS ESCAPED. It is eight characters of free text from a
+   column any signed-in person can write to, and eight characters is
+   enough to open a tag. Nothing in the app trusts it. */
 function fbHighlightMentions(h){
-  return h.replace(/(^|\s)@([A-Za-z0-9._-]+)/g,
-    '$1<span style="color:var(--acc);font-weight:700;">@$2</span>');
+  return h.replace(/(^|\s)@([A-Za-z0-9._-]+)/g,(m,pre,name)=>{
+    const e=emojiFor(name);
+    return pre+'<span style="color:var(--acc);font-weight:700;white-space:nowrap;">'+
+      (e?'<span style="font-style:normal;">'+escAttr(e)+'</span>\u00a0':'')+
+      '@'+name+'</span>';
+  });
 }
 
 /* ══ CHENNAI · DROP A FILE WHERE YOU CAN ALREADY ATTACH ONE ═══════════
