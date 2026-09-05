@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v84.5 — Kota: nothing smaller than eleven"/>
+<meta name="cc-tool-version" content="v85.0 — Minsk: the Calendar reads the Planner"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -124,6 +124,37 @@ body.planning .mc-day{cursor:pointer;}
 body.planning .mc-day:hover{box-shadow:0 0 0 2px #0EA5A5 inset;border-radius:5px;}
 .sp-count{position:absolute;top:-4px;right:-4px;min-width:11px;height:11px;padding:0 2px;border-radius:6px;background:#0EA5A5;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;box-sizing:border-box;}
 .mc-day.has-ev .ev-strip{position:absolute;bottom:1px;left:2px;right:2px;height:3px;border-radius:2px;display:flex;gap:1px;}
+/* MINSK — a shoot. Bottom-right is the only corner nothing else uses:
+   both counts sit top-right, the event bar owns the bottom edge, the
+   wash owns the fill. */
+/* the request form, in a frame. Solid, not the .92 panel — this
+   overhangs the month plan and a blurred form reads as a fault. */
+.overlay.prodframe .pf-box{width:min(860px,94vw);height:min(760px,90vh);background:#fff;
+  border-radius:20px;overflow:hidden;box-shadow:0 24px 70px rgba(13,13,13,.28);}
+.overlay.prodframe iframe{width:100%;height:100%;border:0;display:block;}
+/* the month plan's Production section */
+.prodbb .prow{display:flex;align-items:center;gap:11px;padding:8px 11px;border-top:1px solid var(--div);}
+.prodbb .prow:first-child{border-top:none;}
+.prodbb .pst{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  border-radius:999px;padding:2px 8px;flex:none;width:78px;text-align:center;}
+.prodbb .pst.req{background:#FCEBEB;color:#8E2323;}
+.prodbb .pst.sch{background:#E8F0FE;color:#1D4ED8;}
+.prodbb .pst.nod{background:#EFEDF6;color:#5C5077;}
+.prodbb .pst.done{background:#EAF3DE;color:#3B6D11;}
+.prodbb .pst.canc{background:#F0F0EE;color:#8A8A85;}
+.prodbb .pwhen{font-size:12.5px;font-weight:700;width:130px;flex:none;font-variant-numeric:tabular-nums;}
+.prodbb .pwhen.soft{color:var(--subtle);font-weight:600;}
+.prodbb .pwhat{flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.prodbb .pwhat s{text-decoration:none;color:var(--muted);}
+.prodbb .pgo{font-size:11.5px;font-weight:700;color:var(--acc);white-space:nowrap;cursor:pointer;}
+.prodbb .pdiv{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--subtle);padding:9px 11px 4px;border-top:1px solid var(--div);}
+.prodbb .prodfoot{display:flex;justify-content:flex-end;padding:10px 11px 4px;}
+.mpv-bh .prod-cam{width:14px;height:14px;color:#4A55A8;display:inline-block;}
+.mpv-bh .prod-cam svg{width:14px;height:14px;display:block;}
+.mc-day .pr-cam{position:absolute;bottom:0;right:0;width:13px;height:13px;color:#4A55A8;pointer-events:none;}
+.mc-day .pr-cam svg{width:13px;height:13px;display:block;}
+.mc-day.today .pr-cam{color:#B9C0F5;}
 .ev-strip-seg{flex:1;border-radius:1px;}
 .mc-empty{aspect-ratio:1;min-height:22px;}
 
@@ -4863,6 +4894,12 @@ function leadAssetFromRound(roundId){
   return vis.length?vis.slice().sort((x,y)=>(x.slide_no||99)-(y.slide_no||99))[0]:null;
 }
 
+/* one camera, drawn once, used by the day cell and the section header.
+   Inline rather than a Tabler class because the month grid is built as
+   an HTML string and an icon font that fails to load leaves a blank the
+   size of a word — this cannot fail silently. */
+const PROD_CAM_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5h3.2l1.4-2.2h8.8l1.4 2.2H21v10H3z"/><circle cx="12" cy="13" r="3.4"/></svg>';
+
 function buildMini(m){
   const fevs=filtered(m);
   const byD={};fevs.forEach(e=>{if(!byD[e.date])byD[e.date]=[];byD[e.date].push(e);});
@@ -4872,6 +4909,17 @@ function buildMini(m){
   if((socialLayer||view==="content")&&activeBrand&&brands[activeBrand]){
     socialForBrandYear(activeBrand,YEAR).forEach(p=>{if(p.month===m)(socByD[p.date]=socByD[p.date]||[]).push(p);});
   }
+
+  /* MINSK — the shoots on this month's days. Every channel a day cell
+     has was already taken: the centre by the number and the post ring,
+     the top-right by the campaign and post counts, the bottom edge by
+     the event bar, the fill by the campaign wash and today, an outline
+     by a tentative day. The cell is a circle, so its corners are empty
+     gutter and a corner badge floats between days. What was left was a
+     small camera, drawn bottom-right, which is also the one mark that
+     says what it means without a legend. Chirag chose it over the badge
+     and the arc on 5 September. */
+  const prodByD=prodDayMap(m);
 
   // Multi-day campaigns from ANY month that touch this month
   const camps=allCampaigns().filter(c=>c.sM<=m&&c.eM>=m);
@@ -4953,8 +5001,9 @@ function buildMini(m){
 
         const socPosts=socByD[day]||[];
         const hasSoc=socPosts.length>0;
+        const shoots=prodByD[day]||[];
         let cellClass="mc-day";
-        if(hasEvs||camp||hasSoc) cellClass+=" has-ev";
+        if(hasEvs||camp||hasSoc||shoots.length) cellClass+=" has-ev";
         if(realEvs.some(e=>e.tentative)) cellClass+=" tent";
         if(isToday) cellClass+=" today";
         // Paint campaigns: shade per campaign, gap at boundaries, lanes when overlapping
@@ -4992,8 +5041,10 @@ function buildMini(m){
         const tipLines=dayEvs.filter(e=>e._isPost||gc(e)!=="cat5").map(e=>"E|"+(e._isPost?(e._type+" post"+(e._notes?" — "+e._notes:"")):e.name));
         coveringOf(day).forEach(c=>tipLines.push("C|"+c.e.name+"|"+c.sD+" "+MN[c.sM].slice(0,3)+" – "+c.eD+" "+MN[c.eM].slice(0,3)));
         socPosts.forEach(p=>{const idea=((p.content.concept||"").trim()||p.content.instagram.caption||p.content.facebook.caption||"").replace(/\s+/g," ").slice(0,90);tipLines.push("S|"+(p.status||"")+"|"+idea+"|"+(p.format||"static"));});
+        shoots.forEach(p=>tipLines.push("P|"+((brands[p.brand_id]||{}).name||"")+"|"+prodWhat(p)+"|"+(PROD_STATUS_LBL[p.status]||"")));
         const tipAttr=tipLines.length?` data-tip="${escAttr(tipLines.join("\n"))}"`:"";
-        return `<div class="${cellClass}"${campStyle?` style="${campStyle}"`:""} onclick="dayClick(${m},${day})"${tipAttr}>${dateEl}${strips}${campBadge}</div>`;
+        const camIcon=shoots.length?`<span class="pr-cam" aria-hidden="true">${PROD_CAM_SVG}</span>`:"";
+        return `<div class="${cellClass}"${campStyle?` style="${campStyle}"`:""} onclick="dayClick(${m},${day})"${tipAttr}>${dateEl}${strips}${campBadge}${camIcon}</div>`;
       }).join("")}
       ${Array(Math.max(0,42-FD[m]-DIM[m])).fill('<div class="mc-empty"></div>').join("")}
     </div>` + brLaneHtml(m);
@@ -8678,7 +8729,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v84.5 — Kota: nothing smaller than eleven";
+const TOOL_VERSION="v85.0 — Minsk: the Calendar reads the Planner";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -8706,12 +8757,16 @@ function showDiag(){
     const lines=(t.getAttribute("data-tip")||"").split("\n");
     const socCount=lines.filter(l=>l.indexOf("S|")===0).length;
     const stShortMap={drafting:"Draft",review:"Review",approved:"Approved"};
-    let html="", campHdr=false, socHdr=false;
+    let html="", campHdr=false, socHdr=false, prodHdr=false;
     lines.forEach(ln=>{
       if(ln.startsWith("C|")){
         if(!campHdr){ if(html) html+='<div style="height:1px;background:rgba(255,255,255,.18);margin:7px 0;"></div>'; campHdr=true; }
         const p=ln.slice(2).split("|");
         html+=`<div style="display:flex;align-items:center;gap:8px;margin:3px 0;"><span style="width:13px;height:8px;background:#D4537E;border-radius:2px;flex-shrink:0;"></span><span style="color:#F4C0D1;font-weight:700;">${escAttr(p[0])}<span style="color:#ED93B1;font-weight:400;"> · ${escAttr(p[1]||"")}</span></span></div>`;
+      } else if(ln.startsWith("P|")){
+        if(!prodHdr){ if(html) html+='<div style="height:1px;background:rgba(255,255,255,.18);margin:7px 0;"></div>'; prodHdr=true; }
+        const p=ln.slice(2).split("|");
+        html+=`<div style="display:flex;align-items:center;gap:8px;margin:4px 0;"><span style="width:13px;height:13px;color:#B9C0F5;flex-shrink:0;">${PROD_CAM_SVG}</span><span style="color:#C7CCF7;font-weight:700;">${escAttr(p[0]||"")}<span style="color:#A9AFE0;font-weight:400;"> · ${escAttr(p[1]||"")}${p[2]?" · "+escAttr(p[2]):""}</span></span></div>`;
       } else if(ln.startsWith("S|")){
         if(!socHdr){ if(html) html+='<div style="height:1px;background:rgba(255,255,255,.18);margin:7px 0;"></div>'; html+=`<div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:#5EEAD4;margin:0 0 5px;">${socCount} POST${socCount!==1?"S":""}</div>`; socHdr=true; }
         const p=ln.slice(2).split("|");
@@ -9064,6 +9119,77 @@ sb.auth.onAuthStateChange((event)=>{ if(event==="PASSWORD_RECOVERY"){RECOVERY_MO
 // fallback for older-style links with tokens in the URL
 if(location.hash.includes("access_token")&&(location.hash.includes("type=invite")||location.hash.includes("type=recovery"))) showSetPass();
 
+/* ══ MINSK — THE CALENDAR READS THE PRODUCTION PLANNER ═══════════════
+   First time in this file's life. A shoot is one row in `productions`,
+   owned by the Planner and never written from here — the only door that
+   writes one is the Planner's own form, opened in a frame (see
+   openProdRequest below), so there is exactly one form and nothing to
+   keep in step.
+
+   The read is deliberately UNFILTERED by year: an undated shoot has no
+   year to filter on, and those are the ones the month plan exists to
+   surface. Row level security decides who sees what — staff see every
+   brand, a client sees only their own — so an empty list here is a real
+   answer, never a silent refusal to look.
+
+   Non-fatal, like loadPostFeedback: the Calendar worked without any of
+   this yesterday and must still draw if the read fails. */
+let PRODS=[];
+async function loadProductions(){
+  try{
+    const r=await sb.from("productions").select("*").is("deleted_at",null);
+    PRODS=(r.error||!r.data)?[]:r.data;
+  }catch(e){ PRODS=[]; }
+}
+const prodDated=p=>!!(p.date_year&&p.date_month&&p.date_day);
+const prodIsRequest=p=>!!p.requested_by&&!prodDated(p);
+/* every day a shoot covers, so a three-day shoot marks three days */
+function prodDays(p){
+  if(!prodDated(p)) return [];
+  const out=[]; const s0=new Date(p.date_year,p.date_month-1,p.date_day);
+  const e0=p.date_end_year?new Date(p.date_end_year,p.date_end_month-1,p.date_end_day):s0;
+  for(let d=new Date(s0); d<=e0; d.setDate(d.getDate()+1))
+    out.push({y:d.getFullYear(),m:d.getMonth()+1,d:d.getDate()});
+  return out;
+}
+const PROD_STATUS_LBL={scheduled:"Scheduled",done:"Completed",cancelled:"Cancelled"};
+function prodWhat(p){
+  const t=(p.shoot_types||[]);
+  return t.length?t.join(", "):"Shoot";
+}
+function prodWhen(p){
+  if(prodDated(p)){
+    const a=`${p.date_day} ${MN[p.date_month].slice(0,3)}`;
+    if(!p.date_end_year) return a;
+    return `${p.date_day}–${p.date_end_day} ${MN[p.date_end_month].slice(0,3)}`;
+  }
+  if(p.pref_kind==="day"&&p.pref_date){ const d=p.pref_date.split("-");
+    return `asked for ${Number(d[2])} ${MN[Number(d[1])].slice(0,3)}`; }
+  if(p.pref_kind==="week"&&p.pref_date){ const d=p.pref_date.split("-");
+    return `week of ${Number(d[2])} ${MN[Number(d[1])].slice(0,3)}`; }
+  if(p.rough_year) return `${MN[p.rough_month]}, roughly`;
+  return "no month yet";
+}
+/* the shoots a brand's month plan shows: everything DATED into that
+   month, plus everything with no date at all — those belong to no month
+   and would otherwise be visible nowhere in this tool. */
+function prodsForBrandMonth(bid,y,m){
+  const mine=PRODS.filter(p=>p.brand_id===bid);
+  const dated=mine.filter(p=>prodDated(p)&&prodDays(p).some(x=>x.y===y&&x.m===m));
+  const open =mine.filter(p=>!prodDated(p));
+  return {dated,open};
+}
+/* the marked days for one month card. No brand = every brand, which is
+   what the all-brands year view is. */
+function prodDayMap(m){
+  const map={};
+  PRODS.filter(p=>prodDated(p)&&p.status!=="cancelled")
+       .filter(p=>!activeBrand||!brands[activeBrand]||p.brand_id===activeBrand)
+       .forEach(p=>prodDays(p).forEach(x=>{
+         if(x.y===YEAR&&x.m===m)(map[x.d]=map[x.d]||[]).push(p); }));
+  return map;
+}
+
 async function loadAll(showToast){
   const [inds,evts,brs,bevs,prefs,posts,briefs,social,monthPlans,monthItems]=await Promise.all([
     sb.from("industries").select("*").order("pos"),
@@ -9095,6 +9221,8 @@ async function loadAll(showToast){
   const err=[inds,evts,brs,bevs,prefs,posts,briefs,social,monthPlans,monthItems].find(r=>r.error);
   if(err){toast(err.error.message,"err");return;}
   G={inds:inds.data,evts:evts.data,brs:brs.data,bevs:bevs.data,prefs:prefs.data||[],posts:posts.data,briefs:briefs.data,social:social.data,monthPlans:monthPlans.data,monthItems:monthItems.data};
+  await loadProductions();  // Minsk: non-fatal — the day mark and the
+                            // month plan's Production section both read it
   await loadPostFeedback(); // Atlas: non-fatal — panel hides if tables absent
   await loadBranding(activeBrand); // Cape Town: non-fatal, same contract
   buildYearView();
@@ -12796,6 +12924,47 @@ let PLAN={m:0,day:0};
    Now: openDay, always. It shows what is on the day and offers what you
    are allowed to do. THE SWITCHES ARE UNTOUCHED and go back to their
    real job, which is deciding what the calendar DRAWS. */
+/* ══ MINSK — ONE FORM, OPENED HERE ═══════════════════════════════════
+   Not a second form over the same table. The Production Planner is
+   served from the same address as this page, so its request form runs
+   in a frame with this browser's session and its own permission check
+   — and a field added to it appears here the same day, because there is
+   nothing here to add it to.
+
+   The frame posts back when it saves or closes. Nothing else is
+   accepted: a message from another origin, or one that is not ours, is
+   ignored rather than trusted. */
+const PLANNER_ORIGIN=location.origin;
+const PLANNER_BASE="https://communicationcraftshq.github.io/BrandCalendar/production/";
+function openProdRequest(){
+  if(!activeBrand||!brands[activeBrand]){ toast("Pick a brand first"); return; }
+  prodFrameOpen(PLANNER_BASE+"#request?brand="+encodeURIComponent(activeBrand));
+}
+function openProdInPlanner(id){
+  window.open(PLANNER_BASE+"#shoot?id="+encodeURIComponent(id),"_blank");
+}
+function prodFrameOpen(url){
+  const w=document.createElement("div");
+  w.className="overlay open prodframe"; w.id="prodframe";
+  w.innerHTML=`<div class="pf-box"><iframe src="${escAttr(url)}" title="Request a production"></iframe></div>`;
+  w.addEventListener("mousedown",e=>{ if(e.target===w) prodFrameClose(); });
+  document.body.appendChild(w);
+}
+function prodFrameClose(){
+  const w=document.getElementById("prodframe"); if(w) w.remove();
+}
+window.addEventListener("message",async e=>{
+  if(e.origin!==PLANNER_ORIGIN) return;
+  const d=e.data; if(!d||d.cc!=="minsk") return;
+  prodFrameClose();
+  if(d.saved){ await loadProductions(); toast("Request sent"); rerenderAfterProd(); }
+});
+/* the two screens that draw shoots, and only those */
+function rerenderAfterProd(){
+  if(view==="mplan") renderMonthPlanView();
+  else if(view==="year") buildYearView();
+}
+
 function dayClick(m,day){ openDay(m,day); }
 function shortDate(m,d){ return `${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date(YEAR,m-1,d).getDay()]} ${d}`; }
 /* M18: a notification row is the ONE place with no month around it. On a
@@ -14596,7 +14765,8 @@ async function exportPptBlob(rows){
        the tags. mpPlain turns it back into words (and bullets) first. */
     const theme=mpPlain(mp.key_theme).trim();
     const goals=mpvItems(mp,"goal").filter(g=>!g.discipline||g.discipline==="social");
-    const prod=mpvItems(mp,"production").filter(i=>!i.discipline||i.discipline==="social");
+    const prod=(()=>{const r=prodsForBrandMonth(activeBrand,YEAR,contentMonth);
+      return r.dated.concat(r.open).map(x=>({label:prodWhat(x)+" · "+prodWhen(x)}));})();
     const infl=mpvItems(mp,"influencer").filter(i=>!i.discipline||i.discipline==="social");
     if(theme||goals.length){
       const p=pptx.addSlide(); p.background={color:"FFFFFF"};
@@ -15872,10 +16042,14 @@ const DISCIPLINES=[
      `null` is a real band. It goes first, it is where unassigned work
      lives, and it is the place you tag from. When everything is tagged
      it simply stops appearing. */
-  {id:null,          label:"Not assigned yet",      icon:"ti-inbox",         lists:["influencer","production"]},
-  {id:"social",      label:"Social",                icon:"ti-device-mobile", lists:["influencer","production"]},
-  {id:"branding",    label:"Branding",              icon:"ti-palette",       lists:["production"]},
-  {id:"performance", label:"Performance marketing", icon:"ti-chart-line",    lists:["production"]},
+  /* MINSK — `production` left these lists on 5 September. A shoot is a
+     row in the Production Planner now, drawn by mpvProductionHtml under
+     the bands. Branding and Performance held nothing else, so they stop
+     drawing; their rows are untouched in the database. */
+  {id:null,          label:"Not assigned yet",      icon:"ti-inbox",         lists:["influencer"]},
+  {id:"social",      label:"Social",                icon:"ti-device-mobile", lists:["influencer"]},
+  {id:"branding",    label:"Branding",              icon:"ti-palette",       lists:[]},
+  {id:"performance", label:"Performance marketing", icon:"ti-chart-line",    lists:[]},
 ];
 /* ══ MOTH · THE MONTH PLAN'S TEXT ════════════════════════════════════
    Chirag asked for line breaks, bold, italic, bullets and real links —
@@ -16187,6 +16361,49 @@ function mpvStatusCtl(m,mp,canE){
     :`<span class="mp-status" style="font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px;color:${st?"#791F1F":"#854F0B"};background:${st?"#FCEBEB":"#FAEEDA"};">${st?"Approved":"Drafted"}</span>`;
 }
 
+/* ══ MINSK — THE PRODUCTION SECTION IS THE REAL SHOOTS ═══════════════
+   It used to be free-typed lines with three stages of their own
+   (Pending / Moodboard shared / Complete) that mapped onto nothing a
+   shoot actually is. Those rows still exist in the database; they are
+   simply no longer drawn — Chirag's word, 5 September, "drop".
+
+   What replaces them is the Production Planner's own rows: dated shoots
+   whose first day falls in this month, then everything for this brand
+   with no date at all, because an undated shoot belongs to no month and
+   would otherwise appear nowhere. */
+function mpvProdRow(p){
+  const st = prodDated(p)
+      ? (p.status==="done"?["done","Completed"]:p.status==="cancelled"?["canc","Cancelled"]:["sch","Scheduled"])
+      : prodIsRequest(p) ? ["req","Requested"] : ["nod","Not dated"];
+  const bits=[prodWhat(p)];
+  const pl=(p.locations||[]); if(pl.length) bits.push(pl.join(", "));
+  const crew=(p.team||[]).filter(Boolean); if(crew.length) bits.push(crew.length>2?crew[0]+" +"+(crew.length-1):crew.join(", "));
+  if(prodIsRequest(p)&&p.requested_email) bits.push("asked by "+escHtml(String(p.requested_email).split("@")[0]));
+  return `<div class="prow">
+    <span class="pst ${st[0]}">${st[1]}</span>
+    <span class="pwhen${prodDated(p)?"":" soft"}">${escHtml(prodWhen(p))}</span>
+    <span class="pwhat">${escHtml(bits.shift())}<s>${bits.length?" · "+escHtml(bits.join(" · ")):""}</s></span>
+    <span class="pgo" onclick="openProdInPlanner('${escAttr(p.id)}')">Open ›</span>
+  </div>`;
+}
+function mpvProductionHtml(m,canE){
+  if(!activeBrand||!brands[activeBrand]) return "";
+  const {dated,open}=prodsForBrandMonth(activeBrand,YEAR,m);
+  const n=dated.length+open.length;
+  const rows=dated.sort((a,b)=>a.date_day-b.date_day).map(mpvProdRow).join("")
+    +(open.length?`<div class="pdiv">Coming up, no date yet</div>`
+      +open.slice().sort((a,b)=>(prodIsRequest(b)-prodIsRequest(a))).map(mpvProdRow).join(""):"");
+  return `<div class="mpv-band${mpvIsShut("sc-production-"+m)?" shut":""}" data-band="sc-production-${m}" style="margin-top:14px;">
+    <div class="mpv-bh" onclick="mpvToggle('sc-production-${m}')">
+      <i class="ti ti-chevron-down cv"></i>
+      <span class="prod-cam">${PROD_CAM_SVG}</span><b>Production</b>
+      <span class="sum">${n} shoot${n===1?"":"s"}</span></div>
+    <div class="mpv-bb prodbb">
+      ${n?rows:`<div class="mpv-empty">Nothing planned.</div>`}
+      ${canE?`<div class="prodfoot"><button class="btn btn-s" onclick="openProdRequest()"><i class="ti ti-plus"></i> Request a production</button></div>`:""}
+    </div></div>`;
+}
+
 function mpvSheetHtml(m,canE){
   const mp=monthPlanFor(activeBrand,YEAR,m);
   const goalsAll=canE?mpvRows(mp,"goal"):mpvItems(mp,"goal");   /* an editor sees the row it just made */
@@ -16219,6 +16436,7 @@ function mpvSheetHtml(m,canE){
         : `<div class="mpv-strip">${mpvTargetMetric(mp,m,canE)}</div>`}
 
       ${bands||`<div class="mpv-empty" style="margin-top:14px;">Nothing planned under any discipline yet.</div>`}
+      ${mpvProductionHtml(m,canE)}
     </div>
   </div>`;
 }
@@ -17117,7 +17335,7 @@ function monthPlanCardHtml(m){
   const goals=mpvItems(mp,"goal").filter(g=>!g.discipline||g.discipline==="social");
   const targets=mpvItems(mp,"target");
   const infl=mpvItems(mp,"influencer").filter(i=>!i.discipline||i.discipline==="social");
-  const prod=mpvItems(mp,"production").filter(i=>!i.discipline||i.discipline==="social");
+  const prodN=(()=>{const r=prodsForBrandMonth(activeBrand,YEAR,m);return r.dated.length+r.open.length;})();
 
   const statusCtl=canE
     ?`<select class="mp-status" onchange="mpCardSetStatus(this.value)" style="appearance:none;-webkit-appearance:none;border:none;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border-radius:999px;padding:5px 24px 5px 10px;color:${st?"#791F1F":"#854F0B"};background-color:${st?"#FCEBEB":"#FAEEDA"};background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${st?"%23791F1F":"%23854F0B"}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 9px center;">
@@ -17125,7 +17343,7 @@ function monthPlanCardHtml(m){
     :`<span class="mp-status" style="font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px;color:${st?"#791F1F":"#854F0B"};background:${st?"#FCEBEB":"#FAEEDA"};">${st?"Approved":"Drafted"}</span>`;
   const editBtn=canE?`<span class="mp-edit" onclick="mpvStart(${m})" title="Open the full month plan" style="width:26px;height:26px;border-radius:50%;border:1px solid var(--div);background:var(--surface);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;"><i class="ti ti-pencil" style="font-size:13px;"></i></span>`:"";
   const lbl=t=>`<div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);margin-bottom:6px;">${t}</div>`;
-  const empty=!monthPlanHasData(activeBrand,YEAR,m)&&!infl.length&&!prod.length&&!targets.length&&!(mp.influencer_target>0);
+  const empty=!monthPlanHasData(activeBrand,YEAR,m)&&!infl.length&&!prodN&&!targets.length&&!(mp.influencer_target>0);
 
   let body;
   if(empty){
@@ -17165,7 +17383,7 @@ function monthPlanCardHtml(m){
         ${mp.influencer_target>0?`<div class="mpv-metric"><b>${mp.influencer_target}</b><span>influencers targeted</span></div>`:""}</div>`:""}
 
       ${band("sc-influencer","Influencers",infl,"influencer",mp.influencer_target>0?infl.length+" of "+mp.influencer_target:"")}
-      ${band("sc-production","Production",prod,"production","")}`;
+      ${mpvProductionHtml(m,canE)}`;
   }
   return `<div class="month-card mp-hero" style="position:relative;padding:16px ${canE?"84px":"70px"} 16px 18px;overflow:visible;">
     <div style="position:absolute;top:13px;right:13px;display:flex;align-items:center;gap:6px;">${statusCtl}${editBtn}</div>
