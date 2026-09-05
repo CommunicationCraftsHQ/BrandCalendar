@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v86.0 — Wasp: the Calendar hears the Planner"/>
+<meta name="cc-tool-version" content="v86.1 — Wasp: the frame is a page"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -129,7 +129,7 @@ body.planning .mc-day:hover{box-shadow:0 0 0 2px #0EA5A5 inset;border-radius:5px
    wash owns the fill. */
 /* the request form, in a frame. Solid, not the .92 panel — this
    overhangs the month plan and a blurred form reads as a fault. */
-.overlay.prodframe .pf-box{width:min(860px,94vw);height:min(760px,90vh);background:#fff;
+.overlay.prodframe .pf-box{width:min(1180px,96vw);height:min(880px,92vh);background:#fff;
   border-radius:20px;overflow:hidden;box-shadow:0 24px 70px rgba(13,13,13,.28);}
 .overlay.prodframe iframe{width:100%;height:100%;border:0;display:block;}
 /* the month plan's Production section */
@@ -8729,7 +8729,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v86.0 — Wasp: the Calendar hears the Planner";
+const TOOL_VERSION="v86.1 — Wasp: the frame is a page";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -12981,10 +12981,16 @@ const PLANNER_ORIGIN=location.origin;
 const PLANNER_BASE="https://communicationcraftshq.github.io/BrandCalendar/production/";
 function openProdRequest(){
   if(!activeBrand||!brands[activeBrand]){ toast("Pick a brand first"); return; }
-  prodFrameOpen(PLANNER_BASE+"#request?brand="+encodeURIComponent(activeBrand));
+  /* WASP — the frame was serving a CACHED Planner. The stale-tab guard
+     covers a tab, not an iframe load, so an old bundle could sit in
+     there for days looking like the current one. The Calendar's own
+     version is the cache key: a deploy changes it, so the frame can
+     never be older than the page around it. */
+  prodFrameOpen(PLANNER_BASE+"?v="+encodeURIComponent(TOOL_VERSION)
+                +"#request?brand="+encodeURIComponent(activeBrand));
 }
 function openProdInPlanner(id){
-  window.open(PLANNER_BASE+"#shoot?id="+encodeURIComponent(id),"_blank");
+  window.open(PLANNER_BASE+"?v="+encodeURIComponent(TOOL_VERSION)+"#shoot?id="+encodeURIComponent(id),"_blank");
 }
 function prodFrameOpen(url){
   const w=document.createElement("div");
