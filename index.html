@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v88.0 — Nagpur: one face, one form, one bell"/>
+<meta name="cc-tool-version" content="v89.0 — Nagpur: the bell uses the form words"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -148,6 +148,15 @@ body.planning .mc-day:hover{box-shadow:0 0 0 2px #0EA5A5 inset;border-radius:5px
 .prodbb .pwhat{flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .prodbb .pwhat s{text-decoration:none;color:var(--muted);}
 .prodbb .pgo{font-size:11.5px;font-weight:700;color:var(--acc);white-space:nowrap;cursor:pointer;}
+/* a shoot on the notification list: the status word leads, the shoot
+   follows, and the line underneath says what happened and when. */
+.nrow.nshoot .msg{display:flex;align-items:center;gap:7px;font-weight:600;}
+.nrow.nshoot .ntag{flex:none;font-size:9.5px;font-weight:800;letter-spacing:.04em;
+  text-transform:uppercase;border-radius:999px;padding:2px 8px;}
+.nrow.nshoot .ntag.k-asked{background:#FCEBEB;color:#8E2323;}
+.nrow.nshoot .ntag.k-accepted{background:#E8F0FE;color:#1D4ED8;}
+.nrow.nshoot .ntag.k-cancelled,.nrow.nshoot .ntag.k-withdrawn,
+.nrow.nshoot .ntag.k-trashed{background:#F0F0EE;color:#6B6B6B;}
 .prodbb .psaid{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;
   color:#5C5077;background:#EFEDF6;border:1px solid #E1DDF0;border-radius:999px;
   padding:1px 7px;flex:none;line-height:1.5;}
@@ -8784,7 +8793,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v88.0 — Nagpur: one face, one form, one bell";
+const TOOL_VERSION="v89.0 — Nagpur: the bell uses the form words";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -9258,8 +9267,35 @@ function prodNewsFor(p,opts){
   }
   return out;
 }
-const PROD_NEWS_WORDS={accepted:"was scheduled",cancelled:"was cancelled",
-                       asked:"is being asked for",withdrawn:"was withdrawn"};
+/* ══ THE WORDS ARE THE FORM'S WORDS ═══════════════════════════════
+   6 Sep, Chirag: "they use a unique vocabulary, which is not rooted in
+   the actual forms. Ideally, we should be using words like scheduled,
+   cancelled, requested."
+
+   He is right, and "is being asked for" was the worst of it — nobody
+   says that, and no screen in this suite does either. The switch on
+   the form says Requested · Scheduled · Completed · Cancelled, so the
+   bell says those words too. THE SAME WORDS LIVE IN THE PLANNER, in
+   bellLineFor(). Change both, or neither. */
+const PROD_NEWS_WORDS={accepted:"Scheduled",cancelled:"Cancelled",
+                       asked:"Requested",withdrawn:"Withdrawn",trashed:"Moved to Trash"};
+/* the line under the headline: what happened, when, and who */
+/* THE TAG SAYS THE STATE, THE LINE SAYS THE REST — a REQUESTED tag
+   over the words "Requested by priya" is a row saying nothing twice.
+   Kept word for word in step with bellLineFor() in the Planner. */
+function prodNewsLine(kind,p){
+  const who=(p.requested_email||"").split("@")[0]||"somebody";
+  const when=prodDated(p)?`${p.date_day} ${(MN[p.date_month]||"").slice(0,3)}`:"";
+  if(kind==="accepted")  return when?`Now on ${when}`:"It has a date";
+  if(kind==="cancelled") return when?`It was on ${when}`:"It had no date yet";
+  /* prodWhen already begins "asked for", which made this read
+     "priya asked — asked for 12 Nov". Strip the verb. */
+  if(kind==="asked"){ const w=String(prodWhen(p)||"").replace(/^asked for\s*/i,"");
+                      return w?`${who} asked for ${w}`:`${who} asked — no date named`; }
+  if(kind==="withdrawn") return `${who} took the request back`;
+  if(kind==="trashed")   return when?`It was on ${when}`:"It had no date yet";
+  return "";
+}
 function prodNewsItems(){
   const uid=(ME&&ME.id)||null;
   /* the Calendar has no production role of its own; anybody who is not
@@ -9272,9 +9308,17 @@ function prodNewsItems(){
     if(!kinds.length) return;
     if(brandMuted(p.brand_id)) return;
     const b=(brands[p.brand_id]||{});
-    out.push({ kind:"shoot", shootId:p.id, brandId:p.brand_id, brandName:b.name||"",
+    /* `post` stays on the row because half the panel reaches for
+       it.post.id — but NOTHING may read its date, which is null here.
+       notifRowHtml has a shoot branch for exactly that reason: the
+       first version squeezed a shoot into the comment layout and
+       printed "chiragdagli81 commented · Sun null". */
+    out.push({ kind:"shoot", shootId:p.id, newsKind:kinds[0],
+      brandId:p.brand_id, brandName:b.name||"",
       taskId:null, taskTitle:"", post:{id:null,month:null,date:null,year:null},
-      c:{ id:"shoot:"+p.id, body:prodWhat(p)+" "+(PROD_NEWS_WORDS[kinds[0]]||""),
+      head:prodWhat(p)+((p.locations||[]).length?" · "+(p.locations||[]).join(", "):""),
+      line:prodNewsLine(kinds[0],p),
+      c:{ id:"shoot:"+p.id, body:"",
           author_name:(p.requested_email||"").split("@")[0]||"Production",
           author_email:p.requested_email||"", author_kind:"team",
           created_at:p.updated_at||p.requested_at||new Date().toISOString(), mentions:[] },
@@ -11820,6 +11864,20 @@ async function notifMute(bid,on){
   toast(on?`Muted ${name} — just for you`:`Notifications back on for ${name}`);
 }
 function notifRowHtml(it,bid){
+  /* A SHOOT IS NOT A COMMENT. Squeezed into the comment layout it read
+     "Social content was scheduled / chiragdagli81 commented · Sun
+     null" — a verb that never happened and a date that does not
+     exist, because a shoot has no post to take a date from. */
+  if(it.kind==="shoot"){
+    const tag=PROD_NEWS_WORDS[it.newsKind]||"Changed";
+    return `<div class="nrow unread nshoot" onclick="notifOpen('${bid}','shoot','${escAttr(it.shootId)}')">
+      <span class="nav-av" style="${avatarSkin(it.c.author_name,false)}">${
+        avatarInner(it.c.author_name,escAttr(String(it.c.author_name||"?").slice(0,2).toUpperCase()))}</span>
+      <div class="nbody">
+        <div class="msg"><span class="ntag k-${escAttr(it.newsKind)}">${escHtml(tag)}</span>${escHtml(it.head||"")}</div>
+        <div class="attr">${escHtml(it.line||"")}<span class="when">${fbTimeLabel(it.c.created_at)}</span></div>
+      </div></div>`;
+  }
   const verb=it.mention?"mentioned you":"commented";
   const isTask=it.kind==="task";
   const where=isTask
@@ -11928,6 +11986,7 @@ function buildNotifPanel(){
 }
 async function notifOpen(brandId,kind,postId){
   closeAllPops();
+  if(kind==="shoot"){ openProdInPlanner(postId); return; }
   if(kind==="task"){
     const taskId=postId;                       // same slot, different thing
     pickBrand(brandId);
