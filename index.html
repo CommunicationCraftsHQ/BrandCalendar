@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v89.1 — Weevil: a notification says it is a shoot"/>
+<meta name="cc-tool-version" content="v90.0 — Ghent: one writing box"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2159,13 +2159,8 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .mpv-none{padding:14px 2px 30px;font-size:12.5px;color:var(--subtle);}
 .mpv-start{color:var(--acc);font-weight:600;cursor:pointer;}
 /* the formatting bar, summoned by focus */
-.mpbar{position:absolute;display:none;align-items:center;gap:2px;background:var(--text);border-radius:8px;
-  padding:4px;box-shadow:0 8px 22px rgba(0,0,0,.28);z-index:700;}
-.mpbar.open{display:inline-flex;}
-.mpb{width:28px;height:28px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;
-  color:rgba(255,255,255,.72);font-size:14px;cursor:pointer;border:0;background:transparent;font-family:inherit;}
-.mpb:hover{background:rgba(255,255,255,.16);color:#fff;}
-.mpb.sep{width:1px;height:18px;background:rgba(255,255,255,.18);margin:0 4px;border-radius:0;cursor:default;}
+/* GHENT — .mpbar and .mpb moved into cc-suite.css. The bar is shared,
+   so its paint is too; a copy here would be the drift starting again. */
 .mpv-body{padding:15px 18px 18px;}
 /* goals + targets — never fold */
 /* ══ MOTH v81.2 — GOALS ARE PILLS THAT WRAP ═════════════════════════
@@ -8804,7 +8799,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v89.1 — Weevil: a notification says it is a shoot";
+const TOOL_VERSION="v90.0 — Ghent: one writing box";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -11501,19 +11496,11 @@ async function loadPeople(){
 }
 /* who can be mentioned on THIS post: the team, plus that brand's client —
    never a client from another brand, who could not open the post anyway */
-function mentionablesFor(postBrandId){
-  return PEOPLE.filter(pp=>pp.role!=="client"||pp.brand_id===postBrandId)
-               .filter(pp=>pp.email.toLowerCase()!==(ME.email||"").toLowerCase());
-}
+/* GHENT — the rule lives in the kit now, so the menu the Planner shows
+   and the menu this file shows can never offer different people. */
+function mentionablesFor(postBrandId){ return wMentionables(PEOPLE, postBrandId, ME.email); }
 /* names in, emails out — a display name can change, an email is the key */
-function extractMentions(body,brandId){
-  const out=[];
-  mentionablesFor(brandId).forEach(pp=>{
-    const re=new RegExp("@"+pp.name.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i");
-    if(re.test(body)) out.push(pp.email);
-  });
-  return [...new Set(out)];
-}
+function extractMentions(body,brandId){ return wMentionsIn(body, PEOPLE, brandId, ME.email); }
 /* TEAM ONLY, DELIBERATELY. A branding task is internal until somebody
    presses "Send to the client", so nobody can tag a client into one —
    not even their own. mentionablesFor() includes the brand's client,
@@ -16419,34 +16406,65 @@ const DISCIPLINES=[
    on the way IN and again on the way OUT. Anything not named here is
    unwrapped to its text; nothing is silently dropped, because losing a
    client's paragraph is its own kind of bug. */
-const MP_OK_TAGS = {B:1, STRONG:1, I:1, EM:1, U:1, UL:1, OL:1, LI:1, BR:1, A:1, P:1, DIV:1};
-const MP_SAFE_HREF = /^(https?:|mailto:)/i;
+/* ══ GHENT — THE WRITING BOX MOVED INTO THE KIT ══════════════════════
+   What used to be mpClean / mpRender / mpPlain / rtValue lives in
+   `cc-suite/ui/writer-core.js` now, and the Planner and the Proposal
+   Bank read the identical code. The Calendar cannot import a module, so
+   the block below is a COPY, written by `cc-suite/ui/sync-writer.js`
+   and checked by the drift gate. DO NOT EDIT IT HERE — edit the kit and
+   run the sync, or the two quietly become two behaviours again.        */
+/* ==CC-WRITER-CORE:BEGIN== */
 
-function mpClean(html){
+/* ── WHY A STORED NOTE CAN BE TWO THINGS ────────────────────────────
+   Every note written before this existed is PLAIN TEXT — every shoot
+   note in the Planner, every review comment in the Proposal Bank, and
+   month plans going back to August. Rewriting those rows would be a
+   migration over live content for no benefit, so instead:
+
+     no "<" in the value  →  plain text. Escape it, turn the newlines
+                             into breaks, done.
+     it has tags          →  this editor wrote it. Sanitise it.
+
+   Nothing is converted, nothing is migrated, and every old note starts
+   reading properly the moment this ships.
+
+   ── THE SANITISER IS NOT OPTIONAL ──────────────────────────────────
+   The instant a field stops being plain text it becomes somewhere a
+   pasted <script>, an onclick, or a javascript: href could live — and
+   these notes are shown to CLIENTS. So the rule is an allow-list,
+   applied on the way IN and again on the way OUT. Anything not named
+   here is unwrapped to its text; nothing is silently dropped, because
+   losing somebody's paragraph is its own kind of bug. */
+const W_OK_TAGS = {B:1, STRONG:1, I:1, EM:1, U:1, UL:1, OL:1, LI:1, BR:1, A:1, P:1, DIV:1};
+const W_SAFE_HREF = /^(https?:|mailto:)/i;
+
+function wEsc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function wClean(html){
   let doc;
   try{ doc=new DOMParser().parseFromString("<div id=r>"+String(html==null?"":html)+"</div>","text/html"); }
-  catch(e){ return escHtml(String(html==null?"":html)); }
+  catch(e){ return wEsc(String(html==null?"":html)); }
   const root=doc.getElementById("r"); if(!root) return "";
   const walk=(node)=>{
     [...node.childNodes].forEach(ch=>{
-      if(ch.nodeType===3) return;                       // text is always kept
-      if(ch.nodeType!==1){ ch.remove(); return; }        // comments and the rest go
+      if(ch.nodeType===3) return;                        /* text is always kept */
+      if(ch.nodeType!==1){ ch.remove(); return; }         /* comments and the rest go */
       const tag=ch.tagName;
       /* SCRIPT and STYLE take their contents with them; everything else
          that is not allow-listed is UNWRAPPED, so the words survive. */
       if(tag==="SCRIPT"||tag==="STYLE"){ ch.remove(); return; }
-      if(!MP_OK_TAGS[tag]){
+      if(!W_OK_TAGS[tag]){
         walk(ch);
         while(ch.firstChild) ch.parentNode.insertBefore(ch.firstChild,ch);
         ch.remove(); return;
       }
-      /* every attribute goes, then href is put back if it is safe —
-         an allow-list, so a new attribute nobody thought of cannot
-         arrive already permitted */
+      /* every attribute goes, then href is put back if it is safe — an
+         allow-list, so a new attribute nobody thought of cannot arrive
+         already permitted */
       const href=tag==="A"?ch.getAttribute("href"):null;
       [...ch.attributes].forEach(a=>ch.removeAttribute(a.name));
       if(tag==="A"){
-        if(href&&MP_SAFE_HREF.test(String(href).trim())){
+        if(href&&W_SAFE_HREF.test(String(href).trim())){
           ch.setAttribute("href",String(href).trim());
           ch.setAttribute("target","_blank");
           ch.setAttribute("rel","noreferrer noopener");
@@ -16465,40 +16483,37 @@ function mpClean(html){
 }
 
 /* Is this value plain text, or something this editor wrote? */
-const mpIsRich = v => /<[a-zA-Z/]/.test(String(v==null?"":v));
+const wIsRich = v => /<[a-zA-Z/]/.test(String(v==null?"":v));
 
-/* ══ MOTH — A PASTED URL IS A LINK, AND IT IS NOT 300 CHARACTERS LONG
-   The September production row reads
-     Scripts - https://cctdigisol-my.sharepoint.com/:w:/g/personal/vyom…
-   clamped to one line with an ellipsis, unclickable, because there was
-   nowhere else to put a link so somebody typed it into the label. That
-   is a workaround the tool forced, and it is visible in production.
-
-   A bare url is turned into a real link showing its HOST, with the full
-   address on hover. The stored text is untouched — this is display
-   only, so nothing is rewritten and nothing can be lost. */
-const MP_URL=/\b(https?:\/\/[^\s<>"']+)/g;
-function mpAutoLink(escaped){
-  return escaped.replace(MP_URL,u=>{
+/* A BARE URL IS A LINK, AND IT IS NOT 300 CHARACTERS LONG. Somebody
+   typed a SharePoint address into a production label because there was
+   nowhere else to put a link, and it sat there clamped to one line and
+   unclickable. A bare url is shown as its HOST, with the full address
+   on hover. The stored text is untouched — display only, so nothing is
+   rewritten and nothing can be lost. */
+const W_URL=/\b(https?:\/\/[^\s<>"']+)/g;
+function wAutoLink(escaped){
+  return escaped.replace(W_URL,u=>{
     let host=u; try{ host=new URL(u).hostname.replace(/^www\./,""); }catch(e){}
-    return `<a href="${u}" target="_blank" rel="noreferrer noopener" title="${u}">${escHtml(host)} <i class="ti ti-external-link" style="font-size:11px;"></i></a>`;
+    return '<a href="'+u+'" target="_blank" rel="noreferrer noopener" title="'+u+'">'+wEsc(host)+' <i class="ti ti-external-link" style="font-size:11px;"></i></a>';
   });
 }
 
 /* stored value -> what the screen shows */
-function mpRender(v){
+function wRender(v){
   const raw=String(v==null?"":v);
-  if(!mpIsRich(raw)) return mpAutoLink(escHtml(raw)).replace(/\n/g,"<br>");
-  return mpClean(raw);
+  if(!wIsRich(raw)) return wAutoLink(wEsc(raw)).replace(/\n/g,"<br>");
+  return wClean(raw);
 }
 
-/* stored value -> plain words, for the deck, Word and Excel. They read
-   these fields and none of them wants markup. */
-function mpPlain(v){
+/* stored value -> plain words. The deck, the Word file, a notification
+   line and every export read these fields, and none of them wants
+   markup. A bullet keeps its dot so a list still reads as a list. */
+function wPlain(v){
   const raw=String(v==null?"":v);
-  if(!mpIsRich(raw)) return raw;
+  if(!wIsRich(raw)) return raw;
   try{
-    const d=new DOMParser().parseFromString("<div id=r>"+mpClean(raw)+"</div>","text/html");
+    const d=new DOMParser().parseFromString("<div id=r>"+wClean(raw)+"</div>","text/html");
     const el=d.getElementById("r");
     el.querySelectorAll("br").forEach(b=>b.replaceWith("\n"));
     el.querySelectorAll("li").forEach(li=>li.prepend("• "));
@@ -16506,6 +16521,79 @@ function mpPlain(v){
     return (el.textContent||"").replace(/\n{3,}/g,"\n\n").trim();
   }catch(e){ return raw.replace(/<[^>]*>/g," "); }
 }
+
+/* WHAT A BOX HOLDS, READY TO STORE. Cleaned when there is formatting,
+   and the same string either way — a plain sentence carries no tags, so
+   wIsRich stays false and every old reader keeps working.
+
+   ── THE &nbsp; THAT REACHED THE READER ─────────────────────────────
+   A contenteditable serialises a trailing space as the ENTITY &nbsp;,
+   and picking a mention inserts "@name " — so every comment that ended
+   on a mention was stored as "@harsh.s&nbsp;".
+
+   The reader then decides how to draw a note by asking whether it
+   contains a tag. That one does not: it is plain words plus five
+   literal characters. So it took the plain-text path, escaped them,
+   and showed "&nbsp;" to the reader as text.
+
+   Nothing rich survived the clean, so it was never rich text. Take the
+   words, decode what the editor encoded, and store that. */
+function wValue(el){
+  if(!el) return "";
+  if(!el.isContentEditable) return (el.value||"").trim();
+  const html=wClean(el.innerHTML).trim();
+  if(!wPlain(html).trim()) return "";
+  if(!wIsRich(html)){
+    try{
+      const d=new DOMParser().parseFromString("<div id=r>"+html+"</div>","text/html");
+      const t=(d.getElementById("r").textContent||"").replace(/\u00a0/g," ");
+      return t.replace(/[ \t]+\n/g,"\n").trim();
+    }catch(e){ return html; }
+  }
+  return html;
+}
+function wClear(el){ if(!el) return; if(el.isContentEditable) el.innerHTML=""; else el.value=""; }
+
+/* text before the caret inside a contenteditable — the @ matcher needs it */
+function wTextUptoCaret(el){
+  try{
+    const sel=getSelection(); if(!sel||!sel.rangeCount) return "";
+    const r=sel.getRangeAt(0).cloneRange(); r.collapse(true);
+    r.setStart(el,0); return r.toString();
+  }catch(e){ return ""; }
+}
+
+/* Whose names may be typed after an @ here. A client may only be
+   mentioned on their own brand, and nobody mentions themselves. ONE
+   rule, so the menu in a React tool and the menu in the Calendar can
+   never offer different people. */
+function wMentionables(people, brandId, myEmail){
+  const me=String(myEmail||"").toLowerCase();
+  return (people||[])
+    .filter(pp => pp.role!=="client" || pp.brand_id===brandId)
+    .filter(pp => String(pp.email||"").toLowerCase()!==me);
+}
+
+/* names in, emails out — a display name can change, an email is the key */
+function wMentionsIn(body, people, brandId, myEmail){
+  const text=wPlain(body);
+  const out=[];
+  wMentionables(people, brandId, myEmail).forEach(pp=>{
+    if(!pp.name) return;
+    const re=new RegExp("@"+String(pp.name).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i");
+    if(re.test(text)) out.push(pp.email);
+  });
+  return [...new Set(out)];
+}
+
+/* ==CC-WRITER-CORE:END== */
+
+/* The old names, kept so the two hundred call sites in this file did
+   not all have to change in the same batch as the move. One of these is
+   the real function; the other is a name pointing at it. */
+const MP_OK_TAGS=W_OK_TAGS, MP_SAFE_HREF=W_SAFE_HREF;
+const mpClean=wClean, mpIsRich=wIsRich, mpAutoLink=wAutoLink;
+const mpRender=wRender, mpPlain=wPlain;
 
 let mpvMonth=null;
 
@@ -17156,53 +17244,53 @@ async function mpvBlurSave(el){
    The clip is on the THEME and on PRODUCTION rows. Chirag was asked
    whether Goals should have it too and said no — a goal is one short
    line and a clip on every row is three icons nobody would use. */
-let MPBAR_FOR=null;
-function mpBarEl(){
+/* ==CC-WRITER-BAR:BEGIN== */
+
+/* The two things the bar cannot know for itself: how this tool says
+   something to a person, and what its clip opens. Set once per tool. */
+let WBAR_FOR=null;
+let WBAR_CFG={ toast:function(){}, onAttach:function(){ return false; } };
+function wBarConfig(cfg){ WBAR_CFG=Object.assign({},WBAR_CFG,cfg||{}); }
+function wBarField(){ return WBAR_FOR; }
+
+function wBarEl(){
   let el=document.getElementById("mp-bar");
   if(el) return el;
   el=document.createElement("div"); el.id="mp-bar"; el.className="mpbar";
-  el.innerHTML=`<button class="mpb" title="Bold" onmousedown="return mpvFmt(event,'bold')"><b>B</b></button>
-    <button class="mpb" title="Italic" onmousedown="return mpvFmt(event,'italic')"><i>I</i></button>
-    <span class="mpb sep"></span>
-    <button class="mpb" title="Bullet list" onmousedown="return mpvFmt(event,'insertUnorderedList')"><i class="ti ti-list"></i></button>
-    <button class="mpb" title="Add a link" onmousedown="return mpvLink(event)"><i class="ti ti-link"></i></button>
-    <span class="mpb sep"></span>
-    <button class="mpb" title="Attach a file or a link" onmousedown="return mpAttachOpen(event)"><i class="ti ti-paperclip"></i></button>`;
+  el.innerHTML='<button class="mpb" title="Bold" onmousedown="return wFmt(event,\'bold\')"><b>B</b></button>'
+    +'<button class="mpb" title="Italic" onmousedown="return wFmt(event,\'italic\')"><i>I</i></button>'
+    +'<span class="mpb sep"></span>'
+    +'<button class="mpb" title="Bullet list" onmousedown="return wFmt(event,\'insertUnorderedList\')"><i class="ti ti-list"></i></button>'
+    +'<button class="mpb" title="Add a link" onmousedown="return wLink(event)"><i class="ti ti-link"></i></button>'
+    +'<span class="mpb sep"></span>'
+    +'<button class="mpb" title="Attach a file or a link" onmousedown="return wAttach(event)"><i class="ti ti-paperclip"></i></button>';
   document.body.appendChild(el);
   return el;
 }
-/* onmousedown + preventDefault, NOT onclick. A click on the bar would
-   blur the field first, which fires the save and collapses the
-   selection — so the command would land on nothing. */
-function mpvFmt(ev,cmd,arg){
+
+function wFmt(ev,cmd,arg){
   if(ev){ ev.preventDefault(); ev.stopPropagation(); }
   try{ document.execCommand(cmd,false,arg||null); }catch(e){}
+  if(WBAR_FOR) try{ WBAR_FOR.dispatchEvent(new Event("input",{bubbles:true})); }catch(e){}
   return false;
 }
-function mpvLink(ev){
+function wLink(ev){
   if(ev){ ev.preventDefault(); ev.stopPropagation(); }
   const u=prompt("Link address"); if(!u) return false;
-  if(!MP_SAFE_HREF.test(String(u).trim())){ toast("Only http, https and mailto links","err"); return false; }
+  if(!W_SAFE_HREF.test(String(u).trim())){ WBAR_CFG.toast("Only http, https and mailto links","err"); return false; }
   try{ document.execCommand("createLink",false,String(u).trim()); }catch(e){}
+  if(WBAR_FOR) try{ WBAR_FOR.dispatchEvent(new Event("input",{bubbles:true})); }catch(e){}
   return false;
 }
-/* ══ MOTH v81.2 — THE TOOLBAR STOPS SITTING ON YOUR SENTENCE ═════════
-   Chirag: "it often blocks the view of what you are typing or editing."
-   It was pinned below the field, full stop — so on a long theme, or any
-   field low in the window, it landed squarely over the words being
-   edited, which is the one place it must never be.
+function wAttach(ev){
+  if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+  try{ WBAR_CFG.onAttach(WBAR_FOR); }catch(e){}
+  return false;
+}
 
-   It now measures. Below the field by default, because that is where
-   the eye expects it; ABOVE the field when below would fall past the
-   fold or when the caret itself is in the lower third of the window.
-   Measured against the CARET, not the field: on a four-paragraph theme
-   the field's bottom edge says nothing about where you are typing.
-
-   And it is clamped to the viewport horizontally, so a field near the
-   right edge cannot push it off-screen. */
-function mpBarShow(el){
-  MPBAR_FOR=el;
-  const bar=mpBarEl();
+function wBarShow(el){
+  WBAR_FOR=el;
+  const bar=wBarEl();
   bar.classList.add("open");                 /* measurable only once open */
   const r=el.getBoundingClientRect();
   const vh=window.innerHeight||800, vw=window.innerWidth||1200;
@@ -17222,7 +17310,13 @@ function mpBarShow(el){
   const roomBelow = vh-r.bottom;
   const above = roomBelow < bh+GAP+8 || caretY > vh*0.66;
   const top = above ? (r.top-bh-GAP) : (r.bottom+GAP);
-  const left = Math.max(8, Math.min(r.left, vw-bw-8));
+  /* GHENT — ABOVE MEANS OVER THE BOX'S OWN LABEL. Going above is right
+     (never sit on the words being typed) but the first photograph showed
+     it parked squarely on "NOTES & FILES". A label reads left to right,
+     so above the box the bar goes to the RIGHT edge and the label stays
+     legible; below the box it keeps the left edge, where the eye is. */
+  const wanted = above ? (r.right-bw) : r.left;
+  const left = Math.max(8, Math.min(wanted, vw-bw-8));
 
   bar.style.left=Math.round(left+window.scrollX)+"px";
   bar.style.top =Math.round(Math.max(8,top)+window.scrollY)+"px";
@@ -17232,52 +17326,41 @@ function mpBarShow(el){
   const clip=bar.querySelector('[title^="Attach"]');
   if(clip) clip.style.display=(el.dataset.mpvF==="key_theme"||el.dataset.mpvAtt||el.dataset.att)?"":"none";
 }
-function mpBarHide(){ const b=document.getElementById("mp-bar"); if(b) b.classList.remove("open"); MPBAR_FOR=null; }
+function wBarHide(){ const b=document.getElementById("mp-bar"); if(b) b.classList.remove("open"); WBAR_FOR=null; }
 
-/* ══ v82.3 — ONE WRITING BAR FOR THE SUITE ═══════════════════════════
-   The Monthly Plan's bar stops being the Monthly Plan's. Any field that
-   declares itself rich (contenteditable + rtFocus) gets the identical
-   bar, identical sanitising (mpClean), identical rendering (mpRender /
-   fbBody). The CAPTION is deliberately NOT one of them — Instagram and
-   Facebook flatten formatting, so a styled caption would be a lie.
+/* Any box that declares itself rich gets the identical bar, the
+   identical sanitising and the identical rendering. */
+function wFocus(el){ el.dataset.was=el.innerHTML; wBarShow(el); }
 
-   And the bar FOLLOWS THE CARET: Chirag — "if you move into next line
-   while typing you end up typing blind behind the box." mpBarShow
-   already measures against the caret; nothing re-ran it after focus.
-   One listener, every keystroke, every rich field at once. */
-function rtFocus(el){ el.dataset.was=el.innerHTML; mpBarShow(el); }
+/* THE BAR FOLLOWS THE CARET. mpBarShow already measured against it;
+   nothing re-ran it after focus. One listener, every keystroke, every
+   rich box in the suite at once. */
 document.addEventListener("input",e=>{
-  if(MPBAR_FOR&&e.target===MPBAR_FOR) mpBarShow(MPBAR_FOR);
+  if(WBAR_FOR&&e.target===WBAR_FOR) wBarShow(WBAR_FOR);
 },true);
+
+/* The bar's buttons are inline handlers on an element in document.body,
+   so the functions have to be reachable by bare name from there. In the
+   Calendar they already are; in a bundled tool they are not, and the
+   bar would be five buttons that silently do nothing. */
+try{
+  window.wFmt=wFmt; window.wLink=wLink; window.wAttach=wAttach;
+}catch(e){}
+
+/* ==CC-WRITER-BAR:END== */
+
+/* the old names again — same object, one place it is defined */
+const mpBarEl=wBarEl, mpBarShow=wBarShow, mpBarHide=wBarHide;
+const mpvFmt=wFmt, mpvLink=wLink, rtFocus=wFocus;
+
+/* what this tool says to a person, and what its clip opens. The bar
+   knows neither for itself; every tool tells it once. */
+wBarConfig({ toast:(m,k)=>toast(m,k), onAttach:()=>mpAttachOpen(null) });
+
 /* what a rich field holds, ready to store: cleaned HTML when there is
    formatting, and the same string either way — a plain sentence has no
    tags, so mpIsRich stays false and every old reader keeps working */
-function rtValue(el){
-  if(!el) return "";
-  if(!el.isContentEditable) return (el.value||"").trim();
-  const html=mpClean(el.innerHTML).trim();
-  if(!mpPlain(html).trim()) return "";
-  /* ══ KOTA v84.1 · THE &nbsp; THAT REACHED THE READER ══════════════
-     A contenteditable serialises a trailing space as the ENTITY
-     &nbsp;, and picking a mention inserts "@name " — so every comment
-     that ended on a mention was stored as "@harsh.s&nbsp;".
-
-     The reader then decides how to draw a comment by asking whether it
-     contains a tag. This one does not: it is plain words plus five
-     literal characters. So it took the plain-text path, escaped them,
-     and showed "&nbsp;" to the reader as text.
-
-     Nothing rich survived the clean, so it was never rich text. Take
-     the words, decode what the editor encoded, and store that. */
-  if(!mpIsRich(html)){
-    try{
-      const d=new DOMParser().parseFromString("<div id=r>"+html+"</div>","text/html");
-      const t=(d.getElementById("r").textContent||"").replace(/\u00a0/g," ");
-      return t.replace(/[ \t]+\n/g,"\n").trim();
-    }catch(e){ return html; }
-  }
-  return html;
-}
+const rtValue=wValue;
 function rtClear(el){ if(!el) return; if(el.isContentEditable) el.innerHTML=""; else el.value=""; }
 /* a comment's body may be either era: plain text (every comment before
    today) or this editor's HTML. One reader for both. */
@@ -17285,13 +17368,7 @@ function fbBody(text){
   return mpIsRich(text) ? fbHighlightMentions(mpClean(text)) : fbRich(text);
 }
 /* text before the caret inside a contenteditable — the @ matcher needs it */
-function rtTextUptoCaret(el){
-  try{
-    const sel=getSelection(); if(!sel||!sel.rangeCount) return "";
-    const r=sel.getRangeAt(0).cloneRange(); r.collapse(true);
-    r.setStart(el,0); return r.toString();
-  }catch(e){ return ""; }
-}
+const rtTextUptoCaret=wTextUptoCaret;
 
 /* ══ MOTH · ATTACHING A FILE TO A MONTH PLAN ═════════════════════════
    NOTHING NEW WAS BUILT FOR THIS. `assets` has accepted owner_kind
@@ -17332,7 +17409,7 @@ function mpPlanId(m){
    working it out and one of them getting it wrong. */
 let MP_UP_TARGET=null;
 function mpAttTarget(){
-  const el=MPBAR_FOR; if(!el) return null;
+  const el=wBarField(); if(!el) return null;
   const m=Number(el.dataset.mpvM);
   if(!m) return null;
   if(el.dataset.mpvAtt==="item"&&el.dataset.mpvI)
@@ -17389,7 +17466,7 @@ function mpAttachOpen(ev){
   /* v82.4 — on a comment the clip IS the old Attach button: it opens the
      same staged-files input, and the chips under the composer still show
      what is waiting. One control for attaching, everywhere. */
-  const f=MPBAR_FOR;
+  const f=wBarField();
   if(f&&f.dataset&&f.dataset.att==="comment"){
     const inp=document.getElementById("fb-files-"+f.dataset.post);
     if(inp) inp.click();
