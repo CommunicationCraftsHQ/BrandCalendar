@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v87.0 — Wasp: the shoot has a conversation"/>
+<meta name="cc-tool-version" content="v88.0 — Nagpur: one face, one form, one bell"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -169,6 +169,13 @@ body.planning .mc-day:hover{box-shadow:0 0 0 2px #0EA5A5 inset;border-radius:5px
 .mc-day .pr-cam{position:absolute;bottom:0;right:0;width:13px;height:13px;color:#4A55A8;pointer-events:none;}
 .mc-day .pr-cam svg{width:13px;height:13px;display:block;}
 .mc-day.today .pr-cam{color:#B9C0F5;}
+/* a solid camcorder, 12px, in the production colour. The number
+   appears only when a day carries more than one shoot — the thing an
+   icon on its own can never say. */
+.mc-day .pr-mark{position:absolute;bottom:1px;right:1px;display:flex;align-items:center;gap:2px;
+  color:#4A55A8;pointer-events:none;font-size:9px;font-weight:800;line-height:1;}
+.mc-day .pr-mark svg{width:12px;height:12px;display:block;}
+.mc-day.today .pr-mark{color:#B9C0F5;}
 .ev-strip-seg{flex:1;border-radius:1px;}
 .mc-empty{aspect-ratio:1;min-height:22px;}
 
@@ -2205,6 +2212,20 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .mpv-bh b{font-size:12.5px;font-weight:800;}
 .mpv-bh .sum{font-size:11px;color:var(--muted);font-weight:600;}
 .mpv-bh .dots{display:flex;gap:3px;margin-left:auto;align-items:center;}
+/* the Production strip says something while it is still shut */
+.mpv-bh.prod-bh{gap:0;padding-right:9px;}
+.mpv-bh .bhgrab{display:flex;align-items:center;gap:9px;flex:1;min-width:0;}
+.mpv-bh .pfacts{display:flex;gap:6px;flex-wrap:wrap;min-width:0;}
+.mpv-bh .pf{font-size:10px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
+  border-radius:999px;padding:2px 8px;white-space:nowrap;}
+.mpv-bh .pf.sch{background:#E8F0FE;color:#1D4ED8;}
+.mpv-bh .pf.done{background:#EAF3DE;color:#3B6D11;}
+.mpv-bh .pf.req{background:#FCEBEB;color:#8E2323;}
+.mpv-bh .pf.nod{background:#EFEDF6;color:#5C5077;}
+.mpv-bh .pf.none{background:transparent;color:var(--subtle);text-transform:none;letter-spacing:0;
+  font-weight:600;padding:2px 0;}
+.mpv-bh .pnext{font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap;margin-left:4px;}
+.mpv-bh .prodask{flex:none;margin-left:9px;}
 .mpv-dot{width:7px;height:7px;border-radius:50%;flex:none;}
 .mpv-bb{padding:11px 13px;border-top:1px solid var(--div);}
 .mpv-band.shut .mpv-bb{display:none;}
@@ -4912,7 +4933,17 @@ function leadAssetFromRound(roundId){
    Inline rather than a Tabler class because the month grid is built as
    an HTML string and an icon font that fails to load leaves a blank the
    size of a word — this cannot fail silently. */
-const PROD_CAM_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5h3.2l1.4-2.2h8.8l1.4 2.2H21v10H3z"/><circle cx="12" cy="13" r="3.4"/></svg>';
+/* ══ THE MARK IS A CAMCORDER, AND IT IS SOLID ════════════════════
+   6 Sep. The first camera was a two-line outline at 13px and it
+   cluttered the grid; a plain dot was quiet but said nothing. Chirag
+   asked for a camera shape that stays solid and clear when it is
+   small.
+
+   An OUTLINE loses its middle below about 14px — the strokes close up
+   and it turns to a smudge. A FILLED silhouette does not: the reels,
+   the body and the lens barrel each stay separate down to 11px. That
+   is the whole reason this is drawn as fills rather than strokes. */
+const PROD_CAM_SVG='<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><circle cx="7.4" cy="5.2" r="2.7"/><circle cx="14.2" cy="4.6" r="3.3"/><path d="M2.6 9.2h13.2a1.6 1.6 0 0 1 1.6 1.6v6.4a1.6 1.6 0 0 1-1.6 1.6H2.6A1.6 1.6 0 0 1 1 17.2v-6.4A1.6 1.6 0 0 1 2.6 9.2Zm2 3.2h4.2v2.4H4.6v-2.4Z"/><path d="M18.6 12.1 22.3 9.6a.6.6 0 0 1 .95.5v7.8a.6.6 0 0 1-.95.5l-3.7-2.5v-3.8Z"/></svg>';
 
 function buildMini(m){
   const fevs=filtered(m);
@@ -5057,7 +5088,17 @@ function buildMini(m){
         socPosts.forEach(p=>{const idea=((p.content.concept||"").trim()||p.content.instagram.caption||p.content.facebook.caption||"").replace(/\s+/g," ").slice(0,90);tipLines.push("S|"+(p.status||"")+"|"+idea+"|"+(p.format||"static"));});
         shoots.forEach(p=>tipLines.push("P|"+((brands[p.brand_id]||{}).name||"")+"|"+prodWhat(p)+"|"+(PROD_STATUS_LBL[p.status]||"")));
         const tipAttr=tipLines.length?` data-tip="${escAttr(tipLines.join("\n"))}"`:"";
-        const camIcon=shoots.length?`<span class="pr-cam" aria-hidden="true">${PROD_CAM_SVG}</span>`:"";
+        /* 5 Sep — A CAMERA ON EVERY DAY WAS TOO LOUD. Chirag: it
+           "really clutters the entire calendar view". The grid already
+           has a visual language for "something is on this day" — a
+           coloured mark — so a shoot uses it too, in the production
+           colour, rather than introducing a second kind of object at
+           icon size. The number appears only when there is more than
+           one, which the icon could never show. */
+        const camIcon=shoots.length
+          ?`<span class="pr-mark" aria-hidden="true">${PROD_CAM_SVG}${
+              shoots.length>1?`<b>${shoots.length}</b>`:""}</span>`
+          :"";
         return `<div class="${cellClass}"${campStyle?` style="${campStyle}"`:""} onclick="dayClick(${m},${day})"${tipAttr}>${dateEl}${strips}${campBadge}${camIcon}</div>`;
       }).join("")}
       ${Array(Math.max(0,42-FD[m]-DIM[m])).fill('<div class="mc-empty"></div>').join("")}
@@ -8743,7 +8784,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v87.0 — Wasp: the shoot has a conversation";
+const TOOL_VERSION="v88.0 — Nagpur: one face, one form, one bell";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -9175,6 +9216,72 @@ function prodFilesFor(p,commentIds){
   (commentIds||[]).forEach(cid=>(PRODFILES[cid]||[]).forEach(a=>out.push(a)));
   return out;
 }
+/* ══ WHAT HAPPENED ON A SHOOT THAT I HAVE NOT LOOKED AT ═════════════
+   5 Sep. THE SECOND COPY OF A RULE THAT LIVES IN TWO PLACES. The
+   Planner's shootNewsFor() is the other; this file is one plain script
+   and cannot import the Planner's module, which is why. Change both,
+   or neither.
+
+     the person who ASKED     · it was scheduled · it was cancelled
+     the person who SCHEDULES · a request arrived · one was withdrawn
+
+   Unseen means the row moved after you last opened it; production_seen
+   already records that, so no new table. */
+let PRODSEEN={};
+async function loadProductionSeen(){
+  try{
+    const me=(ME&&ME.email)||""; if(!me){ PRODSEEN={}; return; }
+    const r=await sb.from("production_seen").select("production_id,seen_at").eq("user_email",me);
+    if(r.error){ PRODSEEN={}; return; }
+    PRODSEEN={}; (r.data||[]).forEach(x=>{ PRODSEEN[x.production_id]=x.seen_at; });
+  }catch(e){ PRODSEEN={}; }
+}
+function prodNewsFor(p,opts){
+  if(!p||p.deleted_at) return [];
+  const o=opts||{};
+  const moved=p.updated_at||p.requested_at||null;
+  const seenAt=o.seenAt;
+  if(seenAt&&moved&&new Date(moved)<=new Date(seenAt)) return [];
+  const mine=!!(o.uid&&p.requested_by&&p.requested_by===o.uid);
+  const dated=prodDated(p);
+  const out=[];
+  if(mine){
+    if(p.withdrawn_at){ /* my own withdrawal is not news to me */ }
+    else if(p.status==="cancelled") out.push("cancelled");
+    /* "still a request" is FALSE the moment it is accepted — which is
+       exactly the event — so this asks whether they ASKED. */
+    else if(dated&&p.requested_by) out.push("accepted");
+  }
+  if(o.canSchedule&&!mine){
+    if(p.withdrawn_at) out.push("withdrawn");
+    else if(!dated&&p.requested_by&&p.status!=="cancelled") out.push("asked");
+  }
+  return out;
+}
+const PROD_NEWS_WORDS={accepted:"was scheduled",cancelled:"was cancelled",
+                       asked:"is being asked for",withdrawn:"was withdrawn"};
+function prodNewsItems(){
+  const uid=(ME&&ME.id)||null;
+  /* the Calendar has no production role of its own; anybody who is not
+     a client is staff here, and a client never sees a request at all
+     because the database hides undated shoots from them. */
+  const canSchedule=ME.role!=="client";
+  const out=[];
+  (PRODS||[]).forEach(p=>{
+    const kinds=prodNewsFor(p,{uid,canSchedule,seenAt:PRODSEEN[p.id]});
+    if(!kinds.length) return;
+    if(brandMuted(p.brand_id)) return;
+    const b=(brands[p.brand_id]||{});
+    out.push({ kind:"shoot", shootId:p.id, brandId:p.brand_id, brandName:b.name||"",
+      taskId:null, taskTitle:"", post:{id:null,month:null,date:null,year:null},
+      c:{ id:"shoot:"+p.id, body:prodWhat(p)+" "+(PROD_NEWS_WORDS[kinds[0]]||""),
+          author_name:(p.requested_email||"").split("@")[0]||"Production",
+          author_email:p.requested_email||"", author_kind:"team",
+          created_at:p.updated_at||p.requested_at||new Date().toISOString(), mentions:[] },
+      mention:false });
+  });
+  return out;
+}
 let PRODCOMMENTS={};
 async function loadProductionComments(){
   try{
@@ -9268,6 +9375,7 @@ async function loadAll(showToast){
                             // month plan's Production section both read it
   await loadProductionComments();  // Wasp
   await loadProductionFiles();     // Wasp
+  await loadProductionSeen();      // the four events on the bell
   await loadPostFeedback(); // Atlas: non-fatal — panel hides if tables absent
   await loadBranding(activeBrand); // Cape Town: non-fatal, same contract
   buildYearView();
@@ -11652,6 +11760,7 @@ function notifItems(){
        TWO KEYS, and the second one is what makes it stable: equal
        mention-ness falls back to the date, so the order inside each
        half is the order people already know. */
+    .concat(prodNewsItems())
     .sort((a,b)=> (b.mention-a.mention) ||
                   (new Date(b.c.created_at)-new Date(a.c.created_at)));
 }
@@ -12275,10 +12384,10 @@ async function rtRefetchCalendar(){
   }catch(e){}
 }
 
-// One channel over all nine tables. Fully guarded: environments without
-// .channel (tests) or with a failed socket must never break the app —
-// and tables not yet in the publication simply never send events.
-let RT_CHANNEL=null;
+// SEVERAL channels, a few tables each — see startRealtime() for why one
+// channel with everything on it silently stopped delivering. Fully
+// guarded: environments without .channel (tests) or with a failed
+// socket must never break the app.
 /* ══ WASP — a shoot changed somewhere else ═══════════════════════════
    The row is patched in place rather than re-reading the table: a
    realtime payload IS the row, and a re-read on every event would be a
@@ -12315,34 +12424,88 @@ function rtProductionSay(was, now){
     toast(b.name+" · "+prodWhat(now)+" was cancelled","err");
 }
 
+/* ══ REALTIME — SEVERAL CHANNELS, NOT ONE ═════════════════════════
+   5 Sep 2026, found on the live tool with Chirag watching.
+
+   THE SYMPTOM. A shoot given a date in the Production Planner never
+   reached an open Calendar. The channel said `joined`, the tables were
+   all in the realtime publication, and the code below was correct.
+
+   THE PROOF. A SECOND channel opened by hand in the same page, with a
+   single `productions` listener, received the event instantly. The
+   app's own channel, with ELEVEN listeners on it, received nothing for
+   that table.
+
+   THE CAUSE. Every `.on('postgres_changes', …)` is a separate server
+   side subscription negotiated when the channel joins. Past a point
+   the later ones simply stop delivering — and `productions` was tenth.
+   `post_comments` was also registered TWICE, which is its own way of
+   confusing the matching of events to listeners.
+
+   THE RULE THIS LEAVES: a channel carries a HANDFUL of tables, not a
+   list. Adding a table to this file means checking the count, and
+   adding a channel rather than a line if the group is full. Four
+   channels of three is not slower than one of twelve — they share one
+   socket.
+
+   AND THE GATE THAT MISSED IT: the test double has no such limit, so
+   eleven listeners behaved exactly like one. Anything that depends on
+   how the SERVER behaves has to be proved against the server. */
+const RT_GROUPS = [
+  ['social_posts','social_month_plan','social_month_items'],
+  ['post_comments','post_activity'],
+  ['brand_events','events','brands','brand_event_prefs'],
+  ['productions','assets'],
+];
+let RT_CHANNELS = [];
+let RT_CHANNEL = null;   /* the first one, kept for anything that looks */
+
+function stopRealtime(){
+  RT_CHANNELS.forEach(ch=>{ try{
+    if(typeof sb.removeChannel==="function") sb.removeChannel(ch);
+    else if(ch.unsubscribe) ch.unsubscribe();
+  }catch(e){} });
+  RT_CHANNELS=[]; RT_CHANNEL=null;
+}
+
 function startRealtime(){
   try{
     if(!sb||typeof sb.channel!=="function") return;
-    if(RT_CHANNEL){ try{ if(typeof sb.removeChannel==="function") sb.removeChannel(RT_CHANNEL); else if(RT_CHANNEL.unsubscribe) RT_CHANNEL.unsubscribe(); }catch(e){} RT_CHANNEL=null; }
-    let ch=sb.channel("cc-live-"+Date.now().toString(36));
-    const on=(t,fn)=>{ch=ch.on("postgres_changes",{event:"*",schema:"public",table:t},p=>{try{fn(p);}catch(e){}});};
-    on("social_posts",rtSocialPost);
-    on("social_month_plan",rtMonthPlan);
-    on("social_month_items",rtMonthItem);
-    on("post_comments",rtComment);
-    on("post_activity",rtActivity);
-    on("brand_events",rtCalendarChange);
-    on("events",rtCalendarChange);
-    on("brands",rtCalendarChange);
-    on("brand_event_prefs",rtCalendarChange);
-    /* WASP — the Calendar reads `productions` since Minsk and heard
-       nothing about it. A shoot accepted, dated or cancelled in the
-       Planner went quiet until somebody reloaded, and the message the
-       request frame posts back could only ever cover ONE path: a
-       request you sent yourself, from this page. This covers all of
-       them, including changes made by somebody else entirely. */
-    on("productions",rtProduction);
-    /* Wasp — a moodboard added in the Planner shows up here without a
-       reload, the same way the shoot itself does. */
-    on("post_comments",async()=>{ await loadProductionComments(); rerenderAfterProd(); });
-    on("assets",async()=>{ await loadProductionFiles(); rerenderAfterProd(); });
-    ch.subscribe();
-    RT_CHANNEL=ch;
+    stopRealtime();
+    /* ONE handler per table. `post_comments` used to be registered
+       twice — once for the comment itself and once to refresh the
+       shoot's notes — and two listeners for one table is exactly the
+       shape that stops events arriving. */
+    const HANDLERS = {
+      social_posts:      rtSocialPost,
+      social_month_plan: rtMonthPlan,
+      social_month_items:rtMonthItem,
+      post_activity:     rtActivity,
+      brand_events:      rtCalendarChange,
+      events:            rtCalendarChange,
+      brands:            rtCalendarChange,
+      brand_event_prefs: rtCalendarChange,
+      productions:       rtProduction,
+      post_comments:     async(p)=>{ rtComment(p);
+                                     await loadProductionComments(); rerenderAfterProd(); },
+      assets:            async()=>{ await loadProductionFiles(); rerenderAfterProd(); },
+    };
+    const stamp = Date.now().toString(36);
+    RT_GROUPS.forEach((tables,i)=>{
+      let ch = sb.channel("cc-live-"+i+"-"+stamp);
+      tables.forEach(t=>{
+        const fn = HANDLERS[t];
+        if(!fn) return;
+        ch = ch.on("postgres_changes",{event:"*",schema:"public",table:t},
+                   p=>{ try{ fn(p); }catch(e){} });
+      });
+      ch.subscribe();
+      RT_CHANNELS.push(ch);
+    });
+    RT_CHANNEL = RT_CHANNELS[0] || null;
+    /* so a live page can be asked what it is actually listening to */
+    window.__ccRealtime = () => RT_CHANNELS.map((c,i)=>({
+      topic:c.topic, state:c.state, tables:RT_GROUPS[i] }));
   }catch(e){}
 }
 
@@ -16510,14 +16673,44 @@ function mpvProductionHtml(m,canE){
   const rows=dated.sort((a,b)=>a.date_day-b.date_day).map(mpvProdRow).join("")
     +(open.length?`<div class="pdiv">Coming up, no date yet</div>`
       +open.slice().sort((a,b)=>(prodIsRequest(b)-prodIsRequest(a))).map(mpvProdRow).join(""):"");
+
+  /* ══ THE CLOSED STRIP HAS TO EARN ITS LINE ═════════════════════
+     5 Sep. It read "Production · 0 shoots" and nothing else, and the
+     one useful thing on it — asking for a shoot — was hidden until
+     you expanded. Chirag: "this strip is completely wasted."
+
+     Closed, it now answers the three questions somebody scanning a
+     month plan actually has: what is booked, what is waiting on me,
+     and when is the next one. Expanding ADDS the detail rather than
+     revealing the only thing worth having. */
+  const live      = dated.filter(p=>p.status!=="cancelled");
+  const scheduled = live.filter(p=>p.status!=="done").length;
+  const done      = live.filter(p=>p.status==="done").length;
+  const asked     = open.filter(p=>prodIsRequest(p)&&!p.withdrawn_at).length;
+  const undated   = open.length-asked;
+  const next      = live.filter(p=>p.status!=="done")
+                        .sort((a,b)=>a.date_day-b.date_day)[0];
+
+  const facts=[];
+  if(scheduled) facts.push(`<span class="pf sch">${scheduled} scheduled</span>`);
+  if(done)      facts.push(`<span class="pf done">${done} done</span>`);
+  if(asked)     facts.push(`<span class="pf req">${asked} waiting on you</span>`);
+  if(undated)   facts.push(`<span class="pf nod">${undated} not dated</span>`);
+  if(!facts.length) facts.push(`<span class="pf none">Nothing planned</span>`);
+  const nextLine=next?`<span class="pnext">Next · ${next.date_day} ${MN[m].slice(0,3)}</span>`:"";
+
   return `<div class="mpv-band${mpvIsShut("sc-production-"+m)?" shut":""}" data-band="sc-production-${m}" style="margin-top:14px;">
-    <div class="mpv-bh" onclick="mpvToggle('sc-production-${m}')">
-      <i class="ti ti-chevron-down cv"></i>
-      <span class="prod-cam">${PROD_CAM_SVG}</span><b>Production</b>
-      <span class="sum">${n} shoot${n===1?"":"s"}</span></div>
+    <div class="mpv-bh prod-bh">
+      <span class="bhgrab" onclick="mpvToggle('sc-production-${m}')">
+        <i class="ti ti-chevron-down cv"></i>
+        <span class="prod-cam">${PROD_CAM_SVG}</span><b>Production</b>
+        <span class="pfacts">${facts.join("")}</span>
+        ${nextLine}
+      </span>
+      ${canE?`<button class="btn btn-s btn-sm prodask" onclick="event.stopPropagation();openProdRequest()"><i class="ti ti-plus"></i> Request</button>`:""}
+    </div>
     <div class="mpv-bb prodbb">
       ${n?rows:`<div class="mpv-empty">Nothing planned.</div>`}
-      ${canE?`<div class="prodfoot"><button class="btn btn-s" onclick="openProdRequest()"><i class="ti ti-plus"></i> Request a production</button></div>`:""}
     </div></div>`;
 }
 
