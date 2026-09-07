@@ -35,7 +35,7 @@
    Bump this with every batch that changes this file, the way every tool's
    TOOL_VERSION carries its batch name.
 
-   name="cc-tool-version" content="v67.0 — Ghent: the writing box"
+   name="cc-tool-version" content="v67.1 — Ghent: the @ menu is not clipped"
 
    Source : webapp/site/index.html (v57.5 — Oslo: the sidebar counts formats, not the total twice)
             — where these rules were extracted from, the last time this
@@ -463,14 +463,16 @@ body .em2-page{height:calc(100vh - 60px - var(--cc-alarm-h,0px));}
 .ccw-read ul{margin:4px 0;padding-left:20px;}
 .ccw-read a{color:var(--acc);}
 
-/* THE @ MENU HANGS OFF THE BOX, NOT THE WINDOW. It was `position:fixed`
-   placed from the box's own rectangle, which is correct everywhere
-   except inside a panel that has a transform or a backdrop filter — and
-   the Planner's panel has both. A fixed child of a transformed ancestor
-   is positioned against THAT ancestor, so the menu landed in the middle
-   of the footer. Anchored to the wrapper instead, it cannot be wrong. */
-.ccw-at{position:absolute;left:0;top:100%;margin-top:4px;
-  z-index:9000;min-width:190px;max-width:100%;max-height:230px;overflow:auto;padding:4px;
+/* THE @ MENU IS DRAWN AT THE END OF THE PAGE, NOT INSIDE THE BOX.
+   It has been wrong twice. As a `fixed` child of the Planner's panel it
+   was positioned against that panel — a transformed ancestor takes over
+   from the window — and landed in the middle of the footer. Anchored to
+   its wrapper instead, it was CLIPPED by the panel's own scrolling: two
+   of five people visible, cut off at the edge. It is now portalled to
+   <body> and placed from the box's measured rectangle, which has
+   neither problem. Nothing here positions it. */
+.ccw-at{position:fixed;
+  z-index:9000;min-width:190px;max-width:340px;max-height:230px;overflow:auto;padding:4px;
   background:var(--surface,#fff);border:1px solid var(--div);border-radius:10px;
   box-shadow:0 10px 26px rgba(0,0,0,.16);}
 .ccw-at .row{display:flex;align-items:center;gap:8px;padding:5px 7px;border-radius:7px;cursor:pointer;font-size:12.5px;}
