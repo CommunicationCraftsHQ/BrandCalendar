@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v90.0 — Ghent: one writing box"/>
+<meta name="cc-tool-version" content="v91.0 — Turin: the industry list moved to the Portfolio"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -1962,8 +1962,12 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .im2-li.on{background:#FDF3F3;}
 .im2-li.drag{opacity:.35;}
 .im2-li.over{border-top:2px solid var(--acc);}
-.im2-grip{color:var(--subtle);cursor:grab;font-size:14px;text-align:center;line-height:28px;}
-.im2-grip:active{cursor:grabbing;}
+/* TURIN — the grip is an empty column now, kept so the grid still
+   lines up with the header above it. The list is read here. */
+.im2-grip{color:var(--subtle);font-size:14px;text-align:center;line-height:28px;}
+.im2-nm{font-size:13px;color:var(--text);line-height:28px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;padding:0 6px;}
+.im2-li.ro{cursor:pointer;}
 .im2-num{font-size:12px;font-weight:600;text-align:right;padding-right:4px;}
 .im2-num.hi{color:#1F6B33;}
 .im2-num.me{color:#8A6A11;}
@@ -2708,7 +2712,7 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
              The email keeps its own hairline rather than a .bpsep, so the three
              dividers in the markup are exactly the three group breaks. -->
         <div class="brow" data-need="manage_events" onclick="closeAllPops();openEventManager()"><i class="ti ti-calendar-cog"></i><span class="bnm">Event Manager</span></div>
-        <div class="brow" data-need="edit" onclick="closeAllPops();openIndustryManager()"><i class="ti ti-tags"></i><span class="bnm">Industry Manager</span></div>
+        <div class="brow" data-need="edit" onclick="closeAllPops();openIndustryManager()"><i class="ti ti-tags"></i><span class="bnm">Industry ratings</span></div>
         <div class="brow" data-need="edit" onclick="closeAllPops();carryForward()"><i class="ti ti-arrow-forward"></i><span class="bnm" id="acct-carry">Carry forward to next year</span></div>
         <div class="brow" data-need="edit" onclick="closeAllPops();openImportHistory()"><i class="ti ti-file-import"></i><span class="bnm">Import history</span></div>
         <div class="bpsep"></div>
@@ -2977,9 +2981,10 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
        · "All events (medium)" and "Key dates only" as starting points.
          Neither described a real industry; copying the closest cousin
          is what people actually did, and it is the only option left.
-     renderIndMgr(), addInd(), renameInd() and rmInd() stay defined and
-     guarded — the page uses renderIndMgr2(), imAdd(), imRename() and
-     imDel(), which ask before they act. -->
+     TURIN: renderIndMgr(), addInd(), renameInd() and rmInd() are now
+     DELETED, not merely unreachable. The list is edited in the
+     Portfolio and nowhere else; a dormant editor in this file is a
+     second door waiting to be found. -->
 
 <!-- DATE PICKER MODAL -->
 <div class="overlay" id="ov-date-picker" onclick="if(event.target===this)closeM('date-picker')">
@@ -6220,83 +6225,12 @@ function handleAudKey(e){const inp=document.getElementById("bf-aud-in");if((e.ke
 function rmAud(i){bmAud.splice(i,1);renderAudTags();}
 
 // ── INDUSTRY MANAGER ───────────────────────────────────────
-function renderIndMgr(){
-  const baseSel=document.getElementById("indm-base");
-  if(baseSel){
-    const cur=baseSel.value;
-    baseSel.innerHTML='<option value="">Start blank</option><option value="__all">All events (medium)</option><option value="__key">Key dates only</option>'+INDS.map(i=>`<option value="${i.id}">Copy of ${i.label}</option>`).join("");
-    baseSel.value=cur||"";
-  }
-  /* D2 retired this screen. Same guard as renderEM: without it, any
-     surviving call site throws on a null #indm-list. */
-  const list=document.getElementById("indm-list"); if(!list) return; list.innerHTML="";
-  INDS.forEach(ind=>{
-    let high=0, med=0, low=0;
-    for(let m=1;m<=12;m++) (evs[m]||[]).forEach(e=>{
-      const lv=(e.relevance||{})[ind.id];
-      if(lv==="high") high++; else if(lv==="medium") med++; else if(lv==="low") low++;
-    });
-    const row=document.createElement("div"); row.className="indm-row";
-    row.innerHTML=`<div class="indm-name">${ind.label}</div>
-      <div style="display:flex;gap:4px;align-items:center;">
-        <span style="font-size:11px;font-weight:700;padding:1px 6px;border-radius:3px;background:#DCFCE7;color:#166534;">${high} high</span>
-        <span style="font-size:11px;font-weight:700;padding:1px 6px;border-radius:3px;background:#FEF9C3;color:#854D0E;">${med} med</span>
-        <span style="font-size:11px;font-weight:700;padding:1px 6px;border-radius:3px;background:#F5F5F5;color:#999;">${low} low</span>
-      </div>
-      <button class="btn btn-s btn-sm" onclick="renameInd('${ind.id}')">Rename</button>
-      <button class="btn btn-s btn-sm" onclick="openIndRate('${ind.id}')">Rate events</button>
-      <button class="btn btn-d btn-sm" onclick="rmInd('${ind.id}')">Remove</button>`;
-    list.appendChild(row);
-  });
-}
-
-function renameInd(id){
-  const ind=INDS.find(i=>i.id===id); if(!ind) return;
-  const name=prompt("New name for this industry:", ind.label); if(!name||name===ind.label) return;
-  ind.label=name; saveIndLS();
-  renderIndMgr(); buildIndDropdown(); render(); toast("Industry renamed");
-}
-function addInd(){
-  /* retired with the modal — imAdd() is the live one. Guarded rather
-     than deleted, so a stale call site cannot throw on a null field. */
-  const nf=document.getElementById("indm-new"); if(!nf) return;
-  const name=nf.value.trim(); if(!name) return;
-  const id=name.toLowerCase().replace(/\s+/g,"_").replace(/[^a-z0-9_]/g,"");
-  if(INDS.find(i=>i.id===id)){toast("Already exists","err");return;}
-  INDS.push({id,label:name}); saveIndLS(); document.getElementById("indm-new").value="";
-  // inherit starter ratings so the new industry isn't blank
-  const base=(document.getElementById("indm-base")||{value:""}).value;
-  if(base){
-    for(let m=1;m<=12;m++)(evs[m]||[]).forEach(e=>{
-      if(e._custom||e._isPost) return;
-      e.relevance=e.relevance||{};
-      if(base==="__all"){ e.relevance[id]="medium"; }
-      else if(base==="__key"){ if(e.mega) e.relevance[id]="medium"; }
-      else if(e.relevance[base]) e.relevance[id]=e.relevance[base];
-      e.industries=Object.entries(e.relevance).filter(([,v])=>v==="high"||v==="medium").map(([k])=>k);
-    });
-    dbPushAllMasterEvents();
-  }
-  renderIndMgr(); buildIndDropdown(); render(); toast("Industry added");
-  openIndRate(id); // review & fine-tune every rating in one pass
-}
-
-function rmInd(id){
-  if(!confirm("Remove this industry?")) return;
-  INDS=INDS.filter(i=>i.id!==id);
-  for(let m=1;m<=12;m++)(evs[m]||[]).forEach(e=>{
-    e.industries=(e.industries||[]).filter(i=>i!==id);
-    if(e.relevance) delete e.relevance[id];
-  });
-  selInds=selInds.filter(i=>i!==id);
-  (async()=>{ if(canEdit()) dbErr(await sb.from("industries").delete().eq("id",id)); })();
-  dbPushAllMasterEvents(); // persist the cleaned ratings too
-  saveIndLS(); saveEvsLS(); renderIndMgr(); buildIndDropdown(); render(); toast("Industry removed");
-}
-
-// ── INDUSTRY DROPDOWN ──────────────────────────────────────
-/* Shanghai: industries moved into the side panel. Kept as guarded
-   no-ops so any remaining call site cannot throw. */
+/* TURIN — renderIndMgr(), renameInd(), addInd() and rmInd() were
+   deleted here. They were the FIRST industry editor, retired when the
+   second one was written, left defined and unreachable ever since. The
+   industry list is edited in the Portfolio now and nowhere else, so a
+   dormant editor sitting in this file is exactly the second door this
+   batch exists to close. */
 function buildIndDropdown(){
   const items=document.getElementById("ind-ms-items"); if(!items) return; items.innerHTML="";
   SECTORS().forEach(ind=>{
@@ -6392,7 +6326,7 @@ function exportXLSX(){
 function openM(id){
   if(id==="brand-mgr") renderBM();
   if(id==="ev-mgr") renderEM();
-  if(id==="ind-mgr") renderIndMgr();
+  /* TURIN — #ov-ind-mgr went with the first editor. Nothing opens it. */
   /* D1 deleted #ov-ev-mgr. importEvents() still calls closeM('ev-mgr')
      on its way out, and an unguarded lookup here throws on a modal that
      no longer exists — so both ends tolerate a missing overlay. */
@@ -8799,7 +8733,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v90.0 — Ghent: one writing box";
+const TOOL_VERSION="v91.0 — Turin: the industry list moved to the Portfolio";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -16111,7 +16045,7 @@ function emAdd(){
      yes/no — a guard on an empty row is theatre.
    ═══════════════════════════════════════════════════════════════════ */
 
-let imQ="", imSel="", imShow="all", imNew="", imBase="", imParent="", imDragFrom=-1;
+let imQ="", imSel="", imShow="all";
 const imTimers={};
 
 const imBrandCount=id=>Object.values(brands).filter(b=>(b.inds||[]).includes(id)).length;
@@ -16148,18 +16082,18 @@ function renderIndMgr2(){
     /* the real index, not the filtered one — a search must not be able
        to reorder the list into something the user cannot see */
     const idx=INDS.findIndex(i=>i.id===ind.id);
-    list+=`<div class="im2-li${imSel===ind.id?" on":""}" data-ind="${ind.id}" data-idx="${idx}" draggable="true"
-      onclick="imPick('${ind.id}')"
-      ondragstart="imDragStart(${idx},this)" ondragover="imDragOver(event,this)"
-      ondragleave="this.classList.remove('over')" ondrop="imDrop(event,${idx},this)" ondragend="imDragEnd()">
-      <span class="im2-grip"><i class="ti ti-grip-vertical"></i></span>
-      <input class="em2-ce nm" data-f="label" value="${escAttr(ind.label)}"
-        style="${ind.parent_id?"padding-left:18px;font-weight:400;":"font-weight:700;"}"
-        onchange="imRename('${ind.id}',this)" onkeydown="if(event.key==='Enter')this.blur()">
+    /* TURIN — the row READS now. No grip, no editable name, no trash:
+       the list itself is edited in the Portfolio. What is left is what
+       this screen is actually for — picking an industry to see, and
+       change, what it gets from the calendar. */
+    list+=`<div class="im2-li ro${imSel===ind.id?" on":""}" data-ind="${ind.id}" data-idx="${idx}"
+      onclick="imPick('${ind.id}')">
+      <span class="im2-grip"></span>
+      <span class="im2-nm" style="${ind.parent_id?"padding-left:18px;font-weight:400;":"font-weight:700;"}">${escAttr(ind.label)}</span>
       <span class="im2-num${nb?"":" zero"}">${nb}</span>
       <span class="im2-num hi${c.high?"":" zero"}">${c.high}</span>
       <span class="im2-num me${c.med?"":" zero"}">${c.med}</span>
-      <span class="em2-del" onclick="event.stopPropagation();imDel('${ind.id}')" title="Remove this industry"><i class="ti ti-trash"></i></span>
+      <span></span>
     </div>`;
   });
   if(!rows.length) list=`<div class="em2-empty">${INDS.length?"No industries match that search.":"No industries yet."}</div>`;
@@ -16168,10 +16102,14 @@ function renderIndMgr2(){
   <div class="em2-page">
     <div class="year-head">
       <div class="year-headtxt">
-        <div class="year-title">Industry Manager</div>
-        <div class="year-sub">${SECTORS().length} sector${SECTORS().length===1?"":"s"} · ${INDS.length-SECTORS().length} industr${INDS.length-SECTORS().length===1?"y":"ies"}</div>
+        <div class="year-title">Industry ratings</div>
+        <div class="year-sub">${SECTORS().length} sector${SECTORS().length===1?"":"s"} · ${INDS.length-SECTORS().length} industr${INDS.length-SECTORS().length===1?"y":"ies"} · what each one gets from this calendar</div>
       </div>
       <div class="em2-headacts">
+        <!-- TURIN — a door, never a second editor. The list is the
+             Portfolio's; how relevant each event is to an industry is
+             this calendar's, and that is the whole of what stayed. -->
+        <button class="btn btn-s btn-sm" onclick="window.open('https://communicationcraftshq.github.io/BrandCalendar/portfolio/#industries','_blank')"><i class="ti ti-external-link"></i> Add or rename an industry</button>
         <button class="btn btn-s btn-sm" onclick="setView('year')"><i class="ti ti-arrow-left"></i> Back to the calendar</button>
       </div>
     </div>
@@ -16184,22 +16122,10 @@ function renderIndMgr2(){
       <div class="em2-lst">
         <div class="im2-hrow"><span></span><span>Industry</span><span>Brands</span><span>High</span><span>Medium</span><span></span></div>
         ${list}
-        <!-- starting from scratch means rating every event by hand.
-             Copying the closest cousin and adjusting twenty is the real
-             workflow, so it is a dropdown rather than a wizard. -->
-        <div class="im2-addrow">
-          <span style="color:var(--acc);text-align:center"><i class="ti ti-plus"></i></span>
-          <input class="fi" id="im2-new" style="height:28px" placeholder="Add an industry…" value="${escAttr(imNew)}"
-            oninput="imNew=this.value" onkeydown="if(event.key==='Enter')imAdd()">
-          <select class="fi" style="height:28px;font-size:11.5px" onchange="imParent=this.value">
-            <option value=""${imParent===""?" selected":""}>A sector of its own</option>
-            ${SECTORS().map(sc=>`<option value="${sc.id}"${imParent===sc.id?" selected":""}>Under ${escAttr(sc.label)}</option>`).join("")}
-          </select>
-          <select class="fi" style="height:28px;font-size:11.5px" onchange="imBase=this.value">
-            <option value=""${imBase===""?" selected":""}>Start from scratch — all low</option>
-            ${INDS.map(i=>`<option value="${i.id}"${imBase===i.id?" selected":""}>Copy ratings from ${escAttr(i.label)}</option>`).join("")}
-          </select>
-        </div>
+        <!-- TURIN — the add row went to the Portfolio with the rest of
+             the editing. Adding an industry here and rating it here was
+             one screen doing two jobs; only the rating one is a
+             calendar question. -->
       </div>
       <div class="em2-pn" id="im2-panel">${imPanelHtml()}</div>
     </div>
@@ -16243,89 +16169,16 @@ function imSetShow(k){ imShow=k; imRepaintPanel(); }
 function imPick(id){ if(imSel===id) return; imSel=id; renderIndMgr2(); }
 
 /* A RENAME ASKS FIRST — answered by Chirag on 5 August. */
-function imRename(id,inp){
-  const ind=INDS.find(i=>i.id===id); if(!ind) return;
-  const next=inp.value.trim();
-  if(!next||next===ind.label){ inp.value=ind.label; return; }
-  if(!canEdit()){ inp.value=ind.label; return toast("View-only account","err"); }
-  if(INDS.some(i=>i.id!==id&&i.label.toLowerCase()===next.toLowerCase())){
-    inp.value=ind.label; return toast("There is already an industry with that name","err");
-  }
-  const c=imCounts(id), nb=imBrandCount(id);
-  const carried=[nb?`${nb} brand${nb===1?"":"s"} tagged with it`:"",
-                 (c.high+c.med)?`${c.high+c.med} event rating${(c.high+c.med)===1?"":"s"}`:""]
-                .filter(Boolean).join(" and ");
-  const msg=`Rename "${ind.label}" to "${next}"?`
-    +(carried?`\n\nThe underlying industry does not change, so ${carried} will follow the new name.`
-             :`\n\nNothing is tagged with it yet, so nothing else changes.`);
-  if(!confirm(msg)){ inp.value=ind.label; return; }
-  ind.label=next; saveIndLS(); buildIndDropdown(); renderIndMgr2(); toast("Renamed");
-}
+/* TURIN — imRename(), imDel(), imAdd(), the drag handlers and imMove()
+   were deleted here. Every one of them changed the LIST, and the list
+   is edited in the Portfolio now. What is left below is imRel(), which
+   changes how relevant an event is to an industry — a fact about this
+   calendar, held in this calendar's own events.
 
-/* DELETE IS GUARDED, NOT BLOCKED. */
-function imDel(id){
-  const ind=INDS.find(i=>i.id===id); if(!ind) return;
-  if(!canEdit()) return toast("View-only account","err");
-  const c=imCounts(id), nb=imBrandCount(id), rated=c.high+c.med;
-  if(nb||rated){
-    const names=Object.entries(brands).filter(([,b])=>(b.inds||[]).includes(id)).map(([,b])=>b.name);
-    const what=[names.length?`${names.join(", ")} ${names.length===1?"is":"are"} tagged with it`:"",
-                rated?`${rated} event rating${rated===1?"":"s"}`:""].filter(Boolean).join(", and ");
-    const typed=prompt(`Deleting "${ind.label}" removes ${what}.\n\nType the name to confirm:`);
-    if(typed===null) return;
-    if(typed.trim().toLowerCase()!==ind.label.toLowerCase()) return toast("That did not match — nothing was deleted","err");
-  } else if(!confirm(`Remove "${ind.label}"? Nothing is tagged with it.`)) return;
-  /* SOFT RETIRE, never a hard delete — the id keeps existing so nothing
-     that ever referenced it dangles, exactly as Lisbon retired FMCG.
-     Ratings and history stay; the row just stops appearing anywhere. */
-  INDS=INDS.filter(i=>i.id!==id);
-  Object.values(brands).forEach(b=>{ b.inds=(b.inds||[]).filter(x=>x!==id); });
-  selInds=selInds.filter(x=>x!==id);
-  (async()=>{ if(canEdit()) dbErr(await sb.from("industries").update({deleted_at:new Date().toISOString()}).eq("id",id)); })();
-  saveBrLS();
-  if(imSel===id) imSel="";
-  buildIndDropdown(); renderIndMgr2(); toast("Industry retired — History still holds it");
-}
-
-function imAdd(){
-  const name=(imNew||"").trim(); if(!name) return;
-  if(!canEdit()) return toast("View-only account","err");
-  const id=name.toLowerCase().replace(/\s+/g,"_").replace(/[^a-z0-9_]/g,"");
-  if(!id) return toast("Give it a name with some letters in it","err");
-  if(INDS.find(i=>i.id===id)) return toast("Already exists","err");
-  INDS.push({id,label:name,parent_id:imParent||null});
-  INDS=sortIndsTree(INDS);
-  if(imBase){
-    for(let m=1;m<=12;m++)(evs[m]||[]).forEach(e=>{
-      if(e._custom||e._isPost) return;
-      e.relevance=e.relevance||{};
-      if(e.relevance[imBase]) e.relevance[id]=e.relevance[imBase];
-      e.industries=Object.entries(e.relevance).filter(([,v])=>v==="high"||v==="medium").map(([k])=>k);
-    });
-    dbPushAllMasterEvents();
-  }
-  saveIndLS(); imNew=""; imParent=""; imSel=id; buildIndDropdown(); renderIndMgr2();
-  toast(imBase?`Added, copying ${(INDS.find(i=>i.id===imBase)||{}).label}`:"Industry added");
-}
-
-/* ── drag to reorder. The order IS the array order: saveIndLS writes
-   pos:i straight from it, and everything that shows industries reads
-   the same array — so there is nothing else to keep in step. ── */
-function imDragStart(idx,el){ imDragFrom=idx; if(el) el.classList.add("drag"); }
-function imDragOver(e,el){ e.preventDefault(); if(el) el.classList.add("over"); }
-function imDragEnd(){ imDragFrom=-1; document.querySelectorAll(".im2-li").forEach(n=>n.classList.remove("drag","over")); }
-function imDrop(e,idx,el){
-  if(e&&e.preventDefault) e.preventDefault();
-  if(el) el.classList.remove("over");
-  imMove(imDragFrom,idx); imDragEnd();
-}
-function imMove(from,to){
-  if(from<0||to<0||from===to||from>=INDS.length||to>=INDS.length) return;
-  if(!canEdit()) return toast("View-only account","err");
-  const [row]=INDS.splice(from,1);
-  INDS.splice(to,0,row);
-  saveIndLS(); buildIndDropdown(); renderIndMgr2(); buildSidebar();
-}
+   The only thing in this file that still writes `industries` is
+   restoring a backup, and restoring is not editing: a restore that
+   brought back the events and left the industry list as it found it
+   would be a restore that did not restore. */
 
 function imRel(evId,level){
   if(!imSel) return;
