@@ -35,7 +35,7 @@
    Bump this with every batch that changes this file, the way every tool's
    TOOL_VERSION carries its batch name.
 
-   name="cc-tool-version" content="v67.1 — Ghent: the @ menu is not clipped"
+   name="cc-tool-version" content="v68 — Ravenna: a box means you can type in it"
 
    Source : webapp/site/index.html (v57.5 — Oslo: the sidebar counts formats, not the total twice)
             — where these rules were extracted from, the last time this
@@ -123,9 +123,35 @@ body{background:var(--bg);color:var(--text);margin:0;min-height:100vh;}
 .modal-foot{padding:14px 26px;border-top:1px solid var(--div);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .field{margin-bottom:14px;}
 .fl{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
-.fi{width:100%;height:38px;padding:0 12px;background:var(--bg);border:1.5px solid var(--div);border-radius:var(--r);font-size:14px;color:var(--text);font-family:inherit;outline:none;transition:all 120ms;}
-.fi:hover{border-color:#aaa;}
-.fi:focus{border-color:var(--acc);background:var(--surface);}
+/* ── RAVENNA · A BOX MEANS YOU CAN TYPE IN IT ──────────────────────
+   Chirag, 7 September: "it is difficult to ascertain which one is an
+   editable field… so I can simply go there and start typing rather
+   than having to find which field is editable and which is a tag."
+
+   He was right, and the cause was three near-identical greys. The
+   field was filled `var(--bg)` #F2F2F0; Portfolio's read-only field
+   was filled #F2F2F0 — the same value, written out by hand; and the
+   card behind both is off-white. An editable box and a dead one were
+   the same object.
+
+   THE RULE, AND IT IS THE WHOLE RULE: a box means you can type in it,
+   and no box at all means it is information. So an editable field now
+   sits on `--surface`, the lightest surface the suite has, with a
+   border in `--subtle` that has real contrast against the card; and a
+   read-only one below loses the border and the fill entirely and
+   becomes plain text.
+
+   NO NEW COLOUR. Every value here is an existing `:root` token. The
+   focus ring is `--acc` at 15% — the same red, not another one — and
+   carries no hex of its own, because the drift checker builds the
+   palette from this file and the Calendar and a colour invented here
+   would quietly legalise itself. */
+.fi{width:100%;height:38px;padding:0 12px;background:var(--surface);border:1.5px solid var(--subtle);border-radius:var(--r);font-size:14px;color:var(--text);font-family:inherit;outline:none;transition:all 120ms;}
+.fi:hover{border-color:var(--muted);}
+/* UNMISTAKABLE, not a one-pixel hint: the border goes to the accent
+   AND a ring appears outside it. A focus you have to look for is the
+   same defect one step later. */
+.fi:focus{border-color:var(--acc);background:var(--surface);box-shadow:0 0 0 3px rgba(214,40,40,.15);}
 .fi.ta{height:auto;padding:10px 12px;resize:vertical;}
 .btn{height:36px;padding:0 16px;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid transparent;font-family:inherit;transition:all 120ms;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
 .btn-p{background:var(--acc);color:#fff;border-color:var(--acc);}
@@ -151,8 +177,40 @@ body{background:linear-gradient(150deg,#EFEDE8 0%,#E8E5DF 55%,#EDEAE4 100%) fixe
 .modal-top,.modal-foot{border-color:rgba(13,13,13,.06);}
 .modal-x{background:rgba(255,255,255,.6);box-shadow:inset 0 0 0 1px rgba(255,255,255,.9);}
 .modal-x:hover{background:var(--text);color:#fff;border-color:var(--text);}
-.fi{background:rgba(255,255,255,.55);border-color:rgba(255,255,255,.9);border-radius:10px;}
-.fi:focus{background:#fff;border-color:var(--acc);}
+/* RAVENNA — THIS BLOCK IS NOT SCOPED TO A MODAL. It reads like a
+   modal variant and it is not: nothing encloses it, so this `.fi` has
+   been overriding the base rule on EVERY screen of every tool since
+   the glass pass landed. That is where Chirag's complaint actually
+   came from — a white fill behind a border of `rgba(255,255,255,.9)`,
+   which is to say a white border, on an off-white card.
+
+   It keeps the glassier fill, because on glass that reads well. The
+   border stops being white. */
+.fi{background:rgba(255,255,255,.72);border-color:rgba(13,13,13,.28);border-radius:10px;}
+.fi:hover{border-color:rgba(13,13,13,.45);}
+.fi:focus{background:#fff;border-color:var(--acc);box-shadow:0 0 0 3px rgba(214,40,40,.15);}
+
+/* ── AND THE OTHER HALF: NO BOX MEANS IT IS INFORMATION ───────────
+   One definition, in the kit, rather than the three identical copies
+   this rule used to have — `.fi.ro` in Portfolio's clients.css,
+   `.bm-ro` in master.css and `.fi.indp-t.ro` in portfolio.css, each
+   filling #F2F2F0 by hand. Three copies of one idea is how two
+   screens come to disagree about what read-only looks like, and the
+   drift checker would call a fourth one a contradiction.
+
+   `:disabled` is here for the same reason and not as a bonus: a
+   viewer cannot type into it either, so a box around it makes exactly
+   the promise the rule exists to stop making. A disabled <select>
+   also loses its chevron — an arrow that opens nothing is the same
+   lie in a smaller font. */
+.fi.ro,.fi:disabled{background:transparent;border-color:transparent;box-shadow:none;
+  padding-left:0;color:var(--text);cursor:default;}
+.fi.ro:hover,.fi:disabled:hover{border-color:transparent;}
+.fi.ro:focus{border-color:transparent;background:transparent;box-shadow:none;}
+select.fi:disabled,select.fi.ro{-webkit-appearance:none;appearance:none;background-image:none;}
+/* A read-only value is still worth reading, so it keeps the text
+   colour and stays selectable — the old Portfolio rule set
+   `pointer-events:none`, which also stopped anyone copying it. */
 .modal::-webkit-scrollbar{width:6px;}
 .modal::-webkit-scrollbar-track{background:transparent;margin:14px 0;}
 .modal::-webkit-scrollbar-thumb{background:rgba(13,13,13,.18);border-radius:999px;}
