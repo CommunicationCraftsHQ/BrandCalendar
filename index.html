@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v91.0 — Turin: the industry list moved to the Portfolio"/>
+<meta name="cc-tool-version" content="v92.0 — Lyon: the list sorts and the link lands"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -1478,6 +1478,12 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
   display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;
   color:rgba(255,255,255,.72);font-size:17px;background:rgba(255,255,255,.08);}
 .mlbdel:hover{background:rgba(180,35,24,.9);color:#fff;}
+/* LYON — the download sits beside the bin, same box, same treatment.
+   A different shape here would read as a different KIND of thing. */
+.mlbdl{position:fixed;top:18px;right:106px;width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  background:rgba(255,255,255,.14);color:#fff;font-size:15px;}
+.mlbdl:hover{background:rgba(255,255,255,.3);}
 .mlbx{position:absolute;top:18px;right:22px;color:#fff;font-size:26px;cursor:pointer;line-height:1;opacity:.8;}
 .mlbnav{position:absolute;top:50%;transform:translateY(-50%);color:#fff;font-size:30px;cursor:pointer;
   opacity:.7;padding:14px;user-select:none;}
@@ -1569,6 +1575,9 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .mrev{position:fixed;inset:0;background:rgba(13,13,13,.94);-webkit-backdrop-filter:blur(10px);
   backdrop-filter:blur(10px);z-index:940;display:none;flex-direction:column;}
 .mrev.open{display:flex;}
+.rvdl{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;background:rgba(255,255,255,.14);color:#fff;font-size:14px;}
+.rvdl:hover{background:rgba(255,255,255,.3);}
 .rvtop{height:52px;display:flex;align-items:center;gap:13px;padding:0 18px;color:#fff;
   border-bottom:1px solid rgba(255,255,255,.12);flex:none;}
 .rvt{font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;}
@@ -1674,6 +1683,12 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 /* a comment is text. No box, no border, no buttons until you reach it. */
 .th46 .c46{display:flex;gap:11px;padding:13px 16px;position:relative}
 .th46 .c46:hover{background:#FBFAF8}
+/* LYON — the message a link landed on, marked for four seconds and then
+   left alone. A permanent highlight would still be there tomorrow with
+   nothing to explain it; the animation ends on the ordinary background,
+   so nothing is left behind if the class is not removed. */
+.th46 .c46.fb-landed{animation:fbland 4s ease-out 1}
+@keyframes fbland{0%,55%{background:#FFF4D6}100%{background:transparent}}
 .th46 .av46{width:28px;height:28px;border-radius:50%;background:#0D0D0D;color:#fff;font-size:11px;
   font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
 .th46 .av46.cl{background:#378ADD}
@@ -2380,6 +2395,18 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .brl-lens span{height:28px;padding:0 11px;border-radius:6px;display:flex;align-items:center;
   font-size:12.5px;font-weight:600;cursor:pointer;color:var(--muted)}
 .brl-lens span.on{background:#fff;color:var(--text);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+/* LYON — the sort control sits in the same 34px row as the two lens
+   groups and borrows their tray, so the header reads as one strip
+   rather than a strip plus a stray form field. It is a real <select>
+   on purpose: a third pill group would have made three of them
+   competing in one row, and a popover would have had to solve the
+   sticky-sidebar stacking problem for no gain. */
+.brl-sort{display:flex;align-items:center;gap:7px;height:34px;background:#E7E6E1;
+  border-radius:8px;padding:0 9px 0 11px;box-sizing:border-box}
+.brl-sort b{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--subtle);font-weight:700}
+.brl-sort select{height:26px;border:none;background:#fff;border-radius:6px;padding:0 7px;
+  font-family:inherit;font-size:12px;font-weight:650;color:var(--text);cursor:pointer;outline:none;
+  box-shadow:0 1px 2px rgba(0,0,0,.08)}
 
 
 /* ══ CAPE TOWN LOCK · THE TASK SHEET ════════════════════════════════
@@ -7046,6 +7073,82 @@ let brLens='timing', brGroup=false;   /* flat and timing, by default */
 function brSetLens(k){ brLens=k; render(); }
 function brSetGroup(v){ brGroup=!!v; render(); }
 
+/* ══ LYON · THE ORDER OF THE TASK LIST ═══════════════════════
+   One fixed order — soonest delivery first — answered one question, and
+   the team asked for the other five.
+
+   SORT IS A LENS, NEVER A FILTER. Every option returns the same rows in
+   a different order, so choosing one can never make a task disappear.
+   That is why it lives here and not in brFilter, which can.
+
+   The choice is remembered PER PERSON, not per brand: a sort that reset
+   on every brand switch would be re-chosen forty times a day, which is
+   the same as not having one. It is deliberately not in the database and
+   not in the address — it is how somebody likes to read, not a property
+   of the work.
+
+   NO MANUAL DRAG ORDER, and that is a decision rather than an omission.
+   A hand-ordered list stops telling you what is late, which is the one
+   thing this list exists to say. */
+const BR_SORT={
+  due:     "Delivery date, soonest first",
+  overdue: "Most overdue first",
+  updated: "Recently updated",
+  status:  "Status",
+  owner:   "Owner",
+  title:   "Title A–Z"};
+const BR_SORT_LS="cc_br_sort";
+let brSort="due";
+try{ const s=localStorage.getItem(BR_SORT_LS); if(s&&BR_SORT[s]) brSort=s; }catch(e){}
+function brSetSort(k){
+  if(!BR_SORT[k]) return;
+  brSort=k;
+  try{ localStorage.setItem(BR_SORT_LS,k); }catch(e){}
+  render();
+}
+/* EVERY COMPARATOR ENDS IN THE SAME TWO TIE-BREAKS — delivery date, then
+   title — so the order is TOTAL. A comparator that leaves ties unbroken
+   re-orders them between renders, and a list that shuffles while you are
+   looking at it reads as a fault. */
+function brSortCmp(){
+  const due = t => brNum(t.delivery_date)||99999999;
+  const ttl = t => String(t.title||"").toLowerCase();
+  const tie = (a,b) => (due(a)-due(b)) || ttl(a).localeCompare(ttl(b));
+  switch(brSort){
+    case "overdue": {
+      /* Most days late first. A task that is NOT late has no place in that
+         ranking at all — it falls below every late one and keeps the
+         ordinary order among its own kind, rather than being mixed in at
+         "nought days late" beside something a fortnight over. */
+      const late = t => brIsLate(t) ? (99999999-due(t)) : -1;
+      return (a,b) => (late(b)-late(a)) || tie(a,b);
+    }
+    case "updated": {
+      const up = t => new Date(t.updated_at||t.created_at||0).getTime()||0;
+      return (a,b) => (up(b)-up(a)) || tie(a,b);
+    }
+    case "status": {
+      /* BR_ORDER, not alphabetical: the statuses are a workflow and
+         reading them out of order tells you nothing. Anything not in
+         BR_ORDER sorts after all of it rather than at the front. */
+      const st = t => { const i=BR_ORDER.indexOf(t.status); return i<0?BR_ORDER.length:i; };
+      return (a,b) => (st(a)-st(b)) || tie(a,b);
+    }
+    case "owner": {
+      /* By the NAME ON SCREEN, not the owner id — an id sort looks random
+         to somebody reading names. Unowned last: "nobody" is not a person
+         whose tasks you came here to find. */
+      const nm = t => { const n=brPersonName(t.owner_id);
+                        return (!n||n==="\u2014") ? "\uffff" : String(n).toLowerCase(); };
+      return (a,b) => nm(a).localeCompare(nm(b)) || tie(a,b);
+    }
+    case "title":
+      return (a,b) => ttl(a).localeCompare(ttl(b)) || (due(a)-due(b));
+    default:
+      return tie;
+  }
+}
+
 function brPersonName(id){
   if(!id) return '—';
   const p=(PEOPLE||[]).find(x=>x.id===id);
@@ -7139,10 +7242,9 @@ function brVisible(){
   if(brFilter.status&&!brFilter.archived) out=out.filter(t=>t.status===brFilter.status);
   if(brFilter.project) out=out.filter(t=>t.project_id===brFilter.project);
   if(brFilter.overdue&&!brFilter.archived) out=out.filter(brIsLate);
-  /* soonest delivery first; a task with no date sorts last rather than
-     first, because an undated task is not the most urgent thing you own */
-  return out.sort((a,b)=>(brNum(a.delivery_date)||99999999)-(brNum(b.delivery_date)||99999999)
-                       || String(a.title).localeCompare(String(b.title)));
+  /* LYON — the order is chosen now. The old fixed rule (soonest delivery
+     first, undated last) is still the DEFAULT and is the "due" case. */
+  return out.sort(brSortCmp());
 }
 function brDueText(t){
   const d=brNum(t.delivery_date);
@@ -7276,6 +7378,42 @@ function brOpenTask(id){
         due_date:String(m.due_date||"").slice(0,10),status:m.status||"not_started"}))};
   brRenderEditor(); openM("br-task");
 }
+/* ══ LYON · DUPLICATE A TASK ══════════════════════════════════════════
+   The team asked for a template. This is the honest version of one: a
+   task already IS the template, so duplicating loads it into the editor
+   with every id stripped and nothing written yet.
+
+   IT DOES NOT SAVE. Opening the editor rather than creating a row is the
+   whole point — a duplicate nobody edited is a second task with the same
+   name, which is the thing that makes a task list useless.
+
+   WHAT IS CARRIED AND WHAT IS NOT, and why:
+     carried  title (marked a copy), brief, project, Ac Manager,
+              milestone NAMES and their order
+     reset    status → not started, on the task and on every milestone
+     cleared  every id, every date, the archive
+   Dates are cleared deliberately. A template's dates belong to the job it
+   came from and are always wrong for the next one; a duplicate that keeps
+   them arrives already late, and the list would say so in red. */
+function brDuplicateTask(id){
+  if(!can("task_create")||!activeBrand) return;
+  const t=BR.tasks.find(x=>x.id===id); if(!t) return;
+  BT={id:null,
+      title:((t.title||"")+" (copy)").trim(),
+      brief:t.brief||"",
+      project_id:t.project_id||"",
+      owner_id:t.owner_id||null,
+      delivery_date:"",
+      status:"not_started",
+      /* id:null on every one, or brSaveTask would UPDATE the original's
+         milestones instead of inserting new ones — it keys on m.id. */
+      ms:brMsFor(id).map(m=>({id:null,name:m.name||"",due_date:"",status:"not_started"}))};
+  brRenderEditor(); openM("br-task");
+  /* Straight into the title, selected: the first thing anybody does with
+     a copy is rename it, and "(copy)" is a prompt, not an answer. */
+  setTimeout(()=>{ const el=document.getElementById("bt-title");
+    if(el){ el.focus(); el.select(); } },40);
+}
 function brMsAdd(){ BT.ms.push({id:null,name:"",due_date:"",status:"not_started"}); brRenderEditor(); }
 function brMsDel(i){ BT.ms.splice(i,1); brRenderEditor(); }
 function brMsSet(i,k,v){ BT.ms[i][k]=v; }
@@ -7353,6 +7491,8 @@ function brRenderEditor(){
     </div>
     <div class="brs-f">
       ${canE?`<button class="btn btn-p" onclick="brSaveTask()"><i class="ti ti-check"></i> Save task</button>`:""}
+      ${canE&&BT.id?`<button class="btn btn-s" onclick="brDuplicateTask('${BT.id}')"
+          title="Open a new task with this one's details — nothing is saved until you save it"><i class="ti ti-copy"></i> Duplicate</button>`:""}
       ${canE&&BT.id?`<button class="brs-del" onclick="brDeleteTask()">Delete this task</button>`:""}
     </div>`;
 }
@@ -7567,8 +7707,14 @@ function msgHtml(m){
      threads cannot come to disagree about it. */
   const own=fbIsMine(m)?`<button onclick="taskStartEdit('${escAttr(m.id)}')">Edit</button>
       <button onclick="taskDeleteMsg('${escAttr(m.id)}')">Delete</button>`:"";
+  /* LYON — the same Download the post chat has, on the same terms. A task
+     thread is where a creative reaches the client for approval, so leaving
+     it out here would have left the feature half-built in the place it was
+     actually asked for. */
+  const dl=(canDownload()&&(assetsFor("message",m.id)||[]).some(assetDownloadable))
+    ? `<button onclick="commentDownloadAll('${escAttr(m.id)}',event)" title="Download the original files on this message"><i class="ti ti-download" style="font-size:14px;"></i> Download</button>` : "";
   const acts=`<div class="th-acts${shown?" always":""}">
-      <span class="th-rx">${shown}${add}</span><span class="rgt">${own}</span></div>`;
+      <span class="th-rx">${shown}${add}</span><span class="rgt">${dl}${own}</span></div>`;
   return `<div class="th-m${client?" cli":""}">
     <span class="th-av${client?" cli":""}">${escHtml(brInitials(m.author_id)||"··")}</span>
     <div class="th-b">
@@ -7862,6 +8008,11 @@ function renderTask(){
        ${t.archived_at?`<span class="tk-arch">Archived ${fmtShort(t.archived_at)}</span>`:""}
        <div class="tk-sp"></div>
        <button class="btn btn-s" onclick="setView('branding')"><i class="ti ti-arrow-left"></i> Tasks</button>
+       <button class="btn btn-s" onclick="taskCopyLink('${t.id}')" title="Copy a link that opens this task" aria-label="Copy a link to this task"><i class="ti ti-link"></i></button>
+       ${TASK_SEEN[t.id]?`<button class="btn btn-s" onclick="taskMarkUnread('${t.id}')"
+          title="Put this task back in your bell. Every message on it counts as new again — read state is kept for the task, not for one message."><i class="ti ti-bell-plus"></i> Mark unread</button>`:""}
+       ${can("task_create")?`<button class="btn btn-s" onclick="brDuplicateTask('${t.id}')"
+          title="Open a new task with this one's details — nothing is saved until you save it"><i class="ti ti-copy"></i> Duplicate</button>`:""}
        ${isAM?`<button class="btn btn-s" onclick="brSetArchived('${t.id}',${t.archived_at?0:1})"
           title="${t.archived_at?"Put it back in the working list, with the status it has":"Put it out of the way — the status it has is kept"}">
           <i class="ti ti-${t.archived_at?"archive-off":"archive"}"></i> ${t.archived_at?"Restore":"Archive"}</button>`:""}
@@ -8004,7 +8155,11 @@ function renderBranding(){
                     ? `<span style="font-weight:400;color:var(--subtle);"> · of ${total}</span>`:""))}
        </div>
        <div style="display:flex;align-items:center;gap:10px;">
-         ${BR.ok?`<div class="brl-lens">
+         ${BR.ok?`<label class="brl-sort"><b>Sort</b><select onchange="brSetSort(this.value)">${
+             Object.entries(BR_SORT).map(([k,v])=>
+               `<option value="${k}"${brSort===k?" selected":""}>${escHtml(v)}</option>`).join("")
+           }</select></label>
+         <div class="brl-lens">
            <span class="${brGroup?"":"on"}" onclick="brSetGroup(0)">Flat</span>
            <span class="${brGroup?"on":""}" onclick="brSetGroup(1)">Group by project</span></div>
          <div class="brl-lens">
@@ -8733,7 +8888,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v91.0 — Turin: the industry list moved to the Portfolio";
+const TOOL_VERSION="v92.0 — Lyon: the list sorts and the link lands";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -9809,6 +9964,18 @@ async function taskMarkSeen(taskId){
         brand_id:(t&&t.brand_id)||activeBrand,seen_at:now}); }catch(e){}
 }
 
+/* LYON — the same for a task thread. See fbMarkUnread for why the row is
+   deleted rather than back-dated. */
+async function taskMarkUnread(taskId){
+  if(!taskId) return;
+  const me=(ME.email||"").toLowerCase(); if(!me) return;
+  delete TASK_SEEN[taskId];
+  syncBell();
+  if(!TASK_SEEN_OK) return;                   // local half only, pre-migration
+  try{ await sb.from("task_seen").delete().eq("user_email",me).eq("task_id",taskId); }catch(e){}
+  render();
+}
+
 /* ══ BA4b — ARCHIVING: structure, deliberately not policy ═══════════════
    Chirag: "Both options have to work and we'll have to define detailed
    rules for that. But short answers, something can be manually pushed to
@@ -10670,6 +10837,78 @@ async function hydrateMedia(root){
   }
 }
 
+/* ══ LYON · DOWNLOADING A CREATIVE ════════════════════════════════════
+   THIS REVERSES A STANDING RULE, so the reversal is written down rather
+   than left to be discovered. Look-only was decided on 3 August and is
+   what made the media model cheap: no originals leaving, no licensing
+   argument, one place the work lives. Chirag reversed it on 8 September
+   for one reason — this IS how a creative reaches a client for approval
+   and how it reaches Instagram. A tool that holds the finished artwork
+   and will not give it back is not finished either.
+
+   WHAT IT SERVES IS THE ORIGINAL UPLOAD, never the 1600px view copy. A
+   preview downloaded and posted to a client's grid would be the worst
+   possible outcome of this change: it looks right on a phone and is
+   unusably soft anywhere else. So `storage_path`, and nothing else.
+
+   THE VIDEO PLAYER KEEPS controlsList="nodownload". That is not an
+   oversight left behind: the player serves the original file and its
+   own menu would offer whatever is currently streaming, which for a
+   purged video is the poster. One door, and it is this one.
+
+   NOT FOR CLIENTS. `download_asset` is false for Client reviewer and
+   Client viewer in the matrix; can() is fail-closed, so until the
+   migration runs only an admin sees any of this. */
+function canDownload(){ return can("download_asset"); }
+
+function assetById(id){
+  for(const k of Object.keys(ASSETS)){
+    const f=(ASSETS[k]||[]).find(x=>x.id===id);
+    if(f) return f;
+  }
+  return null;
+}
+/* A download is offered only when there is something to hand over. A
+   purged video has a poster and no original, and a button that delivers
+   the poster under the video's name is a lie with a filename on it. */
+function assetDownloadable(a){
+  return !!(a && !a.deleted_at && a.storage_path && !a.purged_at && a.kind!=="link");
+}
+async function assetDownload(id,ev){
+  if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  if(!canDownload()){ capDenied("Downloading a file"); return; }
+  const a=assetById(id);
+  if(!assetDownloadable(a)){ toast("There is no original file to download","err"); return; }
+  /* The download option puts Content-Disposition on the signed url, so
+     the browser saves it under its real name and the bytes never pass
+     through this page. Fetching it into a blob first would hold a whole
+     video in memory to achieve the same thing. */
+  const r=await sb.storage.from(MEDIA_BUCKET)
+            .createSignedUrl(a.storage_path,600,{download:a.filename||"download"});
+  if(r.error||!r.data||!r.data.signedUrl){ toast("That file could not be fetched","err"); return; }
+  const el=document.createElement("a");
+  el.href=r.data.signedUrl; el.download=a.filename||"download";
+  el.rel="noopener"; document.body.appendChild(el); el.click(); el.remove();
+}
+/* every attachment on one comment, for the common case: the creative and
+   its variants were posted together and are wanted together */
+async function commentDownloadAll(commentId,ev){
+  if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  if(!canDownload()){ capDenied("Downloading a file"); return; }
+  const list=(assetsFor("message",commentId)||[])
+    .concat(assetsFor("comment",commentId)||[])
+    .filter(assetDownloadable);
+  if(!list.length){ toast("Nothing on this message can be downloaded"); return; }
+  /* One at a time, spaced. Browsers refuse a burst of downloads from one
+     gesture and drop the extras SILENTLY — which would look like the
+     button half-working rather than the browser refusing. */
+  for(let i=0;i<list.length;i++){
+    await assetDownload(list[i].id);
+    if(i<list.length-1) await new Promise(r=>setTimeout(r,350));
+  }
+  toast(list.length===1?"Downloading":`Downloading ${list.length} files`);
+}
+
 /* ── lightbox ── */
 let LB={list:[],i:0};
 function openLightbox(assetId,list){
@@ -10680,6 +10919,10 @@ function openLightbox(assetId,list){
   /* view-only accounts do not get a bin */
   const del=document.getElementById("mlb-del");
   if(del) del.style.display=canEdit()?"":"none";
+  /* LYON — and the download follows the asset, not just the account: a
+     purged video has nothing to give. */
+  const dl=document.getElementById("mlb-dl");
+  if(dl) dl.style.display=(canDownload()&&assetDownloadable(live[i]))?"":"none";
   document.getElementById("mlb").classList.add("open");
 }
 function closeLightbox(){ const el=document.getElementById("mlb");
@@ -10704,6 +10947,11 @@ function lbStep(d){ if(!LB.list.length) return;
   LB.i=(LB.i+d+LB.list.length)%LB.list.length; paintLightbox(); }
 async function paintLightbox(){
   const a=LB.list[LB.i]; if(!a) return;
+  /* LYON — stepping to the next file re-asks the question. Setting this
+     only at open time is how the button stays visible on the purged
+     video you arrowed onto. */
+  const dlb=document.getElementById("mlb-dl");
+  if(dlb) dlb.style.display=(canDownload()&&assetDownloadable(a))?"":"none";
   const body=document.querySelector("#mlb .mlbbody"), cap=document.querySelector("#mlb .mlbcap");
   if(cap) cap.textContent=`${a.filename}${a.slide_no?" · slide "+a.slide_no:""}  ·  ${LB.i+1} of ${LB.list.length}`;
   if(!body) return;
@@ -10799,6 +11047,12 @@ function revJump(i){ RV.i=i; RV.zoom=1; paintReview(); }
 function revZoom(d){ RV.zoom=d===0?1:Math.min(4,Math.max(1,RV.zoom+d)); paintReview(); }
 
 async function paintReview(){
+  /* LYON — the same question the lightbox asks, asked here on every step:
+     may this person download, and is there an original to download. */
+  {
+    const cur=RV.list[RV.i], b=document.getElementById("rv-dl");
+    if(b) b.style.display=(canDownload()&&assetDownloadable(cur))?"":"none";
+  }
   const a=RV.list[RV.i]; if(!a) return;
   const root=document.getElementById("mrev"); if(!root) return;
   const stage=root.querySelector(".rvstage");
@@ -11127,6 +11381,14 @@ let fbShowDone={};
 function fbToggleDone(postId){ fbShowDone[postId]=!fbShowDone[postId]; renderSocial(); }
 
 /* a link that lands on one comment — for pasting into WhatsApp or email */
+/* LYON — a task gets one too. Tasks are what the team passes around
+   most, and the post link was the only one that existed. */
+function taskCopyLink(taskId){
+  const url=location.origin+location.pathname+"?task="+encodeURIComponent(taskId);
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(()=>toast("Link copied"),()=>toast(url));
+  } else toast(url);
+}
 function fbCopyLink(postId,commentId){
   const url=location.origin+location.pathname+"?post="+encodeURIComponent(postId)+"&c="+encodeURIComponent(commentId);
   if(navigator.clipboard&&navigator.clipboard.writeText){
@@ -11683,6 +11945,31 @@ async function fbMarkSeen(postId){
   syncBell();
   try{ await sb.from("post_seen").upsert({user_email:me,post_id:postId,
         brand_id:(p&&p.brand_id)||activeBrand,seen_at:now}); }catch(e){}
+}
+
+/* ══ LYON · PUTTING IT BACK IN THE BELL ═══════════════════════════════
+   "Mark it unread so it stays active." Reading something is not the same
+   as being finished with it, and until now opening a thread was the only
+   way to answer the bell — so anything you could not deal with at that
+   moment left the bell and was gone.
+
+   READ STATE IS ONE TIMESTAMP PER POST, not per message. So this brings
+   back EVERY unread message on the post, not the single one you clicked.
+   That is a real consequence and the button says so rather than
+   pretending to a precision the model does not have.
+
+   Deleting the row is the honest inverse of upserting it: setting the
+   timestamp to an old date would work today and quietly rot, because
+   "unread" would then mean "read a long time ago" and any later code
+   reading seen_at would believe it. There is no row = never read. */
+async function fbMarkUnread(postId){
+  if(!FB_AVAILABLE) return;
+  const me=(ME.email||"").toLowerCase(); if(!me) return;
+  POSTFB.seen[postId]=null;
+  delete POSTFB.seen[postId];
+  syncBell();                                  // the one place unread state changes
+  try{ await sb.from("post_seen").delete().eq("user_email",me).eq("post_id",postId); }catch(e){}
+  renderSocial();
 }
 
 /* ── what the bell shows ── */
@@ -14294,6 +14581,92 @@ async function boot(){
   /* v57.4 — start watching the published version. After loadAll, never
      awaited: a version check must not delay the calendar appearing. */
   try{ startVersionWatch(); }catch(e){}
+  /* LYON — and last of all, the link somebody followed to get here. It
+     runs AFTER loadAll because it navigates, and there is nothing to
+     navigate to before the brands exist. */
+  try{ await openDeepLink(); }catch(e){}
+}
+
+/* ══ LYON · THE LINK THAT NEVER WORKED ════════════════════════════════
+   The Link button beside a comment has written an address ending
+   `?post=…&c=…` since Shanghai. NOTHING HAS EVER READ IT BACK — the only
+   place this file looked at the query string was the sign-in error
+   check — so every link anybody has ever pasted into WhatsApp has opened
+   the home page. It was not a routing bug. The other half was never
+   built.
+
+   Three things this has to survive, all of them found by asking what
+   actually happens to a link in a chat app:
+
+   1 · SIGNING IN. Following the link while signed out shows the sign-in
+       screen, and the Microsoft button leaves the page entirely and
+       comes back to a bare path — Supabase redirects to an allow-listed
+       address, so the query string cannot be carried on it. The link is
+       stashed the moment the page loads, before any of that, and read
+       back afterwards.
+   2 · A BRAND THAT IS NOT LOADED. Branding tasks load per brand, so a
+       task link into a brand you were not on finds nothing and bounces
+       to the list. It waits for the load, the same way notifOpen does.
+   3 · THE SECOND RELOAD. The address is cleared once it has been used.
+       Left in place it would drag you back to the same thread every
+       time you refreshed for the rest of the day. */
+const DEEP_LS="cc_deep_link";
+(function stashDeepLink(){
+  try{
+    const q=new URLSearchParams(location.search);
+    if(q.get("post")||q.get("task")){
+      sessionStorage.setItem(DEEP_LS,JSON.stringify({
+        post:q.get("post")||"", c:q.get("c")||"", task:q.get("task")||""}));
+    }
+  }catch(e){}
+})();
+function takeDeepLink(){
+  let d=null;
+  try{
+    const raw=sessionStorage.getItem(DEEP_LS);
+    if(raw) d=JSON.parse(raw);
+    sessionStorage.removeItem(DEEP_LS);
+  }catch(e){}
+  /* the address is tidied whether or not the target is reachable — a
+     link that failed once will fail on every refresh too */
+  try{
+    if(location.search && history.replaceState)
+      history.replaceState(null,"",location.origin+location.pathname);
+  }catch(e){}
+  return d;
+}
+async function openDeepLink(){
+  const d=takeDeepLink(); if(!d) return;
+
+  if(d.task){
+    const r=await sb.from("branding_tasks").select("id,brand_id")
+              .eq("id",d.task).is("deleted_at",null).maybeSingle();
+    const row=r&&r.data;
+    if(!row||!brands[row.brand_id]){ toast("That task is not available to you","err"); return; }
+    pickBrand(row.brand_id);
+    if(BR.brand!==row.brand_id) await loadBranding(row.brand_id);
+    openTaskScreen(row.id);
+    return;
+  }
+
+  const r=await sb.from("social_posts").select("id,brand_id,month")
+            .eq("id",d.post).is("deleted_at",null).maybeSingle();
+  const row=r&&r.data;
+  if(!row||!brands[row.brand_id]){ toast("That post is not available to you","err"); return; }
+  pickBrand(row.brand_id);
+  socialLayer=true; contentMonth=row.month; setView("content");
+  fbOpen[d.post]=true;
+  await fbEnsureLoaded(d.post);
+  renderSocial();
+  /* The comment, if the link named one. Its own element first, the
+     thread's counter as the fallback — a comment that has since been
+     deleted must still land you on the right post rather than nowhere. */
+  setTimeout(()=>{
+    const el=(d.c&&document.getElementById("fbc-"+d.c))
+           ||document.getElementById("fbcount-"+d.post);
+    if(el&&el.scrollIntoView) el.scrollIntoView({behavior:"smooth",block:"center"});
+    if(d.c&&el&&el.id.indexOf("fbc-")===0) el.classList.add("fb-landed");
+  },220);
 }
 
 // client gating for edit-style CSS
@@ -14488,7 +14861,10 @@ function fbPanelHtml(p){
     const resolve=(canComment()&&!c.parent_id)
       ?`<button onclick="fbToggleResolve('${p.id}','${c.id}')"><i class="ti ti-circle-check" style="font-size:14px;"></i> Resolve</button>`:"";
     const hasRx=fbReactionsFor(c.id).length>0;
-    return `<div class="c46">${av(c.author_name,c.author_kind)}
+    /* LYON — the id the deep link lands on. It has to be here, on the
+       comment itself: scrolling to the thread's counter puts the post on
+       screen and leaves you to find the message by eye. */
+    return `<div class="c46" id="fbc-${escAttr(c.id)}">${av(c.author_name,c.author_kind)}
       <div class="cb46">
         <div class="ch46"><span class="who46">${escAttr(c.author_name)}</span>
           ${c.author_kind==="client"?`<span style="font-size:11px;font-weight:700;color:#378ADD;">Client</span>`:""}
@@ -14496,7 +14872,10 @@ function fbPanelHtml(p){
         <div class="ct46">${fbBody(c.body)}</div>
         ${mediaBlock(assetsFor("comment",c.id))}${uploadLiveBlock("comment",c.id)}${uploadFailBlock("comment",c.id)}
         <div class="acts46${hasRx?" always":""}">${rx(c)}<span class="rgt">${own}
-          <button onclick="fbCopyLink('${p.id}','${c.id}')">Link</button>${resolve}</span></div>
+          <button onclick="fbCopyLink('${p.id}','${c.id}')">Link</button>${
+            (canDownload()&&(assetsFor("comment",c.id)||[]).some(assetDownloadable))
+              ? `<button onclick="commentDownloadAll('${c.id}',event)" title="Download the original files on this message"><i class="ti ti-download" style="font-size:14px;"></i> Download</button>` : ""
+          }${resolve}</span></div>
       </div></div>`;
   };
 
@@ -14559,7 +14938,10 @@ function fbPanelHtml(p){
   const bar=`<div class="tbar">
       <b>${openN?openN+(openN===1?" open":" open"):"Nothing open"}</b>
       ${curR?`<span class="rchip cur">Round ${curR.round_no}</span>`:""}
-      <span class="sp">${doneN?`<button class="tog${showDone?" on":""}" onclick="fbToggleDone('${p.id}')">${doneN} resolved</button>`:""}</span>
+      <span class="sp">${doneN?`<button class="tog${showDone?" on":""}" onclick="fbToggleDone('${p.id}')">${doneN} resolved</button>`:""}${
+        fbSeenAt(p.id)?`<button class="tog" onclick="fbMarkUnread('${p.id}')"
+          title="Put this post back in your bell. Every message on it counts as new again — read state is kept for the post, not for one message."
+          ><i class="ti ti-bell-plus" style="font-size:12px;"></i> Mark unread</button>`:""}</span>
     </div>`;
 
   /* CHENNAI, corrected the same day: THE ZONE IS THE WHOLE COMPOSER.
@@ -18460,6 +18842,8 @@ async function histRestore(id,forced){
        The lightbox is the only screen where you are looking at exactly
        one file and can see what it is. A bin on every thumbnail in a
        strip is how the wrong image gets deleted, and there is no undo. -->
+  <span class="mlbdl" id="mlb-dl" onclick="assetDownload(LB.list[LB.i]&&LB.list[LB.i].id,event)"
+        title="Download the original file"><i class="ti ti-download"></i></span>
   <span class="mlbdel" id="mlb-del" onclick="lbRemove()" title="Remove this file permanently"><i class="ti ti-trash"></i></span>
   <span class="mlbx" onclick="closeLightbox()">✕</span>
   <span class="mlbnav l" onclick="lbStep(-1)">‹</span>
@@ -18469,13 +18853,16 @@ async function histRestore(id,forced){
 </div>
 
 <!-- STAGE 2A · Review mode. Creative large, that round's thread beside it.
-     No download control, deliberately — the same rule as the lightbox. -->
+     LYON — it HAS a download control now, the same one as the lightbox.
+     The line that used to sit here said there was deliberately none. -->
 <div class="mrev" id="mrev">
   <div class="rvtop">
     <span class="rvt">Review</span>
     <span class="rvmeta"></span>
     <span style="flex:1;"></span>
     <span class="rvzoom"><span onclick="revZoom(-.5)">−</span><span onclick="revZoom(0)">Fit</span><span onclick="revZoom(.5)">+</span></span>
+    <span class="rvdl" id="rv-dl" onclick="assetDownload(RV.list[RV.i]&&RV.list[RV.i].id,event)"
+          title="Download the original file"><i class="ti ti-download"></i></span>
     <span class="rvx" onclick="closeReview()">✕</span>
   </div>
   <div class="rvbody">
