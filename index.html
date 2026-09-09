@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v93.0 — Hornet: the rail stops explaining itself"/>
+<meta name="cc-tool-version" content="v94.0 — Naples: the rail approves, the list orders, the badge settles"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -1037,8 +1037,18 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .bpanel::-webkit-scrollbar-thumb{background:rgba(13,13,13,.18);border-radius:999px;}
 .bphead{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--subtle);padding:7px 10px 5px;}
 /* KAZAN — the switcher's search */
-.bp-q{display:flex;align-items:center;gap:7px;margin:4px 4px 6px;padding:0 10px;height:34px;
-  background:var(--surface);border:1px solid var(--div);border-radius:9px;}
+/* NAPLES - IT STAYS. The box is the first row inside .bpanel, and
+   .bpanel is what scrolls, so with 76 brands it left the top of the
+   panel the moment you scrolled - which is the one moment you want it.
+   top:0 pins it to the very top of the scrolling area, so nothing can
+   pass above it and none of the box is clipped; the shadow under it says
+   the rows are going underneath rather than ending there. The panel's own
+   6px of padding scrolls away behind it on the first few pixels, which is
+   the whole travel this box ever has. */
+.bp-q{display:flex;align-items:center;gap:7px;margin:0 0 6px;padding:0 10px;height:34px;
+  background:var(--surface);border:1px solid var(--div);border-radius:9px;
+  position:sticky;top:0;z-index:2;
+  box-shadow:0 7px 8px -7px rgba(13,13,13,.16);}
 .bp-q i{font-size:13px;color:var(--subtle);}
 .bp-q input{flex:1;border:none;background:transparent;font-size:12.5px;font-family:inherit;outline:none;color:var(--text);}
 .bp-none{padding:12px;font-size:12px;color:var(--subtle);}
@@ -2385,6 +2395,13 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .brl-ph .pl small{font-weight:400;color:var(--subtle)}
 .brl-tr.dim .brl-pill,.brl-tr.dim .brl-sg,.brl-tr.dim .brl-grp,.brl-tr.dim .brl-av{opacity:.55}
 .brl-empty{padding:52px 20px;text-align:center;color:var(--muted)}
+/* NAPLES - a hand-ordered list. The grip replaces the caret in place, so
+   nothing about the grid changes; only the ink in that cell does. */
+.brl-tr.drg .brl-car{color:var(--subtle);cursor:grab;font-size:15px}
+.brl-tr.drg:active .brl-car{cursor:grabbing}
+.brl-tr.drag{opacity:.4}
+.brl-tr.ova{box-shadow:inset 0 2px 0 0 var(--acc)}
+.brl-tr.ovb{box-shadow:inset 0 -2px 0 0 var(--acc)}
 /* LUCERN — reopen and archive, on the rows where they mean something */
 .brl-act{display:flex;gap:5px;padding-left:6px;}
 .brl-act i{font-style:normal;width:26px;height:26px;border-radius:6px;border:1px solid var(--div);
@@ -2606,6 +2623,19 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .rl-d{font-size:12px;color:var(--muted);font-weight:650;flex:none;}
 .rl-d.late{color:var(--acc);}
 .rl-empty{font-size:12.5px;color:var(--subtle);line-height:1.6;}
+/* NAPLES - the rail's tick. Same 22px box as .rl-n so a row is the same
+   height whether or not you may press it, and the tick is drawn GREY in
+   both states rather than appearing on hover. The photograph is what
+   settled that: at colour:transparent the six unapproved rows read as a
+   column of faint dots, and nothing on screen said they could be pressed.
+   A grey tick that turns green is a control; an empty circle is decoration. */
+.rl-ck{width:22px;height:22px;border-radius:50%;background:var(--surface);
+  border:1.5px solid var(--div);color:var(--subtle);font-size:12px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;flex:none;cursor:pointer;
+  transition:border-color 120ms,color 120ms,background 120ms;}
+.rl-ck:hover{border-color:var(--muted);color:var(--muted);}
+.rl-ck.on{background:#2F7A46;border-color:#2F7A46;color:#fff;}
+.rl-ck.on:hover{background:#286A3C;border-color:#286A3C;color:#fff;}
 /* HORNET — .rl-note went with the paragraph it styled. A dead selector is
    how a rule survives four versions with nobody noticing. */
 
@@ -2754,7 +2784,7 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
              which is now only a fallback, so changes made there were silently
              ignored — a trap worth removing rather than documenting. There is
              one place to manage people now, and this is the door to it. -->
-        <div class="brow" data-need="admin" onclick="closeAllPops();window.open('app.html','_blank')"><i class="ti ti-users"></i><span class="bnm">People &amp; access</span><i class="ti ti-external-link" style="margin-left:auto;font-size:12px;opacity:.5;"></i></div>
+        <div class="brow" data-need="admin" onclick="closeAllPops();window.open('app.html#people','_blank')"><i class="ti ti-users"></i><span class="bnm">People &amp; access</span><i class="ti ti-external-link" style="margin-left:auto;font-size:12px;opacity:.5;"></i></div>
         <!-- UTRECHT — the sweep. data-need="admin" is Bergen's rule: the
              row declares what it needs and applyMenuVisibility() decides.
              Nothing new had to be taught to the menu. -->
@@ -7073,6 +7103,13 @@ const BR_LENS={
 let brLens='timing', brGroup=false;   /* flat and timing, by default */
 function brSetLens(k){ brLens=k; render(); }
 function brSetGroup(v){ brGroup=!!v; render(); }
+/* NAPLES - ONE ORDER CANNOT ALSO BE SEVEN. Group by project draws the
+   list as one section per project, and a single stored order has nothing
+   to say about where a row sits inside a section it was not dragged in.
+   So Custom order leaves the grouped view rather than offering handles
+   that would write an order the screen could not show. */
+let brDragId=null;
+function brMayReorder(){ return brSort==="manual" && !brGroup && can("task_reorder"); }
 
 /* ══ LYON · THE ORDER OF THE TASK LIST ═══════════════════════
    One fixed order — soonest delivery first — answered one question, and
@@ -7097,12 +7134,17 @@ const BR_SORT={
   updated: "Recently updated",
   status:  "Status",
   owner:   "Owner",
-  title:   "Title A–Z"};
+  title:   "Title A–Z",
+  /* NAPLES - the seventh. Chirag reversed Lyon's "no manual drag" on
+     9 September: Ac Manager only, and the order it writes is SHARED, so
+     everybody sees it whether or not they may change it. */
+  manual:  "Custom order"};
 const BR_SORT_LS="cc_br_sort";
 let brSort="due";
 try{ const s=localStorage.getItem(BR_SORT_LS); if(s&&BR_SORT[s]) brSort=s; }catch(e){}
 function brSetSort(k){
   if(!BR_SORT[k]) return;
+  if(k==="manual") brGroup=false;
   brSort=k;
   try{ localStorage.setItem(BR_SORT_LS,k); }catch(e){}
   render();
@@ -7145,6 +7187,14 @@ function brSortCmp(){
     }
     case "title":
       return (a,b) => ttl(a).localeCompare(ttl(b)) || (due(a)-due(b));
+    case "manual": {
+      /* NULLS SINK. A task nobody has dragged has no place in a hand-made
+         order, so it falls below every task that does and keeps the
+         ordinary order among its own kind - the same shape as "overdue"
+         treats a task that is not late. */
+      const so = t => (t.sort_order===null||t.sort_order===undefined) ? Infinity : t.sort_order;
+      return (a,b) => (so(a)-so(b)) || tie(a,b);
+    }
     default:
       return tie;
   }
@@ -7188,9 +7238,17 @@ function brRowHtml(t,showTag){
     const cls=i<pr.done?'done':(i===pr.done&&t.status!=='not_started'?'now':'');
     segs+=`<span class="${cls}"></span>`;
   }
-  return `<div class="brl-tr${dim?' dim':''}" onclick="openTaskScreen('${t.id}')">
+  /* NAPLES - THE GRIP TAKES THE CARET'S CELL RATHER THAN ADDING ONE.
+     .brl-tr is a fixed eight-column grid and a ninth child would land in
+     an implicit column and shove every row wider, which is the fault
+     Lucern paid for with its actions column. The caret is decoration; in
+     a hand-ordered list the same 20px says something useful instead. */
+  const grip=brMayReorder();
+  return `<div class="brl-tr${dim?' dim':''}${grip?' drg':''}" onclick="openTaskScreen('${t.id}')"
+    ${grip?`draggable="true" ondragstart="brDragStart(event,'${t.id}')" ondragover="brDragOver(event)"
+      ondrop="brDrop(event,'${t.id}')" ondragend="brDragEnd(event)"`:''}>
     <div class="brl-sp" style="${pj?`background:${escAttr(pj.colour||'#7C3AED')}`:''}"></div>
-    <span class="brl-car">›</span>
+    <span class="brl-car">${grip?'<i class="ti ti-grip-vertical"></i>':'›'}</span>
     <div class="brl-nm">${escHtml(t.title)}
       ${showTag&&pj?`<span class="brl-pj" style="color:${escAttr(pj.colour||'#7C3AED')}">◧ ${escHtml(pj.name)}</span>`:''}
       ${!ms.length?'<small>no milestones</small>':''}</div>
@@ -7246,6 +7304,59 @@ function brVisible(){
   /* LYON — the order is chosen now. The old fixed rule (soonest delivery
      first, undated last) is still the DEFAULT and is the "due" case. */
   return out.sort(brSortCmp());
+}
+/* -- NAPLES - dragging a task into place ---------------------------
+   The order is SHARED and stored, so a drop is a write, not a local
+   rearrangement. It writes ONLY the rows whose position actually
+   changed: a drop near the bottom of a forty-task list should not send
+   forty updates, and "write only what differs" is the rule everywhere
+   else in this file.
+
+   Every visible row is given a number, including the ones that have
+   never been dragged - otherwise the first drop lands a task among a
+   crowd of nulls and the order it produces is not the order you saw. */
+function brDragStart(e,id){
+  brDragId=id;
+  try{ e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",id); }catch(_){}
+  const row=e.currentTarget; if(row) row.classList.add("drag");
+}
+function brDragOver(e){
+  if(!brDragId) return;
+  e.preventDefault();
+  try{ e.dataTransfer.dropEffect="move"; }catch(_){}
+  const row=e.currentTarget; if(!row||row.classList.contains("drag")) return;
+  const box=row.getBoundingClientRect();
+  const below=(e.clientY-box.top)>box.height/2;
+  row.classList.toggle("ovb",below);
+  row.classList.toggle("ova",!below);
+}
+function brDragEnd(){
+  brDragId=null;
+  document.querySelectorAll(".brl-tr.drag,.brl-tr.ova,.brl-tr.ovb")
+    .forEach(r=>r.classList.remove("drag","ova","ovb"));
+}
+async function brDrop(e,overId){
+  e.preventDefault(); e.stopPropagation();
+  const moved=brDragId; brDragEnd();
+  if(!moved||moved===overId) return;
+  if(!can("task_reorder")){ toast("Only the Ac Manager reorders the list","err"); return; }
+  /* brVisible(), NOT filtered(). `filtered` is the MONTH filter and takes
+     a month; called with nothing it hands back an empty list, so the drop
+     silently did nothing. The gate caught it on its first run. */
+  const order=brVisible().map(t=>t.id);
+  const from=order.indexOf(moved), to=order.indexOf(overId);
+  if(from<0||to<0) return;
+  order.splice(to,0,order.splice(from,1)[0]);
+  /* Ten apart, so a later insert between two rows has room without
+     renumbering the whole list. */
+  const want=new Map(order.map((id,i)=>[id,i*10]));
+  const diff=BR.tasks.filter(t=>want.has(t.id)&&t.sort_order!==want.get(t.id));
+  for(const t of diff){
+    const r=await sb.from("branding_tasks")
+      .update({sort_order:want.get(t.id),updated_at:new Date().toISOString()}).eq("id",t.id);
+    if(r.error){ dbErr(r); break; }
+  }
+  await loadBranding(activeBrand); render();
 }
 function brDueText(t){
   const d=brNum(t.delivery_date);
@@ -7815,16 +7926,52 @@ function railHtml(t){
   const ms=brMsFor(t.id);
   if(!ms.length) return `<div class="rl-empty">No milestones. A simple job does not need any —
     the delivery date is enough.</div>`;
+  /* NAPLES - THE RAIL STOPS BEING READ-ONLY, AND THE ORDER STOPS BEING
+     ENFORCED. Until now the only way to approve a milestone was to move
+     the task on, and one forward move approved exactly one milestone,
+     so a six-milestone job with six statuses could never finish its
+     list. Chirag, 9 September: a tick on every row, any order, because
+     on a film job the edit starts before the boards close.
+
+     THE TICK IS ALSO THE UNDO. A green tick clicked again clears the
+     approval and its date: one control, both directions, rather than a
+     second button that only appears once you are wrong. */
+  const mayApprove=brIsAM(t);
   return ms.map((m,i)=>{
     const done=m.status==="approved";
+    /* "in progress" still means the FIRST unapproved row, so the blush
+       marks where the work is even when a later one is already ticked. */
     const now=!done && ms.slice(0,i).every(x=>x.status==="approved");
     const late=m.due_date && brNum(m.due_date)<brToday() && !done;
+    const mark=mayApprove
+      ? `<span class="rl-ck${done?" on":""}" role="checkbox" aria-checked="${done?"true":"false"}"
+           title="${done?`Un-approve ${escAttr(m.name)}`:`Approve ${escAttr(m.name)}`}"
+           onclick="msSetApproved('${m.id}',${done?0:1})">\u2713</span>`
+      : `<span class="rl-n${done?" done":""}">${done?"\u2713":i+1}</span>`;
     return `<div class="rl-m${now?" now":""}">
-      <span class="rl-n${done?" done":""}">${done?"✓":i+1}</span>
+      ${mark}
       <div class="rl-t"><b>${escHtml(m.name)}</b>
-        <span class="rl-s">${done?"approved":(now?"in progress":"not started")}</span></div>
-      <div class="rl-d${late?" late":""}">${m.due_date?fmtShort(m.due_date):"—"}</div></div>`;
+        <span class="rl-s">${done?`approved ${fmtShort(m.approved_at)}`:(now?"in progress":"not started")}</span></div>
+      <div class="rl-d${late?" late":""}">${m.due_date?`due ${fmtShort(m.due_date)}`:"\u2014"}</div></div>`;
   }).join("");
+}
+
+/* -- approving a milestone, and un-approving it --------------------
+   NAPLES. One writer for both directions. The thread's dividers are
+   derived from approved_at, so clearing it removes that divider; the
+   messages under it stay where they are. Nothing moves but the line. */
+async function msSetApproved(id,on){
+  const t=brTask(); if(!t) return;
+  if(!brIsAM(t)){ toast("Only the Ac Manager approves a milestone","err"); return; }
+  const m=brMsFor(t.id).find(x=>x.id===id); if(!m) return;
+  const r=await sb.from("branding_milestones")
+    .update(on?{status:"approved",approved_at:new Date().toISOString()}
+              :{status:"not_started",approved_at:null})
+    .eq("id",id);
+  if(r.error){ dbErr(r); return; }
+  await logTask(t.id,`${on?"approved":"un-approved"} "${m.name}"`);
+  await loadBranding(activeBrand); await loadThread(t.id); render();
+  toast(`"${m.name}" ${on?"approved":"un-approved"}`);
 }
 
 /* ── the one control ───────────────────────────────────────────────*/
@@ -7832,24 +7979,15 @@ async function taskSetStatus(sel){
   const t=brTask(); if(!t) return;
   const next=sel.value;
   if(!brIsAM(t)){ toast("Only the Ac Manager moves a task on","err"); sel.value=t.status; return; }
-  const ms=brMsFor(t.id);
-  const current=ms.find(m=>m.status!=="approved");
-  const forward=BR_ORDER.indexOf(next)>BR_ORDER.indexOf(t.status);
-  /* DROPDOWN APPROVES. Moving the task on approves the milestone you
-     are leaving, because that is what moving on MEANS. A separate
-     approve button would be the second formal act that killed
-     post_rounds — and the rail stays a map. */
-  if(forward&&current){
-    const r=await sb.from("branding_milestones")
-      .update({status:"approved",approved_at:new Date().toISOString()}).eq("id",current.id);
-    if(r.error){ dbErr(r); sel.value=t.status; return; }
-    await logTask(t.id,`approved "${current.name}"`);
-  }
+  /* NAPLES - THIS CONTROL NO LONGER APPROVES ANYTHING. It approved the
+     milestone you were leaving, one per forward move, which is why a
+     task with more milestones than statuses could never finish its
+     list. The rail carries its own ticks now; this moves the task. */
   const u=await sb.from("branding_tasks").update({status:next,updated_at:new Date().toISOString()}).eq("id",t.id);
   if(u.error){ dbErr(u); sel.value=t.status; return; }
   await logTask(t.id,`moved to ${BR_STATUS[next]||next}`);
   await loadBranding(activeBrand); await loadThread(t.id); render();
-  toast(forward&&current?`"${current.name}" approved`:"Status updated");
+  toast("Status updated");
 }
 const BR_ORDER=["not_started","drafting","internal_review","with_client","needs_closing","closed"];
 
@@ -8018,7 +8156,7 @@ function renderTask(){
           title="${t.archived_at?"Put it back in the working list, with the status it has":"Put it out of the way — the status it has is kept"}">
           <i class="ti ti-${t.archived_at?"archive-off":"archive"}"></i> ${t.archived_at?"Restore":"Archive"}</button>`:""}
        <select class="tk-st" onchange="taskSetStatus(this)" ${isAM?"":"disabled"}
-         title="${isAM?"Moving forward approves the milestone you are leaving":"Only the Ac Manager moves a task on"}">${stOpts}</select>
+         title="${isAM?"Move the task on. Milestones are approved in the rail":"Only the Ac Manager moves a task on"}">${stOpts}</select>
      </div>
      <div class="tk-grid">
        <div class="tk-thread">
@@ -8886,7 +9024,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v93.0 — Hornet: the rail stops explaining itself";
+const TOOL_VERSION="v94.0 — Naples: the rail approves, the list orders, the badge settles";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -13605,7 +13743,10 @@ async function autoTagBrands(newEvs){
    worse than no screen, so it is closed off rather than left as a trap.
    The whole body is kept for one release in case something still calls it. */
 async function openPeople(){
-  window.open("app.html","_blank");
+  /* NAPLES - #people, not the bare path. CC Platform defaults to its
+     analytics screen, so for months this door opened on a chart. The
+     Platform has read a hash for its screen since Lima. */
+  window.open("app.html#people","_blank");
   return;
 }
 async function openPeopleRETIRED(){
@@ -16024,17 +16165,25 @@ function syncAlarmHeight(){
   }catch(e){ /* an old browser simply keeps today's behaviour */ }
 })();
 
-/* ═══ MONTREAL — THE VERSION BADGE ════════════════════════════════════
-   Created once and kept, rather than rebuilt with the sidebar's contents.
-   Appended to .sidebar AFTER #acct-block, which puts it outside
-   .side-scroll — so it cannot scroll away — and below the account block,
-   which is exactly where the kit's Shell puts it in the other four tools.
+/* ═══ MONTREAL, REWRITTEN BY NAPLES — THE VERSION BADGE ═══════════════
+   THE CALENDAR'S PRIVATE COPY IS GONE. This used to pin the badge
+   OUTSIDE .side-scroll, just above the account block, which looked right
+   only because the Calendar's sidebar is short. On a rail long enough to
+   scroll, a pinned badge sits ON the list and covers a row - the fault
+   Seoul hit in the other four tools and fixed there, in the kit, while
+   the Calendar kept its own arrangement and its own future bug.
 
-   No border here. `.acct` directly above already has margin-top:auto and
-   its own border-top; a rule on this as well would put two hairlines within
-   40px of each other. The account block IS the separator. */
+   It now goes INSIDE .side-scroll, after the content, exactly where the
+   kit's Shell puts it. .side-scroll is a flex column as of cc-suite.css
+   v69, so the leftover space decides: short rail, the badge rests above
+   the account line; long rail, it follows the last row and you scroll to
+   it. One rule, one resting place, five tools that agree.
+
+   Still no border. `.acct` below has its own border-top and IS the
+   separator; a second rule here would put two hairlines within 40px. */
 function ensureVersionBadge(){
   const side=document.querySelector("aside.sidebar"); if(!side) return;
+  const scroll=side.querySelector(".side-scroll")||side;
   let v=document.getElementById("cc-ver");
   if(!v){
     v=document.createElement("div");
@@ -16042,13 +16191,12 @@ function ensureVersionBadge(){
     v.className="cc-ver clickable";   /* only the calendar has a data-status panel to open */
     v.title="Click for data status";
     v.onclick=showDiag;
-    /* BEFORE the account block, not appended to the sidebar. Appending
-       put it under .acct, which is why the version sat below the name
-       and the grey line belonged to the account block instead of
-       separating it from the tool. */
-    const acct=side.querySelector(".acct");
-    if(acct) side.insertBefore(v,acct); else side.appendChild(v);
   }
+  /* LAST CHILD OF THE SCROLL PANE, EVERY TIME. render() rebuilds the
+     rail's contents, so a badge that was appended once ends up buried
+     in the middle of the next draw. Re-appending is what keeps it last;
+     the node itself is still created only once. */
+  if(v.parentNode!==scroll||scroll.lastElementChild!==v) scroll.appendChild(v);
   v.textContent=String(TOOL_VERSION).split(":")[0].trim();
 }
 
