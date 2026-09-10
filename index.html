@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v94.0 — Naples: the rail approves, the list orders, the badge settles"/>
+<meta name="cc-tool-version" content="v95.0 — Beetle: a shoot is not a plan"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2187,6 +2187,11 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .mpv-scroll .mpv-sheet{margin-bottom:14px;}
 .mpv-none{padding:14px 2px 30px;font-size:12.5px;color:var(--subtle);}
 .mpv-start{color:var(--acc);font-weight:600;cursor:pointer;}
+/* BEETLE — the add-the-next-month line, at the foot of the scroll */
+.mpv-addnext{display:flex;justify-content:center;padding:14px 0 4px;}
+.mpv-addnext .mpv-start{display:inline-flex;align-items:center;gap:6px;font-size:13px;
+  border:1px solid var(--div);background:var(--surface);border-radius:999px;padding:7px 15px;}
+.mpv-addnext .mpv-start:hover{border-color:var(--acc);}
 /* the formatting bar, summoned by focus */
 /* GHENT — .mpbar and .mpb moved into cc-suite.css. The bar is shared,
    so its paint is too; a copy here would be the drift starting again. */
@@ -4739,6 +4744,37 @@ function mpvStart(m){
     if(el){ el.scrollIntoView({block:"center"}); el.focus(); mpvFocus(el); }
   },80);
 }
+/* ══ BEETLE — THE PENCIL, ON THE MONTHLY PLAN PAGE TOO ═══════════════
+   Chirag asked for "the same edit button" here. The sheet already IS the
+   editor, so there is nothing for a pencil to open — but there is
+   something for it to DO, and it is the thing he complained about back
+   in v81.3: "No typing is possible in a quiet month, no cursor to type
+   available." A sheet you can type into but cannot see how to type into
+   is the same fault wearing better clothes. The pencil puts the cursor
+   in the theme, which is where a month plan starts. */
+function mpvFocusTheme(m){
+  if(!canEdit()){ toast("View-only account","err"); return; }
+  const el=document.querySelector(`.mpv-sheet[data-month="${m}"] .mpv-theme[contenteditable]`);
+  if(!el) return;
+  el.scrollIntoView({block:"center"});
+  el.focus(); mpvFocus(el);
+  /* the caret at the END of what is already written, not at the start —
+     landing before somebody's existing theme means typing in front of it */
+  try{ const r=document.createRange(); r.selectNodeContents(el); r.collapse(false);
+       const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(r); }catch(e){}
+}
+/* The next month worth starting: the one after the last month that has a
+   plan, and failing that the first empty month of the year. A brand that
+   has planned Jan and Feb is offered March; one that has planned only
+   December is offered January, because there is nothing after it. */
+function mpvNextUnplanned(){
+  const has=new Set(mpvMonthsWithPlan());
+  if(!has.size) return curMonth||1;
+  const last=Math.max(...has);
+  for(let m=last+1;m<=12;m++) if(!has.has(m)) return m;
+  for(let m=1;m<=12;m++) if(!has.has(m)) return m;
+  return null;
+}
 function sbTrackerBlock(title,category,items,stages){
   const m=contentMonth||curMonth||1;
   const list=(items||[]).filter(i=>i.category===category).sort((a,b2)=>(a.sort_order||0)-(b2.sort_order||0));
@@ -4822,6 +4858,11 @@ function buildContentSidebar(){
 function mpCardSetStatus(val){
   if(!canEdit()) return;
   const mp=monthPlanFor(activeBrand,YEAR,contentMonth||curMonth||1);
+  /* BEETLE — SETTING A STATUS MUST NEVER CREATE THE THING. The control
+     is gone from a planless month, and this is the second lock: reached
+     any other way, it declines rather than conjuring a plan row. */
+  if(!mp.id&&!monthPlanHasData(activeBrand,YEAR,contentMonth||curMonth||1)){
+    toast("Start the month plan first","err"); return; }
   mp.status=val;
   if(!mp.id) mp.id=newMonthPlanId();
   dbSaveMonthPlan(activeBrand,YEAR,contentMonth||curMonth||1);
@@ -9024,7 +9065,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v94.0 — Naples: the rail approves, the list orders, the badge settles";
+const TOOL_VERSION="v95.0 — Beetle: a shoot is not a plan";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -17268,7 +17309,8 @@ function mpvSheetHtml(m,canE){
         onfocus="mpvFocus(this)" onblur="mpvBlurSave(this)"`:"";
   return `<div class="mpv-sheet" data-month="${m}" id="mpv-m${m}">
     <div class="mpv-top">
-      <div class="mpv-act">${mpvStatusCtl(m,mp,canE)}</div>
+      <div class="mpv-act">${mpvStatusCtl(m,mp,canE)}${canE?`<span class="mp-edit" onclick="mpvFocusTheme(${m})"
+        title="Write the theme for ${MN[m]}"><i class="ti ti-pencil"></i></span>`:""}</div>
       <div class="mpv-mo"><h2>${MN[m]}</h2><span class="yr">${YEAR}</span></div>
       <div class="mpv-theme${themeSet?"":" none"}"${ed}>${themeSet?mpRender(mp.key_theme):(canE?"Write the theme for "+MN[m]+"…":"No theme set for "+MN[m])}</div>
       <div class="mpchips"></div>
@@ -17338,7 +17380,15 @@ function renderMonthPlanView(){
       ${months.length
         ? months.map(m=>mpvSheetHtml(m,canE)).join("")
         : `<div class="mpv-sheet"><div class="mpv-body"><div class="mpv-empty" style="padding:26px 0;">
-            No month has a plan yet for ${YEAR}.${canE?" Click a month in the panel on the left to start one.":""}</div></div></div>`}
+            No month has a plan yet for ${YEAR}.${canE?` <span class="mpv-start" onclick="mpvStart(${curMonth||1})">Start ${MN[curMonth||1]}</span>`:""}</div></div></div>`}
+      ${/* BEETLE — A WAY TO ADD THE NEXT MONTH, from the page you are on.
+            The faded chips in the rail could always do it and still can;
+            this is the one at the end of the scroll, where you arrive
+            having just finished writing the month before. */""}
+      ${canE&&months.length&&mpvNextUnplanned()
+        ? `<div class="mpv-addnext"><span class="mpv-start" onclick="mpvStart(${mpvNextUnplanned()})">
+             <i class="ti ti-plus"></i> Add ${MN[mpvNextUnplanned()]} ${YEAR}</span></div>`
+        : ""}
     </div>
   </div>`;
   /* MOTH — the sheets are in the DOM now, so the chips can be drawn into
@@ -18175,17 +18225,43 @@ function monthPlanCardHtml(m){
   const infl=mpvItems(mp,"influencer").filter(i=>!i.discipline||i.discipline==="social");
   const prodN=(()=>{const r=prodsForBrandMonth(activeBrand,YEAR,m);return r.dated.length+r.open.length;})();
 
-  const statusCtl=canE
+  /* BEETLE — THE STATUS OF WHAT? A Drafted/Approved control on a month
+     with no plan row had nothing to be the status OF, and changing it
+     ran `if(!mp.id) mp.id=newMonthPlanId()` and saved — so the plan came
+     into being because somebody touched a control that should not have
+     been on screen. The pencil is the only way to start a plan. */
+  /* ══ BEETLE — A SHOOT IS NOT A PLAN ═══════════════════════════════
+     `prodN` was in this test, so two scheduled shoots were enough to
+     draw the whole card: the "FROM THE BRAND PLAN" label, the theme
+     line reading "No theme set", and a Drafted/Approved control — for a
+     month with NO PLAN ROW AT ALL. Chirag found it on ZVC by Netre,
+     where the Monthly plan tab correctly said 0 of 12 while this card
+     said September had a plan. The two screens were answering two
+     different questions and only one of them was the question asked.
+
+     Shoots come from the Production Planner. They are worth showing
+     here and they are shown here, below — but they are not evidence
+     that anybody has planned the month. */
+  const hasPlan=!!mp.id||monthPlanHasData(activeBrand,YEAR,m)||infl.length||targets.length||(mp.influencer_target>0);
+  const statusCtl=!hasPlan?"":canE
     ?`<select class="mp-status" onchange="mpCardSetStatus(this.value)" style="appearance:none;-webkit-appearance:none;border:none;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border-radius:999px;padding:5px 24px 5px 10px;color:${st?"#791F1F":"#854F0B"};background-color:${st?"#FCEBEB":"#FAEEDA"};background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${st?"%23791F1F":"%23854F0B"}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 9px center;">
         <option value="drafted"${st?"":" selected"}>Drafted</option><option value="approved"${st?" selected":""}>Approved</option></select>`
     :`<span class="mp-status" style="font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px;color:${st?"#791F1F":"#854F0B"};background:${st?"#FCEBEB":"#FAEEDA"};">${st?"Approved":"Drafted"}</span>`;
   const editBtn=canE?`<span class="mp-edit" onclick="mpvStart(${m})" title="Open the full month plan" style="width:26px;height:26px;border-radius:50%;border:1px solid var(--div);background:var(--surface);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;"><i class="ti ti-pencil" style="font-size:13px;"></i></span>`:"";
   const lbl=t=>`<div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);margin-bottom:6px;">${t}</div>`;
-  const empty=!monthPlanHasData(activeBrand,YEAR,m)&&!infl.length&&!prodN&&!targets.length&&!(mp.influencer_target>0);
+  const empty=!hasPlan;
 
   let body;
   if(empty){
-    body=`${lbl("Theme &amp; goals")}<div style="font-size:13px;color:var(--subtle);">No plan for ${MN[m]} yet.${canE?" Use the pencil to start one.":""}</div>`;
+    /* THE SHOOTS STAY. They are real, they are this month's, and hiding
+       them because the plan is missing would lose the one true thing on
+       the card. What goes is everything that claimed a plan. */
+    /* NO HEADING OVER AN ABSENCE. The photograph showed "THEME & GOALS"
+       standing above a line saying there is no theme and no goals — a
+       label naming content that is not there. The sentence is the
+       content in this state, so it stands on its own. */
+    body=`${lbl(`${MN[m]} ${YEAR}`)}<div style="font-size:13px;color:var(--subtle);">No plan for ${MN[m]} yet.${canE?" Use the pencil to start one.":""}</div>
+      ${prodN?mpvProductionHtml(m,canE):""}`;
   } else {
     const band=(id,title,items,cat,extra)=>{
       if(!items.length&&!extra) return "";
@@ -18210,7 +18286,12 @@ function monthPlanCardHtml(m){
             :`<div class="mpv-empty">None planned</div>`}
         </div></div>`;
     };
-    body=`${lbl(`${MN[m]} theme <span style="font-size:11px;font-weight:700;color:var(--subtle);border:1px solid var(--div);border-radius:5px;padding:1px 5px;margin-left:6px;letter-spacing:.04em;">FROM THE BRAND PLAN</span>`)}
+    /* THE CHIP IS GONE FROM BOTH STATES, on Chirag's word, 10 Sep. It
+       named where the theme came from on a screen with one place it
+       could have come from, and it was the loudest thing on a card that
+       had just been caught claiming a plan it did not have. The month
+       and the year say what this card is about; that is the label's job. */
+    body=`${lbl(`${MN[m]} ${YEAR} theme`)}
       <div class="mpv-theme${(mp.key_theme||"").trim()?"":" none"}" style="margin-top:6px;">${(mp.key_theme||"").trim()?mpRender(mp.key_theme):"No theme set"}</div>
 
       ${goals.length?`<div style="margin-top:12px;">${lbl("Goals")}
