@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v95.0 — Beetle: a shoot is not a plan"/>
+<meta name="cc-tool-version" content="v96.0 — Mantis: a month with work in it earns a sheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -9065,7 +9065,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v95.0 — Beetle: a shoot is not a plan";
+const TOOL_VERSION="v96.0 — Mantis: a month with work in it earns a sheet";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -17170,6 +17170,14 @@ function mpvBandHtml(d,mp,mpvBandMonth,canBandEdit){
    and on each goal, saved on blur, no modal. The pencil still opens the
    full editor for the things a line of text cannot do — adding rows,
    tagging a discipline, setting targets. */
+/* MANTIS — what this month has in it that is not the plan. Read by the
+   month list and by the sheet, so the two can never disagree about
+   whether a month is worth showing. */
+function mpvMonthWork(m){
+  const posts=socialForBrandYear(activeBrand,YEAR).filter(p=>p.month===m).length;
+  const shoots=prodsForBrandMonth(activeBrand,YEAR,m).dated.length;
+  return {posts,shoots};
+}
 function mpvMonthsWithPlan(){
   const out=[];
   for(let m=12;m>=1;m--){
@@ -17195,10 +17203,26 @@ function mpvMonthsWithPlan(){
        "ask what the screen offers in its EMPTY state, its first-run
        state and its all-done state, not only in the populated fixture
        everybody writes." Every fixture I built had content in it. */
+    /* ══ MANTIS — A MONTH WITH WORK IN IT EARNS A SHEET ═══════════════
+       Chirag, 10 September, on ZVC by Netre: 22 posts and 2 shoots in
+       September and the page said there was nothing here, because a plan
+       row had never been written. Beetle proved the two screens were
+       answering different questions and made the Posts card tell the
+       truth; he then chose to WIDEN this one rather than keep it narrow.
+
+       So the page now shows a month that HAS SOMETHING IN IT — a plan, or
+       posts, or dated shoots. The sheet is empty of plan content until
+       somebody types, and the first thing typed creates the row.
+
+       DATED SHOOTS ONLY. `prodsForBrandMonth` also returns the undated
+       ones, which belong to no month; counting those would light up all
+       twelve. */
+    const work=mpvMonthWork(m);
     const has=!!mp.id
       ||(String(mp.key_theme||"").trim()!=="")||mpvItems(mp,"goal").length
       ||mpvItems(mp,"influencer").length||mpvItems(mp,"production").length
-      ||mpvItems(mp,"target").length||(mp.influencer_target>0);
+      ||mpvItems(mp,"target").length||(mp.influencer_target>0)
+      ||work.posts||work.shoots;
     if(has) out.push(m);
   }
   return out;
@@ -17309,7 +17333,7 @@ function mpvSheetHtml(m,canE){
         onfocus="mpvFocus(this)" onblur="mpvBlurSave(this)"`:"";
   return `<div class="mpv-sheet" data-month="${m}" id="mpv-m${m}">
     <div class="mpv-top">
-      <div class="mpv-act">${mpvStatusCtl(m,mp,canE)}${canE?`<span class="mp-edit" onclick="mpvFocusTheme(${m})"
+      <div class="mpv-act">${mp.id?mpvStatusCtl(m,mp,canE):""}${canE?`<span class="mp-edit" onclick="mpvFocusTheme(${m})"
         title="Write the theme for ${MN[m]}"><i class="ti ti-pencil"></i></span>`:""}</div>
       <div class="mpv-mo"><h2>${MN[m]}</h2><span class="yr">${YEAR}</span></div>
       <div class="mpv-theme${themeSet?"":" none"}"${ed}>${themeSet?mpRender(mp.key_theme):(canE?"Write the theme for "+MN[m]+"…":"No theme set for "+MN[m])}</div>
@@ -17346,7 +17370,7 @@ function buildMonthPlanSidebar(){
   const canE=canEdit();
   document.getElementById("sb-stats").innerHTML=`
     <div class="s-stat-num">${months.length}<span style="font-size:16px;color:var(--subtle);">/12</span></div>
-    <div class="s-stat-lbl">months planned</div>`;
+    <div class="s-stat-lbl">months with work</div>`;
   const chip=m=>{
     const on=has.has(m);
     /* a month with nothing in it cannot be JUMPED to — there is no sheet
@@ -17361,8 +17385,12 @@ function buildMonthPlanSidebar(){
     `<div class="s-divider"></div><div class="s-lbl">Months</div>
      <div class="mpv-jump">${Array.from({length:12},(_,i)=>i+1).map(chip).join("")}</div>
      <div style="font-size:11px;color:var(--subtle);margin-top:9px;line-height:1.5;">
-       ${months.length===12?"Every month has a plan."
-         :`${12-months.length} month${12-months.length===1?"":"s"} ${12-months.length===1?"has":"have"} no plan${canE?" — click a faded one to start it":""}.`}
+       ${/* MANTIS — the count widened, so the words had to. It counts
+             months with a plan OR posts OR dated shoots now, and calling
+             that "planned" would be the same kind of quiet lie the batch
+             was called to remove. */""}
+       ${months.length===12?"Every month has something in it."
+         :`${12-months.length} month${12-months.length===1?"":"s"} ${12-months.length===1?"is":"are"} empty${canE?" — click a faded one to start it":""}.`}
      </div>`;
 }
 
@@ -17380,7 +17408,7 @@ function renderMonthPlanView(){
       ${months.length
         ? months.map(m=>mpvSheetHtml(m,canE)).join("")
         : `<div class="mpv-sheet"><div class="mpv-body"><div class="mpv-empty" style="padding:26px 0;">
-            No month has a plan yet for ${YEAR}.${canE?` <span class="mpv-start" onclick="mpvStart(${curMonth||1})">Start ${MN[curMonth||1]}</span>`:""}</div></div></div>`}
+            Nothing in ${YEAR} yet.${canE?` <span class="mpv-start" onclick="mpvStart(${curMonth||1})">Start ${MN[curMonth||1]}</span>`:""}</div></div></div>`}
       ${/* BEETLE — A WAY TO ADD THE NEXT MONTH, from the page you are on.
             The faded chips in the rail could always do it and still can;
             this is the one at the end of the scroll, where you arrive
@@ -18322,6 +18350,12 @@ async function mpvSetStatus(v,m){
   if(!canEdit()) return;
   const mm=Number(m)||mpvMonth||curMonth||1;
   const mp=monthPlanFor(activeBrand,YEAR,mm);
+  /* MANTIS — the same lock Beetle put on the Posts card. A sheet can now
+     be drawn for a month that has posts and no plan, so this control has
+     to be able to say "there is nothing here to approve yet" rather than
+     quietly inventing the thing it is setting the status of. */
+  if(!mp.id&&!monthPlanHasData(activeBrand,YEAR,mm)){
+    toast("Write something in the plan first","err"); return; }
   mp.status=v; if(!mp.id) mp.id=newMonthPlanId();
   await dbSaveMonthPlan(activeBrand,YEAR,mm);
   renderMonthPlanView(); buildSidebar();
