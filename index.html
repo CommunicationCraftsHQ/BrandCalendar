@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v96.0 — Mantis: a month with work in it earns a sheet"/>
+<meta name="cc-tool-version" content="v97.0 — Porto Alegre: one mark sends the post"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -1767,6 +1767,19 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .pc46 .pcia{color:var(--muted)!important}
 .pc46 .pcia:hover{color:var(--text)!important}
 .pc46 .pcia.del:hover{color:#C62828!important}
+/* PORTO ALEGRE — the WhatsApp mark. Grey like the eye, the pencil and
+   the bin; green only under the pointer, the way the bin goes red. A
+   post already sent carries a dot, which is the whole of the state:
+   no word, no extra row, because the row is the thing being kept. */
+.pc46 .pcia.wa{position:relative}
+.pc46 .pcia.wa:hover{color:#1E9E5A!important;background:#E7F6EE}
+.pc46 .pcia.wa .dot{position:absolute;top:2px;right:2px;width:6px;height:6px;border-radius:50%;
+  background:#1E9E5A;box-shadow:0 0 0 2px var(--surface2);pointer-events:none}
+/* the link, where it belongs: inside the conversation, staff only */
+.th46 .walink{display:flex;align-items:center;gap:8px;padding:9px 16px;background:#F3F8F4;
+  border-bottom:1px solid var(--div);font-size:12px;color:var(--muted);flex-wrap:wrap}
+.th46 .walink code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--text)}
+.th46 .walink .sp{margin-left:auto;display:flex;gap:5px;align-items:center}
 /* the staged-file count: the same badge as a new comment, because it is
    the same kind of fact — there is something here you have not dealt with */
 .th46 .stagedn{min-width:17px;height:17px;padding:0 5px;border-radius:999px;background:var(--acc);color:#fff;
@@ -9065,7 +9078,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v96.0 — Mantis: a month with work in it earns a sheet";
+const TOOL_VERSION="v97.0 — Porto Alegre: one mark sends the post";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -10084,6 +10097,7 @@ async function loadPostFeedback(){
       sb.from("post_seen").select("*").eq("user_email",me),
       loadNotifications(),
       loadCommentCounts(),
+      loadShareLinks(),
       loadTaskSeen(),
       loadPrefs(),
       loadAssignments(),
@@ -14873,6 +14887,87 @@ boot();
    ══════════════════════════════════════════════════════════════════ */
 
 /* ── the card ─────────────────────────────────────────────────────── */
+/* ══ PORTO ALEGRE — one post, sent to the client on WhatsApp ═══════
+   THE LINK IS NOT DECORATION. A web page cannot hand WhatsApp a photo
+   — its share link carries text only, and WhatsApp takes a picture
+   only from the machine you are typing on. The picture in the chat is
+   WhatsApp's own preview OF THE LINK, so removing the link removes
+   the picture with it. Chirag was shown both and chose the link.
+
+   The page it opens is served by the `post-review` function, which
+   serves the picture itself: the Calendar mints picture links that
+   die after 600 seconds, and WhatsApp's crawler may look long after
+   that, which would draw nothing. */
+const WA_BASE="https://qsxldzqdjdplffxqdokd.supabase.co/functions/v1/post-review";
+let SHARE_BY_POST={};                 /* postId -> the live link, if any */
+function shareFor(id){ return SHARE_BY_POST[id]||null; }
+function waUrlFor(tok){ return WA_BASE+"/p/"+tok; }
+function waSentLabel(l){
+  return "Sent "+fmtShort(l.created_at)+" · "
+    +(l.view_count?("opened "+l.view_count+(l.view_count===1?" time":" times")):"not opened yet")
+    +" · send again";
+}
+/* Revoked and expired links are left behind deliberately — the row is
+   the record of what went to a client and when, and a screen that
+   quietly shows less than the truth is the thing this suite keeps
+   paying for. Only LIVE ones reach the card. */
+async function loadShareLinks(){
+  try{
+    const r=await sb.from("post_share_links").select("*")
+      .is("revoked_at",null).gt("expires_at",new Date().toISOString());
+    if(r.error){ SHARE_BY_POST={}; return; }
+    SHARE_BY_POST={};
+    /* THE DATABASE IS THE BOUNDARY AND THE SCREEN IS NOT — but a link
+       that is dead must not draw a dot on a card either, and a read
+       filter is the easiest thing in the world to lose in a rewrite.
+       So the two agree: revoked or past its date, it is not live. */
+    const now=Date.now();
+    (r.data||[]).forEach(l=>{
+      if(l.revoked_at) return;
+      if(l.expires_at && new Date(l.expires_at).getTime()<=now) return;
+      const cur=SHARE_BY_POST[l.post_id];
+      if(!cur||new Date(l.created_at)>new Date(cur.created_at)) SHARE_BY_POST[l.post_id]=l;
+    });
+  }catch(e){ SHARE_BY_POST={}; }
+}
+function waMessage(p,url){
+  const bn=((brands[p.brand_id||activeBrand]||{}).name||"").trim();
+  const cap=p.content.instagram.caption||p.content.facebook.caption||"";
+  const tags=p.content.instagram.hashtags||p.content.facebook.hashtags||"";
+  const head=(bn?bn+" — ":"")+"post for "+shortDate(p.month,p.date)+", for your review.";
+  return [head,"",cap,tags,"",url].filter(x=>String(x).length||x==="")
+    .join("\n").replace(/\n{3,}/g,"\n\n").trim();
+}
+async function waSend(id){
+  const b=brands[activeBrand]; const p=(b.social||[]).find(x=>x.id===id); if(!p) return;
+  if(!canEdit()){ toast("View-only account","err"); return; }
+  const r=await sb.rpc("psl_mint",{p_post:id});
+  if(r.error||!r.data){ toast("The link could not be made","err"); return; }
+  /* opened BEFORE the awaits below: a browser blocks a new window that
+     is not opened in the same breath as the click. */
+  window.open("https://wa.me/?text="+encodeURIComponent(waMessage(p,waUrlFor(r.data))),
+              "_blank","noopener");
+  await logActivity(id,"sent the post to the client on WhatsApp");
+  if(p.status==="drafting") socialStatusEdit(id,"review");
+  await loadShareLinks();
+  renderSocial();
+}
+function waCopy(tok){
+  const u=waUrlFor(tok);
+  if(navigator.clipboard&&navigator.clipboard.writeText)
+    navigator.clipboard.writeText(u).then(()=>toast("Link copied"),()=>toast("The link could not be copied","err"));
+  else toast("The link could not be copied","err");
+}
+async function waKill(tok,postId){
+  if(!canEdit()){ toast("View-only account","err"); return; }
+  if(!confirm("Kill this link? Anybody who has it will see that it has expired.")) return;
+  const r=await sb.rpc("psl_revoke",{p_token:tok});
+  if(r.error){ toast("The link could not be killed","err"); return; }
+  await logActivity(postId,"killed the shared link");
+  await loadShareLinks();
+  renderSocial();
+}
+
 function socialViewCard(p){
   const cap =p.content.instagram.caption ||p.content.facebook.caption ||"";
   const tags=p.content.instagram.hashtags||p.content.facebook.hashtags||"";
@@ -14892,7 +14987,16 @@ function socialViewCard(p){
     </span>`:"";
 
   /* Edit and Preview are icons now, and Delete stands beside them */
-  const acts=`<button class="pcia pcia-prev" onclick="openPreview('${p.id}')" title="Preview"><i class="ti ti-eye"></i></button>`
+  const waLink=shareFor(p.id);
+  /* A CLIENT IS NEVER OFFERED THIS. canEdit() is about permission to
+     change the post; sending it to the client is a different question,
+     and the person it would be sent to is the one looking. */
+  const waBtn=(canEdit()&&actorKind()!=="client")
+    ? `<button class="pcia wa pcia-wa" onclick="waSend('${p.id}')" title="${
+        waLink?escAttr(waSentLabel(waLink)):"Send to the client on WhatsApp"}"><i class="ti ti-brand-whatsapp"></i>${
+        waLink?`<span class="dot"></span>`:""}</button>`
+    : "";
+  const acts=waBtn+`<button class="pcia pcia-prev" onclick="openPreview('${p.id}')" title="Preview"><i class="ti ti-eye"></i></button>`
     +(canEdit()?`<button class="pcia pcia-edit" onclick="openSocialEditorById('${p.id}')" title="Edit post"><i class="ti ti-pencil"></i></button>
        <button class="pcia del pcia-del" onclick="deleteContentPost('${p.id}')" title="Delete post"><i class="ti ti-trash"></i></button>`:"");
 
@@ -15115,7 +15219,21 @@ function fbPanelHtml(p){
     </div>`:"";
 
   const curR=currentRound(p.id);
-  const bar=`<div class="tbar">
+  /* staff only — the same call as the design brief above. A client
+     reading how their own review link is administered helps nobody. */
+  const waL=shareFor(p.id);
+  const waStrip=(actorKind()!=="client"&&waL)?`<div class="walink">
+      <i class="ti ti-brand-whatsapp" style="font-size:14px;color:#1E9E5A;"></i>
+      <code>${escAttr(waUrlFor(waL.token).replace(/^https?:\/\//,""))}</code>
+      <span>sent ${fmtShort(waL.created_at)} · ${waL.view_count
+        ?("opened "+waL.view_count+(waL.view_count===1?" time":" times")):"not opened yet"
+        } · expires ${fmtShort(waL.expires_at)}</span>
+      <span class="sp">
+        <button class="tog" onclick="waCopy('${waL.token}')">Copy</button>
+        <button class="tog" style="color:var(--acc);border-color:#F3D7D7;"
+          onclick="waKill('${waL.token}','${p.id}')">Kill this link</button></span>
+    </div>`:"";
+  const bar=waStrip+`<div class="tbar">
       <b>${openN?openN+(openN===1?" open":" open"):"Nothing open"}</b>
       ${curR?`<span class="rchip cur">Round ${curR.round_no}</span>`:""}
       <span class="sp">${doneN?`<button class="tog${showDone?" on":""}" onclick="fbToggleDone('${p.id}')">${doneN} resolved</button>`:""}${
