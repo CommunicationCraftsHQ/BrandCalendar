@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v97.0 — Porto Alegre: one mark sends the post"/>
+<meta name="cc-tool-version" content="v97.1 — Porto Alegre: the message is the caption"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -9078,7 +9078,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v97.0 — Porto Alegre: one mark sends the post";
+const TOOL_VERSION="v97.1 — Porto Alegre: the message is the caption";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -14930,12 +14930,15 @@ async function loadShareLinks(){
     });
   }catch(e){ SHARE_BY_POST={}; }
 }
+/* THE CAPTION, THE HASHTAGS, THE LINK. Nothing else.
+   It used to open with "<Brand> — post for Thu 17, for your review.",
+   which the preview card above it already says in its own line, and two
+   lines of chat are not free on a phone. Chirag, 12 Sep, looking at a
+   real message: "is this the best we can do?" */
 function waMessage(p,url){
-  const bn=((brands[p.brand_id||activeBrand]||{}).name||"").trim();
   const cap=p.content.instagram.caption||p.content.facebook.caption||"";
   const tags=p.content.instagram.hashtags||p.content.facebook.hashtags||"";
-  const head=(bn?bn+" — ":"")+"post for "+shortDate(p.month,p.date)+", for your review.";
-  return [head,"",cap,tags,"",url].filter(x=>String(x).length||x==="")
+  return [cap,tags,"",url].filter(x=>String(x).length||x==="")
     .join("\n").replace(/\n{3,}/g,"\n\n").trim();
 }
 async function waSend(id){
