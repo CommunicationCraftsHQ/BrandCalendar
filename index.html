@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V101.00 — Locust: the dot becomes the eye"/>
+<meta name="cc-tool-version" content="V101.01 — Tallinn: a sentence fits, and a second reader"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -574,6 +574,42 @@ a.bd-chip.link:hover{border-color:var(--acc);}
 .bd-comp .nm{font-size:13.5px;font-weight:700;}
 .bd-comp .why{font-size:12px;color:var(--muted);text-align:right;}
 .bd-card.dark .bd-comp .why{color:#a5a5a5;}
+/* ══ TALLINN v100.3 · THE BRAND VISION HOLDS SENTENCES ═══════════════
+   Everything above was written when a value on this screen was a word
+   or two — "Aurelia", "18k", "Monthly" — and three of them say
+   white-space:nowrap. The first real Brand Vision put WHOLE SENTENCES in
+   the same places: a competitor described in a line, a measurement plan
+   in a detail row. nowrap turns each into one unbreakable thing, a grid
+   track has to be at least as wide as its widest unbreakable thing, and
+   so the Competitors card took the whole row while the two cards beside
+   it were squeezed to one word wide and the page scrolled sideways.
+
+   THE OTHER HALF IS min-width:auto, which is what every grid and flex
+   child is by default: it refuses to shrink below its own content. So
+   even text that COULD wrap starves its neighbours. `min-width:0` is
+   what makes the fr units mean what they say.
+
+   Nothing here is a kit class — cc-suite.css has no .bd- rule at all —
+   so this is the Calendar's own screen being fixed in its own file. */
+/* NO overflow-x:hidden on .bd-wrap. It was the first thing tried and it
+   is the wrong fix twice over: it hides a spill from the eye while the
+   text is still cut off, and it hides it from the gate — the page's own
+   scrollWidth reads 0 while 868px of a competitor line sits outside its
+   card. A clip is not a layout. */
+.bd-grid>*,.bd-pgrid>*,.bd-catgrid>*{min-width:0;}
+.bd-card{min-width:0;overflow-wrap:anywhere;}
+.bd-krow{align-items:flex-start;flex-wrap:wrap;}
+.bd-krow .k{min-width:0;}
+.bd-krow .v{white-space:normal;overflow-wrap:anywhere;text-align:right;min-width:0;flex:1 1 auto;}
+.bd-svc{min-width:0;max-width:100%;}
+.bd-svc .sn{white-space:normal;overflow-wrap:anywhere;}
+.bd-comp{align-items:flex-start;flex-wrap:wrap;}
+.bd-comp a,.bd-comp .nm{white-space:normal;overflow-wrap:anywhere;min-width:0;}
+.bd-comp .why{min-width:0;overflow-wrap:anywhere;text-align:left;}
+.bd-coll .cn,.bd-coll .cw{overflow-wrap:anywhere;}
+.bd-pil .pt,.bd-pil .pp{overflow-wrap:anywhere;}
+.bd-chip{overflow-wrap:anywhere;}
+.bd-slider>.bd-card{overflow-wrap:anywhere;}
 .bd-card.dark .bd-comp a{color:#F09595;}
 /* brief edit form */
 .bd-f{background:var(--surface);border:1px solid var(--div);border-radius:var(--rc);padding:18px 20px;margin-bottom:12px;}
@@ -9216,7 +9252,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V101.00 — Locust: the dot becomes the eye";
+const TOOL_VERSION="V101.01 — Tallinn: a sentence fits, and a second reader";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -16319,11 +16355,66 @@ function sdCell(ws,r,c){
 }
 const sdStr=v=>(v instanceof Date)?"":String(v==null?"":v).trim();
 
+/* ══ TALLINN v100.3 · A SECOND READER ════════════════════════════════
+   exceljs writes these files and usually reads them back. It refuses a
+   workbook that ANOTHER app has re-saved — the one Chirag sent had no
+   docProps, its parts in a different order and a content-type map that
+   declares the workbook type as the default for every .xml part. All
+   legal enough for most readers; exceljs throws
+   "Cannot read properties of undefined (reading 'sheets')" before a
+   single cell is looked at.
+
+   SheetJS is ALREADY ON THIS PAGE — it has been since long before any of
+   these importers — and it read that same file perfectly: both tabs, the
+   stamp, the brand, every row. So the fix is not a new dependency, it is
+   asking the library that is already here.
+
+   The order matters. exceljs FIRST, always, because it is what wrote the
+   file and it carries the cell types we depend on. SheetJS only when
+   exceljs has refused, and its rows are copied into a real exceljs
+   workbook so that everything downstream — three importers, every
+   sdCell/getCell call — is untouched and cannot tell the difference.
+
+   A FILE THAT NEITHER CAN READ IS STILL REFUSED: the original error is
+   re-thrown, not swallowed. And the stamp check still runs afterwards,
+   so a file that is merely not ours is refused for being not ours. */
+async function xlRead(file){
+  const EJ=await loadExportLib("exceljs");
+  const raw=await file.arrayBuffer();
+  try{
+    const wb=new EJ.Workbook();
+    await wb.xlsx.load(raw.slice(0));
+    return wb;
+  }catch(e){
+    if(typeof XLSX==="undefined"||!XLSX.read) throw e;
+    let src2;
+    /* cellDates, so a date cell arrives as a Date exactly as exceljs
+       would have handed it over — the whole v99.1 date lesson depends on
+       the reader downstream seeing a Date and using the UTC getters. */
+    try{ src2=XLSX.read(new Uint8Array(raw),{type:"array",cellDates:true}); }
+    catch(e2){ throw e; }
+    if(!src2||!src2.SheetNames||!src2.SheetNames.length) throw e;
+    const wb=new EJ.Workbook();
+    src2.SheetNames.forEach(name=>{
+      const ws=wb.addWorksheet(name);
+      const s=src2.Sheets[name]||{};
+      const ref=s["!ref"]; if(!ref) return;
+      const R=XLSX.utils.decode_range(ref);
+      for(let r=R.s.r;r<=R.e.r;r++){
+        for(let c=R.s.c;c<=R.e.c;c++){
+          const cell=s[XLSX.utils.encode_cell({r:r,c:c})];
+          if(!cell||cell.v==null||cell.v==="") continue;
+          ws.getCell(r+1,c+1).value=cell.v;
+        }
+      }
+    });
+    return wb;
+  }
+}
+
 async function sdRead(file){
   try{
-    const EJ=await loadExportLib("exceljs");
-    const wb=new EJ.Workbook();
-    await wb.xlsx.load(await file.arrayBuffer());
+    const wb=await xlRead(file);
     const lk=wb.getWorksheet("_lists");
     const stamp=lk?String(lk.getCell(1,5).value||""):"";
     if(stamp===SEED_MAGIC_V1)
@@ -16934,9 +17025,7 @@ function tkDate(v){
 
 async function tkRead(file){
   try{
-    const EJ=await loadExportLib("exceljs");
-    const wb=new EJ.Workbook();
-    await wb.xlsx.load(await file.arrayBuffer());
+    const wb=await xlRead(file);
     const lk=wb.getWorksheet("_lists");
     if(!lk||String(lk.getCell(1,5).value||"")!==TSK_MAGIC)
       return tkRefuse("This file was not downloaded from the calendar.",
@@ -17552,9 +17641,7 @@ function bvRefuse(title,detail){
 /* ── READING ──────────────────────────────────────────────────────── */
 async function bvRead(file){
   try{
-    const EJ=await loadExportLib("exceljs");
-    const wb=new EJ.Workbook();
-    await wb.xlsx.load(await file.arrayBuffer());
+    const wb=await xlRead(file);
     const lk=wb.getWorksheet("_lists");
     if(!lk||String(lk.getCell(1,5).value||"")!==BV_MAGIC)
       return bvRefuse("This file was not downloaded from the calendar.",
