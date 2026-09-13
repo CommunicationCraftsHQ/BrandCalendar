@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v100.0 — Tallinn: tasks from a sheet"/>
+<meta name="cc-tool-version" content="v100.1 — Tallinn: your own keys join the two tabs"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -9107,7 +9107,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v100.0 — Tallinn: tasks from a sheet";
+const TOOL_VERSION="v100.1 — Tallinn: your own keys join the two tabs";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -16849,6 +16849,21 @@ async function tkRead(file){
 
     const create=[],change=[],conflict=[],skip=[]; let same=0;
     const seenTaskRow={};
+    /* ── v100.1 ──────────────────────────────────────────────────────
+       A blank template could not create a task WITH milestones: the two
+       tabs are joined by Task ID, and a task that does not exist yet has
+       no id to join on. Chirag did the only sensible thing — typed his
+       own keys, BR-01 … BR-12, into both tabs — and every row was
+       skipped, because the reader took any Task ID to mean "a task the
+       tool already has".
+
+       So: a value SHAPED LIKE ONE OF OUR IDS means that task, and is
+       still skipped by name when it is gone. ANYTHING ELSE is a key for
+       this sheet — the row creates a task, and a milestone pointing at
+       that key attaches to it. A uuid is unmistakable; BR-01 is not,
+       which is what makes the distinction safe to draw. */
+    const isOurId=v=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+    const localKey={};        /* the key a row gave itself -> its create entry */
 
     for(let n=2;n<=TSK_LAST;n++){
       const id=sdStr(sdCell(ts,n,1));
@@ -16878,6 +16893,11 @@ async function tkRead(file){
         delivery_date:due||null,status:status};
 
       if(!id){ create.push({row:n,want:want}); continue; }
+      if(!isOurId(id)){
+        if(localKey[id]){ skip.push({row:n,why:"“"+id+"” is used as a Task ID twice"}); continue; }
+        const entry={row:n,want:want,key:id};
+        localKey[id]=entry; create.push(entry); continue;
+      }
       const t=byId[id];
       if(!t){ skip.push({row:n,why:"that task is no longer here"}); continue; }
       seenTaskRow[id]=true;
@@ -16916,12 +16936,16 @@ async function tkRead(file){
         if(!mid&&!tid&&!name&&!dueV) continue;
         if(!name){ msSkip.push({row:n,why:"no name"}); continue; }
         if(!tid){ msSkip.push({row:n,why:"no Task ID — a milestone has to belong to a task"}); continue; }
-        if(!byId[tid]){ msSkip.push({row:n,why:"Task ID “"+tid+"” is not a task here"}); continue; }
+        const onKey=(!byId[tid]&&localKey[tid])?tid:null;
+        if(!byId[tid]&&!onKey){ msSkip.push({row:n,why:"Task ID “"+tid+"” is not a task here"}); continue; }
         const due=tkDate(dueV);
         if(due===null){ msSkip.push({row:n,why:"the due date could not be read"}); continue; }
-        const want={task_id:tid,name:name,due_date:due||null};
+        /* on a key, task_id is not known until the task is written */
+        const want={task_id:onKey?null:tid,taskKey:onKey,name:name,due_date:due||null};
 
-        if(!mid){ msCreate.push({row:n,want:want}); continue; }
+        /* a Milestone ID that is not one of ours is a key too — it names
+           a row in this sheet, not a milestone in the tool */
+        if(!mid||!isOurId(mid)){ msCreate.push({row:n,want:want}); continue; }
         const m=msById[mid];
         if(!m){ msSkip.push({row:n,why:"that milestone is no longer here"}); continue; }
         /* Approved is carried for information and never written. Say so
@@ -16988,7 +17012,7 @@ function tkRender(){
      ${TK.change.length?head(TK.change.length+" task"+(TK.change.length===1?"":"s")+" will change")+block(TK.change,"change",false):""}
      ${TK.conflict.length?head(TK.conflict.length+" task"+(TK.conflict.length===1?"":"s")+" edited in the tool since you downloaded")+block(TK.conflict,"conflict",true):""}
      ${TK.msCreate.length?head(TK.msCreate.length+" new milestone"+(TK.msCreate.length===1?"":"s"))+
-        newRows(TK.msCreate,c=>` <span style="color:var(--subtle);">· ${escAttr((byIdTitle(c.want.task_id)||""))}</span>`):""}
+        newRows(TK.msCreate,c=>` <span style="color:var(--subtle);">· ${escAttr(byIdTitle(c.want.task_id)||tkKeyTitle(c.want.taskKey)||"")}</span>`):""}
      ${TK.msChange.length?head(TK.msChange.length+" milestone"+(TK.msChange.length===1?"":"s")+" will change")+block(TK.msChange,"msChange",false):""}
      ${TK.msConflict.length?head(TK.msConflict.length+" milestone"+(TK.msConflict.length===1?"":"s")+" edited since you downloaded")+block(TK.msConflict,"msConflict",true):""}
      ${skipN?head(skipN+" row"+(skipN===1?"":"s")+" skipped")+
@@ -17008,12 +17032,17 @@ function tkRender(){
    </div>`;
 }
 function byIdTitle(id){ const t=(BR.tasks||[]).find(x=>x.id===id); return t?t.title:""; }
+/* a milestone can belong to a task that does not exist yet, so the
+   preview names it by the row that is about to make it */
+function tkKeyTitle(key){ if(!key||!TK) return "";
+  const c=(TK.create||[]).find(x=>x.key===key); return c?c.want.title:""; }
 
 async function tkSave(){
   if(!TK||!can("task_create")) return;
   const btn=document.querySelector("#tk-body .btn-p");
   if(btn){ btn.disabled=true; btn.style.opacity=".5"; }
   const rows=[];
+  const keyToId={};          /* v100.1 — a sheet's own key -> the id it just got */
 
   /* THE ID IS MADE HERE, not read back from the insert. An import that
      creates twenty rows and then asks the database what it just made is
@@ -17028,6 +17057,7 @@ async function tkSave(){
       updated_at:new Date().toISOString()}]);
     if(r.error){ dbErr(r); continue; }
     rows.push({kind:"task",row_id:id,made:true,before:null});
+    if(c.key) keyToId[c.key]=id;
   }
   for(const c of TK.change.concat(TK.conflict.filter(x=>!x.keep))){
     const t=c.task;
@@ -17041,9 +17071,12 @@ async function tkSave(){
     rows.push({kind:"task",row_id:c.id,made:false,before:before,after:{...c.want}});
   }
   for(const c of TK.msCreate){
-    const sort=brMsFor(c.want.task_id).length;
+    /* the tasks are written by now, so a key can be answered */
+    const taskId=c.want.task_id||keyToId[c.want.taskKey];
+    if(!taskId) continue;
+    const sort=brMsFor(taskId).length;
     const id=crypto.randomUUID();
-    const r=await sb.from("branding_milestones").insert([{id:id,task_id:c.want.task_id,brand_id:activeBrand,
+    const r=await sb.from("branding_milestones").insert([{id:id,task_id:taskId,brand_id:activeBrand,
       sort:sort,name:c.want.name,due_date:c.want.due_date,status:"not_started"}]);
     if(r.error){ dbErr(r); continue; }
     rows.push({kind:"milestone",row_id:id,made:true,before:null});
