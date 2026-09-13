@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v97.1 — Porto Alegre: the message is the caption"/>
+<meta name="cc-tool-version" content="v98.0 — Riga: fill a month from a sheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3227,6 +3227,11 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 <div class="overlay" id="ov-imhist" onclick="if(event.target===this)closeM('imhist')">
   <div class="modal" style="max-width:640px;"><div id="imh-body"></div></div>
 </div>
+<!-- RIGA — filling a month from a sheet. Template out, sheet in, one
+     preview, one confirm. -->
+<div class="overlay" id="ov-seed" onclick="if(event.target===this)closeM('seed')">
+  <div class="modal" style="max-width:760px;"><div id="sd-body"></div></div>
+</div>
 
 <!-- LISBON 4 — editing ONE post uses the same form as editing the month.
      The Instagram-preview window taught a second way to do the same job,
@@ -4921,6 +4926,10 @@ function renderSocial(){
      lives in the header, Import writes and lives on the screen it
      changes. Staff only; the write path checks the role again. */
   const importCtl=canEdit()?`<button class="btn btn-s" style="background:var(--surface);" onclick="openImport()" title="Update captions and hashtags from a downloaded sheet"><i class="ti ti-upload"></i> Import</button>`:"";
+  /* RIGA — the other direction. Import updates what is there; this one
+     makes the month. Two buttons because they are two jobs, and a menu
+     between the team and a weekly task is a menu they will resent. */
+  const seedCtl=canEdit()?`<button class="btn btn-s" style="background:var(--surface);" onclick="sdOpen()" title="Create this month's posts and plan from a sheet"><i class="ti ti-table-plus"></i> From a sheet</button>`:"";
   mc.innerHTML=`
    ${pageHead()}
    <div style="padding:0 32px 20px;">
@@ -4930,7 +4939,7 @@ function renderSocial(){
    </div>
    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap;margin:20px 0 12px;padding-top:14px;border-top:1px solid var(--div);">
      <div style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${monthTotal} Post${monthTotal!==1?"s":""} <span style="font-weight:400;color:var(--subtle);">· ${MN[contentMonth]}</span></div>
-     <div style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;flex-shrink:0;">${importCtl}${modeToggle}${canE?`<button class="btn btn-p" style="white-space:nowrap;" onclick="addContentPost()"><i class="ti ti-plus"></i> Add post</button>`:""}</div>
+     <div style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;flex-shrink:0;">${seedCtl}${importCtl}${modeToggle}${canE?`<button class="btn btn-p" style="white-space:nowrap;" onclick="addContentPost()"><i class="ti ti-plus"></i> Add post</button>`:""}</div>
    </div>
    <div id="content-list"></div>
    </div>`;
@@ -9078,7 +9087,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v97.1 — Porto Alegre: the message is the caption";
+const TOOL_VERSION="v98.0 — Riga: fill a month from a sheet";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -16109,6 +16118,454 @@ async function imRevert(importId){
   toast(rows.length+" post"+(rows.length===1?"":"s")+" put back");
 }
 
+
+/* ══ RIGA · FILL A MONTH FROM A SHEET ═════════════════════════════════
+   openImport() above is a ROUND TRIP. It reads two columns off a file
+   this tool exported and writes them back onto posts that already
+   exist; a row with no Post ID has nowhere to go and is counted and
+   dropped. Riga is the other direction. Nothing exists yet, and the
+   sheet makes the month — the monthly plan on one tab, the posts on
+   another.
+
+   THREE LIMITS, ALL OF THEM CHIRAG'S CALL, 13 Sep:
+     · it NEVER edits or deletes a post that is already there. A row
+       landing on a date that already carries a post is listed and
+       skipped. "Only add new" were his words.
+     · one brand per file. The template is stamped with the brand and
+       the month it was made for and is refused anywhere else.
+     · plan and posts travel together — one file, two tabs.
+
+   The safety is the same as the caption import's and for the same
+   reason: a file we did not produce carries no stamp, so there is no
+   way to tell a real row from a hopeful one. Refuse, do not warn.
+   ══════════════════════════════════════════════════════════════════ */
+const SEED_MAGIC="CC-MONTH-SEED-V1";
+const SEED_PLAT=["Instagram + Facebook","Instagram","Facebook"];
+const SEED_ROWS=["Goal","Influencer","Production"];
+const SEED_LAST=201;      /* header + 200 dressed rows */
+const SEED_PLAN_LAST=80;
+let SD=null;              /* the parsed, checked seed awaiting confirmation */
+
+function sdOpen(){
+  if(!can("import_export")) return capDenied("Filling a month from a sheet");
+  const m=contentMonth||curMonth||1;
+  const b=brands[activeBrand]||{};
+  document.getElementById("sd-body").innerHTML=`
+   <div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">Fill ${MN[m]} ${YEAR} from a sheet
+       <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${escAttr(b.name||"")}</span></div>
+     <button class="modal-x" onclick="closeM('seed')">✕</button></div>
+   <div class="modal-body" style="padding:16px 20px 20px;">
+     <div style="display:flex;gap:10px;">
+       <button class="btn btn-s" onclick="sdTemplate()"><i class="ti ti-file-spreadsheet"></i> Download template</button>
+       <button class="btn btn-p" onclick="sdPick()"><i class="ti ti-upload"></i> Choose a filled sheet</button>
+     </div>
+   </div>`;
+  openM("seed");
+}
+
+/* ── THE TEMPLATE ─────────────────────────────────────────────────────
+   Built here rather than kept as a file, because the dropdowns, the
+   date list and the stamp all belong to ONE brand and ONE month. A
+   template that travelled between months would be a template that lies
+   about which dates are valid. */
+async function sdTemplate(){
+  if(!can("import_export")) return capDenied("Downloading the template");
+  const m=contentMonth||curMonth||1;
+  const b=brands[activeBrand]||{};
+  try{
+    const EJ=await loadExportLib("exceljs");
+    const wb=new EJ.Workbook();
+    const plan=wb.addWorksheet("Monthly plan");
+    const post=wb.addWorksheet("Posts",{views:[{state:"frozen",ySplit:1}]});
+    const lk=wb.addWorksheet("_lists"); lk.state="veryHidden";
+
+    const ndays=new Date(YEAR,m,0).getDate();
+    for(let i=1;i<=ndays;i++){ const c=lk.getCell(i,1); c.value=new Date(YEAR,m-1,i); c.numFmt="mmm d, yyyy"; }
+    SEED_PLAT.forEach((v,i)=>lk.getCell(i+1,2).value=v);
+    SOCIAL_FORMATS.forEach((v,i)=>lk.getCell(i+1,3).value=v.charAt(0).toUpperCase()+v.slice(1));
+    SEED_ROWS.forEach((v,i)=>lk.getCell(i+1,4).value=v);
+    /* the stamp — column 5. Nothing else in the workbook is trusted. */
+    lk.getCell(1,5).value=SEED_MAGIC;
+    lk.getCell(2,5).value=activeBrand;
+    lk.getCell(3,5).value=YEAR+"-"+m;
+
+    /* ── tab 1, the monthly plan. A FLAT two-column shape on purpose:
+          a fixed grid of blocks breaks the moment somebody inserts a
+          row, and somebody always does. Every row says what it is. */
+    plan.columns=[{header:"Row",width:22},{header:"Value",width:86}];
+    plan.getCell(2,1).value="Key theme";
+    plan.getCell(3,1).value="Influencer target";
+    for(let n=4;n<=SEED_PLAN_LAST;n++){
+      plan.getCell(n,1).dataValidation={type:"list",allowBlank:true,formulae:["=_lists!$D$1:$D$3"]};
+    }
+    SEED_ROWS.forEach((r,i)=>{ plan.getCell(4+i,1).value=r; });
+    plan.getRow(1).font={bold:true};
+    plan.getCell(2,1).font={bold:true}; plan.getCell(3,1).font={bold:true};
+
+    /* ── tab 2, the posts. 200 rows already dressed, so a row added at
+          the bottom arrives with its dropdowns rather than as plain
+          text the reader then has to guess at. */
+    post.columns=[{header:"Date",width:14},{header:"Day",width:10},
+      {header:"Platforms",width:20},{header:"Post type",width:12},
+      {header:"Focus",width:34},{header:"Caption",width:60},
+      {header:"Hashtags",width:30},{header:"Design guide",width:44}];
+    post.getRow(1).font={bold:true};
+    for(let n=2;n<=SEED_LAST;n++){
+      const d=post.getCell(n,1); d.numFmt="mmm d, yyyy";
+      d.dataValidation={type:"list",allowBlank:true,formulae:["=_lists!$A$1:$A$"+ndays]};
+      post.getCell(n,2).value={formula:`IF(A${n}="","",TEXT(A${n},"ddd"))`};
+      post.getCell(n,3).dataValidation={type:"list",allowBlank:true,formulae:["=_lists!$B$1:$B$3"]};
+      post.getCell(n,4).dataValidation={type:"list",allowBlank:true,formulae:["=_lists!$C$1:$C$"+SOCIAL_FORMATS.length]};
+      post.getCell(n,6).alignment={wrapText:true,vertical:"top"};
+      post.getCell(n,8).alignment={wrapText:true,vertical:"top"};
+    }
+    const buf=await wb.xlsx.writeBuffer();
+    dlBlob(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),
+           seHandle(b.name)+"-"+(MN[m]||"").slice(0,3).toLowerCase()+"-"+YEAR+"-template.xlsx");
+  }catch(e){ toast("Template failed: "+(e.message||""),"err"); }
+}
+
+function sdPick(){
+  if(!can("import_export")) return capDenied("Filling a month from a sheet");
+  const inp=document.createElement("input");
+  inp.type="file"; inp.accept=".xlsx";
+  inp.onchange=()=>{ if(inp.files&&inp.files[0]) sdRead(inp.files[0]); };
+  inp.click();
+}
+
+function sdRefuse(title,detail){
+  SD=null;
+  document.getElementById("sd-body").innerHTML=`
+   <div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">Import stopped</div>
+     <button class="modal-x" onclick="closeM('seed')">✕</button></div>
+   <div class="modal-body" style="padding:6px 20px 18px;">
+     <div style="font-size:13.5px;font-weight:600;color:#C62828;">${escAttr(title)}</div>
+     ${detail?`<div style="font-size:12.5px;color:var(--muted);margin-top:6px;">${escAttr(detail)}</div>`:""}
+   </div>
+   <div style="display:flex;justify-content:flex-end;padding:12px 20px 18px;border-top:1px solid var(--div);">
+     <button class="btn btn-g" onclick="closeM('seed')">Close</button>
+   </div>`;
+  openM("seed");
+}
+
+/* one reader for both tabs. exceljs hands back a Date, a number, a
+   string, a rich-text object or a formula result, and every one of
+   those has turned up in a real file. */
+function sdCell(ws,r,c){
+  const v=ws.getCell(r,c).value;
+  if(v==null) return "";
+  if(v instanceof Date) return v;
+  if(typeof v==="object"&&v.richText) return v.richText.map(t=>t.text).join("");
+  if(typeof v==="object"&&"result" in v) return v.result==null?"":v.result;
+  if(typeof v==="object"&&v.text!=null) return v.text;
+  return v;
+}
+const sdStr=v=>(v instanceof Date)?"":String(v==null?"":v).trim();
+
+async function sdRead(file){
+  try{
+    const EJ=await loadExportLib("exceljs");
+    const wb=new EJ.Workbook();
+    await wb.xlsx.load(await file.arrayBuffer());
+    const lk=wb.getWorksheet("_lists");
+    if(!lk||String(lk.getCell(1,5).value||"")!==SEED_MAGIC)
+      return sdRefuse("This file was not downloaded from the calendar.",
+        "Download the template for this brand and month, fill it in, then choose it here.");
+    const bId=String(lk.getCell(2,5).value||"");
+    const ym =String(lk.getCell(3,5).value||"");
+    const m=contentMonth||curMonth||1;
+    if(bId!==activeBrand)
+      return sdRefuse("That sheet belongs to a different brand.",
+        "It was made for “"+((brands[bId]||{}).name||bId)+"”. Open that brand and import it there.");
+    if(ym!==YEAR+"-"+m)
+      return sdRefuse("That sheet is for a different month.",
+        "It was made for "+(MN[parseInt(ym.split("-")[1],10)]||"?")+" "+ym.split("-")[0]+
+        ". Switch to that month and import it there.");
+
+    const post=wb.getWorksheet("Posts")||wb.worksheets.find(x=>x.name!=="_lists"&&x.name!=="Monthly plan");
+    const plan=wb.getWorksheet("Monthly plan");
+    if(!post) return sdRefuse("That file has no Posts tab.","");
+
+    /* WHAT IS ALREADY THERE, read ONCE before anything is judged. Two
+       rows of the sheet on the same free date both create — the clash
+       being checked is with the calendar, not within the file. */
+    const taken={};
+    socialForBrandYear(activeBrand,YEAR).filter(p=>p.month===m).forEach(p=>{ taken[p.date]=true; });
+
+    const ndays=new Date(YEAR,m,0).getDate();
+    const fmtByLabel={}; SOCIAL_FORMATS.forEach(f=>{ fmtByLabel[f]=f; });
+    const create=[],skip=[];
+    for(let n=2;n<=SEED_LAST;n++){
+      const rawDate=sdCell(post,n,1);
+      const plat=sdStr(sdCell(post,n,3));
+      const type=sdStr(sdCell(post,n,4));
+      const focus=sdStr(sdCell(post,n,5));
+      const cap=sdStr(sdCell(post,n,6));
+      const tags=sdStr(sdCell(post,n,7));
+      const guide=sdStr(sdCell(post,n,8));
+      const hasText=!!(focus||cap||tags||guide||plat||type);
+
+      let day=null;
+      if(rawDate instanceof Date){
+        if(rawDate.getFullYear()===YEAR&&rawDate.getMonth()+1===m) day=rawDate.getDate();
+        else { skip.push({row:n,why:"date is outside "+MN[m]+" "+YEAR}); continue; }
+      }else{
+        const s=sdStr(rawDate);
+        if(!s){ if(hasText) skip.push({row:n,why:"no date"}); continue; }
+        const num=parseInt(s,10);
+        if(String(num)===s&&num>=1&&num<=ndays) day=num;
+        else{
+          const d=new Date(s);
+          if(!isNaN(d)&&d.getFullYear()===YEAR&&d.getMonth()+1===m) day=d.getDate();
+          else { skip.push({row:n,why:"date could not be read"}); continue; }
+        }
+      }
+
+      const fkey=type?type.toLowerCase():"static";
+      if(!fmtByLabel[fkey]){ skip.push({row:n,day:day,why:"post type “"+type+"” is not one of the five"}); continue; }
+      const pl=plat||SEED_PLAT[0];
+      if(SEED_PLAT.indexOf(pl)<0){ skip.push({row:n,day:day,why:"platforms “"+plat+"” is not one of the three"}); continue; }
+      if(taken[day]){ skip.push({row:n,day:day,why:"that date already has a post"}); continue; }
+
+      create.push({row:n,day:day,format:fkey,
+        synced:pl===SEED_PLAT[0],side:pl==="Facebook"?"facebook":"instagram",
+        platforms:pl,focus:focus,caption:cap,hashtags:tags,guide:guide});
+    }
+
+    /* ── the plan tab. Every row says what it is, so an inserted or
+          deleted row costs nothing. */
+    const mpNow=monthPlanFor(activeBrand,YEAR,m);
+    const pl={theme:"",target:null,items:[],themeWas:mpNow.key_theme||"",targetWas:mpNow.influencer_target||0};
+    if(plan){
+      for(let n=2;n<=SEED_PLAN_LAST;n++){
+        const k=sdStr(sdCell(plan,n,1)); if(!k) continue;
+        const v=sdCell(plan,n,2); const vs=sdStr(v);
+        const kl=k.toLowerCase();
+        if(kl==="key theme"){ if(vs) pl.theme=vs; continue; }
+        if(kl==="influencer target"){ const t=parseInt(vs,10); if(!isNaN(t)&&t>=0) pl.target=t; continue; }
+        if(!vs) continue;
+        if(kl==="goal") pl.items.push({cat:"goal",label:vs});
+        else if(kl==="influencer") pl.items.push({cat:"influencer",label:vs});
+        else if(kl==="production") pl.items.push({cat:"production",label:vs});
+      }
+    }
+
+    SD={file:file.name,month:m,create:create,skip:skip,plan:pl};
+    sdRender(); openM("seed");
+  }catch(e){ sdRefuse("That file could not be read.",e.message||""); }
+}
+
+function sdRender(){
+  const m=SD.month;
+  const fmtLabel=f=>f.charAt(0).toUpperCase()+f.slice(1);
+  const rows=SD.create.map(r=>`
+    <tr>
+      <td style="padding:6px 8px;border-top:1px solid var(--div);font-weight:600;white-space:nowrap;">${shortDate(m,r.day)}</td>
+      <td style="padding:6px 8px;border-top:1px solid var(--div);white-space:nowrap;color:var(--muted);">${fmtLabel(r.format)}</td>
+      <td style="padding:6px 8px;border-top:1px solid var(--div);">${escAttr((r.focus||r.caption||"").slice(0,70))}</td>
+    </tr>`).join("");
+  const skips=SD.skip.map(s=>`
+    <div style="font-size:12px;color:var(--muted);padding:3px 0;">Row ${s.row}${s.day?" · "+shortDate(m,s.day):""} — ${escAttr(s.why)}</div>`).join("");
+  const planBits=[];
+  if(SD.plan.theme) planBits.push(SD.plan.themeWas&&SD.plan.themeWas!==SD.plan.theme
+    ? `Key theme replaces “${escAttr(SD.plan.themeWas)}” with “${escAttr(SD.plan.theme)}”`
+    : `Key theme “${escAttr(SD.plan.theme)}”`);
+  if(SD.plan.target!=null&&SD.plan.target!==SD.plan.targetWas)
+    planBits.push("Influencer target "+SD.plan.targetWas+" → "+SD.plan.target);
+  ["goal","influencer","production"].forEach(c=>{
+    const n=SD.plan.items.filter(i=>i.cat===c).length;
+    if(n) planBits.push(n+" "+c+" row"+(n===1?"":"s")+" added");
+  });
+  const n=SD.create.length;
+  document.getElementById("sd-body").innerHTML=`
+   <div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">${MN[m]} ${YEAR} from a sheet
+       <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${escAttr(SD.file)}</span></div>
+     <button class="modal-x" onclick="closeM('seed')">✕</button></div>
+   <div class="modal-body" style="padding:6px 20px 8px;max-height:60vh;overflow-y:auto;">
+     ${planBits.length?`<div style="border:1px solid var(--div);border-radius:10px;padding:11px 13px;margin-bottom:10px;background:var(--surface);">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--subtle);text-transform:uppercase;margin-bottom:5px;">Monthly plan</div>
+        ${planBits.map(t=>`<div style="font-size:12.5px;padding:2px 0;">${t}</div>`).join("")}
+      </div>`:""}
+     ${n?`<table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+        <thead><tr>
+          <th style="text-align:left;padding:0 8px 6px;font-size:11px;letter-spacing:.05em;color:var(--subtle);text-transform:uppercase;">Date</th>
+          <th style="text-align:left;padding:0 8px 6px;font-size:11px;letter-spacing:.05em;color:var(--subtle);text-transform:uppercase;">Type</th>
+          <th style="text-align:left;padding:0 8px 6px;font-size:11px;letter-spacing:.05em;color:var(--subtle);text-transform:uppercase;">Focus</th>
+        </tr></thead><tbody>${rows}</tbody></table>`
+      :`<div style="font-size:13px;color:var(--muted);padding:14px 0;">No new posts in this sheet.</div>`}
+     ${skips?`<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--div);">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--subtle);text-transform:uppercase;margin-bottom:4px;">${SD.skip.length} row${SD.skip.length===1?"":"s"} skipped</div>
+        ${skips}</div>`:""}
+   </div>
+   <div style="display:flex;align-items:center;gap:10px;padding:12px 20px 18px;border-top:1px solid var(--div);">
+     <span style="font-size:12.5px;color:var(--muted);">Nothing is saved yet.</span>
+     <span style="margin-left:auto;display:flex;gap:8px;">
+       <button class="btn btn-g" onclick="closeM('seed')">Cancel</button>
+       <button class="btn btn-p" ${(n||planBits.length)?"":"disabled style=\"opacity:.5;\""} onclick="sdSave()">Create ${n} post${n===1?"":"s"}</button>
+     </span>
+   </div>`;
+}
+
+async function sdSave(){
+  if(!SD||!canEdit()) return;
+  const m=SD.month, b=brands[activeBrand]; if(!b) return;
+  const btn=document.querySelector("#sd-body .btn-p");
+  if(btn){ btn.disabled=true; btn.style.opacity=".5"; }
+  b.social=b.social||[];
+  const seen={};
+  const made=[];
+  for(const r of SD.create){
+    let id=newSocialId(); while(seen[id]) id=newSocialId(); seen[id]=1;
+    const full={...emptyVariant(),caption:r.caption,hashtags:r.hashtags};
+    const p=normalizeSocial({id:id,brand_id:activeBrand,event_id:"",year:YEAR,month:m,date:r.day,
+      time:"",format:r.format,status:"drafting",synced:r.synced,
+      content:{
+        facebook:(r.synced||r.side==="facebook")?full:emptyVariant(),
+        instagram:(r.synced||r.side==="instagram")?full:emptyVariant(),
+        concept:r.focus},
+      notes:r.guide});
+    b.social.push(p); made.push(p);
+    await dbSaveSocialPost(p);
+    logActivity(p.id,"created from an imported sheet");
+  }
+
+  /* the plan. Rows are ADDED to what is there — the sheet never clears
+     a plan somebody typed. The key theme and the target are single
+     fields and the preview showed what they would become. */
+  const mp=monthPlanFor(activeBrand,YEAR,m);
+  const before={key_theme:mp.key_theme||"",influencer_target:mp.influencer_target||0,item_ids:[]};
+  let planTouched=false;
+  if(SD.plan.theme&&SD.plan.theme!==mp.key_theme){ mp.key_theme=SD.plan.theme; planTouched=true; }
+  if(SD.plan.target!=null&&SD.plan.target!==mp.influencer_target){ mp.influencer_target=SD.plan.target; planTouched=true; }
+  if(SD.plan.items.length||planTouched){
+    if(!mp.id) mp.id=newMonthPlanId();
+    await dbSaveMonthPlan(activeBrand,YEAR,m);
+  }
+  mp.items=mp.items||[];
+  for(const it of SD.plan.items){
+    let id=newMonthItemId(); while(seen[id]) id=newMonthItemId(); seen[id]=1;
+    const item={id:id,category:it.cat,label:it.label,status:it.cat==="goal"?"open":"pending",
+      sort_order:mp.items.filter(x=>x.category===it.cat).length,discipline:null,
+      link_instagram:"",link_facebook:"",link_youtube:"",value:""};
+    mp.items.push(item); before.item_ids.push(id);
+    await dbSaveMonthItem(item,activeBrand,YEAR,m);
+  }
+
+  /* the record. The posts are saved either way — this is a log, not a
+     gate — but without it there is no undo. */
+  try{
+    const ins=await sb.from("content_imports").insert({brand_id:activeBrand,year:YEAR,month:m,
+      file_name:SD.file||"",actor_email:(ME.email||""),actor_name:actorName(),
+      posts_changed:made.length,reverts_id:null,kind:"seed",plan_before:before}).select("id").single();
+    if(ins&&ins.data&&made.length){
+      await sb.from("content_import_rows").insert(made.map(p=>({import_id:ins.data.id,post_id:p.id,
+        brand_id:activeBrand,kind:"seed",created_uat:p._uat,
+        caption_before:"",caption_after:"",hashtags_before:"",hashtags_after:""})));
+    }
+  }catch(e){}
+
+  closeM("seed");
+  const made_n=made.length, plan_n=SD.plan.items.length;
+  SD=null;
+  render();
+  toast(made_n+" post"+(made_n===1?"":"s")+" created"+(plan_n?" · "+plan_n+" plan row"+(plan_n===1?"":"s"):""));
+}
+
+/* ── UNDO ─────────────────────────────────────────────────────────────
+   It trashes what THIS import made and nothing else. A post somebody
+   has edited since is left alone and named — the whole point of an
+   undo is that it cannot take work with it. The posts are soft
+   deleted, the same path as deleting one by hand. */
+async function sdUndo(importId){
+  if(!canCap("delete_post")) return capDenied("Undoing an import");
+  let head=null,rows=[];
+  try{
+    const h=await sb.from("content_imports").select("*").eq("id",importId).single();
+    head=(h&&h.data)||null;
+    const r=await sb.from("content_import_rows").select("*").eq("import_id",importId);
+    rows=(r&&r.data)||[];
+  }catch(e){}
+  if(!head) return toast("Nothing recorded for that import.","err");
+  const b=brands[head.brand_id]||brands[activeBrand]||{};
+  const kill=[],kept=[];
+  rows.forEach(r=>{
+    const p=(b.social||[]).find(x=>x.id===r.post_id);
+    if(!p) return;                                   /* already gone */
+    if(r.created_uat&&p._uat&&String(p._uat)!==String(r.created_uat)) kept.push(p);
+    else kill.push(p);
+  });
+  const pb=head.plan_before||{};
+  const itemIds=(pb.item_ids||[]);
+  if(!kill.length&&!itemIds.length) return toast("Nothing left from that import to undo.","err");
+  if(!confirm("Remove "+kill.length+" post"+(kill.length===1?"":"s")+
+      (itemIds.length?" and "+itemIds.length+" plan row"+(itemIds.length===1?"":"s"):"")+
+      " made by this import?"+(kept.length?" "+kept.length+" edited since will be left alone.":"")))
+    return;
+
+  for(const p of kill){
+    await dbTrashSocialPost(p.id);
+    b.social=(b.social||[]).filter(x=>x.id!==p.id);
+  }
+  const mp=monthPlanFor(head.brand_id||activeBrand,head.year,head.month);
+  for(const id of itemIds){
+    if((mp.items||[]).some(i=>i.id===id)){
+      mp.items=mp.items.filter(i=>i.id!==id);
+      await dbDeleteMonthItem(id);
+    }
+  }
+  if(pb.key_theme!=null||pb.influencer_target!=null){
+    mp.key_theme=pb.key_theme||""; mp.influencer_target=pb.influencer_target||0;
+    if(mp.id) await dbSaveMonthPlan(head.brand_id||activeBrand,head.year,head.month);
+  }
+  try{
+    await sb.from("content_imports").insert({brand_id:head.brand_id,year:head.year,month:head.month,
+      file_name:"",actor_email:(ME.email||""),actor_name:actorName(),
+      posts_changed:kill.length,reverts_id:importId,kind:"seed"});
+  }catch(e){}
+  closeM("imhist");
+  render();
+  toast(kill.length+" post"+(kill.length===1?"":"s")+" removed"+(kept.length?" · "+kept.length+" left alone":""));
+}
+
+/* ── THE HISTORY SCREEN, RE-DECLARED ──────────────────────────────────
+   The list now carries two kinds of import and they undo differently:
+   a caption import puts the old words back, a seed takes its posts
+   away. The declaration above stands where it was written; this one
+   wins, which is how every batch since Istanbul has changed behaviour
+   without editing the code it changes. */
+async function openImportHistory(){
+  if(!canEdit()) return toast("View-only account","err");
+  closeAllPops();
+  document.getElementById("imh-body").innerHTML=`<div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">Import history</div>
+     <button class="modal-x" onclick="closeM('imhist')">✕</button></div>
+   <div class="modal-body" style="padding:16px 20px 20px;font-size:13px;color:var(--muted);">Loading…</div>`;
+  openM("imhist");
+  let list=[];
+  try{ const r=await sb.from("content_imports").select("*").eq("brand_id",activeBrand)
+        .order("created_at",{ascending:false}).limit(40); list=(r&&r.data)||[]; }catch(e){}
+  const title=im=>im.reverts_id
+      ? (im.kind==="seed"?"Undid a sheet import":"Reverted an import")
+      : (im.kind==="seed"?(escAttr(im.file_name||"Sheet")+" · filled the month"):escAttr(im.file_name||"Import"));
+  const rowsHtml=list.length?list.map(im=>`
+    <div style="display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid var(--div);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;">${title(im)}
+          <span style="font-weight:400;color:var(--subtle);"> · ${im.posts_changed} post${im.posts_changed===1?"":"s"}</span></div>
+        <div style="font-size:11.5px;color:var(--subtle);">${escAttr(im.actor_name||im.actor_email)} · ${fbTimeLabel(im.created_at)} · ${MN[im.month]} ${im.year}</div>
+      </div>
+      ${im.reverts_id?"":`<button class="btn btn-s btn-sm" onclick="${im.kind==="seed"?`sdUndo('${im.id}')`:`imRevert('${im.id}')`}">Undo this</button>`}
+    </div>`).join("")
+    : `<div style="font-size:13px;color:var(--subtle);padding:14px 0;">Nothing has been imported for this brand yet.</div>`;
+  document.getElementById("imh-body").innerHTML=`<div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">Import history
+       <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${escAttr((brands[activeBrand]||{}).name||"")}</span></div>
+     <button class="modal-x" onclick="closeM('imhist')">✕</button></div>
+   <div class="modal-body" style="padding:6px 20px 20px;max-height:60vh;overflow-y:auto;">${rowsHtml}</div>`;
+}
 
 /* ══ DUBAI D3 · the account menu floats ═══════════════════════════════
    Both functions are RE-DECLARED, not edited. The last declaration of a
