@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v99.1 — Kigali: the sheet's dates are UTC, and Import keeps its name"/>
+<meta name="cc-tool-version" content="v100.0 — Tallinn: tasks from a sheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3231,6 +3231,14 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
      preview, one confirm. -->
 <div class="overlay" id="ov-seed" onclick="if(event.target===this)closeM('seed')">
   <div class="modal" style="max-width:760px;"><div id="sd-body"></div></div>
+</div>
+<!-- TALLINN — the same thing for tasks. Its own windows, because the
+     posts importer's state and this one's must never share a variable. -->
+<div class="overlay" id="ov-tk" onclick="if(event.target===this)closeM('tk')">
+  <div class="modal" style="max-width:760px;"><div id="tk-body"></div></div>
+</div>
+<div class="overlay" id="ov-tkhist" onclick="if(event.target===this)closeM('tkhist')">
+  <div class="modal" style="max-width:640px;"><div id="tkh-body"></div></div>
 </div>
 
 <!-- LISBON 4 — editing ONE post uses the same form as editing the month.
@@ -8356,18 +8364,27 @@ function renderBranding(){
                 : (BR.ok&&filtered&&rows.length!==total
                     ? `<span style="font-weight:400;color:var(--subtle);"> · of ${total}</span>`:""))}
        </div>
-       <div style="display:flex;align-items:center;gap:10px;">
-         ${BR.ok?`<label class="brl-sort"><b>Sort</b><select onchange="brSetSort(this.value)">${
+       <!-- TALLINN — this strip has wrapped at 1180px since Lyon, and
+            adding Import pushed New task off the right edge. The lens
+            chips are a KIT class and not mine to widen, so the fix is in
+            the order and the boxes of my own markup: the strip may wrap,
+            the two lens groups may shrink and scroll inside themselves,
+            and the two buttons never shrink and never leave the row. -->
+       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+         ${BR.ok?`<label class="brl-sort" style="flex:0 1 auto;"><b>Sort</b><select onchange="brSetSort(this.value)">${
              Object.entries(BR_SORT).map(([k,v])=>
                `<option value="${k}"${brSort===k?" selected":""}>${escHtml(v)}</option>`).join("")
            }</select></label>
-         <div class="brl-lens">
-           <span class="${brGroup?"":"on"}" onclick="brSetGroup(0)">Flat</span>
-           <span class="${brGroup?"on":""}" onclick="brSetGroup(1)">Group by project</span></div>
-         <div class="brl-lens">
-           ${["timing","work","people"].map(k=>`<span class="${brLens===k?"on":""}" onclick="brSetLens('${k}')">${k[0].toUpperCase()+k.slice(1)}</span>`).join("")}
+         <div class="brl-lens" style="flex:0 1 auto;overflow-x:auto;scrollbar-width:none;">
+           <span class="${brGroup?"":"on"}" onclick="brSetGroup(0)" style="flex:none;white-space:nowrap;">Flat</span>
+           <span class="${brGroup?"on":""}" onclick="brSetGroup(1)" style="flex:none;white-space:nowrap;">Group by project</span></div>
+         <div class="brl-lens" style="flex:0 1 auto;overflow-x:auto;scrollbar-width:none;">
+           ${["timing","work","people"].map(k=>`<span class="${brLens===k?"on":""}" onclick="brSetLens('${k}')" style="flex:none;white-space:nowrap;">${k[0].toUpperCase()+k.slice(1)}</span>`).join("")}
          </div>`:""}
-         ${canE&&BR.ok?`<button class="btn btn-p" onclick="brNewTask()"><i class="ti ti-plus"></i> New task</button>`:""}
+         <span style="display:flex;align-items:center;gap:10px;flex:none;">
+         ${canE&&BR.ok?`<button class="btn btn-s" style="background:var(--surface);white-space:nowrap;" onclick="tkOpen()" title="Download these tasks or a blank template, and put a filled sheet back"><i class="ti ti-upload"></i> Import</button>`:""}
+         ${canE&&BR.ok?`<button class="btn btn-p" style="white-space:nowrap;" onclick="brNewTask()"><i class="ti ti-plus"></i> New task</button>`:""}
+         </span>
        </div>
      </div>
      ${body}
@@ -9090,7 +9107,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v99.1 — Kigali: the sheet's dates are UTC, and Import keeps its name";
+const TOOL_VERSION="v100.0 — Tallinn: tasks from a sheet";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -16598,6 +16615,564 @@ async function openImportHistory(){
      <div class="modal-title" style="font-size:17px;">Import history
        <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${escAttr((brands[activeBrand]||{}).name||"")}</span></div>
      <button class="modal-x" onclick="closeM('imhist')">✕</button></div>
+   <div class="modal-body" style="padding:6px 20px 20px;max-height:60vh;overflow-y:auto;">${rowsHtml}</div>`;
+}
+
+/* ══ TALLINN · TASKS FROM A SHEET ═════════════════════════════════════
+   Kigali for the task list. Download this brand's tasks or a blank
+   template, edit offline, put the same file back. One Import button.
+
+   FOUR THINGS THAT ARE NOT LIKE KIGALI, and every one of them is his
+   call from 13 Sep:
+
+   · THERE IS NO MONTH. A post belongs to a grid; a task belongs to a
+     list. The sheet is stamped with the brand only and carries EVERY
+     task that is not deleted, closed ones included — a sheet that
+     quietly omitted the closed ones would let somebody re-create a task
+     that is already finished.
+   · OWNER AND PROJECT ARE MATCHED, NEVER CREATED. A name that matches
+     nobody, or a project that does not exist, skips the row and says
+     so. A typo must not invent a second "Diwali Campagin", and it must
+     not silently lose an owner either.
+   · APPROVING A MILESTONE IS NOT A COLUMN. Milestone status in this
+     tool is exactly two values and approving is an Ac Manager's click
+     with its own undo, so the sheet carries Approved as information and
+     never writes it. A dropdown with one usable value would be
+     furniture.
+   · TASKS AND MILESTONES ARE TWO TABS, joined by the Task ID.
+
+   And the rule that is the same everywhere: the sheet ADDS and CHANGES.
+   Anything in the tool that the sheet does not mention is left exactly
+   as it is.
+   ══════════════════════════════════════════════════════════════════ */
+const TSK_MAGIC="CC-TASKS-SHEET-V1";
+const TSK_LAST=301;          /* header + 300 dressed rows */
+let TK=null;                 /* the parsed, checked sheet awaiting confirmation */
+
+function tkOpen(){
+  if(!can("task_create")) return capDenied("Importing tasks");
+  const b=brands[activeBrand]||{};
+  const n=(BR.tasks||[]).length;
+  document.getElementById("tk-body").innerHTML=`
+   <div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">Tasks from a sheet
+       <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${escAttr(b.name||"")}</span></div>
+     <button class="modal-x" onclick="closeM('tk')">✕</button></div>
+   <div class="modal-body" style="padding:16px 20px 20px;">
+     <div style="display:flex;gap:10px;flex-wrap:wrap;">
+       <button class="btn btn-s" onclick="tkTemplate(false)"><i class="ti ti-file-spreadsheet"></i> Blank template</button>
+       <button class="btn btn-s" onclick="tkTemplate(true)"><i class="ti ti-download"></i> These tasks${n?" · "+n:""}</button>
+       <button class="btn btn-p" onclick="tkPick()"><i class="ti ti-upload"></i> Choose a filled sheet</button>
+     </div>
+     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--div);">
+       <button class="btn btn-s btn-sm" onclick="closeM('tk');openTaskImportHistory()"><i class="ti ti-file-import"></i> History</button>
+     </div>
+   </div>`;
+  openM("tk");
+}
+
+const tkPerson=id=>PEOPLE.find(p=>p.id===id)||null;
+const tkProjectName=id=>{ const p=brProject(id); return p?p.name:""; };
+const tkIso=d=>d?String(d).slice(0,10):"";
+const tkPretty=iso=>{ if(!iso) return ""; const p=String(iso).split("-");
+  return (+p[2])+" "+(MN[+p[1]]||"").slice(0,3)+" "+p[0]; };
+/* one string that says what a task holds right now. It is what the
+   download stamps and what the import compares against, so "somebody
+   changed this in the tool while you had the file open" is answered by
+   the VALUES rather than by trusting a timestamp column to be bumped. */
+function tkFingerprint(t){
+  const o=tkPerson(t.owner_id);
+  /* JSON, not a joined string with a separator character — a separator
+     is one caption away from appearing inside a value and making two
+     different tasks fingerprint the same. */
+  return JSON.stringify([ (t.title||"").trim(), mpPlain(t.brief||""), tkProjectName(t.project_id),
+           o?o.email:"", tkIso(t.delivery_date), t.status||"not_started" ]);
+}
+function tkMsFingerprint(m){
+  return JSON.stringify([ (m.name||"").trim(), tkIso(m.due_date) ]);
+}
+
+/* ── THE FILE ─────────────────────────────────────────────────────── */
+async function tkTemplate(filled){
+  if(!can("task_create")) return capDenied("Downloading the sheet");
+  const b=brands[activeBrand]||{};
+  try{
+    const EJ=await loadExportLib("exceljs");
+    const wb=new EJ.Workbook();
+    const ts=wb.addWorksheet("Tasks",{views:[{state:"frozen",ySplit:1}]});
+    const ms=wb.addWorksheet("Milestones",{views:[{state:"frozen",ySplit:1}]});
+    const lk=wb.addWorksheet("_lists"); lk.state="veryHidden";
+
+    const statuses=Object.values(BR_STATUS);
+    statuses.forEach((v,i)=>lk.getCell(i+1,1).value=v);
+    (BR.projects||[]).forEach((p,i)=>lk.getCell(i+1,2).value=p.name||"");
+    (PEOPLE||[]).forEach((p,i)=>lk.getCell(i+1,3).value=p.email||"");
+    lk.getCell(1,5).value=TSK_MAGIC;
+    lk.getCell(2,5).value=activeBrand;
+    lk.getCell(3,5).value="tasks";
+
+    ts.columns=[{header:"Task ID",width:16},{header:"Title",width:40},
+      {header:"Brief",width:60},{header:"Project",width:22},
+      {header:"Owner",width:26},{header:"Delivery date",width:16},{header:"Status",width:18}];
+    ts.getRow(1).font={bold:true};
+    const nProj=Math.max(1,(BR.projects||[]).length), nPeople=Math.max(1,(PEOPLE||[]).length);
+    for(let n=2;n<=TSK_LAST;n++){
+      ts.getCell(n,1).font={color:{argb:"FF9A9A96"},size:9};
+      ts.getCell(n,3).alignment={wrapText:true,vertical:"top"};
+      ts.getCell(n,4).dataValidation={type:"list",allowBlank:true,formulae:["=_lists!$B$1:$B$"+nProj]};
+      ts.getCell(n,5).dataValidation={type:"list",allowBlank:true,formulae:["=_lists!$C$1:$C$"+nPeople]};
+      ts.getCell(n,6).numFmt="mmm d, yyyy";
+      ts.getCell(n,7).dataValidation={type:"list",allowBlank:true,formulae:["=_lists!$A$1:$A$"+statuses.length]};
+    }
+
+    /* Approved is greyed and carried for information. The tool has two
+       milestone states and only an Ac Manager moves between them. */
+    ms.columns=[{header:"Milestone ID",width:16},{header:"Task ID",width:16},
+      {header:"Name",width:44},{header:"Due date",width:16},{header:"Approved",width:12}];
+    ms.getRow(1).font={bold:true};
+    for(let n=2;n<=TSK_LAST;n++){
+      ms.getCell(n,1).font={color:{argb:"FF9A9A96"},size:9};
+      ms.getCell(n,2).font={color:{argb:"FF9A9A96"},size:9};
+      ms.getCell(n,4).numFmt="mmm d, yyyy";
+      ms.getCell(n,5).font={color:{argb:"FF9A9A96"},size:9};
+    }
+
+    if(filled){
+      const tasks=(BR.tasks||[]).slice()
+        .sort((a,c)=>(tkIso(a.delivery_date)||"9999").localeCompare(tkIso(c.delivery_date)||"9999")
+                   ||String(a.title||"").localeCompare(String(c.title||"")));
+      let mr=2;
+      tasks.forEach((t,i)=>{
+        const n=i+2, o=tkPerson(t.owner_id);
+        ts.getCell(n,1).value=t.id;
+        ts.getCell(n,2).value=t.title||"";
+        ts.getCell(n,3).value=mpPlain(t.brief||"");
+        ts.getCell(n,4).value=tkProjectName(t.project_id);
+        ts.getCell(n,5).value=o?o.email:"";
+        const iso=tkIso(t.delivery_date);
+        if(iso){ const p=iso.split("-");
+          const dc=ts.getCell(n,6); dc.value=new Date(Date.UTC(+p[0],+p[1]-1,+p[2])); dc.numFmt="mmm d, yyyy"; }
+        ts.getCell(n,7).value=BR_STATUS[t.status||"not_started"]||BR_STATUS.not_started;
+        lk.getCell(i+1,6).value=t.id;
+        lk.getCell(i+1,7).value=tkFingerprint(t);
+
+        brMsFor(t.id).forEach(m=>{
+          ms.getCell(mr,1).value=m.id;
+          ms.getCell(mr,2).value=t.id;
+          ms.getCell(mr,3).value=m.name||"";
+          const mi=tkIso(m.due_date);
+          if(mi){ const q=mi.split("-");
+            const dc=ms.getCell(mr,4); dc.value=new Date(Date.UTC(+q[0],+q[1]-1,+q[2])); dc.numFmt="mmm d, yyyy"; }
+          ms.getCell(mr,5).value=m.status==="approved"?"Yes":"No";
+          lk.getCell(mr-1,8).value=m.id;
+          lk.getCell(mr-1,9).value=tkMsFingerprint(m);
+          mr++;
+        });
+      });
+    }
+
+    const buf=await wb.xlsx.writeBuffer();
+    dlBlob(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),
+      seHandle(b.name)+"-tasks"+(filled?"":"-template")+".xlsx");
+  }catch(e){ toast("Download failed: "+(e.message||""),"err"); }
+}
+
+function tkPick(){
+  if(!can("task_create")) return capDenied("Importing tasks");
+  const inp=document.createElement("input");
+  inp.type="file"; inp.accept=".xlsx";
+  inp.onchange=()=>{ if(inp.files&&inp.files[0]) tkRead(inp.files[0]); };
+  inp.click();
+}
+
+function tkRefuse(title,detail){
+  TK=null;
+  document.getElementById("tk-body").innerHTML=`
+   <div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">Import stopped</div>
+     <button class="modal-x" onclick="closeM('tk')">✕</button></div>
+   <div class="modal-body" style="padding:6px 20px 18px;">
+     <div style="font-size:13.5px;font-weight:600;color:#C62828;">${escAttr(title)}</div>
+     ${detail?`<div style="font-size:12.5px;color:var(--muted);margin-top:6px;">${escAttr(detail)}</div>`:""}
+   </div>
+   <div style="display:flex;justify-content:flex-end;padding:12px 20px 18px;border-top:1px solid var(--div);">
+     <button class="btn btn-g" onclick="closeM('tk')">Close</button>
+   </div>`;
+  openM("tk");
+}
+
+/* a date cell back to the yyyy-mm-dd the database holds. UTC getters,
+   because the cell holds a UTC instant we wrote — the v99.1 lesson. */
+function tkDate(v){
+  if(v instanceof Date){
+    if(isNaN(v)) return null;
+    const p=n=>String(n).padStart(2,"0");
+    return v.getUTCFullYear()+"-"+p(v.getUTCMonth()+1)+"-"+p(v.getUTCDate());
+  }
+  const s=sdStr(v); if(!s) return "";
+  /* typed as text: the browser parsed it in local time, so the local
+     parts are the day the person meant */
+  const d=new Date(s); if(isNaN(d)) return null;
+  const p=n=>String(n).padStart(2,"0");
+  return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate());
+}
+
+async function tkRead(file){
+  try{
+    const EJ=await loadExportLib("exceljs");
+    const wb=new EJ.Workbook();
+    await wb.xlsx.load(await file.arrayBuffer());
+    const lk=wb.getWorksheet("_lists");
+    if(!lk||String(lk.getCell(1,5).value||"")!==TSK_MAGIC)
+      return tkRefuse("This file was not downloaded from the calendar.",
+        "Download the blank template or these tasks, fill it in, then choose it here.");
+    const bId=String(lk.getCell(2,5).value||"");
+    if(bId!==activeBrand)
+      return tkRefuse("That sheet belongs to a different brand.",
+        "It was made for “"+((brands[bId]||{}).name||bId)+"”. Open that brand and import it there.");
+    const ts=wb.getWorksheet("Tasks"), msS=wb.getWorksheet("Milestones");
+    if(!ts) return tkRefuse("That file has no Tasks tab.","");
+
+    const snap={},msSnap={};
+    for(let n=1;n<=TSK_LAST;n++){ const id=lk.getCell(n,6).value; if(!id) break;
+      snap[String(id)]=String(lk.getCell(n,7).value||""); }
+    for(let n=1;n<=TSK_LAST;n++){ const id=lk.getCell(n,8).value; if(!id) break;
+      msSnap[String(id)]=String(lk.getCell(n,9).value||""); }
+
+    const byId={}; (BR.tasks||[]).forEach(t=>{ byId[t.id]=t; });
+    const msById={}; (BR.ms||[]).forEach(m=>{ msById[m.id]=m; });
+    const statusKey={}; Object.entries(BR_STATUS).forEach(([k,v])=>{ statusKey[v.toLowerCase()]=k; statusKey[k]=k; });
+    const projByName={}; (BR.projects||[]).forEach(p=>{ projByName[String(p.name||"").trim().toLowerCase()]=p.id; });
+    const personBy={}; (PEOPLE||[]).forEach(p=>{
+      if(p.email) personBy[String(p.email).trim().toLowerCase()]=p.id;
+      if(p.name)  personBy[String(p.name).trim().toLowerCase()]=p.id; });
+
+    const create=[],change=[],conflict=[],skip=[]; let same=0;
+    const seenTaskRow={};
+
+    for(let n=2;n<=TSK_LAST;n++){
+      const id=sdStr(sdCell(ts,n,1));
+      const title=sdStr(sdCell(ts,n,2));
+      const brief=sdStr(sdCell(ts,n,3));
+      const projN=sdStr(sdCell(ts,n,4));
+      const ownN=sdStr(sdCell(ts,n,5));
+      const dueV=sdCell(ts,n,6);
+      const statN=sdStr(sdCell(ts,n,7));
+      if(!id&&!title&&!brief&&!projN&&!ownN&&!statN&&!dueV) continue;
+      if(!title){ skip.push({row:n,why:"no title"}); continue; }
+
+      let project_id=null;
+      if(projN){ const pid=projByName[projN.toLowerCase()];
+        if(!pid){ skip.push({row:n,why:"there is no project called “"+projN+"”"}); continue; }
+        project_id=pid; }
+      let owner_id=null;
+      if(ownN){ const oid=personBy[ownN.toLowerCase()];
+        if(!oid){ skip.push({row:n,why:"“"+ownN+"” is not somebody in People"}); continue; }
+        owner_id=oid; }
+      const status=statN?statusKey[statN.toLowerCase()]:"not_started";
+      if(statN&&!status){ skip.push({row:n,why:"“"+statN+"” is not one of the six statuses"}); continue; }
+      const due=tkDate(dueV);
+      if(due===null){ skip.push({row:n,why:"the delivery date could not be read"}); continue; }
+
+      const want={title:title,brief:brief,project_id:project_id,owner_id:owner_id,
+        delivery_date:due||null,status:status};
+
+      if(!id){ create.push({row:n,want:want}); continue; }
+      const t=byId[id];
+      if(!t){ skip.push({row:n,why:"that task is no longer here"}); continue; }
+      seenTaskRow[id]=true;
+
+      const o=tkPerson(t.owner_id);
+      const now={title:(t.title||"").trim(),brief:mpPlain(t.brief||""),
+        project_id:t.project_id||null,owner_id:t.owner_id||null,
+        delivery_date:tkIso(t.delivery_date)||null,status:t.status||"not_started"};
+      const diff=[];
+      if(now.title!==want.title)   diff.push(["Title",now.title,want.title]);
+      if(now.brief!==want.brief)   diff.push(["Brief",now.brief,want.brief]);
+      if((now.project_id||"")!==(want.project_id||""))
+        diff.push(["Project",tkProjectName(now.project_id)||"—",projN||"—"]);
+      if((now.owner_id||"")!==(want.owner_id||""))
+        diff.push(["Owner",(o?o.email:"")||"—",ownN||"—"]);
+      if((now.delivery_date||"")!==(want.delivery_date||""))
+        diff.push(["Delivery date",tkPretty(now.delivery_date)||"—",tkPretty(want.delivery_date)||"—"]);
+      if(now.status!==want.status)
+        diff.push(["Status",BR_STATUS[now.status]||now.status,BR_STATUS[want.status]||want.status]);
+      if(!diff.length){ same++; continue; }
+
+      const was=snap[id];
+      const moved=was!==undefined && tkFingerprint(t)!==was;
+      (moved?conflict:change).push({row:n,id:id,task:t,want:want,diff:diff,keep:moved});
+    }
+
+    /* ── the milestones ── */
+    const msCreate=[],msChange=[],msConflict=[],msSkip=[]; let msSame=0, approvedTouched=0;
+    if(msS){
+      for(let n=2;n<=TSK_LAST;n++){
+        const mid=sdStr(sdCell(msS,n,1));
+        const tid=sdStr(sdCell(msS,n,2));
+        const name=sdStr(sdCell(msS,n,3));
+        const dueV=sdCell(msS,n,4);
+        const appr=sdStr(sdCell(msS,n,5));
+        if(!mid&&!tid&&!name&&!dueV) continue;
+        if(!name){ msSkip.push({row:n,why:"no name"}); continue; }
+        if(!tid){ msSkip.push({row:n,why:"no Task ID — a milestone has to belong to a task"}); continue; }
+        if(!byId[tid]){ msSkip.push({row:n,why:"Task ID “"+tid+"” is not a task here"}); continue; }
+        const due=tkDate(dueV);
+        if(due===null){ msSkip.push({row:n,why:"the due date could not be read"}); continue; }
+        const want={task_id:tid,name:name,due_date:due||null};
+
+        if(!mid){ msCreate.push({row:n,want:want}); continue; }
+        const m=msById[mid];
+        if(!m){ msSkip.push({row:n,why:"that milestone is no longer here"}); continue; }
+        /* Approved is carried for information and never written. Say so
+           once, at the end, rather than on every row. */
+        const isAppr=(m.status==="approved");
+        if(appr&&((appr.toLowerCase()==="yes")!==isAppr)) approvedTouched++;
+        const diff=[];
+        if((m.name||"").trim()!==want.name) diff.push(["Name",(m.name||"").trim(),want.name]);
+        if((tkIso(m.due_date)||"")!==(want.due_date||""))
+          diff.push(["Due date",tkPretty(tkIso(m.due_date))||"—",tkPretty(want.due_date)||"—"]);
+        if(!diff.length){ msSame++; continue; }
+        const was=msSnap[mid];
+        const moved=was!==undefined && tkMsFingerprint(m)!==was;
+        (moved?msConflict:msChange).push({row:n,id:mid,ms:m,want:want,diff:diff,keep:moved});
+      }
+    }
+
+    TK={file:file.name,create:create,change:change,conflict:conflict,skip:skip,same:same,
+        msCreate:msCreate,msChange:msChange,msConflict:msConflict,msSkip:msSkip,msSame:msSame,
+        approvedTouched:approvedTouched};
+    tkRender(); openM("tk");
+  }catch(e){ tkRefuse("That file could not be read.",e.message||""); }
+}
+
+function tkToggle(which,i){ TK[which][i].keep=!TK[which][i].keep; tkRender(); }
+
+function tkRender(){
+  const head=t=>`<div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--subtle);text-transform:uppercase;margin:12px 0 5px;">${t}</div>`;
+  const fld=(l,a,b2)=>`
+    <div style="margin-top:5px;">
+      <div style="font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--subtle);text-transform:uppercase;">${l}</div>
+      <div style="font-size:12px;color:var(--muted);text-decoration:line-through;white-space:pre-wrap;">${escAttr(a)||"—"}</div>
+      <div style="font-size:12.5px;white-space:pre-wrap;">${escAttr(b2)||"—"}</div>
+    </div>`;
+  /* a task has no month around it, so its date has to say the month out
+     loud — "2026-10-20" is correct and unreadable. */
+  const tkDay=iso=>{ if(!iso) return ""; const p=String(iso).split("-");
+    return (+p[2])+" "+(MN[+p[1]]||"").slice(0,3)+" "+p[0]; };
+  const newRows=(list,label)=>list.map(c=>`
+    <div style="font-size:12.5px;padding:4px 0;border-top:1px solid var(--div);">
+      <b>${escAttr(c.want.title||c.want.name)}</b>${label(c)}</div>`).join("");
+  const block=(list,which,flagged)=>list.map((c,i)=>`
+    <div style="border:1px solid ${flagged?"#E8C46A":"var(--div)"};border-radius:10px;padding:11px 13px;margin-bottom:8px;background:var(--surface);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <b style="font-size:13px;">${escAttr((c.task?c.task.title:c.ms.name)||"")}</b>
+        ${flagged?`<label style="margin-left:auto;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" ${c.keep?"":"checked"} onchange="tkToggle('${which}',${i})"> change it anyway</label>`:""}
+      </div>
+      ${flagged?`<div style="font-size:12px;color:#8A6D00;margin-top:5px;">Edited in the tool after you downloaded the sheet.</div>`:""}
+      ${c.diff.map(d=>fld(d[0],d[1],d[2])).join("")}
+    </div>`).join("");
+  const willChange=TK.change.length+TK.conflict.filter(c=>!c.keep).length;
+  const msWillChange=TK.msChange.length+TK.msConflict.filter(c=>!c.keep).length;
+  const total=TK.create.length+willChange+TK.msCreate.length+msWillChange;
+  const skipN=TK.skip.length+TK.msSkip.length;
+  document.getElementById("tk-body").innerHTML=`
+   <div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">Tasks from a sheet
+       <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${escAttr(TK.file)}</span></div>
+     <button class="modal-x" onclick="closeM('tk')">✕</button></div>
+   <div class="modal-body" style="padding:6px 20px 8px;max-height:60vh;overflow-y:auto;">
+     ${TK.create.length?head(TK.create.length+" new task"+(TK.create.length===1?"":"s"))+
+        newRows(TK.create,c=>c.want.delivery_date?` <span style="color:var(--subtle);">· ${escAttr(tkDay(c.want.delivery_date))}</span>`:""):""}
+     ${TK.change.length?head(TK.change.length+" task"+(TK.change.length===1?"":"s")+" will change")+block(TK.change,"change",false):""}
+     ${TK.conflict.length?head(TK.conflict.length+" task"+(TK.conflict.length===1?"":"s")+" edited in the tool since you downloaded")+block(TK.conflict,"conflict",true):""}
+     ${TK.msCreate.length?head(TK.msCreate.length+" new milestone"+(TK.msCreate.length===1?"":"s"))+
+        newRows(TK.msCreate,c=>` <span style="color:var(--subtle);">· ${escAttr((byIdTitle(c.want.task_id)||""))}</span>`):""}
+     ${TK.msChange.length?head(TK.msChange.length+" milestone"+(TK.msChange.length===1?"":"s")+" will change")+block(TK.msChange,"msChange",false):""}
+     ${TK.msConflict.length?head(TK.msConflict.length+" milestone"+(TK.msConflict.length===1?"":"s")+" edited since you downloaded")+block(TK.msConflict,"msConflict",true):""}
+     ${skipN?head(skipN+" row"+(skipN===1?"":"s")+" skipped")+
+        TK.skip.map(s=>`<div style="font-size:12px;color:var(--muted);padding:3px 0;">Tasks row ${s.row} — ${escAttr(s.why)}</div>`).join("")+
+        TK.msSkip.map(s=>`<div style="font-size:12px;color:var(--muted);padding:3px 0;">Milestones row ${s.row} — ${escAttr(s.why)}</div>`).join(""):""}
+     ${TK.approvedTouched?`<div style="font-size:12px;color:#8A6D00;padding:8px 0 2px;">Approved is set in the tool, not here — ${TK.approvedTouched} row${TK.approvedTouched===1?"":"s"} left as they are.</div>`:""}
+     ${(TK.same||TK.msSame)?`<div style="font-size:12px;color:var(--subtle);padding:8px 0 2px;">${TK.same+TK.msSame} row${(TK.same+TK.msSame)===1?"":"s"} match the tool already.</div>`:""}
+     ${!total?`<div style="font-size:13px;color:var(--muted);padding:14px 0;">Nothing in this sheet differs from the tool.</div>`:""}
+   </div>
+   <div style="display:flex;align-items:center;gap:10px;padding:12px 20px 18px;border-top:1px solid var(--div);">
+     <span style="font-size:12.5px;color:var(--muted);">Nothing is saved yet.${
+       skipN?` · <b style="color:#8A6D00;">${skipN} row${skipN===1?"":"s"} skipped</b>`:""}</span>
+     <span style="margin-left:auto;display:flex;gap:8px;">
+       <button class="btn btn-g" onclick="closeM('tk')">Cancel</button>
+       <button class="btn btn-p" ${total?"":"disabled style=\"opacity:.5;\""} onclick="tkSave()">Apply ${total} change${total===1?"":"s"}</button>
+     </span>
+   </div>`;
+}
+function byIdTitle(id){ const t=(BR.tasks||[]).find(x=>x.id===id); return t?t.title:""; }
+
+async function tkSave(){
+  if(!TK||!can("task_create")) return;
+  const btn=document.querySelector("#tk-body .btn-p");
+  if(btn){ btn.disabled=true; btn.style.opacity=".5"; }
+  const rows=[];
+
+  /* THE ID IS MADE HERE, not read back from the insert. An import that
+     creates twenty rows and then asks the database what it just made is
+     twenty round trips and twenty chances to lose track of one; and a
+     record of "what this import created" that depends on a returning
+     select is a record that is wrong the moment one of them fails. */
+  for(const c of TK.create){
+    const id=crypto.randomUUID();
+    const r=await sb.from("branding_tasks").insert([{id:id,brand_id:activeBrand,
+      title:c.want.title,brief:c.want.brief,project_id:c.want.project_id,owner_id:c.want.owner_id,
+      delivery_date:c.want.delivery_date,status:c.want.status,
+      updated_at:new Date().toISOString()}]);
+    if(r.error){ dbErr(r); continue; }
+    rows.push({kind:"task",row_id:id,made:true,before:null});
+  }
+  for(const c of TK.change.concat(TK.conflict.filter(x=>!x.keep))){
+    const t=c.task;
+    const before={title:t.title||"",brief:t.brief||"",project_id:t.project_id||null,
+      owner_id:t.owner_id||null,delivery_date:t.delivery_date||null,status:t.status||"not_started"};
+    const r=await sb.from("branding_tasks").update({
+      title:c.want.title,brief:c.want.brief,project_id:c.want.project_id,owner_id:c.want.owner_id,
+      delivery_date:c.want.delivery_date,status:c.want.status,
+      updated_at:new Date().toISOString()}).eq("id",c.id);
+    if(r.error){ dbErr(r); continue; }
+    rows.push({kind:"task",row_id:c.id,made:false,before:before,after:{...c.want}});
+  }
+  for(const c of TK.msCreate){
+    const sort=brMsFor(c.want.task_id).length;
+    const id=crypto.randomUUID();
+    const r=await sb.from("branding_milestones").insert([{id:id,task_id:c.want.task_id,brand_id:activeBrand,
+      sort:sort,name:c.want.name,due_date:c.want.due_date,status:"not_started"}]);
+    if(r.error){ dbErr(r); continue; }
+    rows.push({kind:"milestone",row_id:id,made:true,before:null});
+  }
+  for(const c of TK.msChange.concat(TK.msConflict.filter(x=>!x.keep))){
+    const m=c.ms;
+    const before={name:m.name||"",due_date:m.due_date||null};
+    const r=await sb.from("branding_milestones").update({name:c.want.name,due_date:c.want.due_date}).eq("id",c.id);
+    if(r.error){ dbErr(r); continue; }
+    rows.push({kind:"milestone",row_id:c.id,made:false,before:before,after:{...c.want}});
+  }
+
+  try{
+    const ins=await sb.from("task_imports").insert({brand_id:activeBrand,file_name:TK.file||"",
+      actor_email:(ME.email||""),actor_name:actorName(),rows_changed:rows.length,reverts_id:null})
+      .select("id").single();
+    if(ins&&ins.data&&rows.length)
+      await sb.from("task_import_rows").insert(rows.map(r=>({import_id:ins.data.id,brand_id:activeBrand,
+        kind:r.kind,row_id:r.row_id,made:r.made,before:r.before,after:r.after||null})));
+  }catch(e){}
+
+  const made=rows.filter(r=>r.made).length, upd=rows.length-made;
+  closeM("tk"); TK=null;
+  await loadBranding(activeBrand);
+  render();
+  toast([made?made+" created":"",upd?upd+" changed":""].filter(Boolean).join(" · ")||"Nothing changed");
+}
+
+/* ── UNDO ─────────────────────────────────────────────────────────────
+   Removes what it made and puts back what it changed. Anything edited
+   since is left alone and counted — a task is somebody's work in
+   progress, and an undo that takes work with it is worse than none. */
+async function tkUndo(importId){
+  if(!can("task_create")) return capDenied("Undoing an import");
+  let head=null,rows=[];
+  try{
+    const h=await sb.from("task_imports").select("*").eq("id",importId).single();
+    head=(h&&h.data)||null;
+    const r=await sb.from("task_import_rows").select("*").eq("import_id",importId);
+    rows=(r&&r.data)||[];
+  }catch(e){}
+  if(!head) return toast("Nothing recorded for that import.","err");
+  const kill=[],back=[],kept=[];
+  rows.forEach(r=>{
+    if(r.kind==="task"){
+      const t=(BR.tasks||[]).find(x=>x.id===r.row_id); if(!t) return;
+      if(r.made){ kill.push({kind:"task",id:t.id}); return; }
+      /* edited since the import? Compare what is there now against what
+         the import WROTE, not against what it replaced — the same
+         question the download's fingerprint answers, asked later. */
+      const a=r.after||null;
+      if(a && (( t.title||"")!==(a.title||"") || (t.status||"")!==(a.status||"")
+            || (tkIso(t.delivery_date)||"")!==(tkIso(a.delivery_date)||"")
+            || (t.owner_id||"")!==(a.owner_id||"")
+            || (t.project_id||"")!==(a.project_id||"")
+            || mpPlain(t.brief||"")!==(a.brief||""))){ kept.push(t); return; }
+      back.push({kind:"task",id:t.id,before:r.before||{}});
+    }else{
+      const m=(BR.ms||[]).find(x=>x.id===r.row_id); if(!m) return;
+      if(r.made){
+        /* a milestone somebody has APPROVED since is not this import's
+           to remove any more */
+        if(m.status==="approved"){ kept.push(m); return; }
+        kill.push({kind:"milestone",id:m.id}); return;
+      }
+      const a=r.after||null;
+      if(a && ((m.name||"")!==(a.name||"") || (tkIso(m.due_date)||"")!==(tkIso(a.due_date)||""))){
+        kept.push(m); return; }
+      back.push({kind:"milestone",id:m.id,before:r.before||{}});
+    }
+  });
+  if(!kill.length&&!back.length) return toast("Nothing left from that import to undo.","err");
+  if(!confirm("Undo this import? "+
+      [kill.length?kill.length+" removed":"",back.length?back.length+" put back":""].filter(Boolean).join(", ")+
+      (kept.length?". "+kept.length+" edited since will be left alone.":".")))
+    return;
+
+  for(const k of kill){
+    if(k.kind==="task") await sb.from("branding_tasks").update({deleted_at:new Date().toISOString()}).eq("id",k.id);
+    else await sb.from("branding_milestones").delete().eq("id",k.id);
+  }
+  for(const b of back){
+    if(b.kind==="task") await sb.from("branding_tasks").update({
+      title:b.before.title,brief:b.before.brief,project_id:b.before.project_id,
+      owner_id:b.before.owner_id,delivery_date:b.before.delivery_date,status:b.before.status,
+      updated_at:new Date().toISOString()}).eq("id",b.id);
+    else await sb.from("branding_milestones").update({
+      name:b.before.name,due_date:b.before.due_date}).eq("id",b.id);
+  }
+  try{
+    await sb.from("task_imports").insert({brand_id:head.brand_id,file_name:"",
+      actor_email:(ME.email||""),actor_name:actorName(),
+      rows_changed:kill.length+back.length,reverts_id:importId});
+  }catch(e){}
+  closeM("tkhist");
+  await loadBranding(activeBrand);
+  render();
+  toast([kill.length?kill.length+" removed":"",back.length?back.length+" put back":"",
+         kept.length?kept.length+" left alone":""].filter(Boolean).join(" · "));
+}
+
+async function openTaskImportHistory(){
+  if(!can("task_create")) return toast("View-only account","err");
+  closeAllPops();
+  document.getElementById("tkh-body").innerHTML=`<div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">Task import history</div>
+     <button class="modal-x" onclick="closeM('tkhist')">✕</button></div>
+   <div class="modal-body" style="padding:16px 20px 20px;font-size:13px;color:var(--muted);">Loading…</div>`;
+  openM("tkhist");
+  let list=[];
+  try{ const r=await sb.from("task_imports").select("*").eq("brand_id",activeBrand)
+        .order("created_at",{ascending:false}).limit(40); list=(r&&r.data)||[]; }catch(e){}
+  const undone={}; list.forEach(im=>{ if(im.reverts_id) undone[im.reverts_id]=true; });
+  const rowsHtml=list.length?list.map(im=>`
+    <div style="display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid var(--div);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;">${im.reverts_id?"Undid a sheet import":escAttr(im.file_name||"Sheet")}
+          <span style="font-weight:400;color:var(--subtle);"> · ${im.rows_changed} row${im.rows_changed===1?"":"s"}</span></div>
+        <div style="font-size:11.5px;color:var(--subtle);">${escAttr(im.actor_name||im.actor_email)} · ${fbTimeLabel(im.created_at)}</div>
+      </div>
+      ${im.reverts_id?"":(undone[im.id]
+        ? `<span style="font-size:12px;color:var(--subtle);white-space:nowrap;">Undone</span>`
+        : `<button class="btn btn-s btn-sm" onclick="tkUndo('${im.id}')">Undo this</button>`)}
+    </div>`).join("")
+    : `<div style="font-size:13px;color:var(--subtle);padding:14px 0;">Nothing has been imported for this brand yet.</div>`;
+  document.getElementById("tkh-body").innerHTML=`<div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">Task import history
+       <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${escAttr((brands[activeBrand]||{}).name||"")}</span></div>
+     <button class="modal-x" onclick="closeM('tkhist')">✕</button></div>
    <div class="modal-body" style="padding:6px 20px 20px;max-height:60vh;overflow-y:auto;">${rowsHtml}</div>`;
 }
 
