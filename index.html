@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v100.1 — Tallinn: your own keys join the two tabs"/>
+<meta name="cc-tool-version" content="v100.2 — Tallinn: brand vision from a sheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3239,6 +3239,15 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 </div>
 <div class="overlay" id="ov-tkhist" onclick="if(event.target===this)closeM('tkhist')">
   <div class="modal" style="max-width:640px;"><div id="tkh-body"></div></div>
+</div>
+
+<!-- TALLINN v100.2 — the same round trip for the Brand Vision. Its own
+     windows again: three importers, three states, no shared variable. -->
+<div class="overlay" id="ov-bv" onclick="if(event.target===this)closeM('bv')">
+  <div class="modal" style="max-width:760px;"><div id="bv-body"></div></div>
+</div>
+<div class="overlay" id="ov-bvhist" onclick="if(event.target===this)closeM('bvhist')">
+  <div class="modal" style="max-width:640px;"><div id="bvh-body"></div></div>
 </div>
 
 <!-- LISBON 4 — editing ONE post uses the same form as editing the month.
@@ -9107,7 +9116,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v100.1 — Tallinn: your own keys join the two tabs";
+const TOOL_VERSION="v100.2 — Tallinn: brand vision from a sheet";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -13288,7 +13297,8 @@ function renderBriefDash(){
     </div>`).join("");
   mc.innerHTML=`
   ${pageHead(
-      `<button class="btn btn-s" onclick="bdImportXLSX()"><i class="ti ti-upload"></i> Import</button>`+
+      (canEditVision()
+        ?`<button class="btn btn-s" onclick="bvOpen()"><i class="ti ti-upload"></i> Import</button>`:"")+
       (canEditVision()
         ?`<button class="btn btn-p" onclick="bdToggleEdit()"><i class="ti ti-pencil"></i> Edit the data</button>`:""))}
   ${String(D.tagline||"").trim()
@@ -13607,6 +13617,11 @@ function bdAOAToBrief(A){
   });
   return D;
 }
+/* TALLINN v100.2 — NOTHING OPENS THIS ANY MORE. It read a file and
+   replaced the whole brief behind a single confirm: no template, no
+   preview, no history, no undo, and no way to send a sheet that spoke
+   about one section only. bvOpen() is the entry now. Left in place
+   rather than deleted, the way Kigali left imApply and imRevert. */
 function bdImportXLSX(){
   if(!canEdit()){toast("View-only account","err");return;}
   const inp=document.createElement("input"); inp.type="file"; inp.accept=".xlsx,.xls,.csv";
@@ -17206,6 +17221,573 @@ async function openTaskImportHistory(){
      <div class="modal-title" style="font-size:17px;">Task import history
        <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${escAttr((brands[activeBrand]||{}).name||"")}</span></div>
      <button class="modal-x" onclick="closeM('tkhist')">✕</button></div>
+   <div class="modal-body" style="padding:6px 20px 20px;max-height:60vh;overflow-y:auto;">${rowsHtml}</div>`;
+}
+
+
+/* ══ TALLINN · BRAND VISION FROM A SHEET ═══════════════════════════════
+   v100.2. The third and last round trip of this sitting.
+
+   THE BRAND VISION IS NOT A LIST OF ROWS. A post belongs to a grid, a
+   task belongs to a list, and both have an id to match a sheet row
+   against. The Vision is ONE DOCUMENT held in brands[b].brief — one
+   jsonb object, nested, with no ids anywhere in it. So the Tallinn rules
+   do not carry over, and Chirag set three of his own on 13 Sep:
+
+   · A SECTION THE SHEET DOES NOT CARRY IS LEFT ALONE. A sheet with only
+     "Positioning & voice" writes only that. This is what makes a partial
+     sheet safe to send, and it is the whole reason the old Import — one
+     confirm, replace everything — had to go.
+   · A BLANK VALUE CELL MEANS "NOTHING TO SAY" and leaves what is there.
+     To actually empty a field you type a single dash. Blank is what a
+     half-filled sheet is full of; emptying a field has to be something
+     you did on purpose.
+   · WHO MAY IMPORT = WHO MAY PRESS EDIT THE DATA. canEditVision(), the
+     same call the Edit button makes. A sheet must not be able to do what
+     the person holding it cannot.
+
+   AND ONE RULE THAT IS MINE, NOT HIS, BECAUSE HIS CHECKLIST CONTRADICTED
+   ITSELF AND SOMETHING HAD TO GIVE:
+
+     A LIST IS REPLACED BY THE SHEET'S ROWS FOR IT — but only when the
+     sheet carries at least one row for that list.
+
+   The checklist said lists replace "inside a category" and implied they
+   append everywhere else. Appending cannot be right: the same checklist
+   promises that exporting a brand, changing nothing and importing again
+   changes nothing, and an appending list doubles every USP on the first
+   re-import. So replace is uniform. The "at least one row" half is what
+   keeps rule 1 honest — a sheet that never mentions Markets must not
+   empty Markets. To empty a list you give it one row with a dash, the
+   same gesture as a scalar.
+
+   The columns are the four the old export already wrote, unchanged, so a
+   file exported months ago still reads:
+
+       Section | Field | Value | Detail | Extra
+
+   ══════════════════════════════════════════════════════════════════ */
+const BV_MAGIC="CC-VISION-SHEET-V1";
+const BV_LAST=801;            /* header + 800 rows; a full brief is ~150 */
+let BV=null;                  /* the parsed, checked sheet awaiting confirmation */
+
+/* ── THE SHAPE OF A BRIEF, SAID ONCE ───────────────────────────────────
+   Every field the sheet can write, in one table, so the reader, the
+   writer, the preview and the blank template cannot drift apart. They
+   all read this. */
+const BV_SCALARS=[
+  ["Brand basics","Tagline","tagline"],
+  ["Brand basics","Section 02 is called","s2"],
+  ["Positioning & voice","Positioning","positioning"],
+  ["Positioning & voice","Positioning note","posNote"],
+  ["Positioning & voice","Voice & tone","toneWords"],
+  ["Positioning & voice","Voice note","toneNote"],
+  ["Audience","Who","audWho"],
+  ["Audience","Detail","audNote"],
+  ["Audience","Funnel stage","funnelStage"],
+  ["Audience","Funnel note","funnelNote"],
+  ["Objectives","Headline label","revLbl"],
+  ["Objectives","Headline figure","revBig"],
+  ["Objectives","Headline note","revNote"]
+];
+/* keys:null = a list of plain strings, kept in Value.
+   keys:[…]  = a list of objects, one key per column from Value onward. */
+const BV_LISTS=[
+  ["Brand basics","Header chip","meta",null],
+  ["Brand basics","Link","links",["label","url"]],
+  ["Engagement & scope","Fact","tl",["k","v"]],
+  ["Engagement & scope","Service","services",["n","w","f"]],
+  ["Engagement & scope","Review","rhythm",["k","v"]],
+  ["Positioning & voice","Never sounds","toneNever",null],
+  ["Positioning & voice","Never publish","noGo",null],
+  ["USPs & talking points","USP","usps",["t","d"]],
+  ["USPs & talking points","Talking point","talking",null],
+  ["Audience","Market","markets",null],
+  ["Audience","Next market","marketsNext",null],
+  ["Social media","Deliverable","smDeliv",["n","w"]],
+  ["Objectives","Headline row","revRows",["k","v"]]
+];
+/* inside one Category N */
+const BV_CATLISTS=[
+  ["USP","usps",null],
+  ["Talking point","talking",null],
+  ["Additional info","collections",["n","w"]],
+  ["Competitor","comps",["n","u","w"]],
+  ["Link","links",["label","url"]]
+];
+const BV_CATSCALARS=[["Name","name"],["Tag","tag"],["Description","desc"]];
+const BV_SEGSCALARS=[["Name","lbl"],["Headline figure","big"],["Under the figure","sub"]];
+
+const BV_SECTIONS=["Brand basics","Engagement & scope","Positioning & voice",
+  "USPs & talking points","Audience","Social media","Objectives"];
+
+const bvNorm=s=>String(s==null?"":s).trim().toLowerCase();
+const bvClone=o=>JSON.parse(JSON.stringify(o==null?{}:o));
+/* one dash, and nothing else, is the instruction to empty */
+const bvIsClear=v=>/^[-–—]$/.test(String(v==null?"":v).trim());
+/* one string that says what the whole document holds right now. Same job
+   as tkFingerprint: the download stamps it, the import compares against
+   it, and "somebody edited this while you had the file open" is answered
+   by the VALUES rather than by trusting a timestamp. */
+function bvFingerprint(){ try{ return JSON.stringify(bdBriefToAOA()); }catch(e){ return ""; } }
+
+/* ── THE WINDOW ───────────────────────────────────────────────────── */
+function bvOpen(){
+  if(!canEditVision()) return capDenied("Importing the Brand Vision");
+  const b=brands[activeBrand]||{};
+  const c=bdCompleteness();
+  document.getElementById("bv-body").innerHTML=`
+   <div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">Brand Vision from a sheet
+       <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${escAttr(b.name||"")}</span></div>
+     <button class="modal-x" onclick="closeM('bv')">✕</button></div>
+   <div class="modal-body" style="padding:16px 20px 20px;">
+     <div style="display:flex;gap:10px;flex-wrap:wrap;">
+       <button class="btn btn-s" onclick="bvTemplate(false)"><i class="ti ti-file-spreadsheet"></i> Blank template</button>
+       <button class="btn btn-s" onclick="bvTemplate(true)"><i class="ti ti-download"></i> This vision${c.n?" · "+c.n+"/"+c.of:""}</button>
+       <button class="btn btn-p" onclick="bvPick()"><i class="ti ti-upload"></i> Choose a filled sheet</button>
+     </div>
+     <div style="font-size:12px;color:var(--muted);margin-top:12px;line-height:1.55;">
+       A section the sheet does not carry is left alone. A blank cell keeps what is
+       already there — type a single dash to empty a field.
+     </div>
+     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--div);">
+       <button class="btn btn-s btn-sm" onclick="closeM('bv');openVisionImportHistory()"><i class="ti ti-file-import"></i> History</button>
+     </div>
+   </div>`;
+  openM("bv");
+}
+
+/* ── THE FILE ─────────────────────────────────────────────────────── */
+/* the blank template: every section and every field name, in page order,
+   with nothing in the value columns. Somebody who has never seen an
+   export can fill this in and it will read. */
+function bvBlankAOA(){
+  const A=[["Section","Field","Value","Detail","Extra"]];
+  const push=(s,f,...v)=>A.push([s,f,...v]);
+  const gap=()=>A.push([]);
+  const catN=(n)=>{
+    gap();
+    BV_CATSCALARS.forEach(([f])=>push("Category "+n,f,""));
+    BV_CATLISTS.forEach(([f])=>push("Category "+n,f,""));
+  };
+  BV_SECTIONS.forEach(sec=>{
+    gap();
+    BV_SCALARS.filter(x=>x[0]===sec).forEach(([,f])=>push(sec,f,""));
+    BV_LISTS.filter(x=>x[0]===sec).forEach(([,f])=>push(sec,f,""));
+    if(sec==="Social media"){ push(sec,"Content pillar",""); push(sec,"Pillar point","",""); }
+  });
+  catN(1);
+  gap();
+  BV_SEGSCALARS.forEach(([f])=>push("Objective 1",f,""));
+  push("Objective 1","Detail row","","");
+  return A;
+}
+
+async function bvTemplate(filled){
+  if(!canEditVision()) return capDenied("Downloading the sheet");
+  const b=brands[activeBrand]||{};
+  try{
+    const EJ=await loadExportLib("exceljs");
+    const wb=new EJ.Workbook();
+    const ws=wb.addWorksheet("Brand Vision",{views:[{state:"frozen",ySplit:1}]});
+    const lk=wb.addWorksheet("_lists"); lk.state="veryHidden";
+    lk.getCell(1,5).value=BV_MAGIC;
+    lk.getCell(2,5).value=activeBrand;
+    lk.getCell(3,5).value="vision";
+    lk.getCell(4,5).value=filled?bvFingerprint():"";
+
+    ws.columns=[{header:"Section",width:22},{header:"Field",width:22},
+      {header:"Value",width:56},{header:"Detail",width:42},{header:"Extra",width:30}];
+    ws.getRow(1).font={bold:true};
+
+    const A=filled?bdBriefToAOA():bvBlankAOA();
+    /* the note sits where the header used to end. Its Section cell is
+       empty, and a row with no Section is ignored on the way back in —
+       so the instruction can be in the file without being data. */
+    A.splice(1,0,["","","Blank keeps what is already there. A single dash (-) empties the field.","",""]);
+    for(let i=1;i<A.length;i++){
+      const r=A[i]||[];
+      for(let c=0;c<5;c++){
+        const v=r[c];
+        if(v!==undefined&&v!==null&&v!=="") ws.getCell(i+1,c+1).value=String(v);
+      }
+      ws.getCell(i+1,1).font={color:{argb:"FF9A9A96"},size:9};
+      ws.getCell(i+1,2).font={color:{argb:"FF9A9A96"},size:9};
+      ws.getCell(i+1,3).alignment={wrapText:true,vertical:"top"};
+      ws.getCell(i+1,4).alignment={wrapText:true,vertical:"top"};
+    }
+    ws.getCell(2,3).font={italic:true,color:{argb:"FF8A6D00"}};
+
+    const buf=await wb.xlsx.writeBuffer();
+    dlBlob(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),
+      seHandle(b.name)+"-brand-vision"+(filled?"":"-template")+".xlsx");
+  }catch(e){ toast("Download failed: "+(e.message||""),"err"); }
+}
+
+function bvPick(){
+  if(!canEditVision()) return capDenied("Importing the Brand Vision");
+  const inp=document.createElement("input");
+  inp.type="file"; inp.accept=".xlsx";
+  inp.onchange=()=>{ if(inp.files&&inp.files[0]) bvRead(inp.files[0]); };
+  inp.click();
+}
+
+function bvRefuse(title,detail){
+  BV=null;
+  document.getElementById("bv-body").innerHTML=`
+   <div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">Import stopped</div>
+     <button class="modal-x" onclick="closeM('bv')">✕</button></div>
+   <div class="modal-body" style="padding:6px 20px 18px;">
+     <div style="font-size:13.5px;font-weight:600;color:#C62828;">${escAttr(title)}</div>
+     ${detail?`<div style="font-size:12.5px;color:var(--muted);margin-top:6px;">${escAttr(detail)}</div>`:""}
+   </div>
+   <div style="display:flex;justify-content:flex-end;padding:12px 20px 18px;border-top:1px solid var(--div);">
+     <button class="btn btn-g" onclick="closeM('bv')">Close</button>
+   </div>`;
+  openM("bv");
+}
+
+/* ── READING ──────────────────────────────────────────────────────── */
+async function bvRead(file){
+  try{
+    const EJ=await loadExportLib("exceljs");
+    const wb=new EJ.Workbook();
+    await wb.xlsx.load(await file.arrayBuffer());
+    const lk=wb.getWorksheet("_lists");
+    if(!lk||String(lk.getCell(1,5).value||"")!==BV_MAGIC)
+      return bvRefuse("This file was not downloaded from the calendar.",
+        "Download the blank template or this vision, fill it in, then choose it here.");
+    const bId=String(lk.getCell(2,5).value||"");
+    if(bId!==activeBrand)
+      return bvRefuse("That sheet belongs to a different brand.",
+        "It was made for “"+((brands[bId]||{}).name||bId)+"”. Open that brand and import it there.");
+    const ws=wb.getWorksheet("Brand Vision")||wb.worksheets.filter(x=>x.name!=="_lists")[0];
+    if(!ws) return bvRefuse("That file has no Brand Vision tab.","");
+
+    const snap=String(lk.getCell(4,5).value||"");
+    const stale=!!snap && snap!==bvFingerprint();
+
+    /* ── pass one: rows into buckets ── */
+    const skip=[];
+    const scal={};            /* section -> {key: rawValue} */
+    const lists={};           /* section -> {key: [entries]} */
+    const seen={};            /* section -> true */
+    const catNums={}, segNums={};
+    const put=(sec,key,val)=>{ (scal[sec]=scal[sec]||{})[key]=val; };
+    const add=(sec,key,ent)=>{ const L=(lists[sec]=lists[sec]||{}); (L[key]=L[key]||[]).push(ent); };
+
+    for(let n=2;n<=BV_LAST;n++){
+      const sec=sdStr(sdCell(ws,n,1));
+      const fld=sdStr(sdCell(ws,n,2));
+      const v1=sdStr(sdCell(ws,n,3));
+      const v2=sdStr(sdCell(ws,n,4));
+      const v3=sdStr(sdCell(ws,n,5));
+      if(!sec&&!fld) continue;                 /* spacer, or the note row */
+      if(!sec||!fld){ skip.push({row:n,why:!sec?"no section name":"no field name"}); continue; }
+      const cm=sec.match(/^Category\s+(\d+)$/i), om=sec.match(/^Objective\s+(\d+)$/i);
+      const known=BV_SECTIONS.some(s=>bvNorm(s)===bvNorm(sec));
+      if(!known&&!cm&&!om){ skip.push({row:n,why:"“"+sec+"” is not a section of the Brand Vision"}); continue; }
+      seen[sec]=true;
+      if(cm) catNums[+cm[1]]=true;
+      if(om) segNums[+om[1]]=true;
+
+      if(cm){
+        const s=BV_CATSCALARS.find(x=>bvNorm(x[0])===bvNorm(fld));
+        if(s){ put(sec,s[1],v1); continue; }
+        const L=BV_CATLISTS.find(x=>bvNorm(x[0])===bvNorm(fld));
+        if(L){ add(sec,L[1],L[2]?bvObj(L[2],[v1,v2,v3]):v1); continue; }
+        skip.push({row:n,why:"“"+fld+"” is not a field of a category"}); continue;
+      }
+      if(om){
+        const s=BV_SEGSCALARS.find(x=>bvNorm(x[0])===bvNorm(fld));
+        if(s){ put(sec,s[1],v1); continue; }
+        if(/^detail row$/i.test(fld)){ add(sec,"rows",{k:v1,v:v2}); continue; }
+        skip.push({row:n,why:"“"+fld+"” is not a field of an objective"}); continue;
+      }
+      const S=BV_SCALARS.find(x=>bvNorm(x[0])===bvNorm(sec)&&bvNorm(x[1])===bvNorm(fld));
+      if(S){ put(sec,S[2],v1); continue; }
+      const L=BV_LISTS.find(x=>bvNorm(x[0])===bvNorm(sec)&&bvNorm(x[1])===bvNorm(fld));
+      if(L){ add(sec,L[2],L[3]?bvObj(L[3],[v1,v2,v3]):v1); continue; }
+      if(bvNorm(sec)==="social media"&&/^content pillar$/i.test(fld)){ add(sec,"_pillar",v1); continue; }
+      if(bvNorm(sec)==="social media"&&/^pillar point$/i.test(fld)){ add(sec,"_pillarPt",{t:v1,p:v2}); continue; }
+      skip.push({row:n,why:"“"+fld+"” is not a field of "+sec}); continue;
+    }
+
+    /* ── a Category 7 with no Category 6 has nowhere to go ──
+       The numbers ARE the positions, so a gap is not a question anybody
+       can answer: writing it as the next one silently renumbers a
+       document somebody wrote by hand. */
+    const D0=bdo();
+    const gapKill=(nums,have,word)=>{
+      const bad={};
+      Object.keys(nums).map(Number).sort((a,b)=>a-b).forEach(i=>{
+        if(i<1){ bad[i]="“"+word+" "+i+"” is not a number"; return; }
+        if(i<=have) return;
+        for(let j=have+1;j<i;j++) if(!nums[j]){
+          bad[i]=word+" "+j+" is not there, so "+word+" "+i+" has nowhere to go"; return; }
+      });
+      return bad;
+    };
+    const badCat=gapKill(catNums,(D0.categories||[]).length,"Category");
+    const badSeg=gapKill(segNums,(D0.segs||[]).length,"Objective");
+
+    /* ── pass two: build what the brief would become ── */
+    const next=bvClone(D0);
+    ["meta","links","toneNever","noGo","usps","talking","markets","marketsNext",
+     "categories","revRows","segs","tl","services","rhythm","smDeliv","pillars"]
+      .forEach(k=>{ if(!Array.isArray(next[k])) next[k]=[]; });
+
+    const setScalar=(obj,key,raw)=>{
+      if(raw==="") return;                      /* blank keeps */
+      obj[key]=bvIsClear(raw)?"":raw;
+    };
+    const setList=(obj,key,entries)=>{
+      if(!entries||!entries.length) return;     /* never mentioned, never touched */
+      if(entries.length===1&&bvIsClear(bvFirst(entries[0]))){ obj[key]=[]; return; }
+      obj[key]=entries.filter(e=>bvAll(e)!=="");
+    };
+
+    Object.keys(scal).forEach(sec=>{
+      if(/^Category\s+\d+$/i.test(sec)||/^Objective\s+\d+$/i.test(sec)) return;
+      Object.entries(scal[sec]).forEach(([k,v])=>setScalar(next,k,v));
+    });
+    Object.keys(lists).forEach(sec=>{
+      if(/^Category\s+\d+$/i.test(sec)||/^Objective\s+\d+$/i.test(sec)) return;
+      Object.entries(lists[sec]).forEach(([k,v])=>{ if(k[0]!=="_") setList(next,k,v); });
+    });
+
+    /* pillars: a title row and its point rows, joined by the title */
+    const socKeys=Object.keys(lists).filter(s=>bvNorm(s)==="social media");
+    const pilT=[],pilP=[];
+    socKeys.forEach(s=>{ (lists[s]._pillar||[]).forEach(x=>pilT.push(x));
+                         (lists[s]._pillarPt||[]).forEach(x=>pilP.push(x)); });
+    if(pilT.length||pilP.length){
+      if(pilT.length===1&&bvIsClear(pilT[0])&&!pilP.length){ next.pillars=[]; }
+      else{
+        const out=[],by={};
+        pilT.forEach(t=>{ if(!t||by[t]) return; by[t]={t:t,p:[]}; out.push(by[t]); });
+        pilP.forEach(x=>{ if(!x.t) return; if(!by[x.t]){ by[x.t]={t:x.t,p:[]}; out.push(by[x.t]); }
+          if(String(x.p||"").trim()) by[x.t].p.push(x.p); });
+        next.pillars=out;
+      }
+    }
+
+    /* categories and objectives, by position */
+    const blankCat=()=>({name:"",tag:"",desc:"",usps:[],talking:[],collections:[],comps:[],links:[]});
+    const blankSeg=()=>({lbl:"",big:"",sub:"",rows:[]});
+    const posApply=(arr,mk,prefix,bad)=>{
+      const nums=new Set();
+      Object.keys(scal).concat(Object.keys(lists)).forEach(s=>{
+        const m=s.match(new RegExp("^"+prefix+"\\s+(\\d+)$","i")); if(m) nums.add(+m[1]); });
+      [...nums].sort((a,b)=>a-b).forEach(i=>{
+        if(bad[i]){ skip.push({row:0,why:bad[i]}); return; }
+        while(arr.length<i) arr.push(mk());
+        const o=arr[i-1];
+        const S=Object.keys(scal).find(s=>bvNorm(s)===bvNorm(prefix+" "+i));
+        if(S) Object.entries(scal[S]).forEach(([k,v])=>setScalar(o,k,v));
+        const L=Object.keys(lists).find(s=>bvNorm(s)===bvNorm(prefix+" "+i));
+        if(L) Object.entries(lists[L]).forEach(([k,v])=>{ if(!Array.isArray(o[k])) o[k]=[]; setList(o,k,v); });
+      });
+    };
+    posApply(next.categories,blankCat,"Category",badCat);
+    posApply(next.segs,blankSeg,"Objective",badSeg);
+
+    /* ── pass three: what actually differs ── */
+    const diff=bvDiff(D0,next);
+
+    if(!diff.length&&!skip.length)
+      return bvRefuse("Nothing in this sheet differs from the Brand Vision.",
+        "Every field it carries already says what the tool says.");
+
+    BV={file:file.name,next:next,diff:diff,skip:skip,stale:stale,keep:stale};
+    bvRender(); openM("bv");
+  }catch(e){ bvRefuse("That file could not be read.",e.message||""); }
+}
+function bvObj(keys,vals){ const o={}; keys.forEach((k,i)=>o[k]=vals[i]||""); return o; }
+function bvFirst(e){ return (e&&typeof e==="object")?Object.values(e)[0]:e; }
+/* every value of an entry, joined — a link with a url and no label is
+   still a link, and a filter that looked only at the first column threw
+   it away on the way back in. */
+function bvAll(e){ return ((e&&typeof e==="object")?Object.values(e):[e])
+  .map(x=>String(x==null?"":x)).join("").trim(); }
+
+/* ── THE DIFF ──────────────────────────────────────────────────────────
+   One flat list of what a person would see change, built by comparing
+   the document before against the document after, rather than by
+   remembering what each row did. A row-by-row account is a different
+   thing from the outcome, and it is the OUTCOME that gets written. */
+function bvDiff(a,b){
+  const out=[];
+  const show=v=>Array.isArray(v)
+    ? v.map(x=>(x&&typeof x==="object")?Object.values(x).filter(z=>String(z||"").trim()).join(" · "):String(x)).join("\n")
+    : String(v==null?"":v);
+  const cmp=(label,x,y)=>{
+    const sx=show(x), sy=show(y);
+    if(sx===sy) return;
+    out.push({label:label,from:sx,to:sy,
+      kind:!sx.trim()?"add":(!sy.trim()?"clear":"change")});
+  };
+  BV_SCALARS.forEach(([sec,f,k])=>cmp(sec+" · "+f,a[k]||"",b[k]||""));
+  BV_LISTS.forEach(([sec,f,k])=>cmp(sec+" · "+f,a[k]||[],b[k]||[]));
+  cmp("Social media · Content pillars",
+      (a.pillars||[]).map(p=>p.t+(p.p&&p.p.length?" ("+p.p.join(", ")+")":"")),
+      (b.pillars||[]).map(p=>p.t+(p.p&&p.p.length?" ("+p.p.join(", ")+")":"")));
+  const nC=Math.max((a.categories||[]).length,(b.categories||[]).length);
+  for(let i=0;i<nC;i++){
+    const x=(a.categories||[])[i]||{}, y=(b.categories||[])[i]||{};
+    const t="Category "+(i+1)+" · ";
+    BV_CATSCALARS.forEach(([f,k])=>cmp(t+f,x[k]||"",y[k]||""));
+    BV_CATLISTS.forEach(([f,k])=>cmp(t+f,x[k]||[],y[k]||[]));
+  }
+  const nS=Math.max((a.segs||[]).length,(b.segs||[]).length);
+  for(let i=0;i<nS;i++){
+    const x=(a.segs||[])[i]||{}, y=(b.segs||[])[i]||{};
+    const t="Objective "+(i+1)+" · ";
+    BV_SEGSCALARS.forEach(([f,k])=>cmp(t+f,x[k]||"",y[k]||""));
+    cmp(t+"Detail rows",x.rows||[],y.rows||[]);
+  }
+  return out;
+}
+
+function bvToggle(){ BV.keep=!BV.keep; bvRender(); }
+
+function bvRender(){
+  const head=t=>`<div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--subtle);text-transform:uppercase;margin:12px 0 5px;">${t}</div>`;
+  const card=d=>`
+    <div style="border:1px solid ${d.kind==="clear"?"#E8C46A":"var(--div)"};border-radius:10px;padding:10px 13px;margin-bottom:7px;background:var(--surface);">
+      <div style="font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--subtle);text-transform:uppercase;">${escAttr(d.label)}</div>
+      ${d.kind==="add"?"":`<div style="font-size:12px;color:var(--muted);text-decoration:line-through;white-space:pre-wrap;">${escAttr(d.from)||"—"}</div>`}
+      <div style="font-size:12.5px;white-space:pre-wrap;${d.kind==="clear"?"color:#8A6D00;font-style:italic;":""}">${d.kind==="clear"?"emptied":(escAttr(d.to)||"—")}</div>
+    </div>`;
+  const adds=BV.diff.filter(d=>d.kind==="add");
+  const chgs=BV.diff.filter(d=>d.kind==="change");
+  const clrs=BV.diff.filter(d=>d.kind==="clear");
+  const blocked=BV.stale&&BV.keep;
+  const total=BV.diff.length;
+  const skipN=BV.skip.length;
+  document.getElementById("bv-body").innerHTML=`
+   <div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">Brand Vision from a sheet
+       <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${escAttr(BV.file)}</span></div>
+     <button class="modal-x" onclick="closeM('bv')">✕</button></div>
+   <div class="modal-body" style="padding:6px 20px 8px;max-height:60vh;overflow-y:auto;">
+     ${BV.stale?`<div style="border:1px solid #E8C46A;border-radius:10px;padding:11px 13px;margin:8px 0 4px;background:var(--surface);">
+       <div style="display:flex;align-items:center;gap:8px;">
+         <b style="font-size:13px;">The Brand Vision was edited in the tool after you downloaded this sheet.</b>
+         <label style="margin-left:auto;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap;">
+           <input type="checkbox" ${BV.keep?"":"checked"} onchange="bvToggle()"> import anyway</label>
+       </div>
+       <div style="font-size:12px;color:#8A6D00;margin-top:5px;">Whatever was changed in the tool is shown struck through below, so you can see what the sheet would put back.</div>
+     </div>`:""}
+     ${adds.length?head(adds.length+" field"+(adds.length===1?"":"s")+" filled in")+adds.map(card).join(""):""}
+     ${chgs.length?head(chgs.length+" field"+(chgs.length===1?"":"s")+" will change")+chgs.map(card).join(""):""}
+     ${clrs.length?head(clrs.length+" field"+(clrs.length===1?"":"s")+" will be emptied")+clrs.map(card).join(""):""}
+     ${skipN?head(skipN+" row"+(skipN===1?"":"s")+" skipped")+
+        BV.skip.map(s=>`<div style="font-size:12px;color:var(--muted);padding:3px 0;">${s.row?"Row "+s.row+" — ":""}${escAttr(s.why)}</div>`).join(""):""}
+     ${!BV.diff.length?`<div style="font-size:13px;color:var(--muted);padding:14px 0;">Nothing in this sheet differs from the Brand Vision.</div>`:""}
+   </div>
+   <div style="display:flex;align-items:center;gap:10px;padding:12px 20px 18px;border-top:1px solid var(--div);">
+     <span style="font-size:12.5px;color:var(--muted);">Nothing is saved yet.${
+       clrs.length?` · <b style="color:#8A6D00;">${clrs.length} will be emptied</b>`:""}${
+       skipN?` · <b style="color:#8A6D00;">${skipN} row${skipN===1?"":"s"} skipped</b>`:""}</span>
+     <span style="margin-left:auto;display:flex;gap:8px;">
+       <button class="btn btn-g" onclick="closeM('bv')">Cancel</button>
+       <button class="btn btn-p" ${(total&&!blocked)?"":"disabled style=\"opacity:.5;\""} onclick="bvSave()">Apply ${total} change${total===1?"":"s"}</button>
+     </span>
+   </div>`;
+}
+
+async function bvSave(){
+  if(!BV||!canEditVision()) return;
+  if(BV.stale&&BV.keep) return;
+  const clears=BV.diff.filter(d=>d.kind==="clear").length;
+  /* a confirm ONLY where something is lost. Chirag's rule from Kigali:
+     "if it is likely to override any existing data, it will ask for
+     confirmation" — and emptying is the one thing a sheet can do here
+     that a person cannot see coming from the file alone. */
+  if(clears&&!confirm(clears+" field"+(clears===1?"":"s")+" will be emptied by this sheet. Go ahead?")) return;
+  const btn=document.querySelector("#bv-body .btn-p");
+  if(btn){ btn.disabled=true; btn.style.opacity=".5"; }
+
+  const before=bvClone(bdo());
+  const after=bvClone(BV.next);
+  brands[activeBrand].brief=after;
+  dbSyncBrandData();
+
+  try{
+    await sb.from("vision_imports").insert({brand_id:activeBrand,file_name:BV.file||"",
+      actor_email:(ME.email||""),actor_name:actorName(),
+      fields_changed:BV.diff.length,reverts_id:null,before:before,after:after});
+  }catch(e){}
+
+  const n=BV.diff.length;
+  closeM("bv"); BV=null;
+  renderBrief();
+  toast(n+" field"+(n===1?"":"s")+" written from the sheet");
+}
+
+/* ── UNDO ─────────────────────────────────────────────────────────────
+   One document, so one snapshot each way and no row-by-row arithmetic.
+   The guard is the same one the task undo applies: if the Vision has
+   been edited since the import, the import is not the thing standing
+   there any more and putting `before` back would take somebody's work
+   with it. Say so and change nothing. */
+async function bvUndo(importId){
+  if(!canEditVision()) return capDenied("Undoing an import");
+  let head=null;
+  try{ const h=await sb.from("vision_imports").select("*").eq("id",importId).single();
+       head=(h&&h.data)||null; }catch(e){}
+  if(!head) return toast("Nothing recorded for that import.","err");
+  if(!head.before) return toast("That import has nothing recorded to put back.","err");
+  const now=JSON.stringify(bvDiff(bdo(),head.after||{}));
+  if(now!=="[]")
+    return toast("The Brand Vision has been edited since that import — nothing undone.","err");
+  const d=bvDiff(head.after||{},head.before||{});
+  if(!d.length) return toast("Nothing left from that import to undo.","err");
+  if(!confirm("Undo this import? "+d.length+" field"+(d.length===1?"":"s")+" will go back to what they were.")) return;
+
+  brands[activeBrand].brief=bvClone(head.before);
+  dbSyncBrandData();
+  try{
+    await sb.from("vision_imports").insert({brand_id:head.brand_id,file_name:"",
+      actor_email:(ME.email||""),actor_name:actorName(),
+      fields_changed:d.length,reverts_id:importId,before:head.after||null,after:head.before||null});
+  }catch(e){}
+  closeM("bvhist");
+  renderBrief();
+  toast(d.length+" field"+(d.length===1?"":"s")+" put back");
+}
+
+async function openVisionImportHistory(){
+  if(!canEditVision()) return toast("View-only account","err");
+  closeAllPops();
+  document.getElementById("bvh-body").innerHTML=`<div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">Brand Vision import history</div>
+     <button class="modal-x" onclick="closeM('bvhist')">✕</button></div>
+   <div class="modal-body" style="padding:16px 20px 20px;font-size:13px;color:var(--muted);">Loading…</div>`;
+  openM("bvhist");
+  let list=[];
+  try{ const r=await sb.from("vision_imports").select("*").eq("brand_id",activeBrand)
+        .order("created_at",{ascending:false}).limit(40); list=(r&&r.data)||[]; }catch(e){}
+  const undone={}; list.forEach(im=>{ if(im.reverts_id) undone[im.reverts_id]=true; });
+  const rowsHtml=list.length?list.map(im=>`
+    <div style="display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid var(--div);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;">${im.reverts_id?"Undid a sheet import":escAttr(im.file_name||"Sheet")}
+          <span style="font-weight:400;color:var(--subtle);"> · ${im.fields_changed} field${im.fields_changed===1?"":"s"}</span></div>
+        <div style="font-size:11.5px;color:var(--subtle);">${escAttr(im.actor_name||im.actor_email)} · ${fbTimeLabel(im.created_at)}</div>
+      </div>
+      ${im.reverts_id?"":(undone[im.id]
+        ? `<span style="font-size:12px;color:var(--subtle);white-space:nowrap;">Undone</span>`
+        : `<button class="btn btn-s btn-sm" onclick="bvUndo('${im.id}')">Undo this</button>`)}
+    </div>`).join("")
+    : `<div style="font-size:13px;color:var(--subtle);padding:14px 0;">Nothing has been imported for this brand yet.</div>`;
+  document.getElementById("bvh-body").innerHTML=`<div class="modal-top" style="padding:18px 20px 14px;">
+     <div class="modal-title" style="font-size:17px;">Brand Vision import history
+       <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${escAttr((brands[activeBrand]||{}).name||"")}</span></div>
+     <button class="modal-x" onclick="closeM('bvhist')">✕</button></div>
    <div class="modal-body" style="padding:6px 20px 20px;max-height:60vh;overflow-y:auto;">${rowsHtml}</div>`;
 }
 
