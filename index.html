@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v100.2 — Tallinn: brand vision from a sheet"/>
+<meta name="cc-tool-version" content="V101.00 — Locust: the dot becomes the eye"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -1052,6 +1052,38 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .bp-q i{font-size:13px;color:var(--subtle);}
 .bp-q input{flex:1;border:none;background:transparent;font-size:12.5px;font-family:inherit;outline:none;color:var(--text);}
 .bp-none{padding:12px;font-size:12px;color:var(--subtle);}
+/* ══ LOCUST — THE DOT'S SLOT ══════════════════════════════════════════
+   One box holds both the dot and the eye, and the CSS shows one at a
+   time. At rest the panel is the panel it has always been; the eye is
+   drawn only on the row under the pointer, the way the people icon
+   already behaves.
+
+   15px, because an eye at the dot's 9px is a smudge — and -6px of margin
+   against the row's 9px gap, so the slot ADVANCES the same 18px the dot
+   did. THE NAME DOES NOT MOVE. That is gateable and it is gated.
+
+   flex-start, NOT center. Centring the dot inside a 15px box moved it
+   3px right of where it has always sat: the NAME was in the right place
+   and the DOT was not. Only the pixel comparison against the previous
+   build caught that — no measurement of the name ever would have. */
+.bslot{width:15px;height:15px;margin-right:-6px;flex:none;
+  display:inline-flex;align-items:center;justify-content:flex-start;}
+.brow .bslot .bdot{margin:0;}
+.bslot i{display:none;font-size:15px;color:var(--muted);line-height:1;}
+.brow:hover .bslot[onclick] .bdot{display:none;}
+.brow:hover .bslot[onclick] i{display:inline-flex;}
+.brow:hover .bslot[onclick]{cursor:pointer;}
+.brow:hover .bslot[onclick]:hover i{color:var(--text);}
+/* a hidden brand, seen in the fold or turned up by a search */
+.brow.bhid .bnm,.brow.bhid .bct{opacity:.5;}
+.brow.bhid .bslot .bdot{display:none;}
+.brow.bhid .bslot i{display:inline-flex;color:var(--acc);}
+/* the way back */
+.brfold{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:9px;cursor:pointer;
+  font-size:12.5px;font-weight:600;color:var(--muted);}
+.brfold:hover{background:rgba(13,13,13,.05);color:var(--text);}
+.brfold i{font-size:14px;}
+.brfold .n{margin-left:auto;font-size:11px;color:var(--subtle);font-weight:700;}
 /* ── LUCERN — the switcher carries two new things per row ── */
 .brow .bgear,
 .brow .bmute{width:24px;height:24px;border-radius:6px;border:1px solid transparent;background:transparent;
@@ -6521,8 +6553,20 @@ let BRQ="";
 function brSearchKey(v){ BRQ=v; buildBrandPanel();
   const i=document.getElementById("brl-q"); if(i){ i.focus(); i.setSelectionRange(i.value.length,i.value.length); } }
 function brandRowHtml(k,b,indent){
-  return `<div class="brow${activeBrand===k?" on":""}${brandMuted(k)?" bmuted":""}"${indent?` style="padding-left:26px;"`:""} onclick="pickBrand('${k}')">
-        <span class="bdot" style="background:${b.color||"#6B6B6B"}"></span>
+  /* LOCUST — THE DOT AND THE EYE SHARE ONE SLOT. Both are drawn; the CSS
+     shows one at a time, so the resting list is exactly what it was and
+     the eye appears only under the pointer. The slot is 15px because an
+     eye at the dot's 9px is a smudge, and it carries -6px of margin so
+     the NAME DOES NOT MOVE and the row does not grow.
+
+     No eye on the row you are standing on, and none on All brands. */
+  const eye=(k!==activeBrand);
+  const hid=prefFor(k).hidden;
+  return `<div class="brow${activeBrand===k?" on":""}${brandMuted(k)?" bmuted":""}${hid?" bhid":""}"${indent?` style="padding-left:26px;"`:""} onclick="pickBrand('${k}')">
+        <span class="bslot"${eye?` onclick="event.stopPropagation();brandHide('${k}',${hid?0:1})"
+           title="${hid?`Put ${escAttr(b.name)} back in your list`:`Hide ${escAttr(b.name)} from your list — just for you`}"`:""}>
+          <span class="bdot" style="background:${b.color||"#6B6B6B"}"></span>
+          ${eye?`<i class="ti ti-eye${hid?"-off":""}"></i>`:""}</span>
         <span class="bnm">${escAttr(b.name)}</span>
         <span class="bct">${(b.posts||[]).length||""}</span>
         <button class="bmute" aria-pressed="${brandMuted(k)?"true":"false"}"
@@ -6548,7 +6592,7 @@ function buildBrandPanel(){
        not a label. The separator stays: All brands IS a different kind
        of row, and that is worth a line. */
     h+=`<div class="brow${activeBrand?"":" on"}" onclick="pickBrand('')">
-          <span class="bdot" style="background:var(--text)"></span>
+          <span class="bslot"><span class="bdot" style="background:var(--text)"></span></span>
           <span class="bnm">All brands</span><span class="bct">${brandCount("")}</span></div>
         <div class="bpsep"></div>`;
   }
@@ -6566,6 +6610,11 @@ function buildBrandPanel(){
   const q=BRQ.trim().toLowerCase();
   if(q){
     /* searching flattens the panel — matches only, no groups, no recents */
+    /* LOCUST — SEARCH REACHES A HIDDEN BRAND. Typed by name it is there,
+       greyed, with the crossed eye that puts it back. A brand you can
+       hide and then cannot find is a way to lose a client, not a way to
+       tidy a list — so hiding narrows the list you SCROLL and never the
+       list you can SEARCH. */
     h+=visible.filter(([,b])=>String(b.name||"").toLowerCase().includes(q))
       .map(([k,b])=>brandRowHtml(k,b,false)).join("")
       ||`<div class="bp-none">Nothing matches.</div>`;
@@ -6582,13 +6631,31 @@ function buildBrandPanel(){
     const placed=new Set();
     visible.forEach(([k,b])=>{
       if(placed.has(k)) return;
+      /* LOCUST — and the ones you have hidden are not in the scroll. The
+         brand you are standing on is never hidden, by brandHide's rule
+         and by the row not offering the eye. */
+      /* AND THE GROUP GOES WITH IT. Returning here skips the parent AND
+         the children it would have drawn on this turn — which is what
+         makes a sub-brand follow its parent out of the list. Everything
+         about that rule is these two lines; there is no second place. */
+      if(brandHidden(k)&&k!==activeBrand){ placed.add(k); return; }
       if(b.parent_id&&vis.has(b.parent_id)) return;   // rendered under its parent
       h+=brandRowHtml(k,b,false); placed.add(k);
       visible.forEach(([ck,cb])=>{
         if(placed.has(ck)||cb.parent_id!==k) return;
+        if(brandHidden(ck)&&ck!==activeBrand) return;
         h+=brandRowHtml(ck,cb,true); placed.add(ck);
       });
     });
+    /* LOCUST — THE WAY BACK, at the foot and folded. An honest count: it
+       names the brands YOU hid, not the children that went with them. */
+    const hid=hiddenBrandIds().filter(k=>vis.has(k));
+    if(hid.length){
+      h+=`<div class="bpsep"></div>
+        <div class="brfold" onclick="event.stopPropagation();brToggleHidden()">
+          <i class="ti ti-chevron-${BRHID?"down":"right"}"></i>Hidden by you<span class="n">${hid.length}</span></div>`;
+      if(BRHID) h+=hid.map(k=>brandRowHtml(k,brands[k],false)).join("");
+    }
   }
   if(canEdit()){
     h+=`<div class="bpsep"></div>
@@ -6788,12 +6855,13 @@ async function loadPrefs(){
     const r=await sb.from("brand_prefs").select("*").eq("user_email",me);
     if(r.error) return;
     (r.data||[]).forEach(x=>{ PREFS[x.brand_id]={
-      layer_social:x.layer_social, layer_branding:x.layer_branding, muted:!!x.muted}; });
+      layer_social:x.layer_social, layer_branding:x.layer_branding, muted:!!x.muted,
+      hidden:!!x.hidden}; });
     PREFS_OK=true;
   }catch(e){}
 }
 function prefFor(bid){
-  return (bid&&PREFS[bid])||{layer_social:null,layer_branding:null,muted:false};
+  return (bid&&PREFS[bid])||{layer_social:null,layer_branding:null,muted:false,hidden:false};
 }
 /* THE SCREEN ANSWERS FIRST AND THE DATABASE CATCHES UP. A switch that
    waits for a round trip before it moves is a switch people press twice
@@ -6807,12 +6875,44 @@ async function savePref(bid,patch){
   try{
     await sb.from("brand_prefs").upsert({user_email:me,brand_id:bid,
       layer_social:next.layer_social, layer_branding:next.layer_branding,
-      muted:!!next.muted, updated_at:new Date().toISOString()},
+      muted:!!next.muted, hidden:!!next.hidden, updated_at:new Date().toISOString()},
       {onConflict:"user_email,brand_id"});
   }catch(e){}
 }
 function brandMuted(bid){ return !!prefFor(bid).muted; }
 function mutedBrandIds(){ return Object.keys(brands||{}).filter(brandMuted); }
+/* ══ LOCUST — TAKING A BRAND OUT OF YOUR OWN SWITCHER ═════════════════
+   Chirag, 13 September, on a list of fifty: the dot before the name
+   becomes an eye when you hover the row, and clicking it drops the brand
+   from YOUR list. Per person, on his word — it is stored on brand_prefs,
+   the row the bell already writes, keyed on your email.
+
+   A SUB-BRAND FOLLOWS ITS PARENT, and NOT from here. This function once
+   asked whether the parent was hidden too, and a fault switch proved the
+   branch could be deleted without changing a single row: the panel draws
+   children inside their parent's turn, so a parent that returns early
+   takes its children with it. The rule lives in buildBrandPanel, where
+   it actually happens, and is gated there. */
+function brandHidden(bid){
+  return !!(brands[bid] && prefFor(bid).hidden);
+}
+function hiddenBrandIds(){
+  return Object.keys(brands||{}).filter(k=>prefFor(k).hidden&&brands[k]);
+}
+let BRHID=false;                       // is the "Hidden by you" fold open
+function brToggleHidden(){ BRHID=!BRHID; buildBrandPanel(); }
+async function brandHide(bid,on){
+  const name=(brands[bid]||{}).name||"this brand";
+  /* THE ONE YOU ARE STANDING ON IS NEVER HIDDEN. The row does not offer
+     the eye, and this is the second lock for anything that reaches the
+     function another way — hiding the brand you are looking at leaves
+     you on a screen with no way back to it. */
+  if(on&&bid===activeBrand){ toast("You are looking at this brand","err"); return; }
+  await savePref(bid,{hidden:!!on});
+  buildBrandPanel();
+  if(!PREFS_OK){ toast("Hidden for now — but this will come back when you reload","err"); return; }
+  toast(on?`${name} hidden from your list`:`${name} is back in your list`);
+}
 
 /* ══ SÃO PAULO · STAGE 2 — ONE BRAND LIST, TWO DOORS ════════════════
    Lucern built brand_members and it lasted a day. `user_brands` already
@@ -9116,7 +9216,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v100.2 — Tallinn: brand vision from a sheet";
+const TOOL_VERSION="V101.00 — Locust: the dot becomes the eye";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
