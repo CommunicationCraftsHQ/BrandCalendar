@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="v99.0 — Kigali: one sheet, both directions"/>
+<meta name="cc-tool-version" content="v99.1 — Kigali: the sheet's dates are UTC, and Import keeps its name"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -4929,7 +4929,10 @@ function renderSocial(){
      caption round-trip were two buttons doing two halves of one job,
      from two different files. They are one file and one window now, so
      Import has no button and no entry point left. */
-  const seedCtl=canEdit()?`<button class="btn btn-s" style="background:var(--surface);" onclick="sdOpen()" title="Download this month or a blank template, and put a filled sheet back"><i class="ti ti-table-plus"></i> From a sheet</button>`:"";
+  /* It is called Import because that is what the team has always called
+     it. Kigali took the old Import button away and this one does its job
+     and more, so it takes its name and its icon back. */
+  const seedCtl=canEdit()?`<button class="btn btn-s" style="background:var(--surface);" onclick="sdOpen()" title="Download this month or a blank template, and put a filled sheet back"><i class="ti ti-upload"></i> Import</button>`:"";
   mc.innerHTML=`
    ${pageHead()}
    <div style="padding:0 32px 20px;">
@@ -9087,7 +9090,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="v99.0 — Kigali: one sheet, both directions";
+const TOOL_VERSION="v99.1 — Kigali: the sheet's dates are UTC, and Import keeps its name";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -15592,7 +15595,8 @@ async function exportExcelBlob(rows){
   const ws=wb.addWorksheet(`${MN[contentMonth]} ${YEAR}`,{views:[{state:"frozen",ySplit:1}]});
   const lk=wb.addWorksheet("_lists"); lk.state="veryHidden";
   const ndays=new Date(YEAR,contentMonth,0).getDate();
-  for(let i=1;i<=ndays;i++){ const c=lk.getCell(i,1); c.value=new Date(YEAR,contentMonth-1,i); c.numFmt="mmm d, yyyy"; }
+  /* UTC, not local — see v99.1. A spreadsheet stores the UTC value. */
+  for(let i=1;i<=ndays;i++){ const c=lk.getCell(i,1); c.value=new Date(Date.UTC(YEAR,contentMonth-1,i)); c.numFmt="mmm d, yyyy"; }
   const PLAT=["Instagram + Facebook","Instagram","Facebook"];
   const FMT=SOCIAL_FORMATS.map(f=>f.charAt(0).toUpperCase()+f.slice(1));
   PLAT.forEach((v,i)=>lk.getCell(i+1,2).value=v);
@@ -15604,7 +15608,7 @@ async function exportExcelBlob(rows){
   rows.forEach((r,i)=>{
     const n=i+2;
     ws.getCell(n,1).value=r.id;
-    const dc=ws.getCell(n,2); dc.value=new Date(YEAR,r.month-1,r.day); dc.numFmt="mmm d, yyyy";
+    const dc=ws.getCell(n,2); dc.value=new Date(Date.UTC(YEAR,r.month-1,r.day)); dc.numFmt="mmm d, yyyy";
     ws.getCell(n,4).value=r.platforms; ws.getCell(n,5).value=r.format;
     ws.getCell(n,6).value=r.focus; ws.getCell(n,7).value=r.caption; ws.getCell(n,8).value=r.hashtags;
   });
@@ -16012,8 +16016,9 @@ async function imRevert(importId){
        confirm nobody reads
      · one brand, one month, stamped, refused anywhere else
    ══════════════════════════════════════════════════════════════════ */
-const SEED_MAGIC="CC-MONTH-SHEET-V2";
+const SEED_MAGIC="CC-MONTH-SHEET-V3";
 const SEED_MAGIC_V1="CC-MONTH-SEED-V1";   /* Riga's eight-column file */
+const SEED_MAGIC_V2="CC-MONTH-SHEET-V2";  /* same columns, dates a day early */
 const SEED_PLAT=["Instagram + Facebook","Instagram","Facebook"];
 const SEED_ROWS=["Goal","Influencer","Production"];
 const SEED_LAST=201;        /* header + 200 dressed rows */
@@ -16065,7 +16070,9 @@ async function sdTemplate(filled){
     const lk=wb.addWorksheet("_lists"); lk.state="veryHidden";
 
     const ndays=new Date(YEAR,m,0).getDate();
-    for(let i=1;i<=ndays;i++){ const c=lk.getCell(i,1); c.value=new Date(YEAR,m-1,i); c.numFmt="mmm d, yyyy"; }
+    /* UTC, not local. The dropdown offered Aug 31 … Sep 29 for a
+       September sheet, which was the clue nobody read. */
+    for(let i=1;i<=ndays;i++){ const c=lk.getCell(i,1); c.value=new Date(Date.UTC(YEAR,m-1,i)); c.numFmt="mmm d, yyyy"; }
     SEED_PLAT.forEach((v,i)=>lk.getCell(i+1,2).value=v);
     SOCIAL_FORMATS.forEach((v,i)=>lk.getCell(i+1,3).value=v.charAt(0).toUpperCase()+v.slice(1));
     SEED_ROWS.forEach((v,i)=>lk.getCell(i+1,4).value=v);
@@ -16106,7 +16113,7 @@ async function sdTemplate(filled){
       rows.forEach((p,i)=>{
         const n=i+2; const s=sdSideOf(p);
         post.getCell(n,1).value=p.id;
-        const dc=post.getCell(n,2); dc.value=new Date(YEAR,m-1,p.date); dc.numFmt="mmm d, yyyy";
+        const dc=post.getCell(n,2); dc.value=new Date(Date.UTC(YEAR,m-1,p.date)); dc.numFmt="mmm d, yyyy";
         post.getCell(n,4).value=s.plat;
         post.getCell(n,5).value=(p.format||"static").charAt(0).toUpperCase()+(p.format||"static").slice(1);
         post.getCell(n,6).value=(p.content&&p.content.concept)||"";
@@ -16190,6 +16197,9 @@ async function sdRead(file){
     if(stamp===SEED_MAGIC_V1)
       return sdRefuse("That is the older eight-column sheet.",
         "Download this month again and copy your rows across — the file now carries a Post ID, which is what lets a change go back to the right post.");
+    if(stamp===SEED_MAGIC_V2)
+      return sdRefuse("That sheet was downloaded before the date fix.",
+        "Its Date column is one day earlier than the real date. Download this month again and copy your words across — dates print correctly now.");
     if(!lk||stamp!==SEED_MAGIC)
       return sdRefuse("This file was not downloaded from the calendar.",
         "Download the blank template or this month, fill it in, then choose it here.");
@@ -16236,7 +16246,11 @@ async function sdRead(file){
 
       let day=null;
       if(rawDate instanceof Date){
-        if(rawDate.getFullYear()===YEAR&&rawDate.getMonth()+1===m) day=rawDate.getDate();
+        /* UTC getters, because the cell holds a UTC instant we wrote.
+           The LOCAL getters used to be here and they cancelled the
+           writing fault exactly, which is how a round trip could agree
+           with itself while disagreeing with the printed page. */
+        if(rawDate.getUTCFullYear()===YEAR&&rawDate.getUTCMonth()+1===m) day=rawDate.getUTCDate();
         else { skip.push({row:n,why:"date is outside "+MN[m]+" "+YEAR}); continue; }
       }else{
         const s=sdStr(rawDate);
@@ -16244,6 +16258,8 @@ async function sdRead(file){
         const num=parseInt(s,10);
         if(String(num)===s&&num>=1&&num<=ndays) day=num;
         else{
+          /* a date somebody TYPED as text was parsed in local time, so
+             the local parts are the day they meant. Not a UTC value. */
           const d=new Date(s);
           if(!isNaN(d)&&d.getFullYear()===YEAR&&d.getMonth()+1===m) day=d.getDate();
           else { skip.push({row:n,why:"date could not be read"}); continue; }
