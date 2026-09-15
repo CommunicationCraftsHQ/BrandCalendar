@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V106.2 Bologna"/>
+<meta name="cc-tool-version" content="V106.3 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -8894,6 +8894,21 @@ function renderBranding(){
               leave the row. Option 1 of three he was shown: all three
               controls fold into View, where each is drawn full width and
               readable for the first time. The row now needs 118px. -->
+         <!-- V106.3 - SORT STAYS OUT, THE REST STAYS FOLDED. Chirag,
+              seeing V106.2 on a wide screen: "the wider screen doesn't need
+              to squeeze all functions in one button". True, and the
+              alternative of folding by width was worse - the same tool
+              would look different on different people's screens and change
+              shape as you resize, with no signal saying which state you are
+              in. So one row at every width, with the control people change
+              often left out where they can see it. Sort needs 274px and the
+              row now needs 392px of the 758 it has, so it NEVER shrinks and
+              never scrolls inside itself - that shrinking is exactly what
+              clipped it at "soonest fir" in the first place. -->
+         ${BR.ok?`<label class="brl-sort" style="flex:0 0 auto;white-space:nowrap;"><b>Sort</b><select onchange="brSetSort(this.value)">${
+             Object.entries(BR_SORT).map(([k,v])=>
+               `<option value="${k}"${brSort===k?" selected":""}>${escHtml(v)}</option>`).join("")
+           }</select></label>`:""}
          <span style="display:flex;align-items:center;gap:10px;flex:none;">
          ${BR.ok?`<span class="bsw"><button class="btn btn-s" id="view-btn" style="background:var(--surface);white-space:nowrap;" onclick="toggleViewSw(event)"><i class="ti ti-adjustments-horizontal"></i> View</button><div class="bpanel right${VIEW_OPEN?" open":""}" id="view-panel">${viewPanelHtml()}</div></span>`:""}
          ${/* V106.1 — IMPORT LOSES ITS WORD, NOT ITS PLACE. Chirag saw the
@@ -9634,7 +9649,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V106.2 Bologna";
+const TOOL_VERSION="V106.3 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -18765,12 +18780,7 @@ function toggleViewSw(e){
    entries, same brSetGroup, same brSetLens, same kit class on the pills.
    They are only given room. */
 function viewPanelHtml(){
-  return `<div class="bphead">Sort by</div>
-    <div class="vpsec"><select onchange="brSetSort(this.value)">${
-      Object.entries(BR_SORT).map(([k,v])=>
-        `<option value="${k}"${brSort===k?" selected":""}>${escHtml(v)}</option>`).join("")
-    }</select></div>
-    <div class="bphead">Group</div>
+  return `<div class="bphead">Group</div>
     <div class="vpsec"><div class="brl-lens">
       <span class="${brGroup?"":"on"}" onclick="brSetGroup(0)">Flat</span>
       <span class="${brGroup?"on":""}" onclick="brSetGroup(1)">By project</span>
