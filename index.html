@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V105.0 Copenhagen"/>
+<meta name="cc-tool-version" content="V105.1 Copenhagen"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -6819,7 +6819,28 @@ function closeAllPops(){
     const el=document.getElementById(id); if(el) el.classList.remove("open");
   });
 }
-document.addEventListener("click",closeAllPops);
+/* ══ V105.1 — A CLICK INSIDE A PANEL MUST NOT DISMISS IT ═══════════════
+   Chirag, 15 Sep: "when you click on any item in the notifications
+   drop down, the dropdown closes... it's the same issue when I tried to
+   switch between the tabs of all vs mentions."
+
+   The handler was `document.addEventListener("click", closeAllPops)` —
+   EVERY click anywhere shut all four popovers, including clicks on
+   their own controls. So the three tabs Moth built have never been
+   usable: clicking Mentions closed the panel before the tab could
+   redraw. Same for the bell buttons in the muted list, the eye and bell
+   in the brand switcher, and Copenhagen's email frequency.
+
+   THE REASON THIS IS SAFE: every row that is MEANT to close already
+   calls closeAllPops() itself — notifOpen, pickBrand, doExport and all
+   ten account-menu rows. Checked one by one, not assumed. So the
+   document handler only ever had to dismiss clicks from OUTSIDE, which
+   is the job it is now given. */
+document.addEventListener("click",e=>{
+  const t=e.target;
+  if(t&&t.closest&&t.closest("#brand-panel,#export-panel,#notif-panel,#acct-menu")) return;
+  closeAllPops();
+});
 function popOpen(id,e){
   if(e) e.stopPropagation();
   const el=document.getElementById(id); if(!el) return;
@@ -9551,7 +9572,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V105.0 Copenhagen";
+const TOOL_VERSION="V105.1 Copenhagen";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
