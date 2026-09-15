@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V105.2 Copenhagen"/>
+<meta name="cc-tool-version" content="V106.0 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -7757,10 +7757,15 @@ function brPersonName(id){
   if(!p) return '—';
   return (p.name||p.email||'').split('@')[0];
 }
+/* BOLOGNA — the LOOKUP stays here, the RULE does not. Which letters a
+   name reduces to was written three times: here, in the Planner and in
+   the kit's account block. The Calendar keeps its own way of finding
+   the person, because that is genuinely its own; what it no longer
+   keeps is its own opinion about what their face says. */
 function brInitials(id){
   const n=brPersonName(id);
   if(n==='—') return '··';
-  return n.replace(/[^A-Za-z ]/g,' ').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase()||'··';
+  return wPersonFace({name:n}).initials;
 }
 function brDaysSince(iso){
   if(!iso) return null;
@@ -9595,7 +9600,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V105.2 Copenhagen";
+const TOOL_VERSION="V106.0 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -10780,7 +10785,17 @@ const MEDIA_BUCKET   = "post-media";
    Raising THIS number without changing the plan does not let a bigger
    file through; it just moves the same 413 back to where it was, at the
    end of a long wait. */
-const UPLOAD_MAX     = 50*1024*1024;
+/* BOLOGNA — THE CONSTANT IS GONE, NOT ALIASED.
+   The obvious move was `const UPLOAD_MAX = W_UPLOAD_MAX;` right here,
+   and it would have broken the whole file on load: W_UPLOAD_MAX is
+   declared in the synced block EIGHT THOUSAND LINES BELOW this point,
+   and a const cannot be read before its declaration runs. That is
+   exactly the fault that took the Termite gate down this morning —
+   a `const` read too early kills the rest of the script block and the
+   error names a symbol far from the cause.
+
+   Nothing else read UPLOAD_MAX, so nothing needed an alias. The one
+   place that did now calls wTooBig(), which lives beside the number. */
 /* A whole number, or nothing. Used for the integer columns on `assets`. */
 function whole(n){
   if(n==null||n==="") return null;
@@ -11039,15 +11054,14 @@ async function uploadAsset(file,{ownerKind,ownerId,brandId,slideNo=null,onTick})
      up and refused at the end with a bare "status 413" — minutes of
      somebody's connection, spent to be told no. The limit is known
      before a single byte moves, so this is answerable instantly. */
-  if(file.size>UPLOAD_MAX){
-    /* MOTH — the old wording was "compress it, or paste a link to it
-       instead", which is no use to somebody holding a 180 MB layered
-       PSD. The ceiling is the Supabase plan's, not a choice this tool
-       made, and saying so is the difference between a limit somebody
-       can act on and one that looks like a bug in the calendar. */
-    const why="it is "+kbmb(file.size)+" and the ceiling is "+kbmb(UPLOAD_MAX)
-             +" per file — that is the storage plan's limit, not the calendar's."
-             +" Paste a link to it, or flatten it first";
+  /* BOLOGNA — the refusal moved to the kit, wording and all. Moth wrote
+     this sentence and it was the better of the two, so it is the one
+     four tools now share; the Planner's terser version is gone. The
+     number went with it, because a ceiling that lives in two files is
+     a ceiling somebody will change in one. */
+  const tooBig=wTooBig(file);
+  if(tooBig){
+    const why=tooBig;
     tick(0,"failed",why);
     noteUploadFail(ownerKind,ownerId,file,why);
     return null;
@@ -19480,6 +19494,70 @@ function wMentionsIn(body, people, brandId, myEmail){
     if(re.test(text)) out.push(pp.email);
   });
   return [...new Set(out)];
+}
+
+/* ══ BOLOGNA — THE UPLOAD CEILING, AND THE SENTENCE THAT REFUSES ══════
+   It was TWO constants and TWO different sentences: MAX_BYTES in the
+   Planner and UPLOAD_MAX in the Calendar, each with its own wording for
+   the same refusal. The number is a property of the SUPABASE PLAN, not
+   of a tool — so the day the plan changes, somebody has to remember
+   there are two of them, and somebody will not.
+
+   `wBytes` is here for the same reason: the Planner rounded to one
+   decimal and the Calendar did it its own way, so the same file was
+   two different sizes depending on which screen refused it. */
+const W_UPLOAD_MAX = 50*1024*1024;
+
+function wBytes(n){
+  const b = Number(n)||0;
+  if(b >= 1048576) return (b/1048576).toFixed(1)+" MB";
+  if(b >= 1024)    return Math.round(b/1024)+" KB";
+  return b+" B";
+}
+
+/* One sentence, four tools. Returns "" when the file is allowed, so a
+   caller reads it as `const no = wTooBig(f); if(no) ...` and cannot
+   accidentally treat a refusal as a pass.
+
+   THE WORDING IS THE CALENDAR'S, NOT THE PLANNER'S, and that was a
+   decision rather than a coin toss. The Planner said "X is 84.2 MB. The
+   limit is 50 MB." Moth rewrote the Calendar's on purpose, because the
+   old one told somebody holding a 180 MB layered PSD to "compress it",
+   which is no use: the ceiling is the STORAGE PLAN'S, not a choice this
+   tool made, and saying so is the difference between a limit somebody
+   can act on and one that looks like a bug in the calendar.
+
+   When two tools disagree, the shared version is the better sentence —
+   not the shorter one, and not whichever tool was read first. */
+function wTooBig(file){
+  if(!file || (file.size||0) <= W_UPLOAD_MAX) return "";
+  return "it is "+wBytes(file.size)+" and the ceiling is "+wBytes(W_UPLOAD_MAX)
+       + " per file — that is the storage plan's limit, not the tool's."
+       + " Paste a link to it, or flatten it first";
+}
+
+/* ══ BOLOGNA — WHAT A PERSON LOOKS LIKE, ANSWERED ONCE ════════════════
+   THREE tools drew a face from the same data and disagreed about how:
+   the kit's account block, the Calendar's brInitials/emojiFor, and the
+   Planner's initialsOf. They agree today only because Kota gave
+   everybody an emoji; the first person without one would have had three
+   different avatars in three tools.
+
+   THE ANSWER IS SHARED, NOT THE MARKUP. The Calendar has no bundler and
+   cannot import a React chip — Ghent settled that — so this returns
+   what to draw and each tool draws it. Same rule underneath, which is
+   the part that could actually drift.
+
+   `person` is anything carrying email and, if known, name and emoji. */
+function wPersonFace(person){
+  const p = person || {};
+  const emoji = String(p.emoji||"").trim();
+  const name  = String(p.name || String(p.email||"").split("@")[0] || "").trim();
+  const initials = name
+    ? (name.replace(/[^A-Za-z ]/g," ").trim().split(/\s+/).slice(0,2)
+           .map(w=>w[0]).join("").toUpperCase() || "\u00b7\u00b7")
+    : "\u00b7\u00b7";
+  return { emoji, initials, isClient: p.role === "client", label: emoji || initials };
 }
 
 /* ==CC-WRITER-CORE:END== */
