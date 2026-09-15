@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V104.1 Termite"/>
+<meta name="cc-tool-version" content="V105.0 Copenhagen"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -1517,6 +1517,15 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
   text-transform:uppercase;color:var(--subtle);}
 .npmr{display:flex;align-items:center;gap:8px;padding:6px 14px 8px;font-size:12.5px;color:var(--muted);}
 .npmr .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* COPENHAGEN — the email setting, at the foot of the bell. It is not in
+   the account menu on purpose: this is where somebody already is when
+   they are thinking about notifications, and two gates pin that menu's
+   rows by position. */
+.npmail{display:flex;align-items:center;gap:8px;padding:9px 14px;font-size:12.5px;
+  border-top:1px solid rgba(13,13,13,.07);background:rgba(13,13,13,.02);}
+.npmail .nm{flex:1;min-width:0;}
+.npmail select{font:inherit;font-size:12px;padding:3px 6px;border-radius:6px;
+  border:1px solid var(--div);background:var(--surface);color:inherit;max-width:130px;}
 .npmr .nmute{width:24px;height:24px;border-radius:6px;border:1px solid var(--div);background:var(--surface);
   color:var(--muted);font-size:12px;display:inline-flex;align-items:center;justify-content:center;
   cursor:pointer;font-family:inherit;flex:none;}
@@ -9542,7 +9551,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V104.1 Termite";
+const TOOL_VERSION="V105.0 Copenhagen";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -10585,6 +10594,7 @@ async function loadPostFeedback(){
       loadShareLinks(),
       loadTaskSeen(),
       loadPrefs(),
+      loadNotifyPref(),
       loadAssignments(),
       /* AWAITED FROM SÃO PAULO STAGE 3 ONWARD, and it was not before.
          loadPeople() was fire-and-forget because the only thing that
@@ -12742,6 +12752,55 @@ function syncBell(){
    JUST FOR YOU. Nobody else's bell changes and there is no "mute for
    everyone", which would not be muting — it would be turning a feature
    off for other people without telling them. */
+/* ══ COPENHAGEN — HOW OFTEN YOU ARE EMAILED ════════════════════════════
+   ONE CONTROL, NOT TWO. The mockup carried a switch AND a frequency,
+   which is the same "two doors onto one job" that Termite had just
+   removed from the Goals row. "Never" is the off switch, so there is
+   nothing to keep in step.
+
+   It lives at the foot of the bell rather than in the account menu:
+   this is where somebody already is when they are thinking about
+   notifications, and the account menu's rows are pinned BY POSITION by
+   two existing gates — a new row there breaks both for no gain.
+
+   Failing to read it is not an error. Somebody whose row has never
+   been written simply gets the default, which is what the digest will
+   do for them anyway. */
+const NOTIFY_EVERY=[["15","Every 15 min"],["60","Hourly"],
+                    ["1440","Once a day"],["0","Never"]];
+let NOTIFY_MIN="15";        // minutes between emails; "0" is never
+let NOTIFY_OK=false;        // did the row read back at all
+async function loadNotifyPref(){
+  NOTIFY_OK=false;
+  try{
+    const me=(ME.email||"").toLowerCase(); if(!me) return;
+    const r=await sb.from("notify_prefs").select("email_every_min").eq("user_email",me).maybeSingle();
+    if(r.error) return;                       // table not there yet
+    NOTIFY_OK=true;
+    if(r.data&&r.data.email_every_min!=null) NOTIFY_MIN=String(r.data.email_every_min);
+  }catch(e){}
+}
+async function saveNotifyPref(v){
+  NOTIFY_MIN=String(v);
+  buildNotifPanel();
+  if(!NOTIFY_OK) return;
+  const me=(ME.email||"").toLowerCase(); if(!me) return;
+  const r=await sb.from("notify_prefs").upsert({user_email:me,
+      email_every_min:parseInt(NOTIFY_MIN,10),updated_at:new Date().toISOString()},
+      {onConflict:"user_email"});
+  if(r.error){ toast("Could not save that — nothing changed","err"); return; }
+  toast(NOTIFY_MIN==="0"?"You will not be emailed about mentions"
+        :"Saved · "+(NOTIFY_EVERY.find(x=>x[0]===NOTIFY_MIN)||[,""])[1].toLowerCase());
+}
+function notifMailBlock(){
+  if(!NOTIFY_OK) return "";
+  return `<div class="npmail">
+    <i class="ti ti-mail"></i><span class="nm">Email my mentions</span>
+    <select onchange="saveNotifyPref(this.value)">${
+      NOTIFY_EVERY.map(([v,label])=>
+        `<option value="${v}"${NOTIFY_MIN===v?" selected":""}>${label}</option>`).join("")
+    }</select></div>`;
+}
 function notifMutedBlock(){
   const ids=mutedBrandIds().filter(b=>brands[b]);
   if(!ids.length) return "";
@@ -12841,7 +12900,7 @@ function buildNotifPanel(){
       ${all.length?`<span class="mark" onclick="notifMarkAll()">Mark all read</span>`:""}</div>`;
 
   if(!all.length){
-    el.innerHTML=`${head}<div class="npempty">Nothing waiting for you.</div>${notifTruncHtml()}${notifMutedBlock()}`;
+    el.innerHTML=`${head}<div class="npempty">Nothing waiting for you.</div>${notifTruncHtml()}${notifMutedBlock()}${notifMailBlock()}`;
     return;
   }
 
@@ -12857,7 +12916,7 @@ function buildNotifPanel(){
         :`<div class="npempty">${NOTIF_TAB==="mention"
             ?"Nobody has mentioned you in what is loaded."
             :"No client has commented in what is loaded."}</div>`)
-      +notifTruncHtml()+notifMutedBlock();
+      +notifTruncHtml()+notifMutedBlock()+notifMailBlock();
     return;
   }
 
@@ -12887,7 +12946,7 @@ function buildNotifPanel(){
       <span class="ngn">${g.rows.length}</span></div>${rows}`;
   }).join("");
 
-  el.innerHTML=head+tabBar+menBlock+groups+notifTruncHtml()+notifMutedBlock();
+  el.innerHTML=head+tabBar+menBlock+groups+notifTruncHtml()+notifMutedBlock()+notifMailBlock();
 }
 async function notifOpen(brandId,kind,postId){
   closeAllPops();
