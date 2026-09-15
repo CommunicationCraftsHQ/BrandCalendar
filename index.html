@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V103.02 — Verona: the first row is reserved, empty or not"/>
+<meta name="cc-tool-version" content="V103.03 — Verona: no flash of the old bar"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -1102,6 +1102,25 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
    An empty #sb-stats still spent its 4px bottom margin, which is why
    the sidebar started 4px lower on Posts and Tasks than on the calendar.
    A box with nothing in it should occupy nothing. */
+/* ══ VERONA — NO FLASH OF THE OLD BAR ═════════════════════════════════
+   The five controls ship in the nav's markup, because that is where they
+   have always lived and moving the NODES (rather than rebuilding them)
+   is what keeps every handler and every piece of their state intact.
+   But the browser paints that markup the instant it arrives, and the
+   move happens after the first render — so for a moment the bar was the
+   OLD bar, with the pill and the year in it and no tabs yet. Chirag saw
+   it on every refresh and it read as the tool changing its mind.
+
+   They are hidden wherever they sit INSIDE the nav, and visible once
+   mountCalStrip has put them on the page. Nothing else changes: the same
+   nodes, the same handlers, one rule deciding whether they are drawn
+   before they arrive where they belong.
+
+   !important because two of them carry an inline display that
+   syncLayerBar writes, and an inline style beats a plain rule. */
+.nav #view-pill,.nav #year-step,.nav #past-tog,
+.nav #lay-sep,.nav #lay-grp{display:none!important;}
+
 /* ══ VERONA — THE PAGE'S VERTICAL RHYTHM, IN TWO NUMBERS ══════════════
    Chirag, 15 September, reading five photographs side by side: the gap
    from the black bar to the first thing on the page, and the gap from
@@ -9506,7 +9525,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V103.02 — Verona: the first row is reserved, empty or not";
+const TOOL_VERSION="V103.03 — Verona: no flash of the old bar";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
