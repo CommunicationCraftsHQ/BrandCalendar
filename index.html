@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V106.0 Bologna"/>
+<meta name="cc-tool-version" content="V106.2 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -1215,6 +1215,16 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .bpanel::-webkit-scrollbar-track{background:transparent;margin:14px 0;}
 .bpanel::-webkit-scrollbar-thumb{background:rgba(13,13,13,.18);border-radius:999px;}
 .bphead{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--subtle);padding:7px 10px 5px;}
+/* V106.2 BOLOGNA - the task row's controls, inside the View panel. The
+   pills keep the kit's .brl-lens class untouched; they are only told to
+   fill the width they now have, which is the whole point of moving. */
+#view-panel{min-width:302px;padding:6px 6px 10px;}
+.vpsec{padding:0 10px 4px;}
+.vpsec .brl-lens{width:100%;box-sizing:border-box;}
+.vpsec .brl-lens span{flex:1;justify-content:center;white-space:nowrap;}
+.vpsec select{width:100%;height:32px;border:1px solid var(--div);background:#fff;border-radius:8px;
+  padding:0 9px;font-family:inherit;font-size:13px;font-weight:650;color:var(--text);
+  cursor:pointer;outline:none;box-sizing:border-box;}
 /* KAZAN — the switcher's search */
 /* NAPLES - IT STAYS. The box is the first row inside .bpanel, and
    .bpanel is what scrolls, so with 76 brands it left the top of the
@@ -6854,11 +6864,24 @@ function closeAllPops(){
    THE FIX IS TO DECIDE BEFORE ANYTHING CAN REDRAW. A capture-phase
    listener runs on the way DOWN, before any element's own handler, so
    it sees the tab while it is still in the document. */
+/* V106.2 BOLOGNA - THE PANEL HAS TO SURVIVE ITS OWN CONTROLS.
+   brSetSort, brSetGroup and brSetLens each call render(), which rewrites
+   the whole task screen's innerHTML. That is the Cape Town / V105.2
+   detachment problem in a third place: the capture-phase guard below stops
+   a click from DISMISSING the panel, but it cannot bring back a panel that
+   has just been written out of the document.
+
+   So the open state lives in a variable, not in the DOM. The row's markup
+   re-applies .open from it on every draw, which means changing a setting
+   inside the panel leaves the panel open AND showing the new state.
+   Declared here, beside the guard it works with, and far above the first
+   render that reads it. */
+let VIEW_OPEN=false;
 let POP_CLICK_INSIDE=false;
 document.addEventListener("click",e=>{
   const t=e.target;
   POP_CLICK_INSIDE=!!(t&&t.closest&&
-    t.closest("#brand-panel,#export-panel,#notif-panel,#acct-menu"));
+    t.closest("#brand-panel,#export-panel,#notif-panel,#acct-menu,#view-panel"));
 },true);
 document.addEventListener("click",()=>{
   if(POP_CLICK_INSIDE) return;
@@ -8862,18 +8885,29 @@ function renderBranding(){
             "min-width:0" so the shrinking Tallinn asked for can actually
             happen, and the row itself is told never to wrap. -->
        <div style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;justify-content:flex-end;min-width:0;">
-         ${BR.ok?`<label class="brl-sort" style="flex:0 1 auto;min-width:0;"><b>Sort</b><select onchange="brSetSort(this.value)">${
-             Object.entries(BR_SORT).map(([k,v])=>
-               `<option value="${k}"${brSort===k?" selected":""}>${escHtml(v)}</option>`).join("")
-           }</select></label>
-         <div class="brl-lens" style="flex:0 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none;">
-           <span class="${brGroup?"":"on"}" onclick="brSetGroup(0)" style="flex:none;white-space:nowrap;">Flat</span>
-           <span class="${brGroup?"on":""}" onclick="brSetGroup(1)" style="flex:none;white-space:nowrap;">Group by project</span></div>
-         <div class="brl-lens" style="flex:0 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none;">
-           ${["timing","work","people"].map(k=>`<span class="${brLens===k?"on":""}" onclick="brSetLens('${k}')" style="flex:none;white-space:nowrap;">${k[0].toUpperCase()+k.slice(1)}</span>`).join("")}
-         </div>`:""}
+         <!-- V106.2 BOLOGNA - SORT, GROUP AND SHOW MOVE INTO ONE CONTROL.
+              Termite made the row fit and Chirag saw what "fit" had cost:
+              the sort field clipped mid-word and "People" scrolled out of
+              sight inside a scroller nobody can tell is scrollable. The
+              controls needed 888px and the row has 758px at 1180, so no
+              amount of shrinking was ever going to work - something had to
+              leave the row. Option 1 of three he was shown: all three
+              controls fold into View, where each is drawn full width and
+              readable for the first time. The row now needs 118px. -->
          <span style="display:flex;align-items:center;gap:10px;flex:none;">
-         ${canE&&BR.ok?`<button class="btn btn-s" style="background:var(--surface);white-space:nowrap;" onclick="tkOpen()" title="Download these tasks or a blank template, and put a filled sheet back"><i class="ti ti-upload"></i> Import</button>`:""}
+         ${BR.ok?`<span class="bsw"><button class="btn btn-s" id="view-btn" style="background:var(--surface);white-space:nowrap;" onclick="toggleViewSw(event)"><i class="ti ti-adjustments-horizontal"></i> View</button><div class="bpanel right${VIEW_OPEN?" open":""}" id="view-panel">${viewPanelHtml()}</div></span>`:""}
+         ${/* V106.1 — IMPORT LOSES ITS WORD, NOT ITS PLACE. Chirag saw the
+       result of the V104.0 squeeze: everything fitted on one row, but
+       the Sort field was clipped mid-word and "People" had scrolled out
+       of its group. The row was one row and unreadable, which is not
+       what "it fits" should mean.
+
+       The cheapest ~85px on the row is the word "Import" — a labelled
+       button nobody presses weekly, sitting beside the one they press
+       daily. The icon and the tooltip carry it, and every pixel it
+       gives up goes to the controls that are read rather than clicked.
+       Measured at 1180 before and after, not assumed. */""
+    }${canE&&BR.ok?`<button class="btn btn-s" style="background:var(--surface);white-space:nowrap;" onclick="tkOpen()" aria-label="Import tasks" title="Download these tasks or a blank template, and put a filled sheet back"><i class="ti ti-upload"></i></button>`:""}
          ${canE&&BR.ok?`<button class="btn btn-p" style="white-space:nowrap;" onclick="brNewTask()"><i class="ti ti-plus"></i> New task</button>`:""}
          </span>
        </div>
@@ -9600,7 +9634,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V106.0 Bologna";
+const TOOL_VERSION="V106.2 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -18492,7 +18526,11 @@ function acctPlace(){
    that looked like it should be clickable and was not. */
 function goHome(){ closeAllPops(); if(view!=="year") setView("year"); else render(); }
 function closeAllPops(){
-  ["brand-panel","export-panel","notif-panel","acct-menu"].forEach(id=>{
+  /* V106.2 - the View panel is re-drawn from VIEW_OPEN on every render, so
+     closing it means clearing the flag as well as the class. If the flag
+     survived a close, the very next render would put the panel back. */
+  VIEW_OPEN=false;
+  ["brand-panel","export-panel","notif-panel","acct-menu","view-panel"].forEach(id=>{
     const el=document.getElementById(id); if(el) el.classList.remove("open");
   });
   const sc=document.getElementById("acct-scrim"); if(sc) sc.classList.remove("on");
@@ -18714,6 +18752,35 @@ function ensureVersionBadge(){
   v.textContent=String(TOOL_VERSION).split(":")[0].trim();
 }
 
+function toggleViewSw(e){
+  if(e) e.stopPropagation();
+  const el=document.getElementById("view-panel"); if(!el) return;
+  const was=el.classList.contains("open");
+  closeAllPops();
+  VIEW_OPEN=!was;
+  if(VIEW_OPEN) el.classList.add("open");
+}
+/* The three controls that used to sit on the row, each given the width it
+   needed all along. Nothing here changes what they do - same BR_SORT
+   entries, same brSetGroup, same brSetLens, same kit class on the pills.
+   They are only given room. */
+function viewPanelHtml(){
+  return `<div class="bphead">Sort by</div>
+    <div class="vpsec"><select onchange="brSetSort(this.value)">${
+      Object.entries(BR_SORT).map(([k,v])=>
+        `<option value="${k}"${brSort===k?" selected":""}>${escHtml(v)}</option>`).join("")
+    }</select></div>
+    <div class="bphead">Group</div>
+    <div class="vpsec"><div class="brl-lens">
+      <span class="${brGroup?"":"on"}" onclick="brSetGroup(0)">Flat</span>
+      <span class="${brGroup?"on":""}" onclick="brSetGroup(1)">By project</span>
+    </div></div>
+    <div class="bphead">Show</div>
+    <div class="vpsec"><div class="brl-lens">${
+      ["timing","work","people"].map(k=>
+        `<span class="${brLens===k?"on":""}" onclick="brSetLens('${k}')">${k[0].toUpperCase()+k.slice(1)}</span>`).join("")
+    }</div></div>`;
+}
 function popOpen(id,e){
   if(e) e.stopPropagation();
   const el=document.getElementById(id); if(!el) return;
