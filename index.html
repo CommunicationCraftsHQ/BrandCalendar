@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V103.04 — Mayfly: the hour the bar went quiet"/>
+<meta name="cc-tool-version" content="V104.00 — Termite: the faults that were never anyone’s batch"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -6117,7 +6117,9 @@ function saveEv(){
       else arr[idx]=updated;
       if(!updated._custom){
         dbPushMasterEvent(m,updated); // same id → updates everywhere instantly
-        if(G){const gr=G.evts.find(r=>r.id===updated.id); if(gr){gr.month=m;gr.date=updated.date;gr.name=updated.name;gr.cat=updated.cat;gr.notes=updated.notes||"";gr.relevance=updated.relevance||{};gr.mega=!!updated.mega;}}
+        /* TERMITE — the same shape the database was just given, so the
+           screen cannot know less than the row does. */
+        if(G){const gr=G.evts.find(r=>r.id===updated.id); if(gr) Object.assign(gr,evRow(m,updated));}
       }
     }
   } else if(activeBrand&&brands[activeBrand]){
@@ -6133,7 +6135,9 @@ function saveEv(){
     const newEv={id:evtId(m,evData.date,evData.name,null),...evData};
     evs[m].push(newEv);
     dbPushMasterEvent(m,newEv);
-    if(G) G.evts.push({id:newEv.id,year:YEAR,month:m,date:newEv.date,name:newEv.name,cat:newEv.cat,notes:newEv.notes||"",relevance:newEv.relevance||{},mega:!!newEv.mega,deleted_at:null});
+    /* TERMITE — the same one shape. A new event arrived on screen
+       missing the very fields an edited one used to lose. */
+    if(G) G.evts.push({...evRow(m,newEv),deleted_at:null});
     autoTagBrands([newEv]); // flows into every brand whose industry matches
   }
   saveEvsLS(); closeM("ev-edit"); curMonth=m; render();
@@ -8292,7 +8296,7 @@ function msgHtml(m){
       <div class="th-h"><b>${who}</b>
         <span class="th-kind">Team</span>
         <span class="th-when">${m.created_at?fmtWhen(m.created_at):""}</span></div>
-      <div class="th-t">${fbRich(m.body||"")}</div>
+      <div class="th-t">${fbBody(m.body||"")}</div>
     </div></div>`;
   if(TASK_EDITING===m.id) return `<div class="th-m">
     <span class="th-av${client?" cli":""}">${escHtml(brInitials(m.author_id)||"··")}</span>
@@ -8327,7 +8331,7 @@ function msgHtml(m){
       <div class="th-h"><b>${who}</b>
         <span class="th-kind${client?" cli":""}">${client?"Client":"Team"}</span>
         ${by}<span class="th-when">${m.created_at?fmtWhen(m.created_at):""}${m.edited_at?" · edited":""}</span></div>
-      <div class="th-t">${fbRich(m.body||"")}</div>
+      <div class="th-t">${fbBody(m.body||"")}</div>
       ${mediaBlock(assetsFor("message",m.id))
        +uploadLiveBlock("message",m.id)
        +uploadFailBlock("message",m.id)}
@@ -8771,7 +8775,7 @@ function renderBranding(){
         ended up with five rhythms. -->
    <div class="pgbar" style="justify-content:space-between;">
      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;">
-       <div style="font-size:15px;font-weight:700;">
+       <div style="font-size:15px;font-weight:700;flex:0 0 auto;white-space:nowrap;">
          ${BR.ok
             ? (brFilter.archived
                  ? `${rows.length} Archived`
@@ -8791,16 +8795,23 @@ function renderBranding(){
             chips are a KIT class and not mine to widen, so the fix is in
             the order and the boxes of my own markup: the strip may wrap,
             the two lens groups may shrink and scroll inside themselves,
-            and the two buttons never shrink and never leave the row. -->
-       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
-         ${BR.ok?`<label class="brl-sort" style="flex:0 1 auto;"><b>Sort</b><select onchange="brSetSort(this.value)">${
+            and the two buttons never shrink and never leave the row.
+
+            TERMITE, 15 September — it wrapped anyway. "flex:0 1 auto" is
+            not enough on its own: a flex item's min-width is "auto", so
+            none of these three boxes would shrink below its own content
+            and the buttons were pushed onto a second line. They each get
+            "min-width:0" so the shrinking Tallinn asked for can actually
+            happen, and the row itself is told never to wrap. -->
+       <div style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;justify-content:flex-end;min-width:0;">
+         ${BR.ok?`<label class="brl-sort" style="flex:0 1 auto;min-width:0;"><b>Sort</b><select onchange="brSetSort(this.value)">${
              Object.entries(BR_SORT).map(([k,v])=>
                `<option value="${k}"${brSort===k?" selected":""}>${escHtml(v)}</option>`).join("")
            }</select></label>
-         <div class="brl-lens" style="flex:0 1 auto;overflow-x:auto;scrollbar-width:none;">
+         <div class="brl-lens" style="flex:0 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none;">
            <span class="${brGroup?"":"on"}" onclick="brSetGroup(0)" style="flex:none;white-space:nowrap;">Flat</span>
            <span class="${brGroup?"on":""}" onclick="brSetGroup(1)" style="flex:none;white-space:nowrap;">Group by project</span></div>
-         <div class="brl-lens" style="flex:0 1 auto;overflow-x:auto;scrollbar-width:none;">
+         <div class="brl-lens" style="flex:0 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none;">
            ${["timing","work","people"].map(k=>`<span class="${brLens===k?"on":""}" onclick="brSetLens('${k}')" style="flex:none;white-space:nowrap;">${k[0].toUpperCase()+k.slice(1)}</span>`).join("")}
          </div>`:""}
          <span style="display:flex;align-items:center;gap:10px;flex:none;">
@@ -9531,7 +9542,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V103.04 — Mayfly: the hour the bar went quiet";
+const TOOL_VERSION="V104.00 — Termite: the faults that were never anyone’s batch";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -14612,6 +14623,21 @@ async function purgeTrash(table,id){
     return;
   }
   if(!confirm("Delete forever? This cannot be undone.")) return;
+  /* ══ TERMITE — FILES FIRST, THEN ROWS ══════════════════════════════
+     Utrecht wrote that rule on 18 August and this function did not obey
+     it: deleting the row first leaves its files in the bucket with
+     nothing left pointing at them. Not merely orphaned — INVISIBLE,
+     because every query that finds an orphan works by joining storage
+     against `assets`, and the asset row has just been taken away.
+
+     If the files cannot be removed, the row STAYS. A failed tidy-up is
+     recoverable; an untraceable file is not. */
+  const own=await sb.from("assets").select("*").eq("owner_id",id).is("deleted_at",null);
+  if(own.error){ toast("Could not check this item's files — nothing was deleted","err"); return; }
+  if((own.data||[]).length){
+    const rm=await removeAssetsAndFiles(own.data);
+    if(!rm.ok){ toast("Some files could not be removed — the item is still here, so we can try again","err"); return; }
+  }
   const r=await sb.from(table).delete().eq("id",id);
   if(r.error){toast(r.error.message,"err");return;}
   toast("Deleted forever"); openTrash();
@@ -18638,15 +18664,30 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeAllPops(); })
    it had to be fixed before the field could be trusted.
    ═══════════════════════════════════════════════════════════════════ */
 
+/* ══ TERMITE — ONE SHAPE FOR AN EVENT ROW ═════════════════════════════
+   Chirag, 7 September: editing an event saves, and the year view keeps
+   showing the old end date, the old mega flag, the old tentative mark.
+   The write was never wrong. `saveEv` wrote the row correctly and then
+   hand-copied a NAMED LIST of fields back into the page's own cache —
+   month, date, name, cat, notes, relevance, mega — and everything not on
+   that list was saved and then not shown until the next reload.
+
+   D1 fixed the same fault once before, on end_month and end_date, at
+   both ends. A list that has to be kept in step with another list is a
+   fault waiting for its next field, so there is one list now and both
+   ends read it. */
+function evRow(m,e){
+  return {id:e.id,year:YEAR,month:m,date:e.date,name:e.name,cat:e.cat||"cat1",
+    notes:e.notes||"",relevance:e.relevance||{},mega:!!e.mega,
+    shopping:!!e.shopping,tentative:!!e.tentative,
+    /* D1: written as null rather than omitted, so clearing a range
+       actually clears it instead of leaving the old end date behind. */
+    end_month:e.endMonth||null,end_date:e.endDate||null};
+}
 async function dbPushMasterEvent(m,e){
   if(!canEdit()) return;
   return rtChain("events:"+e.id,async()=>{
-    const row={id:e.id,year:YEAR,month:m,date:e.date,name:e.name,cat:e.cat||"cat1",
-      notes:e.notes||"",relevance:e.relevance||{},mega:!!e.mega,shopping:!!e.shopping,tentative:!!e.tentative,
-      /* D1: these two were missing. Written as null rather than omitted,
-         so clearing a range actually clears it instead of leaving the
-         old end date behind. */
-      end_month:e.endMonth||null,end_date:e.endDate||null};
+    const row=evRow(m,e);
     if(e._uat){
       const r=await sb.from("events").update(row).eq("id",row.id).eq("updated_at",e._uat).select();
       if(r&&r.error){ dbErr(r); return; }
@@ -19663,7 +19704,7 @@ function mpvSheetHtml(m,canE){
       ${mpvLbl("Goals",canE?`mpvAdd('goal',${m})`:"")}
       ${goalsAll.length
         ? `<div class="mpv-goals">${untagged.concat(tagged).map(g=>mpvGoalPill(g,m,canE)).join("")}</div>`
-        : `<div class="mpv-empty">No goals yet.${canE?` <span class="mpv-start" onclick="mpvAdd('goal',${m})">Add one</span>`:""}</div>`}
+        : `<div class="mpv-empty">No goals yet.</div>`}
 
       ${targets.length?`<div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);margin:15px 0 0;">Targets</div>
         <div class="mpv-strip">${targets.map(t=>`<div class="mpv-metric"><b>${escAttr(t.value||t.label)}</b><span>${escAttr(t.value?t.label:"")}</span></div>`).join("")}
@@ -19710,7 +19751,7 @@ function buildMonthPlanSidebar(){
              that "planned" would be the same kind of quiet lie the batch
              was called to remove. */""}
        ${months.length===12?"Every month has something in it."
-         :`${12-months.length} month${12-months.length===1?"":"s"} ${12-months.length===1?"is":"are"} empty${canE?" — click a faded one to start it":""}.`}
+         :`${12-months.length} month${12-months.length===1?"":"s"} ${12-months.length===1?"is":"are"} empty.`}
      </div>`;
 }
 
