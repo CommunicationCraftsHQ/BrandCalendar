@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V102.00 — Cicada: one answer to what a brand sits under"/>
+<meta name="cc-tool-version" content="V103.00 — Verona: one row, one hover group, one way to pick an industry"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -446,6 +446,23 @@ body.planning .mc-day:hover{box-shadow:0 0 0 2px #0EA5A5 inset;border-radius:5px
 
 /* brand card */
 .bm-card{border:1.5px solid var(--div);border-radius:var(--rc);padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;background:var(--surface);transition:border-color 120ms;}
+.bm-card.bm-kid{margin-left:26px;}
+/* VERONA — the industry field */
+.bfi-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.bfi-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;
+  border:1.5px solid var(--acc);background:#fff;color:var(--acc);font-size:12.5px;font-weight:600;
+  cursor:pointer;font-family:inherit;}
+.bfi-chip i{font-size:13px;opacity:.7;}
+.bfi-chip:hover i{opacity:1;}
+.bfi-none{font-size:12px;color:var(--subtle);padding:2px 0;}
+.bfi-box{border:1px solid var(--div);border-radius:10px;overflow:hidden;background:var(--surface);}
+.bfi-q{width:100%;border:none;border-bottom:1px solid var(--div);background:transparent;
+  padding:9px 11px;font-size:13px;font-family:inherit;color:var(--text);outline:none;}
+.bfi-res{max-height:210px;overflow-y:auto;padding:4px;}
+.bfi-row{display:flex;align-items:baseline;gap:7px;width:100%;text-align:left;border:none;
+  background:transparent;padding:7px 8px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px;color:var(--text);}
+.bfi-row:hover{background:var(--surface2);}
+.bfi-row .w{font-size:11.5px;color:var(--subtle);}
 .bm-card:hover{border-color:#aaa;}
 .bm-card.on{border-color:var(--acc);background:rgba(214,40,40,.04);}
 .bm-name{font-size:14px;font-weight:700;letter-spacing:-.01em;}
@@ -1054,6 +1071,99 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 
 
 
+/* ══ VERONA — THE FIVE TABS IN THE BAR ════════════════════════════════
+   They sit next to the switcher and read as one group, the way the old
+   doors did underneath. Same icon set, same segmented shape the bar
+   already uses for Calendar/Events, so nothing new had to be invented. */
+.bntabs{display:flex;align-items:center;gap:2px;padding:3px;border-radius:calc(var(--r) + 2px);
+  background:rgba(255,255,255,.08);margin-left:2px;}
+.bntab{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;border:none;
+  border-radius:var(--r);background:transparent;color:rgba(255,255,255,.72);
+  font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;}
+.bntab i{font-size:15px;}
+.bntab:hover{background:rgba(255,255,255,.12);color:#fff;}
+.bntab.on{background:#fff;color:var(--text);}
+/* 1180px is where this tool's button rows have wrapped before. The
+   words go before any tab does, and the tool's own name goes first. */
+@media (max-width:1240px){ .bntab span,.nav-brand{font-size:12.5px;} .bntab{padding:0 9px;} }
+
+/* ══ VERONA — THE PAGE STARTS WHERE THE SIDEBAR STARTS ════════════════
+   With the second row gone, every screen's content ran straight into the
+   bottom of the black bar: the renderers all say `padding:0 32px 20px`,
+   and the row that used to give them their top gap is not there any
+   more. Chirag saw it on Posts the moment he looked at the photograph.
+
+   ONE NUMBER, IN ONE PLACE. 20px here puts the first thing in the page
+   on exactly the same line as the first thing in the sidebar, which is
+   what he asked for — the two columns now begin together on every screen
+   instead of 20px apart. `.main` itself belongs to the kit and four other
+   tools use it, so this is scoped to the Calendar's own #main.
+
+   An empty #sb-stats still spent its 4px bottom margin, which is why
+   the sidebar started 4px lower on Posts and Tasks than on the calendar.
+   A box with nothing in it should occupy nothing. */
+/* ══ VERONA — THE PAGE'S VERTICAL RHYTHM, IN TWO NUMBERS ══════════════
+   Chirag, 15 September, reading five photographs side by side: the gap
+   from the black bar to the first thing on the page, and the gap from
+   that first thing to the second, must be THE SAME PIXEL ON EVERY PAGE.
+   They were not: 20 then 14 on the calendar, 20 then 12 on Tasks, 20
+   then 58 of dead air on Vision, where the actions row still carried
+   Cape Town's frozen 94px header height around a 36px row of buttons.
+
+   So there are two numbers and every screen reads them. A screen that
+   wants a different gap has to change the token, which changes all of
+   them — which is the point. Nothing here sets a top gap of its own. */
+:root{--pg-top:20px;--pg-gap:16px;--pg-x:32px;}
+#main{padding-top:var(--pg-top);}
+#sb-stats:empty{display:none;}
+/* THE CONTROL ROW. Every page that has one uses this: same height, same
+   side padding as the content under it, and the one gap below. */
+.pgbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  min-height:36px;padding:0 var(--pg-x);margin:0 0 var(--pg-gap);}
+.pgbar > *{margin-top:0;margin-bottom:0;}
+/* The actions row on Vision and the task thread. `.ph` is the kit's and
+   four other tools use it, so its 94px stands there and is overridden
+   only here, where the row is now nothing but its buttons. */
+#main .ph.ph-acts-only{height:auto;min-height:36px;padding:0 var(--pg-x);
+  margin:0 0 var(--pg-gap);align-items:center;}
+#main .ph.ph-acts-only .ph-acts{margin:0;}
+#main .bd-wrap{margin-top:0;}
+/* The calendar's filter summary is empty on most days and was spending
+   14px saying nothing. */
+.pgfilter:empty{display:none;}
+.pgfilter{padding:0 var(--pg-x);margin:0 0 var(--pg-gap);}
+/* The tasks list sat 12px under its own control row. */
+#main .brl{margin-top:0;}
+/* The Plan page is the one screen that sizes ITSELF to the window
+   (`height:calc(100vh - 60px)`) so its list can scroll inside its own
+   frame. With the page's new top gap that made it 20px taller than the
+   space it had, and #main scrolled by exactly that — the sheet started
+   at the bar again while every other screen had moved down. It takes the
+   gap off its own height instead. */
+#main > .mpv{height:calc(100vh - 80px - var(--cc-alarm-h,0px));}
+
+/* ══ VERONA — THE CALENDAR'S OWN CONTROLS, ON THE CALENDAR'S PAGE ═════
+   The nodes are the nav's; only where they sit and how they are painted
+   changes. Everything here is scoped to #calstrip so the nav's own
+   copies of these rules are untouched — if a future screen wants them
+   back in the bar, deleting this block is the whole of it. */
+.calstrip{/* it IS the control row — see .pgbar */}
+#calstrip .tab-pill{background:var(--surface2);}
+#calstrip .tab-item{color:var(--muted);}
+#calstrip .tab-item.on{background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(13,13,13,.07);}
+#calstrip .lay,#calstrip .qtog{color:var(--muted);border-color:var(--div);background:var(--surface);}
+#calstrip .lay.on,#calstrip .qtog.on{color:var(--text);background:var(--surface2);border-color:var(--div);}
+/* THE SWITCH ITSELF. Both tracks are white-on-dark in the bar, which on
+   a white strip is a white pill on white — the photograph showed "Past
+   months" as a wide empty button with no switch in it at all. */
+#calstrip .lay .sw,#calstrip .qtog i.sw{background:#D8D5CE;}
+#calstrip .lay .sw::after,#calstrip .qtog i.sw::after{box-shadow:0 1px 2px rgba(13,13,13,.25);}
+#calstrip .ystep{background:var(--surface2);}
+#calstrip .ystep button{color:var(--muted);}
+#calstrip .ystep button:hover{background:rgba(13,13,13,.06);color:var(--text);}
+#calstrip .ystep .yv{color:var(--text);}
+#calstrip .nav-sep{background:var(--div);}
+
 /* brand switcher */
 .bsw{position:relative;}
 .bstrig{display:flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:var(--r);
@@ -1120,6 +1230,26 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .brfold:hover{background:rgba(13,13,13,.05);color:var(--text);}
 .brfold i{font-size:14px;}
 .brfold .n{margin-left:auto;font-size:11px;color:var(--subtle);font-weight:700;}
+/* ══ VERONA — ONE BUTTON, THREE CONTROLS ══════════════════════════════
+   bell · eye · people, in a single box at the right of the row, in the
+   shape the people button used to have on its own. The box is there at
+   rest and empty of ink (visibility), so the name never moves when the
+   cursor arrives — Lucern measured that slide at 37px with two separate
+   buttons, and this is the same fix with one box.
+
+   It shows itself without a pointer in exactly two cases: a muted brand
+   and a hidden one, because in both the icon IS the explanation. */
+.bacts{margin-left:auto;display:inline-flex;gap:1px;flex:none;padding:2px;
+  border:1px solid var(--div);border-radius:8px;background:var(--surface);visibility:hidden;}
+.brow:hover .bacts,.brow.bmuted .bacts,.brow.bhid .bacts{visibility:visible;}
+.bact{width:24px;height:21px;border-radius:6px;border:none;background:transparent;
+  color:var(--subtle);font-size:13px;display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;font-family:inherit;padding:0;}
+.bact:hover{background:var(--surface2);color:var(--text);}
+.bact.mut{color:var(--acc);}
+.brow.on .bacts{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.2);}
+.brow.on .bact{color:rgba(255,255,255,.75);}
+.brow.on .bact:hover{background:rgba(255,255,255,.18);color:#fff;}
 /* ── LUCERN — the switcher carries two new things per row ── */
 .brow .bgear,
 .brow .bmute{width:24px;height:24px;border-radius:6px;border:1px solid transparent;background:transparent;
@@ -1895,7 +2025,17 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
    List wrapped its header in a div and lost it, so the same header stood
    84px tall there and 94px everywhere else. Ten pixels, invisible on any
    one screen, and exactly the kind of drift this batch exists to end. */
-#main > div:first-child{min-height:94px;box-sizing:border-box;}
+/* ══ VERONA — THE RESERVED 94px IS RETIRED ════════════════════════════
+   It existed because the brand header was 94px tall and the all-brands
+   header was not, and the jump between them was visible. THERE IS NO
+   HEADER ROW ANY MORE — the name and the doors are in the black bar —
+   so this rule was no longer reserving space for anything. What it was
+   doing instead was inflating whatever happened to be first on the page:
+   the calendar's control row stood 94px tall around a 36px row of
+   buttons, which is exactly the uneven rhythm Chirag saw across the five
+   photographs. The screens that still lead with .year-head keep their
+   height from .year-head itself, which is where it belongs. */
+#main > .year-head{min-height:94px;box-sizing:border-box;}
 .bd-headrow{display:flex;align-items:baseline;gap:10px;}
 .year-tag{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 /* v52.2 — D7 made both headers 94px, but INSIDE them the two states
@@ -2750,13 +2890,23 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
     <div class="bpanel" id="brand-panel"></div>
   </div>
 
+  <!-- VERONA — the brand's five pages, in the bar. They replace the
+       second row that used to print the brand's name again under it. -->
+  <div class="bntabs" id="bn-tabs"></div>
+
   <!-- ══ CAPE TOWN · TWO QUESTIONS, TWO SHAPES ═══════════════════════
        Calendar and List are MUTUALLY EXCLUSIVE — one is always on — so
        they are a switch. Social and Branding are INDEPENDENT on/off — none,
        one or both — so they are toggles. The old bar drew both as identical
        tabs, which is why nobody could tell that Content behaved unlike its
        neighbours. The shape now carries the rule. -->
-  <div class="tab-pill" style="margin-left:2px;">
+  <!-- VERONA — this pill, the two layer toggles, the year and the
+       past-months switch are all WAYS OF LOOKING AT THE CALENDAR, not
+       parts of the tool. mountCalStrip() moves these very elements onto
+       the calendar page at render, so every handler, id and bit of state
+       they carry is the same object it always was — nothing is rebuilt
+       and nothing was rewired. -->
+  <div class="tab-pill" id="view-pill" style="margin-left:2px;">
     <button class="tab-item on" data-v="year" onclick="setView('year',this)">Calendar</button>
     <button class="tab-item" data-v="list" onclick="setView('list',this)">Events</button>
   </div>
@@ -2771,7 +2921,7 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
     <!-- The year and the past-months switch are SETTINGS for the view, not
          destinations. They were sitting where destinations go. The month
          range label is gone: it restated what the visible cards showed. -->
-    <div class="ystep">
+    <div class="ystep" id="year-step">
       <button onclick="stepYear(-1)" title="Previous year">‹</button>
       <span class="yv" id="year-val">2026</span>
       <button onclick="stepYear(1)" title="Next year">›</button>
@@ -4048,12 +4198,10 @@ function eeSetEndDate(d,m){
 // the content view AND both brand-brief screens. They drifted apart
 // (34px vs 40px, dot vs no dot, centred vs baseline) precisely because
 // each screen wrote its own copy.
-function brandTitleHtml(name){
-  return `<div class="year-title brand-title" style="font-size:34px;color:var(--acc);line-height:1;">${escAttr(name)}<span style="color:var(--text);">.</span></div>`;
-}
+/* VERONA — brandTitleHtml() is gone with the red name it drew. */
 /* Which of the four is current. The task thread is not a fifth screen —
    it is a room inside Tasks, so Tasks stays lit while you are in it. */
-function phActive(){ return view==="task" ? "branding" : view; }
+/* VERONA — phActive() is gone with the doors it marked. */
 
 /* THE ONE HEAD. `acts` is the only thing a page supplies, and only two
    pages supply anything. Every other screen calls this with nothing and
@@ -4071,22 +4219,18 @@ function phActive(){ return view==="task" ? "branding" : view; }
    "Social Content" are two different things one word apart and they will
    be confused in conversation before they are confused on screen. */
 function pageHead(acts){
+  /* ══ VERONA — THE ROW IS THE PAGE'S OWN ACTIONS, AND NOTHING ELSE ═══
+     This used to print the brand's name in red and four doors under it,
+     on every screen. Both moved into the bar on 15 September: the name
+     is the switcher (it was being said twice) and the doors are the five
+     tabs. What is left is what only a page can know — its own buttons —
+     and two pages supply any.
+
+     WITH NOTHING TO SHOW IT SHOWS NOTHING. The empty row still cost its
+     padding, which is the row this batch exists to remove. */
   const b=brands[activeBrand]; if(!b) return "";
-  const name=brandTitleHtml(b.name);
-  const right=acts?`<div class="ph-sp"></div><div class="ph-acts">${acts}</div>`:"";
-  if(!canEdit()) return `<div class="ph">${name}${right}</div>`;
-  const active=phActive();
-  const seg=(k,onclick,icon,label)=>
-    `<button class="bh-door${active===k?" on":""}" onclick="${onclick}"
-       aria-current="${active===k?"page":"false"}">
-       <i class="ti ${icon}"></i> ${label}</button>`;
-  const doors=`<div class="bh-seg">`+[
-    seg("brief",   "openBrief()",                    "ti-file-text",      "Brand Vision"),
-    seg("mplan",   "openMonthPlanView(curMonth||1)", "ti-calendar-stats", "Monthly plan"),
-    seg("content", "navPosts()",                     "ti-photo",          "Posts"),
-    seg("branding","navTasks()",                     "ti-clipboard-text", "Tasks"),
-  ].join("")+`</div>`;
-  return `<div class="ph">${name}${doors}${right}</div>`;
+  if(!acts) return "";
+  return `<div class="ph ph-acts-only"><div class="ph-sp"></div><div class="ph-acts">${acts}</div></div>`;
 }
 
 /* A control that silently does nothing is worse than one that says why.
@@ -4114,7 +4258,7 @@ function renderYear(){
   if(b){
     /* The padding used to be restated here to "match .year-head exactly".
        It does not have to match anything now — .ph owns it, once. */
-    header=pageHead()+`<div style="padding:0 32px 14px;">${filterSummaryHtml()}</div>`;
+    header=pageHead()+`<div class="pgfilter">${filterSummaryHtml()}</div>`;
   } else {
     header=`<div class="year-head"><div class="year-title">${YEAR}<span>.</span></div>
       <div class="year-sub">Click any date to view or add events</div>${filterSummaryHtml()}</div>`;
@@ -6030,13 +6174,36 @@ function openNewEv(){
 
 // ── BRAND MANAGER ──────────────────────────────────────────
 
+/* VERONA — one ordering, used by the manager. It answers with pairs of
+   [id, isChild] so the row can indent itself without asking again. */
+function brMgrOrder(){
+  const all=Object.entries(brands).sort((x,y)=>String(x[1].name).localeCompare(String(y[1].name)));
+  const has=new Set(all.map(([k])=>k));
+  const out=[], placed=new Set();
+  all.forEach(([k,b])=>{
+    if(placed.has(k)) return;
+    if(b.parent_id&&has.has(b.parent_id)) return;   // drawn under its parent
+    out.push([k,false]); placed.add(k);
+    all.forEach(([ck,cb])=>{
+      if(placed.has(ck)||cb.parent_id!==k) return;
+      out.push([ck,true]); placed.add(ck);
+    });
+  });
+  return out;
+}
 function renderBM(){
   const list=document.getElementById("bm-list"); list.innerHTML="";
-  const keys=Object.keys(brands);
+  /* VERONA — ALPHABETICAL, WITH SUB-BRANDS UNDER THEIR PARENT.
+     `Object.keys` is the order the brands were added, which is nobody's
+     order. This is the placement the switcher panel already does — the
+     same two loops, so the manager and the switcher can never disagree
+     about where a brand sits. A child whose parent is not in the list
+     rises to the top level and is sorted among the parents. */
+  const keys=brMgrOrder();
   if(!keys.length) list.innerHTML=`<div style="padding:20px;text-align:center;font-size:13px;color:var(--muted);">No brands yet. Add your first brand.</div>`;
-  keys.forEach(k=>{
+  keys.forEach(([k,kid])=>{
     const b=brands[k];
-    const card=document.createElement("div"); card.className="bm-card"+(activeBrand===k?" on":"");
+    const card=document.createElement("div"); card.className="bm-card"+(activeBrand===k?" on":"")+(kid?" bm-kid":"");
     const indLabels=(b.inds||[]).map(id=>INDS.find(x=>x.id===id)?.label||id).join(", ");
     const evCnt=(b.evIds||[]).length;
     card.innerHTML=`<div><div class="bm-name">${b.name}</div><div class="bm-meta">${indLabels||"No industry set"} · ${evCnt} event${evCnt!==1?"s":""} tagged</div></div>
@@ -6052,37 +6219,73 @@ function renderBM(){
 }
 
 function buildBfIndGrid(){
-  /* Two levels, one grid: each sector on its own row with its industries
-     after it. A brand may be tagged at either level — the sector when
-     that is all that is known, the industry when it is not. */
-  const g=document.getElementById("bf-ind-grid"); if(!g) return; g.innerHTML="";
-  const chip=(ind,sub)=>{
-    const on=bmInds.includes(ind.id);
-    const c=document.createElement("button"); c.type="button";
-    c.style.cssText=`padding:${sub?"3px 9px":"5px 12px"};border-radius:6px;font-size:${sub?"11px":"12px"};font-weight:600;cursor:pointer;border:1.5px solid ${on?"var(--acc)":"var(--div)"};background:${on?"rgba(214,40,40,.08)":sub?"var(--surface)":"var(--bg)"};color:${on?"var(--acc)":"var(--muted)"};font-family:inherit;transition:all 120ms;`;
-    c.textContent=ind.label;
-    c.onclick=()=>{
-      if(bmInds.includes(ind.id)) bmInds=bmInds.filter(x=>x!==ind.id);
-      else bmInds.push(ind.id);
-      buildBfIndGrid();
-    };
-    return c;
-  };
-  const kids=sec=>INDS.filter(i=>i.parent_id===sec.id||(indById(i.parent_id||"")||{}).parent_id===sec.id);
-  SECTORS().forEach(sec=>{
-    const row=document.createElement("div");
-    row.style.cssText="display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:4px 0;border-bottom:1px solid var(--div);";
-    row.appendChild(chip(sec,false));
-    kids(sec).forEach(k=>row.appendChild(chip(k,true)));
-    g.appendChild(row);
-  });
-  /* a tag pointing at a row that no longer exists must stay visible,
-     never silently dropped */
-  bmInds.filter(id=>!indById(id)).forEach(id=>{
-    const row=document.createElement("div"); row.style.cssText="padding:4px 0;";
-    row.appendChild(chip({id,label:id},true)); g.appendChild(row);
-  });
+  /* ══ VERONA — ONE LINE INSTEAD OF A WALL ═══════════════════════════
+     Forty-five chips in one wrap, sectors and industries in the same
+     shape, and the one you had chosen somewhere in the middle of them.
+     Chirag chose option C from the mockups on 15 September: what you
+     have picked sits at the top as chips you can take off, and the rest
+     is one field you type into.
+
+     THE FIELD IS NOT EMPTY WHEN IT IS EMPTY. A box that shows nothing
+     until you type leaves a new joiner with no way to learn the list, so
+     with nothing typed it offers the ten sectors — the same first step
+     the old grid gave, in ten lines instead of forty-five.
+
+     A brand may still be tagged at EITHER level, so both sectors and
+     industries are in what you search; the sector's name follows an
+     industry in the results, because "Beverages" alone is not an answer
+     to which list you are in.
+
+     A tag pointing at a row that no longer exists is still shown, and
+     still removable. It was never silently dropped and still is not. */
+  const g=document.getElementById("bf-ind-grid"); if(!g) return;
+  g.innerHTML=`<div id="bf-ind-chips" class="bfi-chips"></div>
+    <div class="bfi-box">
+      <input id="bf-ind-q" class="bfi-q" type="text" autocomplete="off"
+             placeholder="Type an industry, or pick a sector below"
+             oninput="bfIndResults(this.value)" onfocus="bfIndResults(this.value)">
+      <div id="bf-ind-res" class="bfi-res"></div>
+    </div>`;
+  bfIndChips(); bfIndResults("");
 }
+function bfIndChips(){
+  const c=document.getElementById("bf-ind-chips"); if(!c) return;
+  c.innerHTML=bmInds.length
+    ? bmInds.map(id=>{
+        const ind=indById(id);
+        return `<button type="button" class="bfi-chip" onclick="bfIndDrop('${id}')"
+          title="Remove">${escAttr(ind?ind.label:id)}<i class="ti ti-x"></i></button>`;
+      }).join("")
+    : `<span class="bfi-none">Nothing picked yet — a brand needs at least one.</span>`;
+}
+function bfIndDrop(id){ bmInds=bmInds.filter(x=>x!==id); bfIndChips(); bfIndResults(document.getElementById("bf-ind-q")?.value||""); }
+function bfIndAdd(id){
+  if(!bmInds.includes(id)) bmInds.push(id);
+  const q=document.getElementById("bf-ind-q"); if(q){ q.value=""; q.focus(); }
+  bfIndChips(); bfIndResults("");
+}
+function bfIndResults(q){
+  const box=document.getElementById("bf-ind-res"); if(!box) return;
+  const term=String(q||"").trim().toLowerCase();
+  const row=(ind,where)=>`<button type="button" class="bfi-row" onclick="bfIndAdd('${ind.id}')">
+      <span class="l">${escAttr(ind.label)}</span>${where?`<span class="w">· ${escAttr(where)}</span>`:""}</button>`;
+  if(!term){
+    box.innerHTML=SECTORS().filter(sc=>!bmInds.includes(sc.id))
+      .map(sc=>row(sc,"")).join("")||`<div class="bfi-none">Every sector is already picked.</div>`;
+    return;
+  }
+  const sectorOf=i=>{
+    if(!i.parent_id) return "";
+    const p=indById(i.parent_id); if(!p) return "";
+    return p.parent_id ? ((indById(p.parent_id)||{}).label||p.label) : p.label;
+  };
+  const hits=INDS.filter(i=>!i.deleted_at&&!bmInds.includes(i.id)&&
+      String(i.label||"").toLowerCase().includes(term)).slice(0,12);
+  box.innerHTML=hits.length
+    ? hits.map(i=>row(i,sectorOf(i))).join("")
+    : `<div class="bfi-none">Nothing matches “${escAttr(q)}”.</div>`;
+}
+
 
 /* buildBfEvList and its tickbox list are retired — the Events view owns add/remove now. */
 
@@ -6589,27 +6792,42 @@ let BRQ="";
 function brSearchKey(v){ BRQ=v; buildBrandPanel();
   const i=document.getElementById("brl-q"); if(i){ i.focus(); i.setSelectionRange(i.value.length,i.value.length); } }
 function brandRowHtml(k,b,indent){
-  /* LOCUST — THE DOT AND THE EYE SHARE ONE SLOT. Both are drawn; the CSS
-     shows one at a time, so the resting list is exactly what it was and
-     the eye appears only under the pointer. The slot is 15px because an
-     eye at the dot's 9px is a smudge, and it carries -6px of margin so
-     the NAME DOES NOT MOVE and the row does not grow.
+  /* VERONA — THE NAME STARTS AT THE LEFT, AND THE THREE CONTROLS LIVE IN
+     ONE BUTTON THAT APPEARS UNDER THE POINTER. Chirag, 15 September:
+     bell, eye, people, in that order, in the shape the people button
+     already had.
 
-     No eye on the row you are standing on, and none on All brands. */
-  const eye=(k!==activeBrand);
+     The colour dot is gone from the rows. It was decoration on a list
+     where almost every brand is the same grey, and it cost the name its
+     left edge — which is the thing you actually read down.
+
+     THE GROUP KEEPS ITS BOX AT REST (visibility, not display), so
+     nothing moves sideways when the cursor arrives. Lucern measured that
+     37px slide; this is the same fix, one box instead of two.
+
+     TWO STATES SHOW THE GROUP WITHOUT A POINTER, because both are facts
+     about the brand that must be readable at a glance: a muted brand
+     (the crossed bell is the whole signal, per Lucern) and a hidden one
+     turned up by a search (the crossed eye says why it is greyed). */
+  const mut=brandMuted(k);
   const hid=prefFor(k).hidden;
-  return `<div class="brow${activeBrand===k?" on":""}${brandMuted(k)?" bmuted":""}${hid?" bhid":""}"${indent?` style="padding-left:26px;"`:""} onclick="pickBrand('${k}')">
-        <span class="bslot"${eye?` onclick="event.stopPropagation();brandHide('${k}',${hid?0:1})"
-           title="${hid?`Put ${escAttr(b.name)} back in your list`:`Hide ${escAttr(b.name)} from your list — just for you`}"`:""}>
-          <span class="bdot" style="background:${b.color||"#6B6B6B"}"></span>
-          ${eye?`<i class="ti ti-eye${hid?"-off":""}"></i>`:""}</span>
+  const eye=(k!==activeBrand);
+  const act=(cls,title,onclick,icon)=>
+    `<button class="bact${cls?" "+cls:""}" title="${title}"
+       onclick="event.stopPropagation();${onclick}"><i class="ti ${icon}"></i></button>`;
+  const acts=[
+    act(mut?"mut":"", mut?`Muted — turn notifications back on for ${escAttr(b.name)}`
+                         :`Mute ${escAttr(b.name)} — just for you`,
+        `notifMute('${k}',${mut?0:1})`, `ti-bell${mut?"-off":""}`),
+    eye?act(hid?"mut":"", hid?`Put ${escAttr(b.name)} back in your list`
+                             :`Hide ${escAttr(b.name)} from your list — just for you`,
+        `brandHide('${k}',${hid?0:1})`, `ti-eye${hid?"-off":""}`):"",
+    canEdit()?act("", "Who is on this brand", `openBrandPeople('${k}')`, "ti-users"):""
+  ].join("");
+  return `<div class="brow${activeBrand===k?" on":""}${mut?" bmuted":""}${hid?" bhid":""}"${indent?` style="padding-left:26px;"`:""} onclick="pickBrand('${k}')">
         <span class="bnm">${escAttr(b.name)}</span>
         <span class="bct">${(b.posts||[]).length||""}</span>
-        <button class="bmute" aria-pressed="${brandMuted(k)?"true":"false"}"
-           title="${brandMuted(k)?`Muted — turn notifications back on for ${escAttr(b.name)}`:`Mute ${escAttr(b.name)} — just for you`}"
-           onclick="event.stopPropagation();notifMute('${k}',${brandMuted(k)?0:1})"><i class="ti ti-bell${brandMuted(k)?"-off":""}"></i></button>
-        ${canEdit()?`<button class="bgear" title="Who is on this brand"
-           onclick="event.stopPropagation();openBrandPeople('${k}')"><i class="ti ti-users"></i></button>`:""}
+        <span class="bacts">${acts}</span>
       </div>`;
 }
 function buildBrandPanel(){
@@ -6892,12 +7110,12 @@ async function loadPrefs(){
     if(r.error) return;
     (r.data||[]).forEach(x=>{ PREFS[x.brand_id]={
       layer_social:x.layer_social, layer_branding:x.layer_branding, muted:!!x.muted,
-      hidden:!!x.hidden}; });
+      hidden:!!x.hidden, muted_by_eye:!!x.muted_by_eye}; });
     PREFS_OK=true;
   }catch(e){}
 }
 function prefFor(bid){
-  return (bid&&PREFS[bid])||{layer_social:null,layer_branding:null,muted:false,hidden:false};
+  return (bid&&PREFS[bid])||{layer_social:null,layer_branding:null,muted:false,hidden:false,muted_by_eye:false};
 }
 /* THE SCREEN ANSWERS FIRST AND THE DATABASE CATCHES UP. A switch that
    waits for a round trip before it moves is a switch people press twice
@@ -6911,7 +7129,8 @@ async function savePref(bid,patch){
   try{
     await sb.from("brand_prefs").upsert({user_email:me,brand_id:bid,
       layer_social:next.layer_social, layer_branding:next.layer_branding,
-      muted:!!next.muted, hidden:!!next.hidden, updated_at:new Date().toISOString()},
+      muted:!!next.muted, hidden:!!next.hidden, muted_by_eye:!!next.muted_by_eye,
+      updated_at:new Date().toISOString()},
       {onConflict:"user_email,brand_id"});
   }catch(e){}
 }
@@ -6944,7 +7163,19 @@ async function brandHide(bid,on){
      function another way — hiding the brand you are looking at leaves
      you on a screen with no way back to it. */
   if(on&&bid===activeBrand){ toast("You are looking at this brand","err"); return; }
-  await savePref(bid,{hidden:!!on});
+  /* VERONA — THE EYE ALSO MUTES, AND THE RESTORE GIVES THE BELL BACK.
+     Chirag, 15 September: hiding a brand silences it. Putting it back
+     must leave the bell where it was BEFORE the hide, or every restore
+     returns a silent brand with nothing on screen saying why. That is
+     the whole of what `muted_by_eye` is for: it tells "muted because you
+     hid it" from "muted because you meant it", and only the first is
+     undone here. A brand you muted by hand in July and hid in August
+     comes back muted, correctly. */
+  const was=prefFor(bid);
+  const patch=on
+    ? {hidden:true,  muted:true,  muted_by_eye:!was.muted}
+    : {hidden:false, muted:was.muted_by_eye?false:!!was.muted, muted_by_eye:false};
+  await savePref(bid,patch);
   buildBrandPanel();
   if(!PREFS_OK){ toast("Hidden for now — but this will come back when you reload","err"); return; }
   toast(on?`${name} hidden from your list`:`${name} is back in your list`);
@@ -8492,8 +8723,11 @@ function renderBranding(){
   mc.innerHTML=`
    ${pageHead()}
    <div style="padding:0 32px 20px;">
+     <!-- VERONA — the row keeps its own contents and takes the frame's
+          gap. 12px here and 14px on the calendar and 58px on Vision was
+          the drift; there is one number now. -->
      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;
-                 margin:0 0 12px;">
+                 margin:0 0 var(--pg-gap);">
        <div style="font-size:15px;font-weight:700;">
          ${BR.ok
             ? (brFilter.archived
@@ -9252,7 +9486,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V102.00 — Cicada: one answer to what a brand sits under";
+const TOOL_VERSION="V103.00 — Verona: one row, one hover group, one way to pick an industry";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -20431,6 +20665,87 @@ function routeAllows(r){
 function syncTabs(){
   document.querySelectorAll(".tab-item").forEach(t=>t.classList.toggle("on",t.dataset.v===view));
 }
+
+/* ══ VERONA — THE BRAND'S FIVE PAGES, IN THE BAR ══════════════════════
+   Chirag, 15 September: "immediately after the name of the brand you
+   will see the calendar for that brand, then the plan, then the posts,
+   then the tasks" — and the rule that came with it, which decides every
+   other question in this batch: THE BAR CARRIES THE BRAND AND ITS PAGES;
+   anything that changes how ONE page is displayed belongs to that page.
+
+   These five replace the second row — the big red name and its four
+   doors. The name was being said twice, once in the switcher and once
+   underneath it, and the doors cost a whole row of the screen.
+
+   They are drawn only with a brand, exactly as the doors were: Cape
+   Town's rule is that a door to a screen must never depend on how a
+   different screen is drawn, and "no brand" is not a layer. */
+const BN_TABS=[
+  {k:"year",    icon:"ti-calendar",        label:"Calendar", go:"setView('year')",              on:["year","list"]},
+  {k:"brief",   icon:"ti-file-text",       label:"Vision",   go:"openBrief()",                  on:["brief"]},
+  {k:"mplan",   icon:"ti-calendar-stats",  label:"Plan",     go:"openMonthPlanView(curMonth||1)",on:["mplan"]},
+  {k:"content", icon:"ti-photo",           label:"Posts",    go:"navPosts()",                   on:["content"]},
+  {k:"branding",icon:"ti-clipboard-text",  label:"Tasks",    go:"navTasks()",                   on:["branding","task"]}
+];
+function renderBnTabs(){
+  const el=document.getElementById("bn-tabs"); if(!el) return;
+  if(!activeBrand||!brands[activeBrand]||!canEdit()){ el.innerHTML=""; el.style.display="none"; return; }
+  el.style.display="";
+  el.innerHTML=BN_TABS.map(t=>{
+    const on=t.on.indexOf(view)>-1;
+    return `<button class="bntab${on?" on":""}" onclick="${t.go}"
+      aria-current="${on?"page":"false"}"><i class="ti ${t.icon}"></i> ${t.label}</button>`;
+  }).join("");
+}
+
+/* THE CALENDAR'S OWN CONTROLS, ON THE CALENDAR'S OWN PAGE.
+   The elements are MOVED, not rebuilt: #view-pill, #lay-sep, #lay-grp,
+   #year-step and #past-tog are the same nodes the nav shipped with, so
+   every onclick, id and piece of state they carry is untouched and no
+   handler had to be rewired. A rebuilt copy is where the two would start
+   to disagree.
+
+   Off the calendar they go back into a holder that is display:none —
+   NOT removed. An element that leaves the document loses nothing here,
+   but a later `document.getElementById` on it would, and four of these
+   are read by name from other functions. */
+function calStripHost(){
+  let h=document.getElementById("calctl-park");
+  if(!h){ h=document.createElement("div"); h.id="calctl-park"; h.style.display="none";
+          document.body.appendChild(h); }
+  return h;
+}
+/* THE NODES ARE HELD, NOT LOOKED UP. Every renderer replaces #main's
+   contents, and a control living inside it is DETACHED by that — at
+   which point getElementById can no longer find it and the next mount
+   would build an empty strip and lose the five controls for the rest of
+   the session. The gate caught exactly that on its first run. Holding
+   the references keeps them alive through any number of re-renders, and
+   they are the same objects the nav shipped with. */
+let CALCTL=null;
+function calCtlNodes(){
+  if(!CALCTL||!CALCTL.length)
+    CALCTL=["view-pill","lay-sep","lay-grp","year-step","past-tog"]
+      .map(id=>document.getElementById(id)).filter(Boolean);
+  return CALCTL;
+}
+function mountCalStrip(){
+  const wanted=(view==="year"||view==="list");
+  const nodes=calCtlNodes();
+  const main=document.getElementById("main");
+  let strip=main?main.querySelector("#calstrip"):null;
+  if(!wanted||!main){
+    if(strip) strip.remove();
+    const park=calStripHost();
+    nodes.forEach(el=>{ if(el.parentElement!==park) park.appendChild(el); });
+    return;
+  }
+  if(!strip){
+    strip=document.createElement("div"); strip.id="calstrip"; strip.className="calstrip pgbar";
+    main.insertBefore(strip,main.firstChild);
+  }
+  nodes.forEach(el=>{ if(el.parentElement!==strip) strip.appendChild(el); });
+}
 function noBrandsAtAll(){
   /* Not "no brands loaded" — that is still loading. Brands come back
      before this ever runs, and a person on zero of them is a decision
@@ -20471,6 +20786,7 @@ function render(){
   }
   if(!routeAllows(r)){ view="year"; r=viewRoute("year"); }
   syncTabs();
+  renderBnTabs();
 
 
   /* ══ SÃO PAULO · DECISION 5 — SAY SO, DO NOT SHOW NOTHING ═════════
@@ -20495,7 +20811,12 @@ function render(){
   buildSidebar(); syncHeaderState(); syncLayerBar();
   const brandActive=!!(activeBrand&&brands[activeBrand]);
   document.body.classList.toggle("planning",socialLayer&&view==="year"&&brandActive&&canEdit());
-  return r.render();
+  const out=r.render();
+  /* AFTER the page is drawn, never before: every renderer replaces
+     #main's contents, so a strip mounted first would be thrown away by
+     the very next line. */
+  mountCalStrip();
+  return out;
 }
 
 /* ══ REYKJAVIK 4b — HISTORY & RESTORE ═══════════════════════════════
