@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V105.1 Copenhagen"/>
+<meta name="cc-tool-version" content="V105.2 Copenhagen"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -6836,9 +6836,32 @@ function closeAllPops(){
    ten account-menu rows. Checked one by one, not assumed. So the
    document handler only ever had to dismiss clicks from OUTSIDE, which
    is the job it is now given. */
+/* ══ V105.2 — AND THE TAB WAS ALREADY GONE BY THEN ════════════════════
+   V105.1 guarded on `e.target.closest(...)` in a bubbling listener, and
+   it fixed the email dropdown but NOT the All/Mentions/Clients tabs.
+
+   Why: a tab's own onclick calls notifSetTab, which calls
+   buildNotifPanel, which writes innerHTML. By the time the click
+   finishes bubbling to document, THE ELEMENT THAT WAS CLICKED IS NO
+   LONGER IN THE PAGE — so closest() walks a detached node, finds no
+   #notif-panel above it, and the guard lets the close through. The
+   dropdown survived only because a <select> answers to `change`, not
+   `click`, so nothing had been rewritten yet.
+
+   Cape Town's detachment problem again, in a new place: a node held
+   across an innerHTML rewrite is a different node.
+
+   THE FIX IS TO DECIDE BEFORE ANYTHING CAN REDRAW. A capture-phase
+   listener runs on the way DOWN, before any element's own handler, so
+   it sees the tab while it is still in the document. */
+let POP_CLICK_INSIDE=false;
 document.addEventListener("click",e=>{
   const t=e.target;
-  if(t&&t.closest&&t.closest("#brand-panel,#export-panel,#notif-panel,#acct-menu")) return;
+  POP_CLICK_INSIDE=!!(t&&t.closest&&
+    t.closest("#brand-panel,#export-panel,#notif-panel,#acct-menu"));
+},true);
+document.addEventListener("click",()=>{
+  if(POP_CLICK_INSIDE) return;
   closeAllPops();
 });
 function popOpen(id,e){
@@ -9572,7 +9595,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V105.1 Copenhagen";
+const TOOL_VERSION="V105.2 Copenhagen";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
