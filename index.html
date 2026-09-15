@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V103.03 — Verona: no flash of the old bar"/>
+<meta name="cc-tool-version" content="V103.04 — Mayfly: the hour the bar went quiet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3058,6 +3058,12 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
              row declares what it needs and applyMenuVisibility() decides.
              Nothing new had to be taught to the menu. -->
         <div class="brow" data-need="admin" onclick="closeAllPops();sweepOrphans()"><i class="ti ti-database-cog"></i><span class="bnm">Storage sweep</span></div>
+        <!-- MAYFLY — the ONLY way to take a backup was the button on the
+             alarm bar, so the hour the bar was hidden was an hour with no
+             way to back up at all. That is the wrong hour to have no
+             button. The bar keeps its own; this one does not wait for
+             something to be wrong. -->
+        <div class="brow" data-need="admin" onclick="closeAllPops();backupNow()"><i class="ti ti-database-export"></i><span class="bnm">Back up now</span></div>
         <!-- MONTREAL — the row the calendar has never had. Every other tool in
              the suite has had this since Nairobi; the calendar was the only one
              with no way to reach its siblings. Hover opens the flyout; see
@@ -9525,7 +9531,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V103.03 — Verona: no flash of the old bar";
+const TOOL_VERSION="V103.04 — Mayfly: the hour the bar went quiet";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -15024,6 +15030,10 @@ async function lastBackupAt(){
   }catch(e){ return null; }
 }
 
+/* MAYFLY — why the last automatic attempt wrote nothing. Empty until
+   boot() has tried, so an empty string never means "all is well". */
+let BACKUP_WHY="";
+
 /* Silent. Never prompts: showDirectoryPicker needs a click, so if the
    folder was never connected we do not nag on every page load — the
    banner says so instead, once, where it can be acted on. */
@@ -15126,8 +15136,26 @@ async function renderBackupHealth(){
     return;
   }
   const last=await lastBackupAt();
-  const hrs=last?Math.floor((Date.now()-last.getTime())/3600000):null;
-  const stale=(hrs===null)||(hrs>BACKUP_STALE_HOURS);
+  /* ══ MAYFLY, 15 September 2026 — THE HOUR THE BAR WENT QUIET ══════
+     This line read Math.floor(...) and then asked hrs > 36. The kit
+     every OTHER tool draws this bar from — cc-suite/ui/access.js,
+     backupAgeHours() into backupAlarm() — keeps the fraction and asks
+     the same question of it.
+
+     So at 36.9 hours the calendar computed 36, answered "not stale
+     yet" and drew nothing, while Portfolio computed 36.9, answered
+     "stale" and printed "37 hours". One hour in every twenty-four
+     where two tools disagreed about ONE timestamp — and it was the
+     hour somebody came looking for the button, because that is the
+     hour the other tool had just told them to.
+
+     THE REAL NUMBER DECIDES. Rounding is for the words, and it rounds
+     the way the kit rounds so the two bars never read differently
+     again. tests/gates-mayfly.mjs runs both implementations at 36.0,
+     36.5, 36.99 and 37.01 hours and fails unless they agree. */
+  const ageHrs=last?(Date.now()-last.getTime())/3600000:null;
+  const hrs=ageHrs===null?null:Math.round(ageHrs);
+  const stale=(ageHrs===null)||(ageHrs>BACKUP_STALE_HOURS);
   const selfFail=await selfTestFailure();
   const bad=stale||!!selfFail;
   let bar=document.getElementById("backup-health");
@@ -15155,8 +15183,15 @@ async function renderBackupHealth(){
   }
   const when=hrs===null?"No backup has ever been saved."
     :("The last backup was "+(hrs>=48?Math.floor(hrs/24)+" days":hrs+" hours")+" ago.");
+  /* MAYFLY — the age is the symptom, the folder is the cause. The
+     automatic run already knew ("no folder connected") and threw the
+     answer away, so two days of silence read as a late backup rather
+     than a disconnected browser. A data-state, not an explanation. */
+  const sub=BACKUP_WHY==="no folder connected"
+    ? "Your project folder is not connected in this browser."
+    : "Connect your project folder and a copy is saved automatically each day.";
   bar.innerHTML='<span class="bh-dot"></span><b>'+when+'</b>'+
-    '<span class="bh-sub">Connect your project folder and a copy is saved automatically each day.</span>'+
+    '<span class="bh-sub">'+escHtml(sub)+'</span>'+
     '<button class="btn btn-s btn-sm" onclick="backupNow()">Back up now</button>';
 }
 
@@ -15243,7 +15278,9 @@ async function boot(){
      must not stop anybody working. The banner follows the attempt so
      it reports the state after it, not before. */
   (async()=>{
-    try{ await maybeWriteDailyBackup(); }catch(e){}
+    /* MAYFLY — the reason is kept, not discarded. renderBackupHealth()
+       reads it to tell a disconnected folder apart from a late one. */
+    try{ const r=await maybeWriteDailyBackup(); BACKUP_WHY=(r&&r.why)||""; }catch(e){}
     try{ await renderBackupHealth(); }catch(e){}
   })();
   /* v57.4 — start watching the published version. After loadAll, never
