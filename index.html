@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V106.3 Bologna"/>
+<meta name="cc-tool-version" content="V106.4 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2632,7 +2632,15 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .brl{--brlact:0px}
 .brl.acts{--brlact:62px}
 .brl-hd,.brl-tr{display:grid;
-  grid-template-columns:3px 20px minmax(0,1fr) 132px 108px 468px 32px var(--brlact,0px);
+  /* V106.4 - THE TIMING GROUP GIVES WAY FIRST. Measured at 1180 on the
+     live page: the table has 911px, the fixed columns and gaps took 840
+     of it, and the task name was left 56px for a title needing 161. It
+     spilled sideways and the status pill drew on top of it. Timing was
+     taking 468px - more than half the table - to print "01 Jul", "76
+     days" and "21 days late". At 330px each of its three columns still
+     has 100px, which is more than the longest of them needs, and the
+     task name goes from 56px to 194px. */
+  grid-template-columns:3px 20px minmax(0,1fr) 132px 108px 330px 32px var(--brlact,0px);
   gap:11px;align-items:center;padding:11px 15px 11px 0}
 .brl-hd{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--subtle);
   border-bottom:1px solid var(--div);font-weight:700;background:#FCFCFB}
@@ -2643,8 +2651,19 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .brl-car{color:var(--subtle);font-size:17px;text-align:center}
 /* the title is the loudest thing on the row; everything else came down */
 .brl-nm{font-weight:700;font-size:15px;letter-spacing:-.01em;color:var(--text);
-  display:flex;align-items:center;gap:8px;min-width:0}
-.brl-nm small{font-weight:400;color:var(--subtle);font-size:11.5px;white-space:nowrap}
+  display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden}
+/* V106.4 - and a title too long for the room it has is CUT, not wrapped.
+   Chirag chose this over wrapping: the reason this list is a table is
+   that you scan down it, and rows of different heights cost more than a
+   rare cut title, which is on hover and one click away in full. */
+.brl-nm .nmt{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* V106.4 - "no milestones" YIELDS BEFORE THE TITLE DOES. Photographed
+   at 1180 and it was the other way round: the note kept its full width
+   and cut "Billboard artwork" to "Billboard a...", which is the wrong
+   thing to lose. It shrinks eight times faster and ends in an ellipsis
+   of its own. */
+.brl-nm small{font-weight:400;color:var(--subtle);font-size:11.5px;white-space:nowrap;
+  flex:0 999 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
 /* an outline, not a fill — a filled chip beside a title reads as more
    important than the title */
 .brl-pj{font-size:11px;font-weight:700;letter-spacing:.03em;padding:2px 7px;border-radius:5px;
@@ -7828,7 +7847,7 @@ function brRowHtml(t,showTag){
       ondrop="brDrop(event,'${t.id}')" ondragend="brDragEnd(event)"`:''}>
     <div class="brl-sp" style="${pj?`background:${escAttr(pj.colour||'#7C3AED')}`:''}"></div>
     <span class="brl-car">${grip?'<i class="ti ti-grip-vertical"></i>':'›'}</span>
-    <div class="brl-nm">${escHtml(t.title)}
+    <div class="brl-nm"><span class="nmt" title="${escAttr(t.title)}">${escHtml(t.title)}</span>
       ${showTag&&pj?`<span class="brl-pj" style="color:${escAttr(pj.colour||'#7C3AED')}">◧ ${escHtml(pj.name)}</span>`:''}
       ${!ms.length?'<small>no milestones</small>':''}</div>
     <div><span class="brl-pill ${BR_PILL[t.status]||'p-plan'}"><i></i>${BR_STATUS[t.status]||t.status}</span></div>
@@ -9649,7 +9668,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V106.3 Bologna";
+const TOOL_VERSION="V106.4 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
