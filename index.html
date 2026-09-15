@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V103.00 — Verona: one row, one hover group, one way to pick an industry"/>
+<meta name="cc-tool-version" content="V103.02 — Verona: the first row is reserved, empty or not"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -1121,6 +1121,19 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .pgbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
   min-height:36px;padding:0 var(--pg-x);margin:0 0 var(--pg-gap);}
 .pgbar > *{margin-top:0;margin-bottom:0;}
+/* An empty band is still the band. No ink, no border, no surprise — it
+   holds the line the content starts on. */
+.pgbar-empty{pointer-events:none;}
+/* THE ADMIN PAGES' OWN ROW. Title and counts on one line at the size
+   every other page's row uses, buttons at the right. Nothing is removed
+   — a 34px display title and a 94px block simply become a row. */
+.pgbar-head{min-height:36px;height:36px;}
+.pgbar-head .year-headtxt{display:flex;align-items:baseline;gap:9px;min-width:0;flex:1;}
+.pgbar-head .year-title{font-size:15px;font-weight:700;letter-spacing:0;line-height:1;flex:none;}
+.pgbar-head .year-title span{color:var(--acc);}
+.pgbar-head .year-sub{font-size:12.5px;color:var(--subtle);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;margin:0;}
+.pgbar-head .em2-headacts{margin-left:auto;display:flex;align-items:center;gap:8px;flex:none;}
 /* The actions row on Vision and the task thread. `.ph` is the kit's and
    four other tools use it, so its 94px stands there and is overridden
    only here, where the row is now nothing but its buttons. */
@@ -1141,6 +1154,7 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
    at the bar again while every other screen had moved down. It takes the
    gap off its own height instead. */
 #main > .mpv{height:calc(100vh - 80px - var(--cc-alarm-h,0px));}
+#main > .mpv > .pgbar{flex:none;}
 
 /* ══ VERONA — THE CALENDAR'S OWN CONTROLS, ON THE CALENDAR'S PAGE ═════
    The nodes are the nav's; only where they sit and how they are painted
@@ -5164,16 +5178,21 @@ function renderSocial(){
   const seedCtl=canEdit()?`<button class="btn btn-s" style="background:var(--surface);" onclick="sdOpen()" title="Download this month or a blank template, and put a filled sheet back"><i class="ti ti-upload"></i> Import</button>`:"";
   mc.innerHTML=`
    ${pageHead()}
+   <!-- VERONA — THE ROW COMES TO THE TOP. It used to sit under the two
+        cards, with a rule above it, which is why this page's buttons
+        stood 250px lower than the calendar's and the tool looked like
+        five different tools. Every page now leads with its own row of
+        controls, in the same place, and the content follows it. -->
+   <div class="pgbar" style="justify-content:space-between;flex-wrap:nowrap;">
+     <div style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${monthTotal} Post${monthTotal!==1?"s":""} <span style="font-weight:400;color:var(--subtle);">· ${MN[contentMonth]}</span></div>
+     <div style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;flex-shrink:0;">${seedCtl}${modeToggle}${canE?`<button class="btn btn-p" style="white-space:nowrap;" onclick="addContentPost()"><i class="ti ti-plus"></i> Add post</button>`:""}</div>
+   </div>
    <div style="padding:0 32px 20px;">
    <div style="display:grid;grid-template-columns:minmax(280px,340px) minmax(0,1fr);gap:14px;align-items:start;">
      <div id="content-monthcard"></div>
      <div id="content-plancard">${monthPlanCardHtml(contentMonth)}</div>
    </div>
-   <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap;margin:20px 0 12px;padding-top:14px;border-top:1px solid var(--div);">
-     <div style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${monthTotal} Post${monthTotal!==1?"s":""} <span style="font-weight:400;color:var(--subtle);">· ${MN[contentMonth]}</span></div>
-     <div style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;flex-shrink:0;">${seedCtl}${modeToggle}${canE?`<button class="btn btn-p" style="white-space:nowrap;" onclick="addContentPost()"><i class="ti ti-plus"></i> Add post</button>`:""}</div>
-   </div>
-   <div id="content-list"></div>
+   <div id="content-list" style="margin-top:20px;"></div>
    </div>`;
   document.getElementById("content-monthcard").appendChild(buildMini(contentMonth));
   const list=document.getElementById("content-list");
@@ -8722,12 +8741,11 @@ function renderBranding(){
   }
   mc.innerHTML=`
    ${pageHead()}
-   <div style="padding:0 32px 20px;">
-     <!-- VERONA — the row keeps its own contents and takes the frame's
-          gap. 12px here and 14px on the calendar and 58px on Vision was
-          the drift; there is one number now. -->
-     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;
-                 margin:0 0 var(--pg-gap);">
+   <!-- VERONA — the row is the frame's, like every other page's. It
+        carried its own spacing before and that is exactly how five pages
+        ended up with five rhythms. -->
+   <div class="pgbar" style="justify-content:space-between;">
+     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;">
        <div style="font-size:15px;font-weight:700;">
          ${BR.ok
             ? (brFilter.archived
@@ -8766,6 +8784,8 @@ function renderBranding(){
          </span>
        </div>
      </div>
+   </div>
+   <div style="padding:0 32px 20px;">
      ${body}
    </div>`;
 }
@@ -9486,7 +9506,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V103.00 — Verona: one row, one hover group, one way to pick an industry";
+const TOOL_VERSION="V103.02 — Verona: the first row is reserved, empty or not";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -19648,6 +19668,13 @@ function renderMonthPlanView(){
   main.innerHTML=`
   <div class="mpv">
     ${pageHead()}
+    <!-- VERONA — this page had nothing at the top, so its first sheet
+         began where every other page's buttons begin. The counts are the
+         ones the page already works out; nothing new is invented. -->
+    <div class="pgbar">
+      <div style="font-size:15px;font-weight:700;">${months.length} month${months.length===1?"":"s"} with work
+        ${missing?`<span style="font-weight:400;color:var(--subtle);">· ${missing} empty</span>`:""}</div>
+    </div>
     <div class="mpv-scroll">
       ${months.length
         ? months.map(m=>mpvSheetHtml(m,canE)).join("")
@@ -20729,6 +20756,39 @@ function calCtlNodes(){
       .map(id=>document.getElementById(id)).filter(Boolean);
   return CALCTL;
 }
+/* ══ VERONA — THE FIRST ROW IS RESERVED, EMPTY OR NOT ═════════════════
+   Chirag, 15 September, after the rest of this was already right: the
+   band under the black bar belongs to buttons and honest counts, and
+   THE CONTENT BELOW IT STARTS AT THE SAME PIXEL WHETHER THAT BAND HAS
+   ANYTHING IN IT OR NOT.
+
+   Every screen that has controls already draws its own row. This is for
+   the ones that do not — History, the event and industry managers, the
+   calendar with no brand — and, more to the point, for the next screen
+   somebody writes. It cannot forget: a page with no row gets an empty
+   one, and the content starts where it starts on every other page.
+
+   It runs after the renderer, like mountCalStrip, because the renderer
+   has just replaced everything inside #main. */
+function mountFrameRow(){
+  const main=document.getElementById("main"); if(!main) return;
+  /* The Plan page is a flex column that sizes itself, so its row belongs
+     INSIDE it — a row above it would be outside the thing it heads. */
+  const host=main.querySelector(":scope > .mpv")||main;
+  /* History, the Event manager and the Industry ratings all open with the
+     same block: a big title, a line of counts, and their buttons pushed
+     to the right of it. That block IS their row — it was just 94px tall
+     and shaped like nothing else in the tool, which is why History read
+     as a different product. Promoting it to .pgbar gives all three the
+     frame's height and gap without touching what they say. */
+  const head=main.querySelector(":scope > .em2-page > .year-head");
+  if(head){ head.classList.add("pgbar","pgbar-head"); return; }
+  if(host.querySelector(":scope > .pgbar, :scope > .ph-acts-only")) return;
+  const row=document.createElement("div");
+  row.className="pgbar pgbar-empty";
+  row.setAttribute("aria-hidden","true");
+  host.insertBefore(row,host.firstChild);
+}
 function mountCalStrip(){
   const wanted=(view==="year"||view==="list");
   const nodes=calCtlNodes();
@@ -20816,6 +20876,7 @@ function render(){
      #main's contents, so a strip mounted first would be thrown away by
      the very next line. */
   mountCalStrip();
+  mountFrameRow();
   return out;
 }
 
