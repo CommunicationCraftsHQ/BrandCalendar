@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V106.4 Bologna"/>
+<meta name="cc-tool-version" content="V106.5 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2937,6 +2937,41 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
    how a rule survives four versions with nobody noticing. */
 
 
+
+/* ══ BOLOGNA V106.5 · THE NUMBERS SCREEN ═══════════════════════════════
+   Additive only. Nothing here replaces a shared class; the tab is a
+   .bntab like the other five and this screen adds no chrome of its own.
+   Approved from 01 - New Jersey - numbers screen mockup.html. */
+.nswrap{padding:22px 32px 60px;}
+.nsrow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;}
+@media(max-width:1000px){.nsrow{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:560px){.nsrow{grid-template-columns:1fr;}}
+.nstile{background:#fff;border:1px solid var(--div);border-radius:12px;
+  padding:14px 16px 15px;min-height:96px;display:flex;flex-direction:column;gap:2px;}
+.nstile .lbl{font-size:11.5px;font-weight:700;letter-spacing:.02em;
+  text-transform:uppercase;color:var(--subtle);}
+.nstile .val{font-size:30px;font-weight:700;letter-spacing:-.03em;color:var(--text);line-height:1.15;}
+.nstile .val.none{font-size:15px;font-weight:600;color:var(--subtle);letter-spacing:0;padding-top:9px;}
+.nstile .sub{font-size:11.5px;color:var(--muted);line-height:1.45;}
+.nstile .sub .warn{color:#8A6D00;}
+.nssec{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+  color:var(--subtle);margin:26px 0 10px;}
+.nstbl{width:100%;border-collapse:collapse;background:#fff;
+  border:1px solid var(--div);border-radius:12px;overflow:hidden;}
+.nstbl th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;
+  color:var(--subtle);text-align:right;padding:10px 12px;border-bottom:1px solid var(--div);}
+.nstbl th:first-child,.nstbl td:first-child{text-align:left;}
+.nstbl td{font-size:13px;padding:11px 12px;text-align:right;
+  border-bottom:1px solid rgba(13,13,13,.05);color:var(--text);}
+.nstbl tr:last-child td{border-bottom:0;}
+.nstbl tfoot td{font-weight:700;background:rgba(13,13,13,.02);border-top:1px solid var(--div);}
+.nsdim{color:var(--subtle);}
+.nsprov{font-size:10.5px;font-weight:700;color:#8A6D00;background:#FAF3DC;
+  padding:1px 6px;border-radius:999px;margin-left:6px;white-space:nowrap;}
+.nslink{color:var(--subtle);text-decoration:none;}
+.nslink:hover{color:var(--acc);}
+.nsfoot{font-size:11.5px;color:var(--muted);line-height:1.6;margin-top:14px;}
+.nsscroll{overflow-x:auto;}
 </style>
 
 </head>
@@ -9668,7 +9703,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V106.4 Bologna";
+const TOOL_VERSION="V106.5 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -21870,6 +21905,269 @@ async function histRestore(id,forced){
   toast(forced?"Restored — the newer version was replaced.":"Restored.");
   await loadAll(); await loadHistory();
 }
+
+
+/* ══ BOLOGNA V106.5 · THE NUMBERS SCREEN ═══════════════════════════════
+   New Jersey, stage two, piece 4. The month report, on the brand.
+
+   IT READS OUR TWO TABLES AND NEVER CALLS META. The insights rate limit
+   is pooled across every account on the app, so a screen that fetched on
+   load would work in testing and die in a busy month. `instagram-capture`
+   writes nightly; this reads what it wrote.
+
+   IT WRITES NOTHING. Neither table grants insert, update or delete to
+   anybody signed in — the capture function writes with the service key.
+   There is no control on this screen that changes a number, on purpose:
+   a figure a person can edit is a figure nobody can trust.
+
+   WHY THERE ARE NO NUMBERS ON THE POST CARD YET. `post_insights` is keyed
+   by Meta's media ID, and a planned post has no media ID because nothing
+   in the suite publishes to Instagram — that is stage four. Matching by
+   date and brand would be right most of the time and silently wrong the
+   rest: a brand with two posts on one day gets one post's numbers on the
+   other's card with nothing on screen to show it. So the month report
+   comes first and the match gets its own decision. */
+
+const NS={key:null,loading:false,acct:[],posts:[],err:null};
+
+function nsKey(){ return activeBrand+"|"+YEAR+"|"+(curMonth||1); }
+function nsNum(v){ return (v===null||v===undefined) ? null : Number(v); }
+function nsFmt(v){ return (v===null||v===undefined) ? '<span class="nsdim">—</span>'
+                    : Number(v).toLocaleString("en-US"); }
+/* A metric Meta refused is named in `missing`. Blank, never zero — a zero
+   is a claim, and this is the column that stops us making it. */
+function nsHas(row,metric){ return !((row.missing||[]).indexOf(metric)>-1); }
+function nsCell(row,metric,col){ return nsHas(row,metric)? nsFmt(row[col||metric]) : '<span class="nsdim">—</span>'; }
+function nsSum(rows,col){
+  let t=null;
+  rows.forEach(r=>{ const v=nsNum(r[col]); if(v!==null&&!isNaN(v)) t=(t===null?0:t)+v; });
+  return t;
+}
+
+async function navNumbers(){
+  if(!activeBrand){ toast("Pick a brand first — Numbers is per brand"); return; }
+  if(!canCap("view_social_insights")){ toast("Instagram numbers are not part of your access.","err"); return; }
+  setView("numbers");
+}
+
+async function nsLoad(k){
+  NS.loading=true; NS.err=null;
+  const parts=k.split("|"); const m=Number(parts[2])||1;
+  const pad=n=>String(n).padStart(2,"0");
+  const from=`${YEAR}-${pad(m)}-01`;
+  const to = m===12 ? `${YEAR+1}-01-01` : `${YEAR}-${pad(m+1)}-01`;
+  try{
+    const a=await sb.from("account_insights")
+      .select("captured_on,followers_total,followers_new,followers_lost,profile_views,reach,views,missing")
+      .eq("brand_id",activeBrand)
+      .gte("captured_on",from).lt("captured_on",to)
+      .order("captured_on",{ascending:true});
+    if(a.error) throw new Error(a.error.message);
+
+    /* ONE ROW PER POST, THE NEWEST READING OF IT.
+       post_insights holds one row per post PER DAY — the same post, read
+       again every night until it settles. Summing the table would count
+       a two-week-old post fourteen times and report a month four times
+       its real size. So: newest capture per media id, and nothing else. */
+    const p=await sb.from("post_insights")
+      .select("ig_media_id,permalink,media_type,posted_at,captured_on,reach,views,likes,comments,saves,shares,total_interactions,is_final,missing")
+      .eq("brand_id",activeBrand)
+      .gte("posted_at",from).lt("posted_at",to)
+      .order("captured_on",{ascending:false});
+    if(p.error) throw new Error(p.error.message);
+    const seen={},rows=[];
+    (p.data||[]).forEach(r=>{ if(!seen[r.ig_media_id]){ seen[r.ig_media_id]=1; rows.push(r); } });
+    rows.sort((x,y)=>new Date(y.posted_at)-new Date(x.posted_at));
+
+    NS.acct=a.data||[]; NS.posts=rows;
+  }catch(e){
+    /* The message says what happened. A blank screen that is RIGHT looks
+       exactly like one that is BROKEN. */
+    NS.err=(e&&e.message)||String(e); NS.acct=[]; NS.posts=[];
+  }
+  NS.loading=false; NS.key=k;
+  if(view==="numbers") render();
+}
+
+function nsAccountHtml(){
+  const rows=NS.acct, days=rows.length;
+  if(!days){
+    return `<div class="nsrow" style="grid-template-columns:1fr;">
+      <div class="nstile" style="min-height:0;">
+        <span class="lbl">The account</span>
+        <span class="val none">Nothing collected for this month yet</span>
+        <span class="sub">Account figures start the night after the brand is connected. Post figures below
+          can reach back thirty days; account figures cannot.</span>
+      </div></div>`;
+  }
+  const last=rows[rows.length-1];
+  const gained=nsSum(rows,"followers_new");
+  const lostKnown=rows.some(r=>nsNum(r.followers_lost)!==null);
+  const visits=nsSum(rows,"profile_views");
+  const views=nsSum(rows,"views");
+  const reach=nsSum(rows,"reach");
+  const dayWord=days===1?"1 day counted":`${days} days counted`;
+
+  return `<div class="nsrow">
+    <div class="nstile">
+      <span class="lbl">Followers</span>
+      <span class="val">${nsFmt(last.followers_total)}</span>
+      <span class="sub">as at ${nsDay(last.captured_on)}</span>
+    </div>
+    <div class="nstile">
+      <span class="lbl">Followers gained</span>
+      <span class="val">${nsFmt(gained)}</span>
+      <span class="sub">${dayWord}${lostKnown?""
+        :` <span class="warn">· unfollows not supplied by Meta, so this is not a net figure</span>`}</span>
+    </div>
+    <div class="nstile">
+      <span class="lbl">Profile visits</span>
+      <span class="val">${nsFmt(visits)}</span>
+      <span class="sub">${dayWord}</span>
+    </div>
+    <div class="nstile">
+      <span class="lbl">Content views</span>
+      <span class="val">${nsFmt(views)}</span>
+      <span class="sub">${dayWord} · views of posts, reels and stories</span>
+    </div>
+  </div>
+  <div class="nsrow" style="grid-template-columns:1fr;">
+    <div class="nstile" style="min-height:0;">
+      <span class="lbl">Account reach · includes advertising</span>
+      <span class="val">${nsFmt(reach)} <span style="font-size:13px;font-weight:600;color:#8A6D00;">${dayWord}</span></span>
+      <span class="sub"><span class="warn">Account reach counts everyone an ad touched, so on a brand that
+        advertises it is not a measure of the posts below.</span>${days>1?` It is the sum of ${days} daily
+        figures, so somebody seen on two days is counted twice.`:""} The posts' own reach is in the table.</span>
+    </div>
+  </div>`;
+}
+
+function nsDay(iso){
+  const d=new Date(String(iso)+"T00:00:00");
+  if(isNaN(d)) return escHtml(iso);
+  return `${d.getDate()} ${(MN[d.getMonth()+1]||"").slice(0,3)}`;
+}
+
+function nsPostsHtml(){
+  const rows=NS.posts;
+  if(!rows.length){
+    return `<div class="nstile" style="min-height:0;">
+      <span class="lbl">The posts</span>
+      <span class="val none">Nothing published on Instagram this month</span>
+      <span class="sub">These are the posts Instagram actually has, whoever planned them.</span>
+    </div>`;
+  }
+  const kind=t=>{
+    const k=String(t||"").toUpperCase();
+    if(k==="REELS"||k==="VIDEO") return "Reel";
+    if(k==="CAROUSEL_ALBUM")     return "Carousel";
+    if(k==="STORY")              return "Story";
+    return "Image";
+  };
+  const body=rows.map(r=>{
+    const d=r.posted_at?new Date(r.posted_at):null;
+    const when=(d&&!isNaN(d))?`${d.getDate()} ${(MN[d.getMonth()+1]||"").slice(0,3)}`:"—";
+    const prov=r.is_final?"":`<span class="nsprov">still counting</span>`;
+    const link=r.permalink
+      ? `<a class="nslink" href="${escAttr(r.permalink)}" target="_blank" rel="noopener"
+           title="Open on Instagram"><i class="ti ti-external-link"></i></a>` : "";
+    return `<tr>
+      <td>${when} · ${kind(r.media_type)}${prov}</td>
+      <td>${nsCell(r,"reach")}</td>
+      <td>${nsCell(r,"views")}</td>
+      <td>${nsCell(r,"likes")}</td>
+      <td>${nsCell(r,"comments")}</td>
+      <td>${nsHas(r,"saved")?nsFmt(r.saves):'<span class="nsdim">—</span>'}</td>
+      <td>${nsCell(r,"shares")}</td>
+      <td>${nsCell(r,"total_interactions")}</td>
+      <td>${link}</td>
+    </tr>`;
+  }).join("");
+
+  const foot=`<tr>
+    <td>${rows.length} ${rows.length===1?"post":"posts"}</td>
+    <td>${nsFmt(nsSum(rows,"reach"))}</td>
+    <td>${nsFmt(nsSum(rows,"views"))}</td>
+    <td>${nsFmt(nsSum(rows,"likes"))}</td>
+    <td>${nsFmt(nsSum(rows,"comments"))}</td>
+    <td>${nsFmt(nsSum(rows,"saves"))}</td>
+    <td>${nsFmt(nsSum(rows,"shares"))}</td>
+    <td>${nsFmt(nsSum(rows,"total_interactions"))}</td>
+    <td></td></tr>`;
+
+  const moving=rows.filter(r=>!r.is_final).length;
+  return `<div class="nsscroll"><table class="nstbl">
+    <thead><tr>
+      <th style="min-width:190px;">Posted</th>
+      <th>Reach</th><th>Views</th><th>Likes</th><th>Comments</th>
+      <th>Saves</th><th>Shares</th><th>Interactions</th><th style="width:44px;"></th>
+    </tr></thead>
+    <tbody>${body}</tbody>
+    <tfoot>${foot}</tfoot>
+  </table></div>
+  <div class="nsfoot">
+    ${moving?`<b>${moving===1?"One post is":moving+" posts are"} still counting.</b> Instagram's figures move
+      for the first week. Those rows are re-read every night and settle on their own; the total moves
+      with them.<br>`:""}
+    <b>Nothing here is a zero unless Meta said zero.</b> Where Meta gives nothing the cell is blank.
+  </div>`;
+}
+
+function renderNumbers(){
+  const mc=document.getElementById("main");
+  const k=nsKey();
+  if(NS.key!==k && !NS.loading) nsLoad(k);
+  if(NS.key!==k){
+    mc.innerHTML=pageHead()+`<div class="nswrap"><div class="nssec">${MN[curMonth||1]} ${YEAR}</div>
+      <div class="nstile" style="min-height:0;"><span class="val none">Reading the numbers…</span></div></div>`;
+    return;
+  }
+  if(NS.err){
+    mc.innerHTML=pageHead()+`<div class="nswrap"><div class="nssec">${MN[curMonth||1]} ${YEAR}</div>
+      <div class="nstile" style="min-height:0;">
+        <span class="lbl">The numbers could not be read</span>
+        <span class="sub">${escHtml(NS.err)}</span></div></div>`;
+    return;
+  }
+  mc.innerHTML=pageHead()+`<div class="nswrap">
+    <div class="nssec">The account · ${MN[curMonth||1]} ${YEAR}</div>
+    ${nsAccountHtml()}
+    <div class="nssec">The posts · ${MN[curMonth||1]} ${YEAR}</div>
+    ${nsPostsHtml()}
+  </div>`;
+}
+
+/* ── the sixth tab ──────────────────────────────────────────────────
+   Pushed rather than declared, because BN_TABS is a const and the five
+   before it are not this batch's business. `cap` is new: a tab that the
+   matrix has not granted is not drawn, and the route refuses it as well
+   — a hidden door and an unlocked one are different faults. */
+BN_TABS.push({k:"numbers",icon:"ti-chart-bar",label:"Numbers",
+  go:"navNumbers()",on:["numbers"],cap:"view_social_insights"});
+
+renderBnTabs=function(){
+  const el=document.getElementById("bn-tabs"); if(!el) return;
+  if(!activeBrand||!brands[activeBrand]||!canEdit()){ el.innerHTML=""; el.style.display="none"; return; }
+  el.style.display="";
+  el.innerHTML=BN_TABS.filter(t=>!t.cap||canCap(t.cap)).map(t=>{
+    const on=t.on.indexOf(view)>-1;
+    return `<button class="bntab${on?" on":""}" onclick="${t.go}"
+      aria-current="${on?"page":"false"}"><i class="ti ${t.icon}"></i> ${t.label}</button>`;
+  }).join("");
+};
+
+/* THE ROUTE IS WRAPPED, NOT COPIED. Re-declaring the whole table would
+   fork it: the next batch edits the first copy and this one silently
+   keeps the old rows. `needs` goes through canCap, so losing the
+   permission mid-session drops back to the calendar rather than leaving
+   a client's numbers on the screen. */
+(function(){
+  const base=viewRoute;
+  viewRoute=function(v){
+    if(v==="numbers") return {render:renderNumbers,sidebar:null,needs:"view_social_insights"};
+    return base(v);
+  };
+})();
 
 </script>
 <!-- NEW YORK: lightbox. Preview only — there is deliberately no download
