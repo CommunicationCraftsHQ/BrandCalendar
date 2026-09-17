@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V106.7 Bologna"/>
+<meta name="cc-tool-version" content="V106.8 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2364,6 +2364,9 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .mpv > .year-head{flex:none;}
 .mpv > .mpv-scroll{flex:1;min-height:0;}
 .mpv-scroll{flex:1;min-height:0;overflow:auto;padding:0 32px 28px;}
+/* V106.8 — the scope holds its place while the year scrolls under it. */
+.mpv-eng{padding:0 32px 12px;flex:none;}
+.mpv-eng:empty{display:none;}
 .mpv-sheet{background:rgba(255,255,255,.72);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
   border:1px solid var(--div);border-radius:14px;overflow:hidden;max-width:1000px;}
 .mpv-top{background:linear-gradient(135deg,#FBF3F1 0%,#F4F0F7 100%);padding:15px 18px 14px;
@@ -9732,7 +9735,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V106.7 Bologna";
+const TOOL_VERSION="V106.8 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -13966,7 +13969,10 @@ function engToggle(e){
   if(e) e.stopPropagation();
   ENG_OPEN=!ENG_OPEN;
   try{ localStorage.setItem(engOpenKey(), ENG_OPEN?"1":"0"); }catch(err){}
-  renderBrief();
+  /* THE SCOPE LIVES ON THE PLAN PAGE, but a redraw is a redraw and the
+     toggle must not name one page. Naming renderBrief() is how this
+     would quietly stop working the next time the strip moves. */
+  render();
 }
 
 /* THE MONTHLY LINE IS A SUM ACROSS SERVICES, approved 17 Sep. Two
@@ -14010,10 +14016,6 @@ function openBrief(){
   if(!canEdit()){toast("View-only account","err");return;}
   if(!activeBrand||!brands[activeBrand]){toast("Pick a brand first","err");return;}
   briefEdit=false; view="brief"; render(); window.scrollTo(0,0);
-  /* Read after the first paint, then redraw. The page is useful before
-     the contract arrives and the strip says so while it is coming. */
-  ENG_OPEN=engReadOpen();
-  if(ENG.brand!==activeBrand) loadEngagement(activeBrand).then(()=>{ if(view==="brief") renderBrief(); });
 }
 function closeBrief(){ briefEdit=false; view="year"; render(); }
 function bdToggleEdit(){
@@ -14090,7 +14092,6 @@ function buildBriefSidebar(){
   const pct=Math.round(c.n/c.of*100);
   const item=(id,txt,ind)=>`<div class="bd-navi" data-tgt="${id}" style="${ind?"padding-left:22px;font-weight:500;color:var(--muted);":""}" onclick="bdJump('${id}')">${txt}</div>`;
   const nav=[
-    item("bd-scope","Engagement &amp; scope"),
     item("bd-s1","01 · The brand"),
     item("bd-s2","02 · "+escAttr(D.s2||"Products")),
     ...(D.categories||[]).map((cat,i)=>item("bd-cat-"+i,escAttr(cat.name||("Category "+(i+1))),true)),
@@ -14161,8 +14162,6 @@ function renderBriefDash(){
       (canEditVision()
         ?`<button class="btn btn-p" onclick="bdToggleEdit()"><i class="ti ti-pencil"></i> Edit the data</button>`:""))}
   <div class="bd-wrap">
-
-    ${engHtml()}
 
     <div class="bd-sec" id="bd-s1"><div class="bd-secnum">01</div><div class="bd-sectitle">The brand</div><div class="bd-secrule"></div><div class="bd-secsub">Positioning · USPs · talking points · audience</div></div>
     ${(String(D.tagline||"").trim()||D.meta.length||D.tl.length||D.rhythm.length)?`<div class="bd-card" style="padding:14px 18px;margin-bottom:12px;">
@@ -18258,7 +18257,7 @@ const BV_CATLISTS=[
 const BV_CATSCALARS=[["Name","name"],["Tag","tag"],["Description","desc"]];
 const BV_SEGSCALARS=[["Name","lbl"],["Headline figure","big"],["Under the figure","sub"]];
 
-const BV_SECTIONS=["Brand basics","Engagement & scope","Positioning & voice",
+const BV_SECTIONS=["Brand basics","Brand facts & rhythm","Positioning & voice",
   "USPs & talking points","Audience","Social media","Objectives"];
 
 const bvNorm=s=>String(s==null?"":s).trim().toLowerCase();
@@ -19899,6 +19898,10 @@ function mpvToggle(id){
 function openMonthPlanView(m){
   if(!activeBrand||!brands[activeBrand]) return;
   mpvMonth=m; setView("mplan");
+  /* Read after the first paint, then redraw. The page is useful before
+     the contract arrives and the strip says so while it is coming. */
+  ENG_OPEN=engReadOpen();
+  if(ENG.brand!==activeBrand) loadEngagement(activeBrand).then(()=>{ if(view==="mplan") renderMonthPlanView(); });
 }
 /* ══ MOTH v81.5 — A ROW THAT EXISTS HAS TO BE ON THE SCREEN ══════════
    Chirag: "the add buttons on production goals is not working." It was
@@ -20258,6 +20261,10 @@ function renderMonthPlanView(){
       <div style="font-size:15px;font-weight:700;">${months.length} month${months.length===1?"":"s"} with work
         ${missing?`<span style="font-weight:400;color:var(--subtle);">· ${missing} empty</span>`:""}</div>
     </div>
+    ${/* THE SCOPE SITS ABOVE THE SCROLLER, not inside it. What we owe
+          each month is the thing you check a month sheet against, so it
+          has to stay on screen while the year moves under it. */""}
+    <div class="mpv-eng">${engHtml()}</div>
     <div class="mpv-scroll">
       ${months.length
         ? months.map(m=>mpvSheetHtml(m,canE)).join("")
