@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V106.9 Bologna"/>
+<meta name="cc-tool-version" content="V107.0 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -9735,7 +9735,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V106.9 Bologna";
+const TOOL_VERSION="V107.0 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -13879,7 +13879,7 @@ async function loadEngagement(brandId){
     const cons=c.data||[];
     if(!cons.length){ ENG={brand:brandId,lines:[],ok:true,loading:false,err:""}; return; }
     const ids=cons.map(x=>x.id);
-    const [l,sv]=await Promise.all([
+    const [l,sv,bank]=await Promise.all([
       sb.from("contract_services").select("*").in("service_contract_id",ids),
       /* V106.9 — has_monthly_commitments rides along. The Calendar must
          not draw posts, stories, reels, production or setup for a
@@ -13888,7 +13888,20 @@ async function loadEngagement(brandId){
          because a number typed before the flag existed was still in the
          row and the Portfolio had stopped showing the field. The screen
          that READS is the last place to catch that, so it catches it. */
-      sb.from("services").select("id,title,type,category,has_monthly_commitments").is("deleted_at",null)
+      sb.from("services").select("id,title,type,category,pos,has_monthly_commitments,commitment_kind").is("deleted_at",null),
+      /* ── V107.0 · THE ORDER IS THE PROPOSAL BANK'S ─────────────────
+         Chirag: the services must read "in the exact same order as in
+         the service section of the proposal bank". That order is
+         pb_bank.data.categoryOrder — his own list, draggable on that
+         screen — so this reads it rather than keeping a copy. The
+         Portfolio reads the same row.
+
+         A REFUSAL IS NOT AN ERROR. This row belongs to another tool and
+         its policy may not let the Calendar read it. An empty order
+         leaves every category unranked and the services fall back to
+         name order, which is what they do today — visibly imperfect
+         rather than quietly wrong. */
+      sb.from("pb_bank").select("data")
     ]);
     if(l.error) throw l.error;
     const byId={}; (sv.data||[]).forEach(x=>{byId[x.id]=x;});
@@ -13913,9 +13926,30 @@ async function loadEngagement(brandId){
         production:commits?x.production_included:null,
         setup:commits?x.setup_included:null,
         covers:x.covers||[], notOurs:x.not_included||[],
-        contractStart: con.start_date||null
+        contractStart: con.start_date||null,
+        pos: meta.pos||0
       };
-    }).sort((a,b)=>String(a.title).localeCompare(String(b.title)));
+    });
+    /* The Proposal Bank's rule, kept identical on purpose: an unranked
+       category sorts after the ranked ones by name, and Uncategorised is
+       always last. Inside a category, `pos` — the column that tool
+       sorts by. */
+    const ORDER=(()=>{
+      const rows=(bank&&bank.data)||[];
+      const r=rows.find(x=>x&&x.data&&Array.isArray(x.data.categoryOrder));
+      return r?r.data.categoryOrder.map(String):[];
+    })();
+    const rank=c=>{ const i=ORDER.indexOf(c); return i<0?ORDER.length:i; };
+    lines.sort((a,b)=>{
+      const ca=a.category||"Uncategorised", cb=b.category||"Uncategorised";
+      if(ca!==cb){
+        if(ca==="Uncategorised") return 1;
+        if(cb==="Uncategorised") return -1;
+        const d=rank(ca)-rank(cb); if(d) return d;
+        return ca.localeCompare(cb);
+      }
+      return (a.pos||0)-(b.pos||0) || String(a.title).localeCompare(String(b.title));
+    });
     ENG={brand:brandId,lines,ok:true,loading:false,err:""};
   }catch(e){
     ENG={brand:brandId,lines:[],ok:false,loading:false,err:String(e&&e.message||e)};
