@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V106.8 Bologna"/>
+<meta name="cc-tool-version" content="V106.9 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -9735,7 +9735,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V106.8 Bologna";
+const TOOL_VERSION="V106.9 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -13881,7 +13881,14 @@ async function loadEngagement(brandId){
     const ids=cons.map(x=>x.id);
     const [l,sv]=await Promise.all([
       sb.from("contract_services").select("*").in("service_contract_id",ids),
-      sb.from("services").select("id,title,type,category").is("deleted_at",null)
+      /* V106.9 — has_monthly_commitments rides along. The Calendar must
+         not draw posts, stories, reels, production or setup for a
+         service that does not commit them, WHATEVER the row holds.
+         Chirag, 18 Sep: Brand Website was reading "15 posts a month"
+         because a number typed before the flag existed was still in the
+         row and the Portfolio had stopped showing the field. The screen
+         that READS is the last place to catch that, so it catches it. */
+      sb.from("services").select("id,title,type,category,has_monthly_commitments").is("deleted_at",null)
     ]);
     if(l.error) throw l.error;
     const byId={}; (sv.data||[]).forEach(x=>{byId[x.id]=x;});
@@ -13893,14 +13900,18 @@ async function loadEngagement(brandId){
     const lines=(l.data||[]).map(x=>{
       const con=byCon[x.service_contract_id]||{};
       const meta=byId[x.service_id]||{};
+      const commits=!!meta.has_monthly_commitments;
       const start=x.start_date||con.start_date||null;
       const end=x.actual_end_date||x.end_date||con.actual_end_date||con.end_date||null;
       return {
         title: meta.title||"Service", basis: meta.type||"", category: meta.category||"",
         start, end,
         running: !!start && start<=today && (!end || end>=today),
-        posts:x.posts_per_month, stories:x.stories_per_month, reels:x.reels_per_month,
-        production:x.production_included, setup:x.setup_included,
+        posts:commits?x.posts_per_month:null,
+        stories:commits?x.stories_per_month:null,
+        reels:commits?x.reels_per_month:null,
+        production:commits?x.production_included:null,
+        setup:commits?x.setup_included:null,
         covers:x.covers||[], notOurs:x.not_included||[],
         contractStart: con.start_date||null
       };
