@@ -35,7 +35,7 @@
    Bump this with every batch that changes this file, the way every tool's
    TOOL_VERSION carries its batch name.
 
-   name="cc-tool-version" content="v69.0 — Naples: the version badge settles in one place"
+   name="cc-tool-version" content="V70.0 Salzburg"
 
    Source : webapp/site/index.html (v57.5 — Oslo: the sidebar counts formats, not the total twice)
             — where these rules were extracted from, the last time this
@@ -44,7 +44,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 
-:root{--bg:#F2F2F0;--surface:#FFFFFF;--surface2:#F7F7F5;
+:root{--sidebar-w:200px;--bg:#F2F2F0;--surface:#FFFFFF;--surface2:#F7F7F5;
   --text:#0D0D0D;--muted:#6B6B6B;--subtle:#AAAAAA;
   --div:#E4E4E2;--acc:#D62828;--acc2:#F5F5F5;
   --r:8px;--rc:12px;
@@ -61,7 +61,7 @@ body{background:var(--bg);color:var(--text);margin:0;min-height:100vh;}
 .nav-btn:hover{background:rgba(255,255,255,.16);color:#fff;}
 .nav-btn.red{background:var(--acc);border-color:var(--acc);color:#fff;}
 .nav-btn.red:hover{background:#BF2424;}
-.layout{display:grid;grid-template-columns:200px 1fr;}
+.layout{display:grid;grid-template-columns:var(--sidebar-w) 1fr;}
 .sidebar{background:var(--surface);border-right:1px solid var(--div);padding:20px 14px;position:sticky;top:60px;height:calc(100vh - 60px);overflow-y:auto;}
 .main{overflow-y:auto;max-height:calc(100vh - 60px);scrollbar-gutter:stable;}
 .year-head{padding:28px 32px 20px;display:flex;align-items:flex-end;gap:16px;}
@@ -216,6 +216,79 @@ select.fi:disabled,select.fi.ro{-webkit-appearance:none;appearance:none;backgrou
 .modal::-webkit-scrollbar-thumb{background:rgba(13,13,13,.18);border-radius:999px;}
 .nav{overflow:visible;}
 .nav-sep{width:1px;height:22px;background:rgba(255,255,255,.16);flex:none;}
+
+/* ══ THE DOORS, IN THE BLACK STRIP — SALZBURG, 19 September 2026 ══════
+   Lifted out of webapp/roster/src/roster.css BYTE FOR BYTE, on the
+   instruction Roster's own comment left behind when it wrote them:
+
+     "KIT-SHAPED NAMES ON PURPOSE — if this reads better after a week
+      these three rules move into cc-suite.css unchanged and every tool
+      gets them."
+
+   It has been a week and it read better, so they have moved. Roster's
+   copies are deleted in the same release; taking them verbatim is what
+   guarantees Roster cannot change appearance on the day it stops
+   owning them.
+
+   `.nav-seg` / `.nav-door` are the kit's `.bh-seg` / `.bh-door` with two
+   colours changed, because the ground they sit on changed: the tray is
+   the nav's own black rather than the page's #E7E6E1, and the lit door
+   is white. Same 28px pill, same 12.5px type. */
+.nav-seg{display:flex;background:rgba(255,255,255,.08);border-radius:9px;
+  padding:3px;gap:2px;height:34px;box-sizing:border-box;flex:none;}
+.nav-door{height:28px;padding:0 13px;border:0;border-radius:6px;background:transparent;
+  display:flex;align-items:center;cursor:pointer;white-space:nowrap;
+  font-family:inherit;font-size:12.5px;font-weight:600;line-height:1;
+  color:rgba(255,255,255,.62);}
+.nav-door:hover{color:#fff;}
+.nav-door.on{background:#fff;color:var(--text);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.22);}
+
+/* The one number the screen is about, in the bar that had the room.
+   Grey on black so it reads as a caption and not as another button. */
+.nav-count{font-size:12.5px;color:rgba(255,255,255,.55);white-space:nowrap;}
+.nav-count b{color:#fff;font-weight:700;}
+
+/* ══ THE COLUMN RULE, AND WHY IT IS OPT-IN ═══════════════════════════
+   cc-suite/COLUMN-RULE.md: the nav's columns are the page's columns.
+   The brand takes the sidebar's lane, so whatever follows it starts
+   exactly where the page content starts — and the separator goes,
+   because a rule between two aligned columns is a line doing nothing.
+
+   OPT-IN, VIA `.nav.lane`, AND THAT IS NOT TIDINESS. The Marketing
+   Calendar draws its own <nav class="nav"> and reads these rules from
+   here. An unscoped lane would move its header, and the Calendar is
+   deliberately outside this batch on Chirag's word. A tool joins by
+   adding one class, on the day its own batch reaches it.
+
+   WHAT THE PHOTOGRAPH FOUND. This block first read
+   `.nav.lane .nav-brand{width:var(--sidebar-w)}` — the line printed in
+   COLUMN-RULE.md. That line is a simplification of what Roster actually
+   ships, and on the live page it put the doors 40px right of the first
+   heading: the nav's own padding and gap sit between the brand and the
+   door, and the nav's padding is NOT the page's padding at every width.
+   The lane width is `sidebar + page padding - nav padding`, all three
+   of which move at the breakpoints, so it is computed at each one —
+   lifted from webapp/roster/src/roster.css, where it was measured. */
+:root{--cc-nav-lane:200px;}                               /* 200 + 32 - 32 */
+@media(max-width:1440px){:root{--cc-nav-lane:216px;}}     /* nav pad 16 */
+@media(max-width:1024px){:root{--cc-nav-lane:194px;}}     /* sidebar 180, nav pad 18 */
+.nav.lane{gap:0;}
+.nav.lane > * + *{margin-left:20px;}
+@media(max-width:1440px){.nav.lane > * + *{margin-left:10px;}}
+.nav.lane .nav-brand{width:var(--cc-nav-lane);flex:none;}
+.nav.lane > .nav-brand + *{margin-left:0;}
+/* The separator goes: a rule between two aligned columns is a line
+   doing nothing. It stays in the DOM, so the item after it needs the
+   same zero margin the brand's neighbour gets. */
+.nav.lane .nav-sep{display:none;}
+.nav.lane > .nav-sep + *{margin-left:0;}
+/* Replacing gap with margins gives every item the same weight as the
+   kit's `.nav-right{margin-left:auto}` and this block loads after it,
+   so the pin is restored explicitly. COLUMN-RULE.md: it shipped wrong
+   in Roster V1.33 and was found by eye on the live page. */
+.nav.lane > .nav-right{margin-left:auto;}
+@media(max-width:768px){.nav.lane .nav-brand{width:auto;}
+                        .nav.lane > * + *{margin-left:8px;}}
 .bpsep{height:1px;background:rgba(13,13,13,.07);margin:5px 6px;}
 .brow{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;cursor:pointer;font-size:13px;color:var(--text);}
 .brow:hover{background:rgba(13,13,13,.05);}
@@ -346,7 +419,8 @@ body .em2-page{height:calc(100vh - 60px - var(--cc-alarm-h,0px));}
 @media(max-width:1024px){
   .nav{padding:0 18px;gap:10px;}
   .nav-brand{font-size:15px;}
-  .layout{grid-template-columns:180px 1fr;}
+  :root{--sidebar-w:180px;}
+  .layout{grid-template-columns:var(--sidebar-w) 1fr;}
   .sidebar{padding:14px 10px;}
   .year-head{padding:20px 18px 14px;}
   .year-title{font-size:30px;}
