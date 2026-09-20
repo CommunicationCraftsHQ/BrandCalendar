@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V107.5 Bologna"/>
+<meta name="cc-tool-version" content="V107.6 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -9761,7 +9761,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V107.5 Bologna";
+const TOOL_VERSION="V107.6 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -14176,9 +14176,12 @@ function engDeliveryChip(){
   const d=DELIVERY[activeBrand];
   if(!d||!d.months_committed) return "";
   const miss=Number(d.months_missed)||0;
-  return `<span class="bd-chip eng-del${miss?" miss":""}" title="Committed production from ${
-    escAttr(engDate(d.since))} to this month, against the months that actually had a shoot">${
-    d.months_delivered} of ${d.months_committed} months shot${miss?` &middot; ${miss} missed`:""}</span>`;
+  /* SHORT. Chirag: "0 of 1 months shot · 1 missed — this is too long
+     for a chip." Two numbers and a word; the sentence that explains
+     them lives in the tooltip, where a sentence belongs. */
+  return `<span class="bd-chip eng-del${miss?" miss":""}" title="Production committed from ${
+    escAttr(engDate(d.since))} to the end of last month, against the months that actually had a shoot${
+    miss?` — ${miss} missed`:""}">${d.months_delivered}/${d.months_committed} shot</span>`;
 }
 
 function engHtml(){
@@ -20114,7 +20117,9 @@ function mpvToggle(id){
 
 function openMonthPlanView(m){
   if(!activeBrand||!brands[activeBrand]) return;
-  mpvMonth=m; setView("mplan");
+  /* 0 or nothing means "no month in particular" — the view opens at the
+     top of the list rather than scrolling to today. */
+  mpvMonth=m||0; setView("mplan");
   /* Read after the first paint, then redraw. The page is useful before
      the contract arrives and the strip says so while it is coming. */
   ENG_OPEN=engReadOpen();
@@ -20590,7 +20595,26 @@ function renderMonthPlanView(){
 function mpvSnap(){
   const main=document.getElementById("main"); if(!main) return;
   const sc=main.querySelector(".mpv-scroll"); if(!sc) return;
-  const want=mpvMonth||curMonth;
+  /* ⚠️ AND THE THIRD CAUSE, WHICH WAS THE REAL ONE. The timing fix was
+     right and did not fix it, because the snap was doing its job
+     perfectly — on the wrong month.
+
+     `mpvMonthsWithPlan` returns months NEWEST FIRST: for Times Blue
+     Haven that is [October, September]. The tab opened this view with
+     `openMonthPlanView(curMonth)` — September — so the snap scrolled
+     September to the top of the scroller, which puts OCTOBER above the
+     viewport with only its last few pixels showing. Exactly the pink
+     sliver Chirag photographed, on exactly the brands that have a
+     later month planned.
+
+     `curMonth` IS NOT A CHOICE, it is today's date. Landing on it made
+     sense when this view was a year of equal months; with a
+     newest-first list, "no preference" means the top of the list,
+     which is the most recent month with work. A month is only scrolled
+     to when somebody actually asked for one — `mpvStart`, the rail,
+     the theme jump — and those set `mpvMonth` themselves. */
+  const want=mpvMonth;
+  if(!want) return;
   const months=mpvMonthsWithPlan();
   if(!(months.length>1&&months.indexOf(want)>0)) return;
   const el=document.getElementById("mpv-m"+want); if(!el) return;
@@ -21616,7 +21640,9 @@ function syncTabs(){
 const BN_TABS=[
   {k:"year",    icon:"ti-calendar",        label:"Calendar", go:"setView('year')",              on:["year","list"]},
   {k:"brief",   icon:"ti-file-text",       label:"Vision",   go:"openBrief()",                  on:["brief"]},
-  {k:"mplan",   icon:"ti-calendar-stats",  label:"Plan",     go:"openMonthPlanView(curMonth||1)",on:["mplan"]},
+  /* 0 — no month asked for. The view opens at the top of its own list,
+   which is the latest month with work. See mpvSnap. */
+  {k:"mplan",   icon:"ti-calendar-stats",  label:"Plan",     go:"openMonthPlanView(0)",on:["mplan"]},
   {k:"content", icon:"ti-photo",           label:"Posts",    go:"navPosts()",                   on:["content"]},
   {k:"branding",icon:"ti-clipboard-text",  label:"Tasks",    go:"navTasks()",                   on:["branding","task"]}
 ];
