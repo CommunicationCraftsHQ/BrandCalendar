@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V107.1 Bologna"/>
+<meta name="cc-tool-version" content="V107.2 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -140,6 +140,11 @@ body.planning .mc-day:hover{box-shadow:0 0 0 2px #0EA5A5 inset;border-radius:5px
 .prodbb .pst.req{background:#FCEBEB;color:#8E2323;}
 .prodbb .pst.sch{background:#E8F0FE;color:#1D4ED8;}
 .prodbb .pst.nod{background:#EFEDF6;color:#5C5077;}
+/* CADENCE — a committed month. Amber, not the violet of "not dated":
+   a promise nobody has acted on is a different state from a shoot
+   that exists without a date, and the row says so in one glance. */
+.prodbb .pst.cmt{background:#FBF1DC;color:#8A5A12;}
+.prodbb .prow.commit{opacity:.92;}
 .prodbb .pst.done{background:#EAF3DE;color:#3B6D11;}
 .prodbb .pst.canc{background:#F0F0EE;color:#8A8A85;}
 .prodbb .pwhen{font-size:12.5px;font-weight:700;width:142px;flex:none;font-variant-numeric:tabular-nums;
@@ -2577,6 +2582,7 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .mpv-bh .pf.done{background:#EAF3DE;color:#3B6D11;}
 .mpv-bh .pf.req{background:#FCEBEB;color:#8E2323;}
 .mpv-bh .pf.nod{background:#EFEDF6;color:#5C5077;}
+.mpv-bh .pf.cmt{background:#FBF1DC;color:#8A5A12;}
 .mpv-bh .pf.none{background:transparent;color:var(--subtle);text-transform:none;letter-spacing:0;
   font-weight:600;padding:2px 0;}
 .mpv-bh .pnext{font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap;margin-left:4px;}
@@ -9736,7 +9742,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V107.1 Bologna";
+const TOOL_VERSION="V107.2 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -10148,6 +10154,38 @@ async function loadProductions(){
     PRODS=(r.error||!r.data)?[]:r.data;
   }catch(e){ PRODS=[]; }
 }
+/* ══ THE MONTHS A CONTRACT PROMISES ════════════════════════════════
+   CADENCE, 20 September 2026. Chirag: social media production is
+   committed in a contract — every month for some clients, every
+   alternate month for others — and "it should also appear in the
+   production section of the monthly plan pre-created as an item, so
+   the team knows that this has to be executed."
+
+   THE MONTH ARITHMETIC IS NOT HERE. `production_commitments` is a
+   view: it expands each contract line across its term, applies the
+   cadence, and drops any month that already has a shoot. The Planner
+   reads the same view. Writing "which months" twice — once in this
+   file and once in the Planner's React — is the drift this suite has
+   paid for more than once, so neither tool computes it.
+
+   Non-fatal like the shoots themselves: an empty list means the plan
+   shows the shoots alone, which is what it showed yesterday. */
+let COMMITS=[];
+async function loadCommitments(){
+  try{
+    const r=await sb.from("production_commitments").select("*").eq("year",YEAR);
+    COMMITS=(r.error||!r.data)?[]:r.data;
+  }catch(e){ COMMITS=[]; }
+}
+/* One card per committed month. A brand with two social services both
+   committing production would otherwise show the same month twice —
+   the promise is one production in that month, not one per line. */
+function commitsForBrandMonth(bid,y,m){
+  const seen={};
+  return COMMITS.filter(c=>c.brand_id===bid&&c.year===y&&c.month===m)
+                .filter(c=>seen[c.month]?false:(seen[c.month]=1,true));
+}
+
 /* WASP — a shoot's moodboards, scripts and references. Read once with
    the shoots, keyed by the shoot they hang off, so the month plan can
    show them without a request per row. Staff only: the migration's
@@ -10360,6 +10398,11 @@ async function loadAll(showToast){
   G={inds:inds.data,evts:evts.data,brs:brs.data,bevs:bevs.data,prefs:prefs.data||[],posts:posts.data,briefs:briefs.data,social:social.data,monthPlans:monthPlans.data,monthItems:monthItems.data};
   await loadProductions();  // Minsk: non-fatal — the day mark and the
                             // month plan's Production section both read it
+  await loadCommitments();  // Cadence: the months the contracts promise.
+                            // AFTER the shoots on purpose — the view
+                            // already excludes booked months, and
+                            // loading it second keeps the two reads in
+                            // the order a person would ask them in.
   await loadProductionComments();  // Wasp
   await loadProductionFiles();     // Wasp
   await loadProductionSeen();      // the four events on the bell
@@ -13930,6 +13973,15 @@ async function loadEngagement(brandId){
         stories:commits?x.stories_per_month:null,
         reels:commits?x.reels_per_month:null,
         production:commits?x.production_included:null,
+        /* CADENCE · 20 September 2026. Production stopped being a
+           yes-or-no on the contract: a line can commit one production
+           every month or every alternate month. NULL is every month —
+           every line signed before that day stored nothing and meant
+           monthly, so the fallback is the old behaviour. Read only
+           where production is actually included; anywhere else it is a
+           number that cannot mean anything. */
+        prodEveryN:(commits&&x.production_included===true)
+                    ? (Number(x.production_every_n_months)===2?2:1) : null,
         setup:commits?x.setup_included:null,
         covers:x.covers||[], notOurs:x.not_included||[],
         /* Same rule as the counts: a service that does not run ads shows
@@ -13986,14 +14038,24 @@ function engDate(d){
 function engCell(n,k){
   return n==null?"":`<div class="eng-q"><div class="n">${escAttr(String(n))}</div><div class="k">${escAttr(k)}</div></div>`;
 }
-function engMark(v,k){
+function engMark(v,k,note){
   if(v!==true&&v!==false) return "";
-  return `<div class="eng-q ${v?"yes":"no"}"><div class="n">${v?"&#10003; Included":"&#10007; Not included"}</div><div class="k">${escAttr(k)}</div></div>`;
+  /* `note` qualifies an Included tile — how often, for production.
+     It rides in the caption under the tick rather than as a tile of
+     its own: "every month" is not a second fact, it is half of the
+     first one, and a tile of its own would read as another
+     commitment. */
+  const cap=escAttr(k)+(v===true&&note?` &middot; ${escAttr(note)}`:"");
+  return `<div class="eng-q ${v?"yes":"no"}"><div class="n">${v?"&#10003; Included":"&#10007; Not included"}</div><div class="k">${cap}</div></div>`;
 }
+/* Said the same way in three places — this row, the plan's Production
+   section and the Planner — so one function says it. */
+function cadenceSays(n){ return Number(n)===2?"alternate months":"every month"; }
 const PAID_BY_SAYS={client_card:"Client's card",ours_reimbursed:"Our card, reimbursed",both:"Both"};
 function engBlock(l){
   const cells=engCell(l.posts,"Posts a month")+engCell(l.stories,"Stories a month")
-             +engCell(l.reels,"Reels a month")+engMark(l.production,"Production")
+             +engCell(l.reels,"Reels a month")
+             +engMark(l.production,"Production",l.prodEveryN?cadenceSays(l.prodEveryN):null)
              +engMark(l.setup,"One-time setup")
              /* Whose card the spend leaves on reads as a figure, beside
                 the counts, because it is the same kind of fact: a thing
@@ -20159,6 +20221,25 @@ function mpvStatusCtl(m,mp,canE){
    whose first day falls in this month, then everything for this brand
    with no date at all, because an undated shoot belongs to no month and
    would otherwise appear nowhere. */
+/* ── A COMMITTED MONTH, DRAWN AS A ROW ─────────────────────────────
+   The same shape as a shoot's row, deliberately, so the section reads
+   as one list. What differs is the status word: "Committed" is not a
+   shoot that exists with no date — it is a promise in a contract that
+   nobody has acted on. Saying "Not dated" would put it in the same
+   language as a real undated shoot and the difference is the whole
+   point of drawing it.
+
+   IT IS NOT A DATABASE ROW and nothing here can edit it. Book a shoot
+   in that month and the view stops producing it. */
+function mpvCommitRow(c){
+  const how=cadenceSays(c.every_n_months);
+  return `<div class="prow commit">
+    <span class="pst cmt">Committed</span>
+    <span class="pwhen soft">This month</span>
+    <span class="pwhat">Social media production<s> &middot; ${escHtml(how)} in the contract</s></span>
+  </div>`;
+}
+
 function mpvProdRow(p){
   const st = prodDated(p)
       ? (p.status==="done"?["done","Completed"]:p.status==="cancelled"?["canc","Cancelled"]:["sch","Scheduled"])
@@ -20186,10 +20267,16 @@ function mpvProdRow(p){
 function mpvProductionHtml(m,canE){
   if(!activeBrand||!brands[activeBrand]) return "";
   const {dated,open}=prodsForBrandMonth(activeBrand,YEAR,m);
-  const n=dated.length+open.length;
+  /* CADENCE — what the contract promised for this month and nobody has
+     booked. It joins the "no date yet" group rather than making a
+     group of its own: from where the team stands both answer the same
+     question, which is "what still has to be put in the diary". */
+  const owed=commitsForBrandMonth(activeBrand,YEAR,m);
+  const n=dated.length+open.length+owed.length;
+  const later=open.slice().sort((a,b)=>(prodIsRequest(b)-prodIsRequest(a))).map(mpvProdRow).join("")
+    +owed.map(mpvCommitRow).join("");
   const rows=dated.sort((a,b)=>a.date_day-b.date_day).map(mpvProdRow).join("")
-    +(open.length?`<div class="pdiv">Coming up, no date yet</div>`
-      +open.slice().sort((a,b)=>(prodIsRequest(b)-prodIsRequest(a))).map(mpvProdRow).join(""):"");
+    +(later?`<div class="pdiv">Coming up, no date yet</div>`+later:"");
 
   /* ══ THE CLOSED STRIP HAS TO EARN ITS LINE ═════════════════════
      5 Sep. It read "Production · 0 shoots" and nothing else, and the
@@ -20213,6 +20300,9 @@ function mpvProductionHtml(m,canE){
   if(done)      facts.push(`<span class="pf done">${done} done</span>`);
   if(asked)     facts.push(`<span class="pf req">${asked} waiting on you</span>`);
   if(undated)   facts.push(`<span class="pf nod">${undated} not dated</span>`);
+  /* On the closed strip too, because the strip's job is to answer
+     "what still has to happen this month" without opening it. */
+  if(owed.length) facts.push(`<span class="pf cmt">${owed.length} committed</span>`);
   if(!facts.length) facts.push(`<span class="pf none">Nothing planned</span>`);
   const nextLine=next?`<span class="pnext">Next · ${next.date_day} ${MN[m].slice(0,3)}</span>`:"";
 
