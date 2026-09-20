@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V107.2 Bologna"/>
+<meta name="cc-tool-version" content="V107.3 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -1208,6 +1208,11 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
    at the bar again while every other screen had moved down. It takes the
    gap off its own height instead. */
 #main > .mpv{height:calc(100vh - 80px - var(--cc-alarm-h,0px));}
+/* `.mpv` declares 100vh-60 and this declares 100vh-80. The specific one
+   wins, which is right — but the two being written apart is why nobody
+   could say what the height was. Stated here: the plan view is 80px
+   shorter than the window, and that 80 is the bar plus the page's top
+   gap. */
 #main > .mpv > .pgbar{flex:none;}
 
 /* ══ VERONA — THE CALENDAR'S OWN CONTROLS, ON THE CALENDAR'S PAGE ═════
@@ -2371,7 +2376,10 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .mpv > .mpv-scroll{flex:1;min-height:0;}
 .mpv-scroll{flex:1;min-height:0;overflow:auto;padding:0 32px 28px;}
 /* V106.8 — the scope holds its place while the year scrolls under it. */
-.mpv-eng{padding:0 32px 12px;flex:none;}
+/* OPAQUE, because `.mpv-sheet` is translucent with a backdrop blur: a
+   sheet passing under a transparent block reads as a sheet BEHIND it,
+   which is half of what Chirag saw on Blue Haven's October. */
+.mpv-eng{padding:0 32px 12px;flex:none;background:var(--bg);position:relative;z-index:2;}
 .mpv-eng:empty{display:none;}
 .mpv-sheet{background:rgba(255,255,255,.72);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
   border:1px solid var(--div);border-radius:14px;overflow:hidden;max-width:1000px;}
@@ -9742,7 +9750,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V107.2 Bologna";
+const TOOL_VERSION="V107.3 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -14052,6 +14060,19 @@ function engMark(v,k,note){
    section and the Planner — so one function says it. */
 function cadenceSays(n){ return Number(n)===2?"alternate months":"every month"; }
 const PAID_BY_SAYS={client_card:"Client's card",ours_reimbursed:"Our card, reimbursed",both:"Both"};
+/* ── SALZBURG · ONLY WHAT IS RUNNING ───────────────────────────────
+   Chirag, 20 September: "In the plan view of a brand, only running
+   services should be showing. There is no need to show lapsed services
+   in this section. Lapsed services should only be visible in the
+   Portfolio."
+
+   `running` is computed by loadEngagement off the line's own dates,
+   falling back to the contract's — so this is a filter, not a second
+   opinion about what running means. A brand whose every line has ended
+   shows the section's own empty state rather than a list of things
+   that are over. */
+function engRunning(lines){ return (lines||[]).filter(l=>l.running); }
+
 function engBlock(l){
   const cells=engCell(l.posts,"Posts a month")+engCell(l.stories,"Stories a month")
              +engCell(l.reels,"Reels a month")
@@ -14105,7 +14126,7 @@ function engToggle(e){
    committing it is dropped rather than printed as zero - null is not
    zero here either. */
 function engMonthly(){
-  const add=(k)=>ENG.lines.reduce((t,l)=>l[k]==null?t:t+l[k],null);
+  const add=(k)=>engRunning(ENG.lines).reduce((t,l)=>l[k]==null?t:t+l[k],null);
   const bits=[[add("posts"),"post"],[add("stories"),"story"],[add("reels"),"reel"]]
     .filter(([n])=>n!=null)
     .map(([n,w])=>n+" "+(n===1?w:(w==="story"?"stories":w+"s")));
@@ -14113,27 +14134,49 @@ function engMonthly(){
 }
 
 function engHtml(){
+  /* ⚠️ THE BRAND ON SCREEN, NOT THE BRAND THIS WAS READ FOR.
+     Chirag, 20 September: "when you are in the plan view and you change
+     the client, the plan view remains intact on the old client... you
+     don't even realise that it is not relevant data on the screen."
+
+     Here is why. The contract was read in `openMonthPlanView` — the
+     function that OPENS the view — and nowhere else. Switching brand
+     while already inside the plan view re-rendered everything from the
+     new brand except this block, which kept the lines it had loaded
+     for the previous one. The worst kind of wrong: correct-looking,
+     and about somebody else.
+
+     The guard belongs to the RENDERER, not to one entry point, because
+     a renderer runs on every path into the view and an entry point
+     only runs on one. */
+  if(ENG.brand!==activeBrand){
+    if(activeBrand&&!ENG.loading)
+      loadEngagement(activeBrand).then(()=>{ if(view==="mplan") renderMonthPlanView(); });
+    return `<div class="bd-card" style="padding:14px 18px;"><div class="bd-note" style="margin:0;">Reading the contract…</div></div>`;
+  }
   if(ENG.loading) return `<div class="bd-card" style="padding:14px 18px;"><div class="bd-note" style="margin:0;">Reading the contract…</div></div>`;
   if(ENG.err) return `<div class="bd-card" style="padding:14px 18px;"><div class="bd-note" style="margin:0;">The contract could not be read — ${escAttr(ENG.err)}</div></div>`;
   if(!ENG.lines.length) return `<div class="bd-card" style="padding:14px 18px;"><div class="bd-note" style="margin:0;">No contract is recorded for this brand yet.</div></div>`;
-  const live=ENG.lines.filter(x=>x.running);
+  /* RUNNING ONLY, from here down. A lapsed service is Portfolio's
+     record, not this month's scope. */
+  const live=engRunning(ENG.lines);
+  if(!live.length) return `<div class="bd-card" style="padding:14px 18px;"><div class="bd-note" style="margin:0;">No service is running for this brand right now.</div></div>`;
   /* THE NEXT ONE DUE, and nothing at all when none of them end. An
      open-ended retainer has no renewal and an empty space says so
      better than the words "no end date" do. */
   const today=new Date().toISOString().slice(0,10);
-  const renew=ENG.lines.map(x=>x.end).filter(d=>d&&d>=today).sort()[0]||null;
-  const n=ENG.lines.length, mth=engMonthly();
+  const renew=live.map(x=>x.end).filter(d=>d&&d>=today).sort()[0]||null;
+  const n=live.length, mth=engMonthly();
   return `<div class="bd-card eng-sec${ENG_OPEN?" open":""}" id="bd-scope" style="scroll-margin-top:calc(var(--hdrh) + 14px);">
       <div class="eng-strip" onclick="engToggle(event)">
         <span class="bd-lbl" style="margin:0;">Engagement &amp; scope</span>
-        ${live.length?`<span class="bd-chip"><span class="eng-dot on"></span> Running</span>`:""}
-        <span class="bd-chip">${n} service${n===1?"":"s"}</span>
+        <span class="bd-chip"><span class="eng-dot on"></span> ${n} service${n===1?"":"s"} running</span>
         ${mth?`<span class="bd-chip">${escAttr(mth)}</span>`:""}
         ${renew?`<span class="bd-chip">Renews ${escAttr(engDate(renew))}</span>`:""}
         <span class="eng-gap"></span>
         <button class="bd-chev${ENG_OPEN?" open":""}" aria-expanded="${ENG_OPEN?"true":"false"}" aria-controls="eng-body" onclick="engToggle(event)"><span class="bd-chevlbl">${ENG_OPEN?"Hide":"Show"} the scope</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5"/></svg></button>
       </div>
-      ${ENG_OPEN?`<div class="eng-body" id="eng-body">${ENG.lines.map(engBlock).join("")}</div>`:""}
+      ${ENG_OPEN?`<div class="eng-body" id="eng-body">${live.map(engBlock).join("")}</div>`:""}
     </div>`;
 }
 
@@ -20271,12 +20314,37 @@ function mpvProductionHtml(m,canE){
      booked. It joins the "no date yet" group rather than making a
      group of its own: from where the team stands both answer the same
      question, which is "what still has to be put in the diary". */
-  const owed=commitsForBrandMonth(activeBrand,YEAR,m);
+  /* ── ONE PRODUCTION A MONTH, SO ONE ROW ─────────────────────────
+     Chirag, 20 September, looking at Addressbox: "When you have one
+     committed and one not dated, they should be one and the same.
+     Since you have to conduct at least one production every month and
+     you already see that planned, there is no need to show an
+     additional one committed but not dated."
+
+     He is right, and the duplicate was mine. The commitment says a
+     production is owed this month; a shoot in this section says one is
+     planned. Drawing both says the brand owes two. So the commitment
+     is drawn only when the section is otherwise EMPTY for this month.
+
+     SCOPED TO THIS SECTION ON PURPOSE. The Planner's shelf keeps both,
+     because there an undated shoot belongs to no month and cancelling
+     twelve commitments over one stray shoot would be wrong. Here the
+     question is only ever "is anything planned for this month". */
+  const owed=(dated.length||open.length)?[]:commitsForBrandMonth(activeBrand,YEAR,m);
   const n=dated.length+open.length+owed.length;
-  const later=open.slice().sort((a,b)=>(prodIsRequest(b)-prodIsRequest(a))).map(mpvProdRow).join("")
-    +owed.map(mpvCommitRow).join("");
+  /* ── AND THE SECTION LOST ITS FURNITURE ─────────────────────────
+     "The layout of the whole section is unnecessarily complex. There
+     are multiple horizontal rules which are not required. There is a
+     title that says Coming up, no date yet, which also doesn't tell
+     you anything and is quite unnecessary."
+
+     The divider said what each row's own status chip already says —
+     NOT DATED, REQUESTED, COMMITTED — so it was a heading over rows
+     that had introduced themselves. Dated shoots come first, undated
+     after; the chips carry the difference. */
   const rows=dated.sort((a,b)=>a.date_day-b.date_day).map(mpvProdRow).join("")
-    +(later?`<div class="pdiv">Coming up, no date yet</div>`+later:"");
+    +open.slice().sort((a,b)=>(prodIsRequest(b)-prodIsRequest(a))).map(mpvProdRow).join("")
+    +owed.map(mpvCommitRow).join("");
 
   /* ══ THE CLOSED STRIP HAS TO EARN ITS LINE ═════════════════════
      5 Sep. It read "Production · 0 shoots" and nothing else, and the
@@ -20440,10 +20508,22 @@ function renderMonthPlanView(){
   ensureMonthPlanAssets(months);
 
   /* land on the month you came from, without a jump if it is the first */
+  /* ⚠️ `scrollIntoView` SCROLLS EVERY SCROLLABLE ANCESTOR, not only the
+     one you meant. Chirag, 20 September: "in some brands where the next
+     month is already planned — in Blue Haven, October — when you open
+     the plan view the month appears either cropped or behind the
+     Engagement & scope section instead of under it, so you have to
+     scroll to fully reveal it."
+
+     That is the browser obeying the instruction on more than one box.
+     This scrolls ONE element, by arithmetic, and cannot move anything
+     else: the sheet's top lands at the top of its own scroller, which
+     begins below the scope block by construction. */
   const want=mpvMonth||curMonth;
   if(months.length>1&&months.indexOf(want)>0){
     const el=document.getElementById("mpv-m"+want);
-    if(el) el.scrollIntoView({block:"start"});
+    const sc=main.querySelector(".mpv-scroll");
+    if(el&&sc) sc.scrollTop=Math.max(0,el.offsetTop-6);
   }
 }
 
