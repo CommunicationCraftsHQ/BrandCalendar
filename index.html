@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V107.7 Bologna"/>
+<meta name="cc-tool-version" content="V107.8 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3114,7 +3114,7 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
              The email keeps its own hairline rather than a .bpsep, so the three
              dividers in the markup are exactly the three group breaks. -->
         <div class="brow" data-need="manage_events" onclick="closeAllPops();openEventManager()"><i class="ti ti-calendar-cog"></i><span class="bnm">Event Manager</span></div>
-        <div class="brow" data-need="edit" id="acct-playbooks-row" onmouseenter="openPlaybooksFlyout()" onmouseleave="closePlaybooksFlyout()"><i class="ti ti-book"></i><span class="bnm">Playbooks</span><i class="ti ti-chevron-right" style="margin-left:auto;font-size:12px;opacity:.5;"></i></div>
+        <div class="brow" data-need="edit" id="acct-playbooks-row" onmouseenter="openPlaybooksFlyout()" onmouseleave="closePlaybooksFlyout()"><i class="ti ti-notebook"></i><span class="bnm">Playbooks</span><i class="ti ti-chevron-right" style="margin-left:auto;font-size:12px;opacity:.5;"></i></div>
         <div class="brow" data-need="edit" onclick="closeAllPops();carryForward()"><i class="ti ti-arrow-forward"></i><span class="bnm" id="acct-carry">Carry forward to next year</span></div>
         <div class="brow" data-need="edit" onclick="closeAllPops();openImportHistory()"><i class="ti ti-file-import"></i><span class="bnm">Import history</span></div>
         <div class="bpsep"></div>
@@ -9709,7 +9709,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V107.7 Bologna";
+const TOOL_VERSION="V107.8 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -19046,11 +19046,42 @@ function renderSuiteFlyout(list){
   }).join("");
 }
 
+/* ══ BOLOGNA · A FLYOUT CANNOT LIVE IN THE SIDEBAR ══════════════════
+   `aside.sidebar` is position:sticky, and a sticky element creates its
+   OWN STACKING CONTEXT. Everything inside it is sealed in there, so a
+   flyout's z-index of 700 never competes at page level however high it
+   is set — raising it to 900 changed nothing, because the ceiling is
+   the container and not the number.
+
+   Two faults followed, both reported from the live page on 20 Sep:
+     · the calendar painted OVER the flyout, because `.main` comes
+       after the sidebar and both sit at the same level
+     · clicks never reached it, because #acct-scrim (z 699, a child of
+       body) covered it and swallowed them
+
+   THE SUITE FLYOUT HAS THE SAME FAULT and has had it since Montreal.
+   It goes unnoticed only because it opens low, over the sidebar, where
+   there is no content to bleed through and the scrim's 6% tint reads
+   as nothing. It would break identically the day it opened higher.
+
+   So both are lifted onto the body the first time they open. They are
+   positioned against the WINDOW already — `position:fixed`, left and
+   top written by hand — so moving them changes nothing about where
+   they land, only what they are allowed to paint over.
+
+   The gate asserts the parent, not the background colour. The first
+   version checked that the panel was opaque white, which is true and
+   says nothing at all about what paints on top of it. */
+function liftFlyout(el){
+  if(el && el.parentElement !== document.body) document.body.appendChild(el);
+  return el;
+}
+
 async function openSuiteFlyout(){
   clearTimeout(SUITE.timer);
   const list=suiteToolsForMe(await loadSuiteTools());
   SUITE.mine=list.length;
-  const fly=document.getElementById("acct-suite");
+  const fly=liftFlyout(document.getElementById("acct-suite"));
   const menu=document.getElementById("acct-menu");
   const row=document.getElementById("acct-suite-row");
   if(!fly||!menu||!row||!list.length) return;
@@ -19099,13 +19130,13 @@ function renderPlaybooksFlyout(){
   const fly=document.getElementById("acct-playbooks"); if(!fly) return;
   fly.innerHTML=PLAYBOOKS.map(function(p){
     return '<a class="brow" href="'+escAttr(p.url)+'" target="_blank" rel="noopener" style="text-decoration:none;">'
-      +'<i class="ti ti-book"></i><span class="bnm">'+escHtml(p.label)+'</span>'
+      +'<i class="ti ti-notebook"></i><span class="bnm">'+escHtml(p.label)+'</span>'
       +'<i class="ti ti-external-link" style="margin-left:auto;font-size:12px;opacity:.5;"></i></a>';
   }).join("");
 }
 function openPlaybooksFlyout(){
   clearTimeout(PBK.timer);
-  const fly=document.getElementById("acct-playbooks");
+  const fly=liftFlyout(document.getElementById("acct-playbooks"));
   const menu=document.getElementById("acct-menu");
   const row=document.getElementById("acct-playbooks-row");
   if(!fly||!menu||!row||!PLAYBOOKS.length) return;
