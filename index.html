@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V107.3 Bologna"/>
+<meta name="cc-tool-version" content="V107.4 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2376,10 +2376,18 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .mpv > .mpv-scroll{flex:1;min-height:0;}
 .mpv-scroll{flex:1;min-height:0;overflow:auto;padding:0 32px 28px;}
 /* V106.8 — the scope holds its place while the year scrolls under it. */
-/* OPAQUE, because `.mpv-sheet` is translucent with a backdrop blur: a
-   sheet passing under a transparent block reads as a sheet BEHIND it,
-   which is half of what Chirag saw on Blue Haven's October. */
-.mpv-eng{padding:0 32px 12px;flex:none;background:var(--bg);position:relative;z-index:2;}
+/* ⚠️ THE BAND WAS WORSE THAN THE PROBLEM. I painted `.mpv-eng` with
+   the page background to stop sheets reading through it; `.mpv-eng` is
+   full width and the card inside it is not, so the paint showed as a
+   slab stretching past the card to both edges. Chirag: "there is an
+   awkward background behind the Engagement & scope section which
+   stretches to end... seems like a bug."
+
+   The CARD is the thing that has to be opaque, not the strip holding
+   it. `.eng-sec` already has a white card background; it only needed
+   to stop being see-through at the edges and to sit above the scroll. */
+.mpv-eng{padding:0 32px 12px;flex:none;position:relative;z-index:2;}
+.mpv-eng > .bd-card{background:#fff;}
 .mpv-eng:empty{display:none;}
 .mpv-sheet{background:rgba(255,255,255,.72);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
   border:1px solid var(--div);border-radius:14px;overflow:hidden;max-width:1000px;}
@@ -9750,7 +9758,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V107.3 Bologna";
+const TOOL_VERSION="V107.4 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -20523,7 +20531,19 @@ function renderMonthPlanView(){
   if(months.length>1&&months.indexOf(want)>0){
     const el=document.getElementById("mpv-m"+want);
     const sc=main.querySelector(".mpv-scroll");
-    if(el&&sc) sc.scrollTop=Math.max(0,el.offsetTop-6);
+    /* ⚠️ `offsetTop` IS MEASURED FROM THE OFFSET PARENT, and `.mpv-scroll`
+       is not one — it has no `position`, so the browser measured from
+       whichever ancestor did, and the month landed short by that
+       ancestor's own offset. October stayed half under the scope block,
+       which is exactly what Chirag reported again.
+
+       Rectangles, not offsets: the difference between where the sheet
+       IS and where the scroller's top edge is, added to the scroll
+       position. True whatever is positioned and whatever is nested. */
+    if(el&&sc){
+      const d=el.getBoundingClientRect().top-sc.getBoundingClientRect().top;
+      sc.scrollTop=Math.max(0,sc.scrollTop+d-6);
+    }
   }
 }
 
