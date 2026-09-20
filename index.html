@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V107.4 Bologna"/>
+<meta name="cc-tool-version" content="V107.5 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2388,6 +2388,9 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
    to stop being see-through at the edges and to sit above the scroll. */
 .mpv-eng{padding:0 32px 12px;flex:none;position:relative;z-index:2;}
 .mpv-eng > .bd-card{background:#fff;}
+/* the delivery record: quiet when it is clean, amber when it is not */
+.bd-chip.eng-del{background:#EAF5EC;color:#256B33;}
+.bd-chip.eng-del.miss{background:#FBF1DC;color:#8A5A12;}
 .mpv-eng:empty{display:none;}
 .mpv-sheet{background:rgba(255,255,255,.72);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
   border:1px solid var(--div);border-radius:14px;overflow:hidden;max-width:1000px;}
@@ -9758,7 +9761,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V107.4 Bologna";
+const TOOL_VERSION="V107.5 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -10193,6 +10196,27 @@ async function loadCommitments(){
     COMMITS=(r.error||!r.data)?[]:r.data;
   }catch(e){ COMMITS=[]; }
 }
+
+/* ── WHAT WAS PROMISED AND WHAT HAPPENED ───────────────────────────
+   Chirag, 20 September: "from the start of the contract, how many
+   months have passed, how many shoots were committed and against that
+   how many actual shoots happened. This is the only past data that is
+   required."
+
+   A SECOND VIEW, not a second reading of the first. `COMMITS` is what
+   is owed and unbooked — a month drops out of it the moment a shoot
+   lands there. This is the record of how we have done, so it has to
+   count exactly the months the other one has dropped. He chose (c):
+   the same number in the Calendar and in the Planner, read from one
+   place so the two cannot disagree. */
+let DELIVERY={};
+async function loadDelivery(){
+  try{
+    const r=await sb.from("production_delivery").select("*");
+    DELIVERY={};
+    if(!r.error&&r.data) r.data.forEach(d=>{ DELIVERY[d.brand_id]=d; });
+  }catch(e){ DELIVERY={}; }
+}
 /* One card per committed month. A brand with two social services both
    committing production would otherwise show the same month twice —
    the promise is one production in that month, not one per line. */
@@ -10414,6 +10438,7 @@ async function loadAll(showToast){
   G={inds:inds.data,evts:evts.data,brs:brs.data,bevs:bevs.data,prefs:prefs.data||[],posts:posts.data,briefs:briefs.data,social:social.data,monthPlans:monthPlans.data,monthItems:monthItems.data};
   await loadProductions();  // Minsk: non-fatal — the day mark and the
                             // month plan's Production section both read it
+  await loadDelivery();     // Cadence: promised against delivered.
   await loadCommitments();  // Cadence: the months the contracts promise.
                             // AFTER the shoots on purpose — the view
                             // already excludes booked months, and
@@ -14141,6 +14166,21 @@ function engMonthly(){
   return bits.length?bits.join(" · ")+" a month":"";
 }
 
+/* ── THE RECORD, IN ONE CHIP ───────────────────────────────────────
+   "4 of 9 months shot" on the strip you already check the scope from.
+   It appears only where there is a record to show — a brand with no
+   production commitment gets nothing rather than a zero, and a brand
+   that has missed none is quietly green rather than silent, because
+   "we are on top of this" is worth a glance too. */
+function engDeliveryChip(){
+  const d=DELIVERY[activeBrand];
+  if(!d||!d.months_committed) return "";
+  const miss=Number(d.months_missed)||0;
+  return `<span class="bd-chip eng-del${miss?" miss":""}" title="Committed production from ${
+    escAttr(engDate(d.since))} to this month, against the months that actually had a shoot">${
+    d.months_delivered} of ${d.months_committed} months shot${miss?` &middot; ${miss} missed`:""}</span>`;
+}
+
 function engHtml(){
   /* ⚠️ THE BRAND ON SCREEN, NOT THE BRAND THIS WAS READ FOR.
      Chirag, 20 September: "when you are in the plan view and you change
@@ -14179,6 +14219,7 @@ function engHtml(){
       <div class="eng-strip" onclick="engToggle(event)">
         <span class="bd-lbl" style="margin:0;">Engagement &amp; scope</span>
         <span class="bd-chip"><span class="eng-dot on"></span> ${n} service${n===1?"":"s"} running</span>
+        ${engDeliveryChip()}
         ${mth?`<span class="bd-chip">${escAttr(mth)}</span>`:""}
         ${renew?`<span class="bd-chip">Renews ${escAttr(engDate(renew))}</span>`:""}
         <span class="eng-gap"></span>
@@ -20514,37 +20555,56 @@ function renderMonthPlanView(){
      month plans have never been asked about. */
   months.forEach(m=>mpDrawChips(m));
   ensureMonthPlanAssets(months);
+  /* and again once the frame has laid all of that out */
+  mpvSnapSoon();
 
   /* land on the month you came from, without a jump if it is the first */
-  /* ⚠️ `scrollIntoView` SCROLLS EVERY SCROLLABLE ANCESTOR, not only the
-     one you meant. Chirag, 20 September: "in some brands where the next
-     month is already planned — in Blue Haven, October — when you open
-     the plan view the month appears either cropped or behind the
-     Engagement & scope section instead of under it, so you have to
-     scroll to fully reveal it."
+  mpvSnap();
+}
 
-     That is the browser obeying the instruction on more than one box.
-     This scrolls ONE element, by arithmetic, and cannot move anything
-     else: the sheet's top lands at the top of its own scroller, which
-     begins below the scope block by construction. */
+/* ══ LANDING ON THE RIGHT MONTH, AFTER THE PAGE HAS FINISHED GROWING ══
+   Chirag, twice: October is cropped — and, the third time, with the
+   detail that made it solvable: "strangely the problem is different in
+   different pages. In Smart Laboratories October is scrolled further up
+   and hidden, whereas in Luvaire it appears exactly how we want."
+
+   DIFFERENT BY BRAND, BY AN AMOUNT NOBODY CHOSE. That is not a wrong
+   formula — a wrong formula is wrong by the same amount everywhere. It
+   is a correct formula run at the wrong moment.
+
+   The scroll was the last line of the render, and three things grow the
+   page AFTER that line:
+
+     · `mpDrawChips` draws attachment chips into the sheets,
+     · `ensureMonthPlanAssets` fetches those assets and draws more,
+     · the scope block itself is a placeholder saying "Reading the
+       contract…" until the contract arrives, then becomes a full card.
+
+   Every one of them adds height ABOVE the month being aimed at, and
+   each brand has a different amount of it. So each brand landed short
+   by its own number: Luvaire has little, Smart Laboratories has a lot.
+
+   The fix is not arithmetic, it is timing. This runs the same snap
+   again after each of those has had its turn, and it is idempotent —
+   snapping to a month already at the top moves nothing. */
+function mpvSnap(){
+  const main=document.getElementById("main"); if(!main) return;
+  const sc=main.querySelector(".mpv-scroll"); if(!sc) return;
   const want=mpvMonth||curMonth;
-  if(months.length>1&&months.indexOf(want)>0){
-    const el=document.getElementById("mpv-m"+want);
-    const sc=main.querySelector(".mpv-scroll");
-    /* ⚠️ `offsetTop` IS MEASURED FROM THE OFFSET PARENT, and `.mpv-scroll`
-       is not one — it has no `position`, so the browser measured from
-       whichever ancestor did, and the month landed short by that
-       ancestor's own offset. October stayed half under the scope block,
-       which is exactly what Chirag reported again.
-
-       Rectangles, not offsets: the difference between where the sheet
-       IS and where the scroller's top edge is, added to the scroll
-       position. True whatever is positioned and whatever is nested. */
-    if(el&&sc){
-      const d=el.getBoundingClientRect().top-sc.getBoundingClientRect().top;
-      sc.scrollTop=Math.max(0,sc.scrollTop+d-6);
-    }
-  }
+  const months=mpvMonthsWithPlan();
+  if(!(months.length>1&&months.indexOf(want)>0)) return;
+  const el=document.getElementById("mpv-m"+want); if(!el) return;
+  /* Rectangles, not `offsetTop`: `.mpv-scroll` is not an offset parent,
+     so `offsetTop` measures from whichever ancestor is, and the month
+     lands short by that ancestor's own offset. */
+  const d=el.getBoundingClientRect().top-sc.getBoundingClientRect().top;
+  if(Math.abs(d-6)<1) return;
+  sc.scrollTop=Math.max(0,sc.scrollTop+d-6);
+}
+/* Twice through the frame queue: once for the layout this render caused,
+   once for anything the first frame's own work caused. */
+function mpvSnapSoon(){
+  requestAnimationFrame(()=>{ mpvSnap(); requestAnimationFrame(mpvSnap); });
 }
 
 /* One query for the whole year rather than one per month. Asked once
@@ -20581,6 +20641,9 @@ async function ensureMonthPlanAssets(months){
       }
     }
     months.forEach(m=>mpDrawChips(m));
+    /* THE ASSETS ARRIVED AND THE SHEETS GREW. Whatever month was being
+       aimed at is now that much lower than it was. */
+    if(view==="mplan") mpvSnapSoon();
   }catch(e){}
 }
 
