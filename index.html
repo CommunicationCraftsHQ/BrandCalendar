@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V108.2 Bologna"/>
+<meta name="cc-tool-version" content="V108.3 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2835,6 +2835,9 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .bh-door.on{background:var(--surface);color:var(--text);font-weight:700;
   box-shadow:0 1px 2px rgba(0,0,0,.09);}
 
+
+/* BOLOGNA V108.3 — the Promotions | Numbers switch uses .bh-seg as it is */
+.prnum-row + .nswrap{padding-top:0;}
 
 /* ══ CAPE TOWN STAGE 3 · THE TASK SCREEN ═════════════════════════════ */
 .tk-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
@@ -9805,7 +9808,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V108.2 Bologna";
+const TOOL_VERSION="V108.3 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -23681,6 +23684,105 @@ async function prCrTrash(cid){
   const base=viewRoute;
   viewRoute=function(v){
     if(v==="promotions") return {render:renderPromotions,sidebar:null,needs:"view_promotions"};
+    return base(v);
+  };
+})();
+
+</script>
+<!-- BOLOGNA V108.3 / V108.4 — the tab changes and the Plan page, in a script of
+     their own so the gates that read the Numbers and Promotions blocks out of
+     the page (tests/newjersey-numbers) stop at the end of those blocks. -->
+<script>
+/* ══ BOLOGNA V108.3 · NUMBERS LIVES INSIDE PROMOTIONS ════════════════
+   Chirag, 22 Sep: "numbers for now can simply become a sub page within
+   promotions, without any changes... go away from the top tab and live
+   inside the promotion page." Checklist: 01 - Plan page - build
+   checklist.md, part 1.
+
+   THE NUMBERS SCREEN IS UNTOUCHED. Its route, its loader and its
+   renderer are exactly as New Jersey left them; only the door moves.
+   The tab goes, and a two-way switch at the top of both screens takes
+   its place.
+
+   WHO SEES THE TAB. Promotions was gated on "See Promotions" and
+   Numbers on "Instagram numbers". Folding one door into the other must
+   not take a screen away from anybody, so the tab is drawn for EITHER
+   permission, and inside it each half is offered only to people who
+   have that half. With only one of the two there is no switch at all —
+   a switch with one position is a label pretending to be a control. */
+(function(){
+  const ni=BN_TABS.findIndex(t=>t.k==="numbers");
+  if(ni>-1) BN_TABS.splice(ni,1);
+  const pr=BN_TABS.find(t=>t.k==="promotions");
+  if(pr){ delete pr.cap; pr.caps=["view_promotions","view_social_insights"]; pr.on=["promotions","numbers"]; }
+})();
+function bnTabAllowed(t){
+  if(t.caps) return t.caps.some(c=>canCap(c));
+  return !t.cap||canCap(t.cap);
+}
+renderBnTabs=function(){
+  const el=document.getElementById("bn-tabs"); if(!el) return;
+  if(!activeBrand||!brands[activeBrand]||!canEdit()){ el.innerHTML=""; el.style.display="none"; return; }
+  el.style.display="";
+  el.innerHTML=BN_TABS.filter(bnTabAllowed).map(t=>{
+    const on=t.on.indexOf(view)>-1;
+    return `<button class="bntab${on?" on":""}" onclick="${t.go}"
+      aria-current="${on?"page":"false"}"><i class="ti ${t.icon}"></i> ${t.label}</button>`;
+  }).join("");
+};
+/* The one door. Someone with Numbers but not Promotions lands on
+   Numbers rather than on a refusal. */
+navPromotions=async function(){
+  if(!activeBrand){ toast("Pick a brand first — Promotions is per brand"); return; }
+  const pv=canCap("view_promotions"), nv=canCap("view_social_insights");
+  if(!pv&&!nv){ toast("Promotions are not part of your access.","err"); return; }
+  if(!pv){ setView("numbers"); return; }
+  PR.open=null; PR.creative=null;
+  setView("promotions");
+};
+function prNumSwitchHtml(cur){
+  if(!(canCap("view_promotions")&&canCap("view_social_insights"))) return "";
+  const b=(k,label,go)=>`<button class="bh-door${cur===k?" on":""}" data-prnum="${k}"
+      aria-pressed="${cur===k?"true":"false"}" onclick="${go}">${label}</button>`;
+  return `<div class="bh-seg prnum">${b("promotions","Promotions","navPromotions()")}${b("numbers","Numbers","navNumbers()")}</div>`;
+}
+/* ITS OWN ROW, AT THE SAME PIXEL ON BOTH SCREENS. It was first put at
+   the front of Promotions' control row, and at 1180 that row needed
+   1,096px of a 977px band: it wrapped to two lines. Promotions' row was
+   already nearly full on its own. A switch between two sibling screens
+   is the frame's grouped switch (.bh-seg), so it sits in a row of its
+   own above whatever the screen puts under it — and because it is the
+   same row on both, it does not jump when you flip between them. */
+function prNumRowMount(mc,sw){
+  const ph=mc.querySelector(":scope > .ph");
+  const row=`<div class="pgbar prnum-row">${sw}</div>`;
+  if(ph) ph.insertAdjacentHTML("afterend",row); else mc.insertAdjacentHTML("afterbegin",row);
+}
+/* Wrapped, not copied: the two renderers stay New Jersey's and Bologna's.
+   The switch goes at the FRONT of the page's own control row on
+   Promotions (the list only — inside one promotion the row belongs to
+   that promotion), and becomes the control row on Numbers, which never
+   had one. */
+(function(){
+  const baseR=renderPromotions, baseN=renderNumbers;
+  renderPromotions=function(){
+    const out=baseR.apply(this,arguments);
+    const sw=prNumSwitchHtml("promotions");
+    const mc=document.getElementById("main");
+    if(sw && !PR.open && mc && !mc.querySelector(".prnum")) prNumRowMount(mc,sw);
+    return out;
+  };
+  renderNumbers=function(){
+    const out=baseN.apply(this,arguments);
+    const sw=prNumSwitchHtml("numbers");
+    const mc=document.getElementById("main");
+    if(sw && mc && !mc.querySelector(".prnum")) prNumRowMount(mc,sw);
+    return out;
+  };
+  const base=viewRoute;
+  viewRoute=function(v){
+    if(v==="promotions") return {render:renderPromotions,sidebar:null,needs:"view_promotions"};
+    if(v==="numbers")    return {render:renderNumbers,sidebar:null,needs:"view_social_insights"};
     return base(v);
   };
 })();
