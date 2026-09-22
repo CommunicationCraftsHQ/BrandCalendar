@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V108.5 Bologna"/>
+<meta name="cc-tool-version" content="V108.6 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2721,11 +2721,22 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
    Five fixed columns and one that gives way: the task name. */
 .brl-hd,.brl-tr{grid-template-columns:3px 20px minmax(0,1fr) 140px 150px 96px 108px 96px 26px 30px;}
 .brl-stw{position:relative;}
+/* V108.6 — WITHOUT THIS THE MENU WENT TO THE TOP OF THE PAGE. An
+   absolutely positioned child is placed against the nearest POSITIONED
+   ancestor, and the row was not one, so it climbed out of the list
+   altogether and landed under the header. */
+.brl-tr{position:relative;}
 .brl-pill.may{cursor:pointer;border:1px solid transparent;}
 .brl-pill.may:hover{border-color:currentColor;}
 .brl-pill b{font-weight:700;opacity:.45;font-size:10px;margin-left:1px;}
-.brl-tr .c{font-size:12.5px;color:var(--muted);text-align:right;white-space:nowrap;
+/* V108.6 — THE HEADING AND ITS COLUMN ARE ONE RULE, NOT TWO. Chirag,
+   22 Sep: "the columns don't align with the title". They were aligned
+   to the same grid cell and to opposite edges of it — the cells right,
+   the headings left — which is the one way two things in the same
+   column can still disagree. */
+.brl-tr .c,.brl-hd .c{font-size:12.5px;text-align:right;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis;display:block;}
+.brl-tr .c{color:var(--muted);}
 .brl-tr .c.late{color:var(--acc);font-weight:700;}
 .brl-un{min-width:17px;height:17px;padding:0 5px;border-radius:99px;background:var(--acc);color:#fff;
   font-size:10.5px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex:none;}
@@ -2798,7 +2809,7 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 
 /* ── the task, open inside the list ─────────────────────────────── */
 .br-open{background:#FCFCFB;border-bottom:1px solid #F4F4F2;padding:13px 18px 0 34px;cursor:default;}
-.br-otop{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+.br-otop{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
 .br-otop .k{font-size:12.5px;color:var(--muted);}
 .br-otop .k b{color:var(--text);font-weight:650;}
 .br-otop .sp{flex:1;}
@@ -7246,11 +7257,17 @@ let POP_CLICK_INSIDE=false;
 document.addEventListener("click",e=>{
   const t=e.target;
   POP_CLICK_INSIDE=!!(t&&t.closest&&
-    t.closest("#brand-panel,#export-panel,#notif-panel,#acct-menu,#view-panel"));
+    t.closest("#brand-panel,#export-panel,#notif-panel,#acct-menu,.brl-menu,.brfb-pop"));
 },true);
 document.addEventListener("click",()=>{
   if(POP_CLICK_INSIDE) return;
+  /* V108.6 — the task list's menus live in variables, not in the DOM,
+     so dismissing them means a redraw as well as a close. Without it a
+     click on the page left the menu on screen until something else
+     happened to render. */
+  const had=BR_MENU||BR_STMENU||BR_FPOP;
   closeAllPops();
+  if(had&&typeof render==="function") render();
 });
 function popOpen(id,e){
   if(e) e.stopPropagation();
@@ -8519,13 +8536,21 @@ function brOpenPanelHtml(t){
       </div>
     </div>`:"";
   return `<div class="br-open" onclick="event.stopPropagation()">
+    <!-- V108.6 — THE ACTIONS TAKE THE PLACE OF THE REPEATED FACTS.
+         Chirag, 22 Sep: the Ac Manager, the project and the delivery
+         date were "simply repetition of the row above it", and the row
+         above is still on screen. So this strip carries what the ⋯ menu
+         carries, spelled out, because there is room for it here and a
+         menu you have to open is one click more than a button. -->
     <div class="br-otop">
-      <span class="k">Ac Manager <b>${escHtml(brPersonName(t.owner_id))}</b></span>
-      ${pj?`<span class="k">·</span><span class="k">Project <b>${escHtml(pj.name)}</b></span>`:""}
-      <span class="k">·</span><span class="k">Delivery <b>${t.delivery_date?fmtShort(t.delivery_date):"—"}</b></span>
-      ${t.archived_at?`<span class="k">·</span><span class="k">Archived <b>${fmtShort(t.archived_at)}</b></span>`:""}
-      <span class="sp"></span>
+      ${t.archived_at?`<span class="k">Archived <b>${fmtShort(t.archived_at)}</b></span><span class="sp"></span>`:`<span class="sp"></span>`}
       ${canEdit()?`<button class="btn btn-s" onclick="brOpenTask('${t.id}')"><i class="ti ti-pencil"></i> Edit details</button>`:""}
+      ${can("task_create")?`<button class="btn btn-s" onclick="brDuplicateTask('${t.id}')"><i class="ti ti-copy"></i> Duplicate</button>`:""}
+      <button class="btn btn-s" onclick="taskCopyLink('${t.id}')" title="Copy a link that opens this task"><i class="ti ti-link"></i> Copy link</button>
+      ${TASK_SEEN[t.id]?`<button class="btn btn-s" onclick="taskMarkUnread('${t.id}')" title="Put this task back in your bell"><i class="ti ti-bell-plus"></i> Mark unread</button>`:""}
+      ${brCanArchive(t)?`<button class="btn btn-s" onclick="brSetArchived('${t.id}',${t.archived_at?0:1})"
+         title="${t.archived_at?"Put it back in the working list":"Put it out of the way — the status it has is kept"}">
+         <i class="ti ti-${t.archived_at?"archive-off":"archive"}"></i> ${t.archived_at?"Restore":"Archive"}</button>`:""}
     </div>
     ${brTrailHtml(t)}
     <div class="br-tabs">
@@ -10190,7 +10215,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V108.5 Bologna";
+const TOOL_VERSION="V108.6 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
