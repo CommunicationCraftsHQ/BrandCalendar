@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V108.1 Bologna"/>
+<meta name="cc-tool-version" content="V108.2 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3018,16 +3018,12 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .prtag.t-meta{background:#E7F0FD;color:#1B5FBF;} .prtag.t-google{background:#E8F5EC;color:#1E7A3C;}
 .prtag.t-typed{background:#EEEDEA;color:#6B6B6B;} .prtag.t-client{background:#FAF3DC;color:#8A6D00;}
 .prx td{background:#FAFAF8;}
-.prcities{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.prcc{font-size:12px;background:#fff;border:1px solid var(--div);border-radius:999px;padding:3px 11px;color:var(--muted);}
-.prcc b{color:var(--text);margin-right:2px;}
+.prxbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .prback{color:var(--muted);text-decoration:none;font-weight:600;font-size:13px;}
 .prback:hover{color:var(--acc);}
 .prtitle{font-size:15px;}
 .prfacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);}
 .prgrid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;}
-.prouts{display:flex;flex-wrap:wrap;gap:6px 14px;}
-.prchk{display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;}
 .prftbl{width:100%;border-collapse:collapse;font-size:13px;}
 .prftbl th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--subtle);
   text-align:left;padding:6px 6px;border-bottom:1px solid var(--div);white-space:nowrap;}
@@ -3057,6 +3053,23 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .prcr.sm .prcrh{margin-top:6px;font-size:11px;}
 .prbad{font-size:12.5px;line-height:1.6;color:#8A2A2A;background:#FCEFEF;border:1px solid #F3D3D3;
   border-radius:10px;padding:10px 12px;margin-top:4px;}
+/* V108.2 · target audience, goals and the budget control.
+   Goals wear the monthly plan's .mpv-goal pill unchanged; .prgoals only
+   spaces the row. The budget is Portfolio's contract amount (clients.css
+   .cl-money / .cl-cur / .cl-basis), copied value for value: currency
+   fused on the left, the basis fused on the right. */
+.praud{display:inline-flex;align-items:flex-start;gap:5px;color:var(--text);font-size:12.5px;line-height:1.4;
+  min-width:0;max-width:100%;white-space:normal;}
+.praud i.ti{font-size:14px;color:var(--subtle);margin-top:1px;flex:none;}
+.prgoals{margin-top:10px;}
+.cl-money{display:flex;align-items:stretch;min-width:0;}
+.cl-money .fi{border-radius:0;flex:1;min-width:0;}
+.cl-cur{font-family:inherit;font-size:13px;font-weight:700;padding:0 4px 0 9px;
+  border:1px solid var(--div);border-right:none;border-radius:8px 0 0 8px;
+  background:var(--surface2);color:var(--text);cursor:pointer;flex:none;}
+.cl-basis{font-family:inherit;font-size:12px;font-weight:600;padding:0 6px;
+  border:1px solid var(--div);border-left:none;border-radius:0 8px 8px 0;
+  background:var(--surface2);color:var(--muted);cursor:pointer;flex:none;}
 </style>
 
 </head>
@@ -9792,7 +9805,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V108.1 Bologna";
+const TOOL_VERSION="V108.2 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -22714,32 +22727,51 @@ renderBnTabs=function(){
    source but 'typed'.
 
    BLANK IS NOT ZERO. A week nobody entered stays blank; totals skip
-   blanks rather than counting them as 0. */
+   blanks rather than counting them as 0.
 
-const PR={key:null,loading:false,err:null,list:[],cities:{},figs:[],outs:[],cr:[],crc:{},
+   V108.2 · TRIAL CHANGES (03 - Promotions page - build checklist.md,
+   database: webapp/03 - Promotions - trial changes.sql, run 22 Sep).
+   Cities are gone from every screen: a promotion has a target audience
+   instead, and figures are for the whole promotion, one row per week.
+   promotion_cities, outcome_keys and ad_creatives.city_id stay in the
+   database and are never read. A figure typed against a city before
+   this keeps its city_id, so it is still counted in the total, once.
+   Goals are the promotion's own list, in order. The client reports ONE
+   figure a week, named per promotion (client_metric), stored as
+   outcome_key 'client'; with no name there is no client column. The
+   budget is planned_spend on a basis: in total, a day, a week, a month. */
+
+const PR={key:null,loading:false,err:null,list:[],figs:[],outs:[],cr:[],crc:{},
   open:null,seg:"all",plat:"",obj:"",exp:{},y:null,m:null,edit:null,fig:null,
-  creative:null,crCity:"",th:{id:null,msgs:[],acts:[],loading:false,err:""},staged:[],draft:"",sheet:null};
+  creative:null,th:{id:null,msgs:[],acts:[],loading:false,err:""},staged:[],draft:"",sheet:null};
 const PR_CST={drafting:["Drafting","#EF9F27"],review:["Review","#378ADD"],approved:["Approved","#639922"],
   live:["Live","#2EA05A"],ended:["Ended","#AAAAAA"]};
 const PR_FMT=["1:1 image","4:5 image","9:16 image","Carousel","9:16 reel","16:9 video","Search ad","Other"];
 
 const PR_OBJ={
-  leads:    {label:"Leads",     result:"leads",        chip:"leads", outs:["good_leads","visits_booked"]},
-  footfall: {label:"Footfall",  result:"store visits", chip:"foot",  outs:["walk_ins","purchases"]},
-  traffic:  {label:"Traffic",   result:"clicks",       chip:"traf",  outs:["enquiries"]},
-  awareness:{label:"Awareness", result:"reached",      chip:"aw",    outs:[]},
-  sales:    {label:"Sales",     result:"purchases",    chip:"sale",  outs:["orders","conversions"]}
+  leads:    {label:"Leads",     result:"leads",        chip:"leads"},
+  footfall: {label:"Footfall",  result:"store visits", chip:"foot"},
+  traffic:  {label:"Traffic",   result:"clicks",       chip:"traf"},
+  awareness:{label:"Awareness", result:"reached",      chip:"aw"},
+  sales:    {label:"Sales",     result:"purchases",    chip:"sale"}
 };
-const PR_OUT_LBL={good_leads:"Good leads",visits_booked:"Visits booked",walk_ins:"Walk-ins",
-  purchases:"Purchases",enquiries:"Enquiries",orders:"Orders",conversions:"Conversions"};
+/* the budget control is Portfolio's contract amount (Clients.jsx Money):
+   currency fused on the left, the basis fused on the right */
+const PR_CUR=["INR","USD","AED"];
+const PR_CUR_SYM={INR:"\u20B9",USD:"$",AED:"\u062F.\u0625"};
+const PR_BASIS={total:["total","in total"],per_day:["a day","a day"],per_week:["a week","a week"],per_month:["a month","a month"]};
+const PR_CLIENT="client";   /* the one outcome_key the page writes and reads */
 const PR_PLAT={meta:{label:"Meta",icon:"ti-brand-meta"},google:{label:"Google",icon:"ti-brand-google"},
   other:{label:"Other",icon:"ti-speakerphone"}};
 
-function prOutLbl(k){ return PR_OUT_LBL[k]||String(k||"").replace(/_/g," ").replace(/^./,c=>c.toUpperCase()); }
 function prFmt(v){ return (v===null||v===undefined||isNaN(v)) ? '<span class="nsdim">—</span>'
                     : Number(v).toLocaleString("en-IN",{maximumFractionDigits:0}); }
-function prMoney(v){ return (v===null||v===undefined||isNaN(v)) ? '<span class="nsdim">—</span>'
-                    : "₹"+Number(v).toLocaleString("en-IN",{maximumFractionDigits:0}); }
+function prSym(cur){ return PR_CUR_SYM[cur||"INR"]||((cur||"")+" "); }
+function prMoney(v,cur){ return (v===null||v===undefined||isNaN(v)) ? '<span class="nsdim">—</span>'
+                    : prSym(cur)+Number(v).toLocaleString("en-IN",{maximumFractionDigits:0}); }
+function prCur(p){ return (p&&p.budget_currency)||"INR"; }
+function prLabel(p){ return String((p&&p.client_metric)||"").trim(); }
+function prGoals(p){ return (Array.isArray(p&&p.goals)?p.goals:[]).map(g=>String(g||"").trim()).filter(Boolean); }
 function prIso(d){ const p=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
 function prDate(iso){ if(!iso) return null; const d=new Date(String(iso)+"T00:00:00"); return isNaN(d)?null:d; }
 function prShort(iso){ const d=prDate(iso); return d?`${d.getDate()} ${(MN[d.getMonth()+1]||"").slice(0,3)}`:""; }
@@ -22766,6 +22798,29 @@ function prFlight(p){
   return `<div class="prflight"><b style="width:${Math.round(done/tot*100)}%;${ended?"background:#C4C3BE":""}"></b></div>`;
 }
 
+/* ── the budget, worked out across the dates ───────────────────────
+   A day's budget over a 30-day promotion is 30 times the amount; a week's
+   is the days over seven; a month's is the days over thirty. With no
+   dates only a total can be worked out. */
+function prDays(p){
+  const s=prDate(p.starts_on), e=prDate(p.ends_on); if(!s||!e||e<s) return null;
+  return Math.round((e-s)/864e5)+1;
+}
+function prBudgetTotal(p){
+  const a=p.planned_spend; if(a===null||a===undefined||a===""||isNaN(a)) return null;
+  const n=Number(a), b=p.budget_basis||"total";
+  if(b==="total") return n;
+  const d=prDays(p); if(d===null) return null;
+  return Math.round(n*(b==="per_day"?d:b==="per_week"?d/7:d/30));
+}
+function prBudgetLine(p){
+  const a=p.planned_spend; if(a===null||a===undefined||a===""||isNaN(a)) return "";
+  const b=p.budget_basis||"total", cur=prCur(p);
+  if(b==="total") return `${prMoney(a,cur)} in total`;
+  const t=prBudgetTotal(p), d=prDays(p);
+  return `${prMoney(a,cur)} ${PR_BASIS[b][1]}${t!==null?` · ${prMoney(t,cur)} over ${d} ${d===1?"day":"days"}`:""}`;
+}
+
 /* ── loading: the brand's promotions and everything under them ────── */
 function prKey(){ return String(activeBrand||""); }
 async function prLoad(k){
@@ -22775,15 +22830,13 @@ async function prLoad(k){
       .order("starts_on",{ascending:false,nullsFirst:true});
     if(a.error) throw new Error(a.error.message);
     const list=a.data||[]; const ids=list.map(p=>p.id);
-    let cities=[],figs=[],outs=[],cr=[],crc=[];
+    let figs=[],outs=[],cr=[],crc=[];
     if(ids.length){
-      const c=await sb.from("promotion_cities").select("*").in("promotion_id",ids).is("deleted_at",null).order("sort");
-      if(c.error) throw new Error(c.error.message);
       const f=await sb.from("promotion_figures").select("*").in("promotion_id",ids);
       if(f.error) throw new Error(f.error.message);
       const o=await sb.from("promotion_outcomes").select("*").in("promotion_id",ids).is("deleted_at",null);
       if(o.error) throw new Error(o.error.message);
-      cities=c.data||[]; figs=f.data||[]; outs=o.data||[];
+      figs=f.data||[]; outs=o.data||[];
       const a2=await sb.from("ad_creatives").select("*").in("promotion_id",ids).is("deleted_at",null).order("created_at");
       if(a2.error) throw new Error(a2.error.message);
       cr=a2.data||[];
@@ -22796,10 +22849,9 @@ async function prLoad(k){
     }
     PR.cr=cr; PR.crc={};
     crc.forEach(x=>{ (PR.crc[x.creative_id]=PR.crc[x.creative_id]||[]).push(x); });
-    PR.list=list; PR.figs=figs; PR.outs=outs; PR.cities={};
-    cities.forEach(c=>{ (PR.cities[c.promotion_id]=PR.cities[c.promotion_id]||[]).push(c); });
+    PR.list=list; PR.figs=figs; PR.outs=outs;
   }catch(e){
-    PR.err=(e&&e.message)||String(e); PR.list=[]; PR.figs=[]; PR.outs=[]; PR.cities={};
+    PR.err=(e&&e.message)||String(e); PR.list=[]; PR.figs=[]; PR.outs=[];
   }
   PR.loading=false; PR.key=k;
   if(view==="promotions") render();
@@ -22807,12 +22859,12 @@ async function prLoad(k){
 function prReload(){ PR.key=null; render(); }
 
 /* ── the figures, with the source rule applied ────────────────────── */
-function prFigRows(pid,cityId){
-  /* one row per city + week: a platform row beats a typed row */
+function prFigRows(pid){
+  /* one row per week — and per city for figures typed before V108.2, so
+     each of those still counts once. A platform row beats a typed row. */
   const by={};
   PR.figs.forEach(f=>{
     if(f.promotion_id!==pid) return;
-    if(cityId!==undefined && (f.city_id||null)!==cityId) return;
     const k=(f.city_id||"-")+"|"+f.period_start;
     const cur=by[k];
     if(!cur || (cur.source==="typed" && f.source!=="typed")) by[k]=f;
@@ -22823,11 +22875,12 @@ function prSum(rows,col){
   let t=null; rows.forEach(r=>{ const v=r[col]; if(v!==null&&v!==undefined&&!isNaN(v)) t=(t===null?0:t)+Number(v); });
   return t;
 }
-function prOutSum(pid,key,cityId){
+function prOutSum(pid,week){
+  /* the client's one figure; outcomes under the V108.0 names stop showing */
   let t=null;
   PR.outs.forEach(o=>{
-    if(o.promotion_id!==pid||o.outcome_key!==key) return;
-    if(cityId!==undefined && (o.city_id||null)!==cityId) return;
+    if(o.promotion_id!==pid||o.outcome_key!==PR_CLIENT) return;
+    if(week!==undefined && o.week_start!==week) return;
     t=(t===null?0:t)+Number(o.value);
   });
   return t;
@@ -22918,66 +22971,69 @@ function prListHtml(){
 
   /* the four tiles, over what the filters show */
   const running=rows.filter(p=>prStatus(p)==="running").length;
-  let res=null,spend=null,outTot=null,outLbl="";
-  const byObj={};
+  let res=null,spend=null,outTot=null,planned=null,clicks=null;
+  const byObj={}, curs=new Set(rows.map(prCur));
+  const labels=new Set(rows.map(prLabel).filter(Boolean));
   rows.forEach(p=>{
     const fr=prFigRows(p.id);
     const r=prSum(fr,"results"); if(r!==null){ res=(res===null?0:res)+r; byObj[p.objective]=(byObj[p.objective]||0)+r; }
     const s=prSum(fr,"spend"); if(s!==null) spend=(spend===null?0:spend)+s;
-    const k0=(p.outcome_keys||[])[0];
-    if(k0){ const o=prOutSum(p.id,k0); if(o!==null){ outTot=(outTot===null?0:outTot)+o; outLbl=outLbl&&outLbl!==prOutLbl(k0)?"Real outcomes":prOutLbl(k0); } }
+    const c=prSum(fr,"clicks"); if(c!==null) clicks=(clicks===null?0:clicks)+c;
+    const b=prBudgetTotal(p); if(b!==null) planned=(planned===null?0:planned)+b;
+    if(prLabel(p)){ const o=prOutSum(p.id); if(o!==null) outTot=(outTot===null?0:outTot)+o; }
   });
   const resSub=Object.keys(byObj).map(k=>`${PR_OBJ[k].label} ${Number(byObj[k]).toLocaleString("en-IN")}`).join(" · ");
-  const planned=prSum(rows,"planned_spend");
+  /* money in two currencies is not one number */
+  const oneCur=curs.size<=1, cur=oneCur?([...curs][0]||"INR"):null;
+  const outTile=labels.size
+    ? `<div class="nstile"><span class="lbl">${escHtml(labels.size===1?[...labels][0]:"Client figures")} <span class="prtag t-client">client</span></span>
+        <span class="val">${prFmt(outTot)}</span><span class="sub">&nbsp;</span></div>`
+    : `<div class="nstile"><span class="lbl">Clicks</span><span class="val">${prFmt(clicks)}</span><span class="sub">&nbsp;</span></div>`;
 
   const tiles=`<div class="nsrow">
       <div class="nstile"><span class="lbl">Promotions</span><span class="val">${rows.length}</span>
         <span class="sub">${running} running${rows.length!==all.length?` · ${rows.length} of ${all.length} shown`:""}</span></div>
       <div class="nstile"><span class="lbl">Results</span><span class="val">${prFmt(res)}</span><span class="sub">${resSub||"&nbsp;"}</span></div>
-      <div class="nstile"><span class="lbl">${escHtml(outLbl||"Real outcomes")} <span class="prtag t-client">client</span></span>
-        <span class="val">${prFmt(outTot)}</span><span class="sub">&nbsp;</span></div>
-      <div class="nstile"><span class="lbl">Spend</span><span class="val">${prMoney(spend)}</span>
-        <span class="sub">${planned!==null?`of ${prMoney(planned)} planned`:"&nbsp;"}</span></div>
+      ${outTile}
+      <div class="nstile"><span class="lbl">Spend</span><span class="val">${oneCur?prMoney(spend,cur):prFmt(null)}</span>
+        <span class="sub">${!oneCur?"More than one currency":planned!==null?`of ${prMoney(planned,cur)} planned`:"&nbsp;"}</span></div>
     </div>`;
 
   const body=rows.map(p=>{
-    const fr=prFigRows(p.id), cities=PR.cities[p.id]||[];
+    const fr=prFigRows(p.id), cur=prCur(p), lbl=prLabel(p);
     const res=prSum(fr,"results"), sp=prSum(fr,"spend");
-    const k0=(p.outcome_keys||[])[0], out=k0?prOutSum(p.id,k0):null;
+    const out=lbl?prOutSum(p.id):null;
     const per=out? prPer(sp,out) : prPer(sp,res);
-    const perLbl=out? "per "+prOutLbl(k0).toLowerCase().replace(/s$/,"") : "per "+PR_OBJ[p.objective].result.replace(/s$/,"");
+    const perLbl=out? "per "+lbl.toLowerCase().replace(/s$/,"") : "per "+PR_OBJ[p.objective].result.replace(/s$/,"");
     const pl=PR_PLAT[p.platform]||PR_PLAT.other, ob=PR_OBJ[p.objective]||PR_OBJ.leads;
     const dates=(p.starts_on||p.ends_on)?`${prShort(p.starts_on)||"…"} – ${prShort(p.ends_on)||"…"}`:'<span class="nsdim">—</span>';
     const ex=!!PR.exp[p.id];
     let xrow="";
     if(ex){
-      const chips=cities.length? cities.map(c=>{
-        const r=prSum(prFigRows(p.id,c.id),"results"), o=k0?prOutSum(p.id,k0,c.id):null;
-        return `<span class="prcc"><b>${escHtml(c.city)}</b> ${prFmt(r)}${k0?` · ${prFmt(o)} ${escHtml(prOutLbl(k0).toLowerCase())}`:""}</span>`;
-      }).join("") : '<span class="prcc">No cities set</span>';
-      const crs=prCrFor(p.id);
-      xrow=`<tr class="prx"><td colspan="9"><div class="prcities">${chips}
+      const crs=prCrFor(p.id), ta=String(p.target_audience||"").trim();
+      xrow=`<tr class="prx"><td colspan="9"><div class="prxbar">
+        ${ta?`<span class="praud"><i class="ti ti-users"></i>${escHtml(ta)}</span>`:""}
         <span style="flex:1"></span><button class="btn btn-s" onclick="event.stopPropagation();prOpen('${p.id}')">Open</button></div>
         ${crs.length?`<div class="prstrip">${crs.map(c=>prCrCard(c,true)).join("")}</div>`:""}</td></tr>`;
     }
     return `<tr class="prrow" onclick="prToggle('${p.id}')">
       <td><div class="prname"><span class="prpl ${p.platform}"><i class="ti ${pl.icon}"></i></span>
           <a href="javascript:void 0" onclick="event.stopPropagation();prOpen('${p.id}')">${escHtml(p.name)}</a></div>
-        <div class="prmeta">${prStatusHtml(p)}${cities.length?` · ${cities.length===1?escHtml(cities[0].city):cities.length+" cities"}`:""}</div></td>
+        <div class="prmeta">${prStatusHtml(p)}</div></td>
       <td style="text-align:left"><span class="probj ${ob.chip}">${ob.label}</span></td>
       <td style="text-align:left;font-size:12px">${dates}${prFlight(p)}</td>
       <td>${prCrCount(p.id)}</td>
       <td><span class="prbig">${prFmt(res)}</span><span class="prunit">${ob.result} ${fr.length?prSources(fr):""}</span></td>
-      <td>${k0?`<span class="prbig">${prFmt(out)}</span><span class="prunit">${escHtml(prOutLbl(k0).toLowerCase())} <span class="prtag t-client">client</span></span>`:'<span class="nsdim">—</span>'}</td>
-      <td><span class="prbig">${prMoney(sp)}</span></td>
-      <td><span class="prbig">${prMoney(per)}</span>${per!==null?`<span class="prunit">${escHtml(perLbl)}</span>`:""}</td>
+      <td>${lbl?`<span class="prbig">${prFmt(out)}</span><span class="prunit">${escHtml(lbl.toLowerCase())} <span class="prtag t-client">client</span></span>`:'<span class="nsdim">—</span>'}</td>
+      <td><span class="prbig">${prMoney(sp,cur)}</span></td>
+      <td><span class="prbig">${prMoney(per,cur)}</span>${per!==null?`<span class="prunit">${escHtml(perLbl)}</span>`:""}</td>
       <td><i class="ti ti-chevron-${ex?"up":"down"} nsdim"></i></td>
     </tr>${xrow}`;
   }).join("");
 
   const table=rows.length? `<div class="nsscroll"><table class="nstbl prtbl">
       <thead><tr><th style="min-width:250px">Promotion</th><th style="text-align:left">Objective</th><th style="text-align:left">Dates</th>
-        <th>Creatives</th><th>Result</th><th>Real outcome</th><th>Spend</th><th>Cost per outcome</th><th style="width:30px"></th></tr></thead>
+        <th>Creatives</th><th>Result</th><th>Client figure</th><th>Spend</th><th>Cost per outcome</th><th style="width:30px"></th></tr></thead>
       <tbody>${body}</tbody></table></div>`
     : `<div class="nstile" style="min-height:0;"><span class="val none">Nothing matches these filters</span></div>`;
 
@@ -22987,10 +23043,11 @@ function prListHtml(){
 /* ── one promotion opened ─────────────────────────────────────────── */
 function prDetailHtml(p){
   const ob=PR_OBJ[p.objective]||PR_OBJ.leads, pl=PR_PLAT[p.platform]||PR_PLAT.other;
-  const cities=PR.cities[p.id]||[], keys=p.outcome_keys||[];
+  const cur=prCur(p), lbl=prLabel(p), goals=prGoals(p), ta=String(p.target_audience||"").trim();
   const fr=prFigRows(p.id);
   const res=prSum(fr,"results"), sp=prSum(fr,"spend"), clicks=prSum(fr,"clicks"), imps=prSum(fr,"impressions");
   const canEditP=canCap("edit_promotions"), canOut=canCap("enter_promotion_outcomes");
+  const R=ob.result.replace(/^./,c=>c.toUpperCase());
 
   const bar=`<div class="pgbar">
       <a class="prback" href="javascript:void 0" onclick="prBack()">← Promotions</a>
@@ -23005,67 +23062,51 @@ function prDetailHtml(p){
   const facts=`<div class="prfacts"><span class="prpl ${p.platform}"><i class="ti ${pl.icon}"></i></span>${pl.label}
       <span class="nsdim">·</span><span class="probj ${ob.chip}">${ob.label}</span>
       <span class="nsdim">·</span>${dates}<span class="nsdim">·</span>${prStatusHtml(p)}
-      ${cities.length?`<span class="nsdim">·</span>${cities.length===1?escHtml(cities[0].city):cities.length+" cities"}`:""}</div>`;
+      ${ta?`<span class="nsdim">·</span><span class="praud"><i class="ti ti-users"></i>${escHtml(ta)}</span>`:""}</div>`;
+  /* the monthly plan's goal pill, read-only here: edited in the form */
+  const goalRow=goals.length?`<div class="mpv-goals prgoals">${goals.map(g=>
+      `<span class="mpv-goal" title="${escAttr(g)}"><i class="ti ti-target"></i><span class="tx">${escHtml(g)}</span></span>`).join("")}</div>`:"";
 
-  const k0=keys[0], k1=keys[1];
-  const o0=k0?prOutSum(p.id,k0):null, o1=k1?prOutSum(p.id,k1):null;
-  const tile=(lbl,val,sub)=>`<div class="nstile"><span class="lbl">${lbl}</span><span class="val">${val}</span><span class="sub">${sub||"&nbsp;"}</span></div>`;
-  const t2 = k0 ? tile(`${escHtml(prOutLbl(k0))} <span class="prtag t-client">client</span>`, prFmt(o0),
-                   (o0!==null&&res)?`${Math.round(o0/res*100)}% of ${ob.result}`:"")
-                : tile("Clicks", prFmt(clicks), imps?`${prFmt(imps)} impressions`:"");
-  const t3 = k1 ? tile(`${escHtml(prOutLbl(k1))} <span class="prtag t-client">client</span>`, prFmt(o1), "")
-                : tile("Click-through", (clicks!==null&&imps)?(clicks/imps*100).toFixed(1)+"%":prFmt(null), "");
-  const perRes=prPer(sp,res), perOut=prPer(sp,o0);
-  const tiles=`<div class="nsrow">
-      ${tile(`${escHtml(ob.result.replace(/^./,c=>c.toUpperCase()))} ${fr.length?prSources(fr):""}`, prFmt(res), "")}
-      ${t2}${t3}
-      ${tile("Spend", prMoney(sp), [perRes!==null?`${prMoney(perRes)} per ${ob.result.replace(/s$/,"")}`:"", perOut!==null?`${prMoney(perOut)} per ${prOutLbl(k0).toLowerCase().replace(/s$/,"")}`:""].filter(Boolean).join(" · ")
-        + (p.planned_spend!==null&&p.planned_spend!==undefined?`${(perRes!==null||perOut!==null)?" · ":""}of ${prMoney(p.planned_spend)} planned`:""))}
-    </div>`;
-
-  /* by city */
-  let city="";
-  if(cities.length){
-    const head=`<th>City</th><th>${escHtml(ob.result.replace(/^./,c=>c.toUpperCase()))}</th>${keys.map(k=>`<th>${escHtml(prOutLbl(k))}</th>`).join("")}<th>Spend</th>${k0?`<th>Per ${escHtml(prOutLbl(k0).toLowerCase().replace(/s$/,""))}</th>`:""}`;
-    const line=(name,cid)=>{
-      const rr=prFigRows(p.id,cid); const r=prSum(rr,"results"), s=prSum(rr,"spend");
-      const o=k0?prOutSum(p.id,k0,cid):null;
-      return `<td>${name}</td><td>${prFmt(r)}</td>${keys.map(k=>`<td>${prFmt(prOutSum(p.id,k,cid))}</td>`).join("")}<td>${prMoney(s)}</td>${k0?`<td>${prMoney(prPer(s,o))}</td>`:""}`;
-    };
-    const body=cities.map(c=>`<tr>${line(`<b>${escHtml(c.city)}</b>`,c.id)}</tr>`).join("");
-    const foot=`<td>${cities.length} ${cities.length===1?"city":"cities"}</td><td>${prFmt(res)}</td>${keys.map(k=>`<td>${prFmt(prOutSum(p.id,k))}</td>`).join("")}<td>${prMoney(sp)}</td>${k0?`<td>${prMoney(perOut)}</td>`:""}`;
-    city=`<div class="nssec">By city · ${cities.length}</div>
-      <div class="nsscroll"><table class="nstbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody><tfoot><tr>${foot}</tr></tfoot></table></div>`;
-  }
+  const out=lbl?prOutSum(p.id):null;
+  const tile=(l,val,sub)=>`<div class="nstile"><span class="lbl">${l}</span><span class="val">${val}</span><span class="sub">${sub||"&nbsp;"}</span></div>`;
+  const perRes=prPer(sp,res), perOut=prPer(sp,out);
+  const t1=tile(`${escHtml(R)} ${fr.length?prSources(fr):""}`, prFmt(res),
+    perRes!==null?`${prMoney(perRes,cur)} per ${ob.result.replace(/s$/,"")}`:"");
+  const t2=lbl
+    ? tile(`${escHtml(lbl)} <span class="prtag t-client">client</span>`, prFmt(out),
+        [(out!==null&&res)?`${Math.round(out/res*100)}% of ${ob.result}`:"", perOut!==null?`${prMoney(perOut,cur)} each`:""].filter(Boolean).join(" · "))
+    : tile("Clicks", prFmt(clicks), imps?`${prFmt(imps)} impressions`:"");
+  const t3=tile("Click-through", (clicks!==null&&imps)?(clicks/imps*100).toFixed(1)+"%":prFmt(null), "");
+  const t4=tile("Spend", prMoney(sp,cur), prBudgetLine(p));
+  const tiles=`<div class="nsrow">${t1}${t2}${t3}${t4}</div>`;
 
   /* week by week */
   const weeks={};
   PR.figs.forEach(f=>{ if(f.promotion_id===p.id) weeks[f.period_start]=1; });
-  PR.outs.forEach(o=>{ if(o.promotion_id===p.id) weeks[o.week_start]=1; });
+  PR.outs.forEach(o=>{ if(o.promotion_id===p.id&&o.outcome_key===PR_CLIENT) weeks[o.week_start]=1; });
   const wk=Object.keys(weeks).sort().reverse();
   let week="";
   if(wk.length){
     const body=wk.map(w=>{
-      const rr=prFigRows(p.id).filter(r=>r.period_start===w);
-      const entered=PR.outs.filter(o=>o.promotion_id===p.id&&o.week_start===w)
+      const rr=fr.filter(r=>r.period_start===w);
+      const entered=PR.outs.filter(o=>o.promotion_id===p.id&&o.week_start===w&&o.outcome_key===PR_CLIENT)
         .concat(PR.figs.filter(f=>f.promotion_id===p.id&&f.period_start===w&&f.source==="typed"));
       const last=entered.sort((a,b)=>new Date(b.updated_at||b.entered_at)-new Date(a.updated_at||a.entered_at))[0];
       const who=last&&last.entered_by?personById(last.entered_by):null;
       const d=prDate(w), e=d?new Date(d.getTime()+6*864e5):null;
-      let wsum=null; PR.outs.forEach(o=>{ if(o.promotion_id===p.id&&o.week_start===w&&o.outcome_key===k0) wsum=(wsum===null?0:wsum)+Number(o.value); });
       return `<tr><td>${prShort(w)} – ${e?prShort(prIso(e)):""}</td><td>${prFmt(prSum(rr,"results"))}</td>
-        ${keys.map(k=>{ let t=null; PR.outs.forEach(o=>{ if(o.promotion_id===p.id&&o.week_start===w&&o.outcome_key===k) t=(t===null?0:t)+Number(o.value); }); return `<td>${prFmt(t)}</td>`; }).join("")}
-        <td>${prMoney(prSum(rr,"spend"))}</td>
+        ${lbl?`<td>${prFmt(prOutSum(p.id,w))}</td>`:""}
+        <td>${prMoney(prSum(rr,"spend"),cur)}</td>
         <td style="text-align:left" class="nsdim">${who?escHtml(who.name||who.email):""}${last?` · ${prShort(String(last.updated_at||last.entered_at).slice(0,10))}`:""}</td></tr>`;
     }).join("");
     week=`<div class="nssec">Week by week</div>
-      <div class="nsscroll"><table class="nstbl"><thead><tr><th>Week</th><th>${escHtml(ob.result.replace(/^./,c=>c.toUpperCase()))}</th>
-        ${keys.map(k=>`<th>${escHtml(prOutLbl(k))}</th>`).join("")}<th>Spend</th><th style="text-align:left">Entered</th></tr></thead>
+      <div class="nsscroll"><table class="nstbl"><thead><tr><th>Week</th><th>${escHtml(R)}</th>
+        ${lbl?`<th>${escHtml(lbl)}</th>`:""}<th>Spend</th><th style="text-align:left">Entered</th></tr></thead>
         <tbody>${body}</tbody></table></div>`;
   }
 
-  return bar+`<div class="nswrap" style="padding-top:0">${facts}
-    <div class="nssec">What happened</div>${tiles}${city}${prCrSection(p)}${week}</div>`;
+  return bar+`<div class="nswrap" style="padding-top:0">${facts}${goalRow}
+    <div class="nssec">What happened</div>${tiles}${prCrSection(p)}${week}</div>`;
 }
 
 /* ── the box both windows open in ─────────────────────────────────── */
@@ -23086,44 +23127,67 @@ function prBox(html,wide){
 function prEditOpen(id){
   if(!canCap("edit_promotions")){ capDenied("Adding promotions"); return; }
   const p=id?PR.list.find(x=>x.id===id):null;
-  PR.edit={id:id||null, outs:p?(p.outcome_keys||[]).slice():PR_OBJ.leads.outs.slice(), objDirty:!!p};
-  const cities=p?(PR.cities[p.id]||[]).map(c=>c.city).join(", "):"";
+  PR.edit={id:id||null, goals:p?prGoals(p):[]};
   const opt=(o,sel)=>Object.keys(o).map(k=>`<option value="${k}"${sel===k?" selected":""}>${o[k].label}</option>`).join("");
+  const cur=p?prCur(p):"INR", basis=(p&&p.budget_basis)||"total";
+  const curs=PR_CUR.indexOf(cur)<0?PR_CUR.concat([cur]):PR_CUR;
   prBox(`<div class="modal-top"><div><div class="modal-title">${p?"Edit promotion":"Add promotion"}</div>
       <div class="modal-sub">${escHtml(brands[activeBrand]?.name||"")}</div></div>
       <button class="modal-x" onclick="closeM('promo')">✕</button></div>
     <div class="modal-body">
       <div class="field"><label class="fl">Name</label><input class="fi" id="pr-name" value="${escAttr(p?p.name:"")}" maxlength="120"></div>
       <div class="prgrid2">
-        <div class="field"><label class="fl">Objective</label><select class="fi" id="pr-obj" onchange="prObjChanged()">${opt(PR_OBJ,p?p.objective:"leads")}</select></div>
+        <div class="field"><label class="fl">Objective</label><select class="fi" id="pr-obj">${opt(PR_OBJ,p?p.objective:"leads")}</select></div>
         <div class="field"><label class="fl">Platform</label><select class="fi" id="pr-plat">${opt(PR_PLAT,p?p.platform:"meta")}</select></div>
         <div class="field"><label class="fl">Starts</label><input class="fi" type="date" id="pr-s" value="${p&&p.starts_on||""}"></div>
         <div class="field"><label class="fl">Ends</label><input class="fi" type="date" id="pr-e" value="${p&&p.ends_on||""}"></div>
       </div>
-      <div class="field"><label class="fl">Cities</label><input class="fi" id="pr-cities" value="${escAttr(cities)}" placeholder="Ahmedabad, Surat, Rajkot"></div>
-      <div class="field"><label class="fl">Real outcomes to record</label><div id="pr-outs">${prOutsHtml()}</div></div>
-      <div class="field"><label class="fl">Planned spend (₹)</label><input class="fi" id="pr-plan" inputmode="numeric" value="${p&&p.planned_spend!==null&&p.planned_spend!==undefined?Number(p.planned_spend):""}"></div>
+      <div class="field"><label class="fl">Target audience</label><textarea class="fi" id="pr-aud" rows="3" maxlength="2000"
+        style="height:auto;padding:10px 12px;">${escHtml(p&&p.target_audience||"")}</textarea></div>
+      <div class="field"><label class="fl" style="display:flex;align-items:center">Goals<span class="mpv-add" onclick="prGoalAdd()"><i class="ti ti-plus"></i>Add</span></label>
+        <div id="pr-goals">${prGoalsHtml()}</div></div>
+      <div class="prgrid2">
+        <div class="field"><label class="fl">What the client reports</label><input class="fi" id="pr-lbl" maxlength="40"
+          value="${escAttr(p&&p.client_metric||"")}" placeholder="Walk-ins"></div>
+        <div class="field"><label class="fl">Budget</label><div class="cl-money">
+          <select class="cl-cur" id="pr-cur" aria-label="Currency">${curs.map(c=>`<option value="${c}"${c===cur?" selected":""}>${escHtml(PR_CUR_SYM[c]||c)}</option>`).join("")}</select>
+          <input class="fi" id="pr-plan" inputmode="decimal" value="${p&&p.planned_spend!==null&&p.planned_spend!==undefined?Number(p.planned_spend):""}">
+          <select class="cl-basis" id="pr-basis" aria-label="That amount is">${Object.keys(PR_BASIS).map(k=>`<option value="${k}"${k===basis?" selected":""}>${PR_BASIS[k][0]}</option>`).join("")}</select>
+        </div></div>
+      </div>
     </div>
     <div class="modal-foot"><span style="flex:1"></span>
       <button class="btn btn-s" onclick="closeM('promo')">Cancel</button>
       <button class="btn btn-p" id="pr-save" onclick="prEditSave()">${p?"Save":"Add promotion"}</button></div>`);
   setTimeout(()=>{ const n=document.getElementById("pr-name"); if(n) n.focus(); },30);
 }
-function prOutsHtml(){
-  const all=Object.keys(PR_OUT_LBL);
-  return `<div class="prouts">${all.map(k=>`<label class="prchk"><input type="checkbox" value="${k}"
-    ${PR.edit.outs.indexOf(k)>-1?"checked":""} onchange="prOutTick(this)"> ${PR_OUT_LBL[k]}</label>`).join("")}</div>`;
+/* goals: the monthly plan's pills — type in the pill, the cross removes
+   it, Enter starts the next one. The order is the order they were added. */
+function prGoalsHtml(){
+  const g=PR.edit.goals;
+  if(!g.length) return `<div class="mpv-empty">None yet</div>`;
+  return `<div class="mpv-goals">${g.map((t,i)=>`<span class="mpv-goal" title="${escAttr(t)}"><i class="ti ti-target"></i>
+    <span class="tx" contenteditable="true" data-i="${i}" oninput="prGoalType(this)" onkeydown="prGoalKey(event,this)">${escHtml(t)}</span>
+    <i class="ti ti-x rm" title="Remove" onclick="prGoalDel(${i})"></i></span>`).join("")}</div>`;
 }
-function prOutTick(el){
-  const k=el.value, o=PR.edit.outs;
-  if(el.checked){ if(o.indexOf(k)<0) o.push(k); } else { PR.edit.outs=o.filter(x=>x!==k); }
-  PR.edit.objDirty=true;
+function prGoalSync(){
+  document.querySelectorAll("#pr-goals .tx").forEach(el=>{ PR.edit.goals[+el.dataset.i]=el.textContent; });
 }
-function prObjChanged(){
-  if(PR.edit.objDirty) return;   /* a hand-picked list is never overwritten */
-  const v=document.getElementById("pr-obj").value;
-  PR.edit.outs=(PR_OBJ[v]||PR_OBJ.leads).outs.slice();
-  document.getElementById("pr-outs").innerHTML=prOutsHtml();
+function prGoalType(el){ PR.edit.goals[+el.dataset.i]=el.textContent; }
+function prGoalDraw(focusLast){
+  document.getElementById("pr-goals").innerHTML=prGoalsHtml();
+  if(focusLast){ const t=[...document.querySelectorAll("#pr-goals .tx")].pop(); if(t) t.focus(); }
+}
+function prGoalAdd(){
+  prGoalSync();
+  if(PR.edit.goals.length>=20){ toast("Twenty goals is the most one promotion holds","err"); return; }
+  PR.edit.goals=PR.edit.goals.filter(x=>String(x).trim());
+  PR.edit.goals.push(""); prGoalDraw(true);
+}
+function prGoalDel(i){ prGoalSync(); PR.edit.goals.splice(i,1); prGoalDraw(false); }
+function prGoalKey(e,el){
+  if(e.key==="Enter"){ e.preventDefault(); prGoalAdd(); }
+  else if(e.key==="Backspace" && !el.textContent){ e.preventDefault(); prGoalDel(+el.dataset.i); }
 }
 async function prEditSave(){
   const g=id=>document.getElementById(id);
@@ -23131,14 +23195,17 @@ async function prEditSave(){
   if(!name){ toast("Give the promotion a name","err"); g("pr-name").focus(); return; }
   const s=g("pr-s").value||null, e=g("pr-e").value||null;
   if(s&&e&&e<s){ toast("The end date is before the start","err"); return; }
-  const planRaw=g("pr-plan").value.replace(/[,\s₹]/g,"");
+  const planRaw=g("pr-plan").value.replace(/[,\s₹$]/g,"");
   const plan=planRaw===""?null:Number(planRaw);
-  if(plan!==null&&(isNaN(plan)||plan<0)){ toast("Planned spend must be a number","err"); return; }
-  const cityNames=[];
-  g("pr-cities").value.split(",").map(x=>x.trim()).filter(Boolean).forEach(c=>{
-    if(!cityNames.some(y=>y.toLowerCase()===c.toLowerCase())) cityNames.push(c); });
+  if(plan!==null&&(isNaN(plan)||plan<0)){ toast("The budget must be a number","err"); g("pr-plan").focus(); return; }
+  prGoalSync();
+  const goals=PR.edit.goals.map(x=>String(x).replace(/\s+/g," ").trim()).filter(Boolean);
   const row={brand_id:activeBrand,name,objective:g("pr-obj").value,platform:g("pr-plat").value,
-    starts_on:s,ends_on:e,planned_spend:plan,outcome_keys:PR.edit.outs,updated_at:new Date().toISOString()};
+    starts_on:s,ends_on:e,planned_spend:plan,
+    target_audience:g("pr-aud").value.trim()||null, goals,
+    client_metric:g("pr-lbl").value.trim()||null,
+    budget_basis:g("pr-basis").value, budget_currency:g("pr-cur").value,
+    updated_at:new Date().toISOString()};
   const btn=g("pr-save"); btn.disabled=true;
   try{
     let pid=PR.edit.id;
@@ -23151,18 +23218,6 @@ async function prEditSave(){
       const r=await sb.from("promotions").insert([row]).select("id");
       if(r.error) throw new Error(r.error.message);
       pid=r.data[0].id;
-    }
-    /* cities: add the new ones, send removed ones to Trash. Never a wipe. */
-    const have=PR.edit.id?(PR.cities[pid]||[]):[];
-    const add=cityNames.filter(c=>!have.some(h=>h.city.toLowerCase()===c.toLowerCase()));
-    const drop=have.filter(h=>!cityNames.some(c=>c.toLowerCase()===h.city.toLowerCase()));
-    if(add.length){
-      const r=await sb.from("promotion_cities").insert(add.map((c,i)=>({promotion_id:pid,city:c,sort:have.length+i})));
-      if(r.error) throw new Error(r.error.message);
-    }
-    for(const h of drop){
-      const r=await sb.from("promotion_cities").update({deleted_at:new Date().toISOString()}).eq("id",h.id);
-      if(r.error) throw new Error(r.error.message);
     }
     closeM("promo"); toast(PR.edit.id?"Saved":"Promotion added");
     if(!PR.edit.id) PR.open=pid;
@@ -23178,7 +23233,7 @@ async function prTrash(id){
   toast("Moved to Trash"); PR.open=null; prReload();
 }
 
-/* ── enter figures: one week, one row per city ────────────────────── */
+/* ── enter figures: one week, one row ─────────────────────────────── */
 function prFigOpen(pid){
   const p=PR.list.find(x=>x.id===pid); if(!p) return;
   const last=prMonday(new Date(Date.now()-7*864e5));   /* last full week by default */
@@ -23186,35 +23241,33 @@ function prFigOpen(pid){
   prFigDraw();
 }
 function prFigStep(d){ const w=prDate(PR.fig.week); w.setDate(w.getDate()+7*d); PR.fig.week=prIso(w); prFigDraw(); }
+function prFigCols(p){
+  const ob=PR_OBJ[p.objective]||PR_OBJ.leads, cols=[];
+  if(canCap("edit_promotions")) cols.push({k:"spend",l:"Spend"},{k:"results",l:ob.result.replace(/^./,c=>c.toUpperCase())},{k:"clicks",l:"Clicks"});
+  if(canCap("enter_promotion_outcomes") && prLabel(p)) cols.push({k:"o:"+PR_CLIENT,l:prLabel(p),client:true});
+  return cols;
+}
 function prFigDraw(){
-  const p=PR.list.find(x=>x.id===PR.fig.pid); const ob=PR_OBJ[p.objective]||PR_OBJ.leads;
-  const cities=PR.cities[p.id]||[]; const keys=p.outcome_keys||[];
-  const canP=canCap("edit_promotions"), canO=canCap("enter_promotion_outcomes");
+  const p=PR.list.find(x=>x.id===PR.fig.pid);
   const w=PR.fig.week, wd=prDate(w), we=new Date(wd.getTime()+6*864e5);
-  const lines=cities.length? cities.map(c=>({id:c.id,name:c.city})) : [{id:null,name:"All"}];
-  const typed=cid=>PR.figs.find(f=>f.promotion_id===p.id&&(f.city_id||null)===cid&&f.period_start===w&&f.source==="typed");
-  const plat=cid=>PR.figs.find(f=>f.promotion_id===p.id&&(f.city_id||null)===cid&&f.period_start===w&&f.source!=="typed");
-  const out=(cid,k)=>PR.outs.find(o=>o.promotion_id===p.id&&(o.city_id||null)===cid&&o.week_start===w&&o.outcome_key===k);
+  const typed=PR.figs.find(f=>f.promotion_id===p.id&&!f.city_id&&f.period_start===w&&f.source==="typed");
+  const plat=PR.figs.find(f=>f.promotion_id===p.id&&!f.city_id&&f.period_start===w&&f.source!=="typed");
+  const out=PR.outs.find(o=>o.promotion_id===p.id&&!o.city_id&&o.week_start===w&&o.outcome_key===PR_CLIENT);
   const v=x=>(x===null||x===undefined)?"":Number(x);
-  const cols=[];
-  if(canP){ cols.push({k:"spend",l:"Spend ₹"},{k:"results",l:ob.result.replace(/^./,c=>c.toUpperCase())},{k:"clicks",l:"Clicks"}); }
-  if(canO){ keys.forEach(k=>cols.push({k:"o:"+k,l:prOutLbl(k),client:true})); }
-  const head=`<th>City</th>${cols.map(c=>`<th>${escHtml(c.l)}${c.client?' <span class="prtag t-client">client</span>':""}</th>`).join("")}`;
-  const body=lines.map(L=>{
-    const t=typed(L.id), m=plat(L.id);
-    return `<tr><td>${escHtml(L.name)}</td>${cols.map(c=>{
-      if(c.k.startsWith("o:")){ const o=out(L.id,c.k.slice(2)); return `<td><input class="fi prin" data-c="${L.id||""}" data-k="${c.k}" inputmode="numeric" value="${o?v(o.value):""}"></td>`; }
-      if(m) return `<td><span class="prlock" title="Read from ${m.source==="meta"?"Meta":"Google"}">${v(m[c.k])===""?"—":Number(m[c.k]).toLocaleString("en-IN")}</span></td>`;
-      return `<td><input class="fi prin" data-c="${L.id||""}" data-k="${c.k}" inputmode="numeric" value="${t?v(t[c.k]):""}"></td>`;
+  const cols=prFigCols(p);
+  const head=cols.map(c=>`<th>${escHtml(c.l)}${c.k==="spend"?" "+escHtml(prSym(prCur(p)).trim()):""}${c.client?' <span class="prtag t-client">client</span>':""}</th>`).join("");
+  const row=`<tr>${cols.map(c=>{
+      if(c.client) return `<td><input class="fi prin" data-k="${c.k}" inputmode="numeric" value="${out?v(out.value):""}"></td>`;
+      if(plat) return `<td><span class="prlock" title="Read from ${plat.source==="meta"?"Meta":"Google"}">${v(plat[c.k])===""?"—":Number(plat[c.k]).toLocaleString("en-IN")}</span></td>`;
+      return `<td><input class="fi prin" data-k="${c.k}" inputmode="numeric" value="${typed?v(typed[c.k]):""}"></td>`;
     }).join("")}</tr>`;
-  }).join("");
   prBox(`<div class="modal-top"><div><div class="modal-title">Enter figures</div>
       <div class="modal-sub">${escHtml(p.name)}</div></div>
       <button class="modal-x" onclick="closeM('promo')">✕</button></div>
     <div class="modal-body">
       <div class="prstep" style="margin-bottom:14px"><button onclick="prFigStep(-1)">‹</button>
         <b>${prShort(w)} – ${prShort(prIso(we))}</b><button onclick="prFigStep(1)">›</button></div>
-      ${cols.length?`<div class="nsscroll"><table class="prftbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`
+      ${cols.length?`<div class="nsscroll"><table class="prftbl"><thead><tr>${head}</tr></thead><tbody>${row}</tbody></table></div>`
         :`<div class="nsdim">Entering figures is not part of your access.</div>`}
     </div>
     <div class="modal-foot">
@@ -23270,12 +23323,12 @@ async function prFigSave(){
   if(bad){ toast("Figures must be numbers, zero or more","err"); bad.focus(); return; }
   const btn=document.getElementById("pr-fsave"); btn.disabled=true;
   try{
-    const byCity={};
-    inputs.forEach(i=>{ if(i.dataset.k.startsWith("o:")) return; (byCity[i.dataset.c]=byCity[i.dataset.c]||{})[i.dataset.k]=prNum(i.value); });
-    for(const c of Object.keys(byCity)) await prPutFig(p,c||null,w,byCity[c]);
+    const vals={};
+    inputs.forEach(i=>{ if(!i.dataset.k.startsWith("o:")) vals[i.dataset.k]=prNum(i.value); });
+    if(Object.keys(vals).length) await prPutFig(p,null,w,vals);
     for(const i of inputs){
       if(!i.dataset.k.startsWith("o:")) continue;
-      await prPutOut(p,i.dataset.c||null,w,i.dataset.k.slice(2),prNum(i.value));
+      await prPutOut(p,null,w,i.dataset.k.slice(2),prNum(i.value));
     }
     closeM("promo"); toast("Figures saved"); prReload();
   }catch(err){ toast("Could not save — "+((err&&err.message)||err),"err"); btn.disabled=false; }
@@ -23283,14 +23336,12 @@ async function prFigSave(){
 
 /* ── the sheet: download a filled template, upload it back ───────────
    Same round trip as the posts sheet: what comes out goes back in.
-   One row per week and city. A week that is not a Monday is refused by
-   name, a city the promotion does not have is refused by name, and a
-   city Meta already reported for that week keeps Meta's figures. */
+   One row per week. A week that is not a Monday is refused by name, and
+   a week Meta already reported keeps Meta's figures. A sheet downloaded
+   before V108.2 still has a City column: it is read by heading, so that
+   column is simply ignored. */
 function prSheetCols(p){
-  const ob=PR_OBJ[p.objective]||PR_OBJ.leads, cols=[];
-  if(canCap("edit_promotions")) cols.push({k:"spend",l:"Spend"},{k:"results",l:ob.result.replace(/^./,c=>c.toUpperCase())},{k:"clicks",l:"Clicks"});
-  if(canCap("enter_promotion_outcomes")) (p.outcome_keys||[]).forEach(k=>cols.push({k:"o:"+k,l:prOutLbl(k)+" (client)"}));
-  return cols;
+  return prFigCols(p).map(c=>c.client?{k:c.k,l:c.l+" (client)"}:c);
 }
 function prSheetWeeks(p){
   const t=prToday(); let s=prDate(p.starts_on)||new Date(t.getTime()-49*864e5);
@@ -23302,16 +23353,15 @@ function prSheetWeeks(p){
 function prSheetDownload(pid){
   if(typeof XLSX==="undefined"){ toast("The sheet library did not load — reload the page","err"); return; }
   const p=PR.list.find(x=>x.id===pid); if(!p) return;
-  const cols=prSheetCols(p), cities=(PR.cities[p.id]||[]).map(c=>({id:c.id,name:c.city}));
-  const lines=cities.length?cities:[{id:null,name:"All"}];
-  const aoa=[["Week starting (Monday)","City",...cols.map(c=>c.l)]];
-  prSheetWeeks(p).forEach(w=>lines.forEach(L=>{
-    const t=PR.figs.find(f=>f.promotion_id===p.id&&(f.city_id||null)===L.id&&f.period_start===w&&f.source==="typed");
-    aoa.push([w,L.name,...cols.map(c=>{
-      if(c.k.startsWith("o:")){ const o=PR.outs.find(x=>x.promotion_id===p.id&&(x.city_id||null)===L.id&&x.week_start===w&&x.outcome_key===c.k.slice(2)); return o?Number(o.value):""; }
+  const cols=prSheetCols(p);
+  const aoa=[["Week starting (Monday)",...cols.map(c=>c.l)]];
+  prSheetWeeks(p).forEach(w=>{
+    const t=PR.figs.find(f=>f.promotion_id===p.id&&!f.city_id&&f.period_start===w&&f.source==="typed");
+    aoa.push([w,...cols.map(c=>{
+      if(c.k.startsWith("o:")){ const o=PR.outs.find(x=>x.promotion_id===p.id&&!x.city_id&&x.week_start===w&&x.outcome_key===c.k.slice(2)); return o?Number(o.value):""; }
       return t&&t[c.k]!==null&&t[c.k]!==undefined?Number(t[c.k]):"";
     })]);
-  }));
+  });
   const wb=XLSX.utils.book_new(), ws=XLSX.utils.aoa_to_sheet(aoa);
   XLSX.utils.book_append_sheet(wb,ws,"Figures");
   XLSX.writeFile(wb,`${(brands[activeBrand]?.name||"Brand").replace(/\s+/g,"-")} - ${p.name.replace(/[\\/:*?"<>|]/g,"")} - figures.xlsx`);
@@ -23334,8 +23384,7 @@ async function prSheetRead(pid,file){
 function prSheetParse(p,rows){
   const cols=prSheetCols(p), head=(rows[0]||[]).map(h=>String(h).trim().toLowerCase());
   const at=cols.map(c=>head.indexOf(c.l.toLowerCase()));
-  const cities=(PR.cities[p.id]||[]);
-  const ok=[],bad=[];
+  const ok=[],bad=[],seen={};
   rows.slice(1).forEach((r,i)=>{
     if(!r.some(v=>String(v).trim()!=="")) return;
     const line=i+2;
@@ -23346,20 +23395,15 @@ function prSheetParse(p,rows){
     const d=prDate(w);
     if(!d){ bad.push(`Row ${line}: "${r[0]}" is not a date`); return; }
     if(d.getDay()!==1){ bad.push(`Row ${line}: ${w} is not a Monday`); return; }
-    const cn=String(r[1]||"").trim();
-    let cid=null;
-    if(cities.length){
-      const c=cities.find(x=>x.city.toLowerCase()===cn.toLowerCase());
-      if(!c){ bad.push(`Row ${line}: "${cn}" is not one of this promotion's cities`); return; }
-      cid=c.id;
-    }
+    if(seen[w]){ bad.push(`Row ${line}: ${w} is already on row ${seen[w]}`); return; }
+    seen[w]=line;
     const vals={}, outs={}; let badNum=null;
     cols.forEach((c,j)=>{ if(at[j]<0) return; const v=prNum(r[at[j]]);
       if(v!==null&&(isNaN(v)||v<0)) badNum=c.l;
       if(c.k.startsWith("o:")) outs[c.k.slice(2)]=v; else vals[c.k]=v; });
     if(badNum){ bad.push(`Row ${line}: ${badNum} is not a number`); return; }
-    const locked=PR.figs.some(f=>f.promotion_id===p.id&&(f.city_id||null)===cid&&f.period_start===w&&f.source!=="typed");
-    ok.push({w,cid,city:cn||"All",vals:locked?{}:vals,outs,locked});
+    const locked=PR.figs.some(f=>f.promotion_id===p.id&&!f.city_id&&f.period_start===w&&f.source!=="typed");
+    ok.push({w,vals:locked?{}:vals,outs,locked});
   });
   return {ok,bad};
 }
@@ -23388,15 +23432,15 @@ async function prSheetSave(pid){
   let n=0;
   try{
     for(const r of PR.sheet.ok){
-      if(Object.keys(r.vals).length && await prPutFig(p,r.cid,r.w,r.vals)) n++;
-      for(const k of Object.keys(r.outs)) if(await prPutOut(p,r.cid,r.w,k,r.outs[k])) n++;
+      if(Object.keys(r.vals).length && await prPutFig(p,null,r.w,r.vals)) n++;
+      for(const k of Object.keys(r.outs)) if(await prPutOut(p,null,r.w,k,r.outs[k])) n++;
     }
     closeM("promo"); PR.sheet=null; toast(n?`${n} ${n===1?"figure":"figures"} saved`:"Nothing had changed"); prReload();
   }catch(err){ toast("Could not save — "+((err&&err.message)||err),"err"); if(btn) btn.disabled=false; }
 }
 
 /* ── ad creatives ──────────────────────────────────────────────────── */
-function prCrFor(pid,city){ return PR.cr.filter(c=>c.promotion_id===pid&&(city===undefined||city===""||(c.city_id||"")===city)); }
+function prCrFor(pid){ return PR.cr.filter(c=>c.promotion_id===pid); }
 function prCrCount(pid){
   const cs=prCrFor(pid); if(!cs.length) return '<span class="nsdim">—</span>';
   const live=cs.filter(c=>c.status==="live").length, rev=cs.filter(c=>c.status==="review").length;
@@ -23413,39 +23457,32 @@ function prCrThumb(c){
   return "";
 }
 function prCrChip(st){ const s=PR_CST[st]||PR_CST.drafting; return `<span class="prcst"><i style="background:${s[1]}"></i>${s[0]}</span>`; }
-function prCityName(id){ for(const k in PR.cities){ const c=PR.cities[k].find(x=>x.id===id); if(c) return c.city; } return ""; }
 function prCrCard(c,small){
   const src=prCrThumb(c), n=(PR.crc[c.id]||[]).length;
   return `<div class="prcr${small?" sm":""}" onclick="event.stopPropagation();prCrOpen('${c.promotion_id}','${c.id}')">
     <div class="prthumb"${src?` data-sign="${escAttr(src)}"`:""}>${src?"":`<span>${escHtml(c.format||"Creative")}</span>`}
       ${c.format&&src?`<span class="prfm">${escHtml(c.format)}</span>`:""}</div>
-    <div class="prcrh">${prCrChip(c.status)}<span class="nsdim">${escHtml(c.city_id?prCityName(c.city_id):"All cities")}</span></div>
+    <div class="prcrh">${prCrChip(c.status)}${small?"":`<span class="nsdim">${escHtml(c.format||"")}</span>`}</div>
     ${small?"":`<div class="prcrt">${escHtml(c.title||"Untitled")}</div>
     <div class="prcrn"><i class="ti ti-message-circle"></i> ${n} ${n===1?"comment":"comments"}</div>`}
   </div>`;
 }
 function prCrSection(p){
-  const cities=PR.cities[p.id]||[], all=prCrFor(p.id), shown=prCrFor(p.id,PR.crCity);
+  const all=prCrFor(p.id);
   if(!all.length && !canCap("edit_ad_creatives")) return "";
-  const seg=cities.length>1?`<div class="prseg" style="margin-left:10px">${[{id:"",n:"All cities"}].concat(cities.map(c=>({id:c.id,n:c.city})))
-    .map(c=>`<button class="prseg-b${PR.crCity===c.id?" on":""}" onclick="PR.crCity='${c.id}';render()">${escHtml(c.n)}</button>`).join("")}</div>`:"";
   const add=canCap("edit_ad_creatives")?`<div class="prcr add" onclick="prCrNew('${p.id}')"><i class="ti ti-plus"></i>Add creative</div>`:"";
-  return `<div class="nssec" style="display:flex;align-items:center">Creatives · ${all.length}${seg}</div>
-    <div class="prcgrid">${shown.map(c=>prCrCard(c)).join("")}${add}</div>`;
+  return `<div class="nssec">Creatives · ${all.length}</div>
+    <div class="prcgrid">${all.map(c=>prCrCard(c)).join("")}${add}</div>`;
 }
 function prCrNew(pid){
   if(!canCap("edit_ad_creatives")){ capDenied("Adding creatives"); return; }
-  const p=PR.list.find(x=>x.id===pid); const cities=PR.cities[pid]||[];
+  const p=PR.list.find(x=>x.id===pid);
   prBox(`<div class="modal-top"><div><div class="modal-title">Add creative</div>
       <div class="modal-sub">${escHtml(p.name)}</div></div>
       <button class="modal-x" onclick="closeM('promo')">✕</button></div>
     <div class="modal-body">
       <div class="field"><label class="fl">Name</label><input class="fi" id="prc-title" maxlength="120"></div>
-      <div class="prgrid2">
-        <div class="field"><label class="fl">Format</label><select class="fi" id="prc-fmt">${PR_FMT.map(f=>`<option>${escHtml(f)}</option>`).join("")}</select></div>
-        <div class="field"><label class="fl">City</label><select class="fi" id="prc-city"><option value="">All cities</option>
-          ${cities.map(c=>`<option value="${c.id}">${escHtml(c.city)}</option>`).join("")}</select></div>
-      </div>
+      <div class="field"><label class="fl">Format</label><select class="fi" id="prc-fmt">${PR_FMT.map(f=>`<option>${escHtml(f)}</option>`).join("")}</select></div>
       <div class="field"><label class="fl">Brief</label><textarea class="fi" id="prc-brief" rows="4" style="height:auto;padding:10px 12px;"></textarea></div>
     </div>
     <div class="modal-foot"><span style="flex:1"></span>
@@ -23458,7 +23495,7 @@ async function prCrCreate(pid){
   const title=g("prc-title").value.trim();
   if(!title){ toast("Give the creative a name","err"); g("prc-title").focus(); return; }
   const btn=g("prc-save"); btn.disabled=true;
-  const r=await sb.from("ad_creatives").insert([{brand_id:activeBrand,promotion_id:pid,city_id:g("prc-city").value||null,
+  const r=await sb.from("ad_creatives").insert([{brand_id:activeBrand,promotion_id:pid,
     title,format:g("prc-fmt").value,brief:g("prc-brief").value.trim(),status:"drafting",created_by:ME.id||null}]).select("id");
   if(r.error||!r.data||!r.data.length){ toast("Could not add it — "+(r.error?r.error.message:"not allowed"),"err"); btn.disabled=false; return; }
   const id=r.data[0].id;
@@ -23575,7 +23612,6 @@ function prCreativeHtml(p,c){
         <div class="tk-card"><div class="prthumb big"${src?` data-sign="${escAttr(src)}"`:""}>${src?"":`<span>${escHtml(c.format||"No design yet")}</span>`}</div></div>
         <div class="tk-card">
           <div class="tk-k"><span>Promotion</span><b>${escHtml(p.name)}</b></div>
-          <div class="tk-k"><span>City</span><b>${escHtml(c.city_id?prCityName(c.city_id):"All cities")}</b></div>
           <div class="tk-k"><span>Format</span><b>${escHtml(c.format||"—")}</b></div>
           <div class="tk-k"><span>Added by</span><b>${escHtml(who?(who.name||who.email):"—")}</b></div>
         </div>
