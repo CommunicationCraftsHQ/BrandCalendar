@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V108.3 Bologna"/>
+<meta name="cc-tool-version" content="V108.4 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2835,6 +2835,82 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .bh-door.on{background:var(--surface);color:var(--text);font-weight:700;
   box-shadow:0 1px 2px rgba(0,0,0,.09);}
 
+
+/* ══ BOLOGNA V108.4 · THE PLAN PAGE ══════════════════════════════════
+   Row 1 (the month cards), the scope, the sheets. The page scrolls as
+   one — #main — rather than as a pinned header over a scroller: with
+   row 1 above the scope, pinning both would have taken half the screen. */
+/* Still .mpv — the Monthly plan's page, which gates and functions look
+   for by that name — but not its fixed-height column: this page scrolls
+   as a whole. */
+.mpv.plpage{display:block;height:auto;padding-bottom:28px;}
+.pl-wrap{container-type:inline-size;padding:0 var(--pg-x,32px);}
+.pl-strip{display:grid;gap:14px;grid-template-columns:1fr;}
+.pl-strip > .month-card:nth-child(n+2){display:none;}
+@container (min-width:520px){ .pl-strip{grid-template-columns:repeat(2,minmax(0,1fr));} .pl-strip > .month-card:nth-child(2){display:block;} }
+@container (min-width:800px){ .pl-strip{grid-template-columns:repeat(3,minmax(0,1fr));} .pl-strip > .month-card:nth-child(3){display:block;} }
+@container (min-width:1080px){ .pl-strip{grid-template-columns:repeat(4,minmax(0,1fr));} .pl-strip > .month-card:nth-child(4){display:block;} }
+.pl-row1{margin-bottom:14px;}
+.pl-step{display:inline-flex;gap:3px;}
+.pl-step button{width:30px;height:30px;border-radius:8px;border:1px solid var(--div);background:var(--surface);
+  color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:15px;padding:0;}
+.pl-step button:hover{color:var(--text);border-color:var(--text);}
+.pl-range{font-size:12.5px;font-weight:600;color:var(--muted);white-space:nowrap;}
+.pl-meet{position:absolute;top:1px;left:2px;width:5px;height:5px;border-radius:50%;background:#4A55A8;pointer-events:none;}
+.pl-mfoot{border-top:1px solid var(--div);padding:8px 14px 10px;font-size:11.5px;color:var(--muted);
+  display:flex;flex-direction:column;gap:3px;min-height:36px;box-sizing:border-box;}
+.pl-mfoot.none{color:var(--subtle);justify-content:center;}
+.pl-mrow{display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
+.pl-mrow:hover{color:var(--text);}
+.pl-mrow b{color:var(--text);}
+.pl-mdot{width:6px;height:6px;border-radius:50%;background:#4A55A8;flex:none;}
+.pl-eng{padding:0 var(--pg-x,32px) 14px;}
+/* It keeps the class .mpv-scroll — it is still the list of sheets every
+   earlier gate and function looks for — but it no longer scrolls on its own. */
+.mpv-scroll.pl-sheets{padding:0 var(--pg-x,32px);overflow:visible;flex:none;min-height:0;}
+.pl-sheets .mpv-sheet{margin-bottom:14px;max-width:none;scroll-margin-top:12px;}
+.pl-meets{margin-top:16px;}
+.pl-blocks{margin-top:14px;}
+.pl-blocks .mpv-band + .mpv-band{margin-top:10px;}
+.pl-svc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:22px;}
+@media (max-width:1100px){ .pl-svc{grid-template-columns:minmax(0,1fr);gap:12px;} }
+.pl-plan{font-size:13px;line-height:1.6;margin-top:4px;min-height:22px;border-radius:6px;padding:2px 4px;margin-left:-4px;}
+.pl-plan.none{color:var(--subtle);}
+.pl-plan[contenteditable="true"]:hover{background:rgba(13,13,13,.035);cursor:text;}
+.pl-plan[contenteditable="true"]:focus{outline:none;background:var(--surface);box-shadow:0 0 0 1.5px var(--div) inset;}
+.pl-out{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px;}
+.pl-out th{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--subtle);text-align:left;padding:4px 6px;border-bottom:1px solid var(--div);}
+.pl-out td{padding:5px 6px;border-bottom:1px solid var(--div);vertical-align:middle;}
+.pl-out .n{text-align:right;font-variant-numeric:tabular-nums;}
+.pl-out td:last-child{width:18px;text-align:right;}
+.pl-out .rm{cursor:pointer;color:var(--subtle);}
+.pl-out .rm:hover{color:var(--acc);}
+.pl-in{width:100%;border:1px solid transparent;background:transparent;border-radius:6px;padding:4px 6px;font:inherit;color:var(--text);box-sizing:border-box;}
+.pl-in.n{text-align:right;}
+.pl-in:hover{border-color:var(--div);}
+.pl-in:focus{outline:none;border-color:var(--text);background:var(--surface);}
+.pl-infl{margin-top:14px;}
+.pl-mom{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--div);}
+.pl-mom:last-child{border-bottom:0;}
+.pl-momd{width:38px;flex:none;text-align:center;line-height:1.1;}
+.pl-momd b{display:block;font-size:18px;}
+.pl-momd span{font-size:11px;color:var(--subtle);text-transform:uppercase;letter-spacing:.06em;}
+.pl-momb{min-width:0;flex:1;}
+.pl-momb .t{font-size:13px;font-weight:700;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;}
+.pl-where{font-size:11.5px;font-weight:500;color:var(--subtle);}
+.pl-edit{margin-left:auto;color:var(--subtle);cursor:pointer;font-size:14px;}
+.pl-edit:hover{color:var(--text);}
+.pl-momb .s{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.55;}
+.pl-who{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-top:6px;}
+.pl-client{font-size:11.5px;color:var(--muted);margin-left:6px;}
+.pl-file{font-size:11.5px;color:var(--muted);margin-left:8px;display:inline-flex;gap:4px;align-items:center;text-decoration:none;}
+.pl-file:hover{color:var(--text);}
+.pl-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.pl-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:4px 8px;border-radius:999px;background:var(--surface2,#F1EFE8);}
+.pl-chip i{cursor:pointer;font-size:12px;color:var(--subtle);}
+.pl-chip i:hover{color:var(--acc);}
+.pl-add{width:auto;flex:1;min-width:150px;height:34px;}
+.pl-notes-box{min-height:90px;height:auto;line-height:1.55;padding:8px 10px;overflow:auto;}
 
 /* BOLOGNA V108.3 — the Promotions | Numbers switch uses .bh-seg as it is */
 .prnum-row + .nswrap{padding-top:0;}
@@ -9808,7 +9884,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V108.3 Bologna";
+const TOOL_VERSION="V108.4 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -14099,7 +14175,12 @@ async function loadEngagement(brandId){
            click, from the contract's own row, by the contract-file
            function, so a rename or a move never breaks it. */
         contractId: x.service_contract_id, hasFile: !!con.file_item_id,
-        pos: meta.pos||0
+        pos: meta.pos||0,
+        /* V108.4 — the Plan page keys a service's month plan and figures
+           by the SERVICE, not the contract line, so a renewal (a new line
+           for the same service) keeps its history. `kind` decides what a
+           block can count on its own: 'social' posts, 'ads' promotions. */
+        serviceId: x.service_id||null, lineId: x.id, kind
       };
     });
     /* The Proposal Bank's rule, kept identical on purpose: an unranked
@@ -23786,6 +23867,712 @@ function prNumRowMount(mc,sw){
     return base(v);
   };
 })();
+
+/* ══ BOLOGNA V108.4 · THE PLAN PAGE — CALENDAR AND PLAN BECOME ONE ════
+   Approved 22 Sep 2026: mockup "01 - Plan page - merged layout.html",
+   checklist "01 - Plan page - build checklist.md", part 2.
+
+   Row 1 is the calendar (4, 3, 2 or 1 month cards). Row 2 is
+   Engagement & scope. Under it, one sheet per month with work: theme,
+   goals and meetings for the month, then one block per service in
+   scope — Plan, Delivered, Outcomes — then Production.
+
+   WHO GETS IT. Staff with a brand open (canEdit), the same people who
+   see the brand's tabs. A client or view-only person keeps the brand
+   calendar exactly as it was: they have no tabs, and meetings and
+   figures are staff only.
+
+   NOTHING UNDERNEATH IS REBUILT. The month cards are buildMini, the
+   control row is the Calendar's own nodes moved by mountCalStrip, the
+   scope is engHtml, the theme/goals/status are the month sheet's own
+   controls, and Production is mpvProductionHtml. What is new is the
+   arrangement, the service blocks and meetings.
+
+   SAFE BEFORE THE MIGRATION. Meetings, plan text and typed figures live
+   in three new tables. If they cannot be read — the migration has not
+   run — those parts are simply not drawn and nothing else changes
+   (see a-migration-that-never-ran: a screen that throws on a missing
+   table empties itself, not just the new field). */
+let PLMODE="cal", PLWIN=0, PLWINY=0, PL_INLIST=false;
+const PLD={key:null,loading:false,ok:{meet:false,plan:false,out:false},meet:[],plans:[],outs:[],ins:[],contacts:[],cnOk:false};
+const PLQ={};
+function plMerged(){ return !!(activeBrand&&brands[activeBrand]&&canEdit()); }
+function plOn(){ return view==="mplan"&&plMerged(); }
+function plPad(n){ return String(n).padStart(2,"0"); }
+function plMonthRange(m){ return [`${YEAR}-${plPad(m)}-01`, `${YEAR}-${plPad(m)}-${plPad(new Date(YEAR,m,0).getDate())}`]; }
+
+/* ── the tabs: Plan first, the Calendar tab gone ───────────────────── */
+(function(){
+  const ci=BN_TABS.findIndex(t=>t.k==="year");
+  if(ci>-1) BN_TABS.splice(ci,1);
+  const pi=BN_TABS.findIndex(t=>t.k==="mplan");
+  if(pi>-1){ const t=BN_TABS.splice(pi,1)[0]; BN_TABS.unshift(t); }
+})();
+
+/* ── every road to the brand calendar now arrives at Plan ────────────
+   goHome, closeBrief, a bell link, the Calendar/Events pill: all of
+   them set view to "year" or "list". Catching it in render() means no
+   entry point can be missed — the lesson of engHtml's stale brand, where
+   the guard belonged to the renderer and not to one door. */
+(function(){
+  const baseRender=render;
+  render=function(){
+    if(plMerged() && (view==="year"||view==="list")){ PLMODE=(view==="list")?"events":"cal"; view="mplan"; }
+    return baseRender.apply(this,arguments);
+  };
+  const baseSync=syncTabs;
+  syncTabs=function(){
+    if(!plOn()) return baseSync.apply(this,arguments);
+    const v=PLMODE==="events"?"list":"year";
+    document.querySelectorAll(".tab-item").forEach(t=>t.classList.toggle("on",t.dataset.v===v));
+  };
+  /* The layer switches were inert off the calendar. On Plan the calendar
+     IS on screen, so they act — asked as if this were the calendar. */
+  const baseLayer=syncLayerBar;
+  syncLayerBar=function(){
+    if(!plOn()) return baseLayer.apply(this,arguments);
+    const v=view; view="year"; try{ return baseLayer.apply(this,arguments); } finally{ view=v; }
+  };
+  const baseStrip=mountCalStrip;
+  mountCalStrip=function(){
+    if(!plOn()){ baseStrip.apply(this,arguments); plStripExtras(false); return; }
+    const v=view; view=PLMODE==="events"?"list":"year";
+    try{ baseStrip.apply(this,arguments); } finally{ view=v; }
+    plStripExtras(true);
+  };
+  /* The events list writes straight into #main, and its own search box
+     and filters call it again directly. On Plan it must write into row 1
+     instead, so for the length of the call row 1 answers to that name. */
+  const baseList=renderList;
+  renderList=function(){
+    if(plOn() && PLMODE==="events" && !PL_INLIST){
+      const slot=document.getElementById("pl-row1");
+      if(slot){ plListInto(slot,baseList); return; }
+    }
+    return baseList.apply(this,arguments);
+  };
+})();
+function plListInto(slot,baseList){
+  const main=document.getElementById("main"); if(!main) return;
+  PL_INLIST=true;
+  main.id="main-hold"; slot.id="main";
+  try{ (baseList||renderList)(); }
+  finally{ slot.id="pl-row1"; main.id="main"; PL_INLIST=false; }
+}
+function plStripExtras(on){
+  const past=document.getElementById("past-tog");
+  if(!on){ if(past) past.style.display=""; return; }
+  const strip=document.getElementById("calstrip"); if(!strip) return;
+  /* THE ARROWS REPLACE "PAST MONTHS" on the calendar: the left arrow is
+     how an earlier month comes back. The events list still has no
+     arrows, so it keeps the switch. */
+  if(past) past.style.display=(PLMODE==="events")?"":"none";
+  if(PLMODE!=="events" && !strip.querySelector(".pl-step")){
+    const html=`<div class="pl-step"><button onclick="plStep(-1)" title="Earlier month" aria-label="Earlier month"><i class="ti ti-chevron-left"></i></button><button onclick="plStep(1)" title="Later month" aria-label="Later month"><i class="ti ti-chevron-right"></i></button></div><span class="pl-range" id="pl-range"></span>`;
+    const lay=document.getElementById("lay-grp");
+    if(lay&&lay.parentElement===strip) lay.insertAdjacentHTML("afterend",html);
+    else strip.insertAdjacentHTML("beforeend",html);
+  }
+  plRange();
+}
+
+/* ── row 1 · the month cards ─────────────────────────────────────── */
+function plWin(){
+  if(PLWINY!==YEAR||!PLWIN){
+    const t=new Date();
+    PLWIN=(t.getFullYear()===YEAR)?t.getMonth()+1:1; PLWINY=YEAR;
+  }
+  return PLWIN;
+}
+function plStep(d){
+  PLWIN=Math.max(1,Math.min(12,plWin()+d));
+  plDrawStrip();
+}
+function plDrawStrip(){
+  const el=document.getElementById("pl-strip"); if(!el) return;
+  el.innerHTML="";
+  const a=plWin();
+  for(let m=a;m<=Math.min(12,a+3);m++) el.appendChild(buildMini(m));
+  plRange();
+}
+/* The label says what is ACTUALLY on screen. How many cards show is the
+   stylesheet's decision (4, 3, 2 or 1 by the width), so the label reads
+   it back from the page rather than assuming four. */
+function plRange(){
+  const r=document.getElementById("pl-range"); if(!r) return;
+  const cards=[...document.querySelectorAll("#pl-strip > .month-card")].filter(c=>getComputedStyle(c).display!=="none");
+  if(!cards.length){ r.textContent=""; return; }
+  const a=plWin(), b=a+cards.length-1;
+  r.textContent=a===b?`${MN[a]} ${YEAR}`:`${MN[a].slice(0,3)} – ${MN[b].slice(0,3)} ${YEAR}`;
+}
+window.addEventListener("resize",()=>{ if(plOn()) plRange(); });
+
+/* A meeting on a month card: a dot on its day, and its name under the
+   grid. Every other channel of a day cell is taken (see buildMini's
+   camera note), so the dot sits top-left, the one corner left. */
+(function(){
+  const base=buildMini;
+  buildMini=function(m){
+    const card=base.apply(this,arguments);
+    if(!plOn()||!PLD.ok.meet) return card;
+    const ms=plMeetingsIn(m);
+    const days=card.querySelectorAll(".mc-grid .mc-day");
+    ms.forEach(x=>{
+      const d=Number(String(x.held_on).slice(8,10));
+      const cell=days[d-1];
+      if(cell&&!cell.querySelector(".pl-meet")){ cell.insertAdjacentHTML("beforeend",`<span class="pl-meet" aria-hidden="true"></span>`); cell.classList.add("has-ev"); }
+    });
+    const foot=document.createElement("div");
+    foot.className="pl-mfoot"+(ms.length?"":" none");
+    foot.innerHTML=ms.length
+      ? ms.map(x=>`<div class="pl-mrow" onclick="plMeetOpen('${escAttr(x.id)}')"><span class="pl-mdot"></span><b>${Number(String(x.held_on).slice(8,10))}</b> ${escHtml(x.topic||"Meeting")}</div>`).join("")
+      : "No meetings";
+    card.appendChild(foot);
+    return card;
+  };
+})();
+
+/* ── the data this page adds ─────────────────────────────────────── */
+function plKey(){ return activeBrand+"|"+YEAR; }
+function plEnsure(){
+  const k=plKey();
+  if(PLD.key!==k && !PLD.loading) plLoad(k);
+  if(canCap("view_promotions") && PR.key!==String(activeBrand) && !PR.loading)
+    prLoad(String(activeBrand)).then(()=>{ if(plOn()) render(); });
+}
+async function plLoad(k){
+  PLD.loading=true;
+  const [bid,yy]=k.split("|"); const y=Number(yy);
+  const from=`${y}-01-01`, to=`${y+1}-01-01`;
+  const safe=async(q)=>{ try{ const r=await q; return r&&!r.error?{ok:true,data:r.data||[]}:{ok:false,data:[]}; }catch(e){ return {ok:false,data:[]}; } };
+  const [mt,pl,ou,ins,cn]=await Promise.all([
+    safe(sb.from("brand_meetings").select("*").eq("brand_id",bid).is("deleted_at",null).gte("held_on",from).lt("held_on",to)),
+    safe(sb.from("plan_service_months").select("*").eq("brand_id",bid).eq("year",y)),
+    safe(sb.from("plan_outcomes").select("*").eq("brand_id",bid).eq("year",y).is("deleted_at",null)),
+    canCap("view_social_insights")
+      ? safe(sb.from("account_insights").select("brand_id,captured_on,followers_total,followers_new,profile_views,views,missing").eq("brand_id",bid).gte("captured_on",from).lt("captured_on",to))
+      : Promise.resolve({ok:false,data:[]}),
+    safe(sb.from("contacts").select("id,name,email,brand_id,deleted_at").eq("brand_id",bid).is("deleted_at",null))
+  ]);
+  /* The stub and the live database both get the brand filter, and the
+     rows are checked again here: a figure from another brand on this
+     page would be the worst kind of wrong — correct-looking. */
+  const mine=r=>r&&r.brand_id===bid&&!r.deleted_at;
+  PLD.meet=mt.data.filter(r=>mine(r)&&String(r.held_on||"").slice(0,4)===String(y));
+  PLD.plans=pl.data.filter(r=>mine(r)&&Number(r.year)===y);
+  PLD.outs=ou.data.filter(r=>mine(r)&&Number(r.year)===y);
+  PLD.ins=ins.data.filter(r=>r&&r.brand_id===bid&&String(r.captured_on||"").slice(0,4)===String(y));
+  PLD.contacts=cn.data.filter(mine);
+  PLD.ok={meet:mt.ok,plan:pl.ok,out:ou.ok}; PLD.cnOk=cn.ok;
+  PLD.loading=false; PLD.key=k;
+  if(plOn()) render();
+}
+function plMeetingsIn(m){
+  return PLD.meet.filter(x=>Number(String(x.held_on).slice(5,7))===m)
+    .sort((a,b)=>String(a.held_on).localeCompare(String(b.held_on)));
+}
+function plPlanRow(svc,m){ return PLD.plans.find(p=>p.service_id===svc&&Number(p.month)===m); }
+function plOutRows(svc,m){ return PLD.outs.filter(o=>o.service_id===svc&&Number(o.month)===m).sort((a,b)=>(a.sort||0)-(b.sort||0)||String(a.created_at||"").localeCompare(String(b.created_at||""))); }
+
+/* A month with a meeting, a plan line or a typed figure is a month with
+   work, exactly as a month with posts or dated shoots already is. */
+(function(){
+  const base=mpvMonthsWithPlan;
+  mpvMonthsWithPlan=function(){
+    const out=base.apply(this,arguments);
+    if(!plOn()||PLD.key!==plKey()) return out;
+    const s=new Set(out);
+    PLD.meet.forEach(x=>s.add(Number(String(x.held_on).slice(5,7))));
+    PLD.plans.forEach(p=>{ if(String(p.plan||"").trim()) s.add(Number(p.month)); });
+    PLD.outs.forEach(o=>s.add(Number(o.month)));
+    return [...s].filter(m=>m>=1&&m<=12).sort((a,b)=>b-a);
+  };
+})();
+
+/* ── which services a month carries ──────────────────────────────── */
+function plServicesFor(m){
+  const [ms,me]=plMonthRange(m);
+  const seen=new Map();
+  const lines=(ENG.brand===activeBrand&&ENG.ok)?ENG.lines:[];
+  lines.forEach(l=>{
+    if(!l.serviceId) return;
+    const covers=!!l.start && l.start<=me && (!l.end||l.end>=ms);
+    if(!covers) return;
+    if(!seen.has(l.serviceId)) seen.set(l.serviceId,{id:l.serviceId,title:l.title,kind:l.kind,lines:[l],gone:false});
+    else seen.get(l.serviceId).lines.push(l);
+  });
+  /* A service that has left the scope keeps its block in a month where
+     somebody wrote its plan or its figures. Dropping the block would hide
+     work that happened. */
+  const withData=new Set([
+    ...PLD.plans.filter(p=>Number(p.month)===m&&String(p.plan||"").trim()).map(p=>p.service_id),
+    ...PLD.outs.filter(o=>Number(o.month)===m).map(o=>o.service_id)]);
+  withData.forEach(id=>{
+    if(seen.has(id)) return;
+    const l=lines.find(x=>x.serviceId===id);
+    seen.set(id,{id,title:l?l.title:"Service",kind:l?l.kind:null,lines:[],gone:true});
+  });
+  return [...seen.values()];
+}
+
+/* ── the pieces of a service block ───────────────────────────────── */
+function plMetric(n,l){ return `<div class="mpv-metric"><b>${n}</b><span>${escHtml(l)}</span></div>`; }
+function plSocialDelivered(sv,m){
+  const posts=socialForBrandYear(activeBrand,YEAR).filter(p=>p.month===m);
+  const ok=posts.filter(p=>p.status==="approved").length;
+  const scope=sv.lines.reduce((t,l)=>t+(Number(l.posts)||0),0);
+  return plMetric(`${ok}/${scope||posts.length}`,"posts approved")+plMetric(posts.length,posts.length===1?"post planned":"posts planned");
+}
+function plPromosIn(m){
+  if(PR.key!==String(activeBrand)) return [];
+  const [ms,me]=plMonthRange(m);
+  return PR.list.filter(p=>{
+    const s=p.starts_on||null, e=p.ends_on||null;
+    if(!s&&!e) return false;
+    return (!s||s<=me)&&(!e||e>=ms);
+  });
+}
+function plAdsDelivered(m){
+  if(!canCap("view_promotions")) return "";
+  const n=plPromosIn(m).length;
+  return plMetric(n,n===1?"promotion":"promotions");
+}
+/* The automatic figures. Social: the account, from the nightly Instagram
+   read — the same four the Numbers screen leads with, summed only over
+   days whose metric was actually supplied. Ads: each promotion's result
+   and client figure for the month, a platform figure winning over a
+   typed one for the same week exactly as on Promotions (prFigRows). */
+function plSocialAuto(m){
+  if(!canCap("view_social_insights")) return [];
+  const rows=PLD.ins.filter(r=>Number(String(r.captured_on).slice(5,7))===m)
+    .sort((a,b)=>String(a.captured_on).localeCompare(String(b.captured_on)));
+  if(!rows.length) return [];
+  const sum=(col,metric)=>{ let t=null; rows.forEach(r=>{ if(!nsHas(r,metric||col)) return; const v=nsNum(r[col]); if(v!==null&&!isNaN(v)) t=(t===null?0:t)+v; }); return t; };
+  const last=rows[rows.length-1];
+  const out=[];
+  const add=(label,v)=>{ if(v!==null&&v!==undefined&&!isNaN(v)) out.push({label,actual:nsFmt(v),src:`<span class="prtag t-meta">Meta</span>`}); };
+  add("Followers",nsNum(last.followers_total));
+  add("Followers gained",sum("followers_new"));
+  add("Profile visits",sum("profile_views"));
+  add("Content views",sum("views"));
+  return out;
+}
+function plAdsAuto(m){
+  if(!canCap("view_promotions")) return [];
+  const [ms,me]=plMonthRange(m);
+  const out=[];
+  plPromosIn(m).forEach(p=>{
+    const fr=prFigRows(p.id).filter(f=>f.period_start>=ms&&f.period_start<=me);
+    const res=prSum(fr,"results");
+    const obj=PR_OBJ[p.objective]||{result:"results"};
+    if(res!==null) out.push({label:`${p.name} · ${obj.result}`,actual:prFmt(res),src:prSources(fr)});
+    const lab=prLabel(p);
+    if(lab){
+      let t=null;
+      PR.outs.forEach(o=>{ if(o.promotion_id===p.id&&o.outcome_key===PR_CLIENT&&o.week_start>=ms&&o.week_start<=me) t=(t===null?0:t)+Number(o.value); });
+      if(t!==null) out.push({label:`${p.name} · ${lab}`,actual:prFmt(t),src:`<span class="prtag t-client">client</span>`});
+    }
+  });
+  return out;
+}
+function plOutTable(auto,typed,sv,m,canE){
+  const canType=canE&&PLD.ok.out;
+  const aRows=auto.map(r=>`<tr class="pl-auto"><td>${escHtml(r.label)}</td><td class="n"><span class="nsdim">—</span></td><td class="n"><b>${r.actual}</b></td><td>${r.src}</td><td></td></tr>`).join("");
+  const tRows=typed.map(o=>{
+    const f=(k,ph,cls)=>canType
+      ? `<input class="pl-in${cls?" "+cls:""}" value="${escAttr(o[k]||"")}" placeholder="${ph}" onchange="plOutSet('${escAttr(o.id)}','${k}',this.value)" onclick="event.stopPropagation()">`
+      : escHtml(o[k]||"");
+    return `<tr class="pl-typed" data-out="${escAttr(o.id)}"><td>${f("label","What")}</td><td class="n">${f("planned","Planned","n")}</td><td class="n">${f("actual","Actual","n")}</td><td><span class="prtag t-typed">typed</span></td>
+      <td>${canType?`<i class="ti ti-x rm" title="Move to Trash" onclick="plOutTrash('${escAttr(o.id)}')"></i>`:""}</td></tr>`;
+  }).join("");
+  if(!aRows&&!tRows) return `<div class="mpv-empty">No outcomes yet.</div>`;
+  return `<table class="pl-out"><thead><tr><th></th><th class="n">Planned</th><th class="n">Actual</th><th>Source</th><th></th></tr></thead><tbody>${aRows}${tRows}</tbody></table>`;
+}
+function plInfluencersHtml(m,canE){
+  const mp=monthPlanFor(activeBrand,YEAR,m);
+  const rows=canE?mpvRows(mp,"influencer"):mpvItems(mp,"influencer");
+  if(!rows.length&&!canE) return "";
+  return `<div class="pl-infl">${mpvLbl("Influencers",canE?`mpvAdd('influencer',${m})`:"")}
+    ${rows.length?rows.map(i=>mpvItemRow(i,"influencer",m,canE)).join(""):`<div class="mpv-empty">None yet</div>`}
+    <div class="mpv-strip">${mpvTargetMetric(mp,m,canE)}</div></div>`;
+}
+/* A service block is OPEN until somebody folds it — the approved mockup
+   drew them open, and a sheet of closed headers says nothing. The fold is
+   one preference per service, not twelve, the same rule mpvToggle keeps
+   for Production; stored beside mpvFolds so the two live in one place. */
+function plIsShut(id){
+  const f=mpvFolds();
+  return Object.prototype.hasOwnProperty.call(f,id) ? !!f[id] : false;
+}
+function plToggle(id){
+  const f=mpvFolds(); const shut=!plIsShut(id); f[id]=shut;
+  try{ localStorage.setItem(mpvFoldKey(),JSON.stringify(f)); }catch(e){}
+  document.querySelectorAll(`.mpv-band[data-band="${id}"]`).forEach(el=>el.classList.toggle("shut",shut));
+}
+function plBlockHtml(sv,m,canE,withInfl){
+  const key="pl-"+sv.id;
+  const pr=plPlanRow(sv.id,m);
+  const planTxt=String((pr&&pr.plan)||"").trim();
+  const canPlan=canE&&PLD.ok.plan;
+  const icon=sv.kind==="social"?"ti-device-mobile":sv.kind==="ads"?"ti-chart-line":"ti-briefcase";
+  const delivered=sv.kind==="social"?plSocialDelivered(sv,m):sv.kind==="ads"?plAdsDelivered(m):"";
+  const auto=sv.kind==="social"?plSocialAuto(m):sv.kind==="ads"?plAdsAuto(m):[];
+  const typed=PLD.ok.out?plOutRows(sv.id,m):[];
+  const bits=[];
+  if(sv.gone) bits.push("no longer in scope");
+  if(auto.length+typed.length) bits.push(`${auto.length+typed.length} figure${auto.length+typed.length===1?"":"s"}`);
+  const planBox=PLD.ok.plan
+    ? `<div class="pl-plan${planTxt?"":" none"}"${canPlan?` contenteditable="true" data-pl-svc="${escAttr(sv.id)}" data-pl-m="${m}" onfocus="plFocus(this)" onblur="plBlurSave(this)"`:""}>${planTxt?mpRender(planTxt):(canPlan?"Write the plan for "+escHtml(sv.title)+"…":"No plan written")}</div>`
+    : "";
+  return `<div class="mpv-band pl-svcband${plIsShut(key)?" shut":""}" data-band="${escAttr(key)}" data-svc="${escAttr(sv.id)}">
+    <div class="mpv-bh" onclick="plToggle('${escAttr(key)}')">
+      <i class="ti ti-chevron-down cv"></i><i class="ti ${icon}" style="font-size:14px;color:var(--muted)"></i>
+      <b>${escHtml(sv.title)}</b><span class="sum">${bits.join(" · ")}</span>
+    </div>
+    <div class="mpv-bb"><div class="pl-svc">
+      <div class="pl-col">
+        ${PLD.ok.plan?`<div class="mpv-lbl">Plan</div>${planBox}`:""}
+        ${delivered?`<div class="mpv-lbl" style="margin-top:12px;">Delivered</div><div class="mpv-strip">${delivered}</div>`:""}
+      </div>
+      <div class="pl-col">
+        ${mpvLbl("Outcomes",(canE&&PLD.ok.out)?`plOutAdd('${escAttr(sv.id)}',${m})`:"")}
+        ${plOutTable(auto,typed,sv,m,canE)}
+      </div>
+    </div>${withInfl?plInfluencersHtml(m,canE):""}</div></div>`;
+}
+
+/* ── meetings, in the sheet ──────────────────────────────────────── */
+const PL_LOC={office:"Our office",client_office:"Client office",online:"Online"};
+function plPersonFace(id){
+  const pp=(PEOPLE||[]).find(x=>x.id===id); if(!pp) return "";
+  return `<span class="nav-av" title="${escAttr(pp.name)}" style="width:22px;height:22px;font-size:10px;${avatarSkin(pp.email||pp.name,false)}">${avatarInner(pp.email||pp.name,escAttr((pp.name||"?").slice(0,2).toUpperCase()))}</span>`;
+}
+function plClientNames(x){
+  const byId={}; PLD.contacts.forEach(c=>{ byId[c.id]=c.name; });
+  return [...(x.client_contact_ids||[]).map(id=>byId[id]).filter(Boolean), ...(x.client_names||[])];
+}
+function plMeetingsHtml(m,canE){
+  if(!PLD.ok.meet) return "";
+  const ms=plMeetingsIn(m);
+  const rows=ms.map(x=>{
+    const d=Number(String(x.held_on).slice(8,10));
+    const where=[PL_LOC[x.location_kind]||"",x.location_name||""].filter(Boolean).join(" · ");
+    const cl=plClientNames(x);
+    return `<div class="pl-mom" data-meet="${escAttr(x.id)}">
+      <div class="pl-momd"><b>${d}</b><span>${MN[m].slice(0,3)}</span></div>
+      <div class="pl-momb">
+        <div class="t">${escHtml(x.topic||"Meeting")}${where?`<span class="pl-where">${escHtml(where)}</span>`:""}
+          ${canE?`<span class="pl-edit" onclick="plMeetOpen('${escAttr(x.id)}')" title="Edit this meeting"><i class="ti ti-pencil"></i></span>`:""}</div>
+        ${String(x.notes||"").trim()?`<div class="s">${mpRender(x.notes)}</div>`:""}
+        <div class="pl-who">${(x.cc_people||[]).map(plPersonFace).join("")}
+          ${cl.length?`<span class="pl-client">${cl.map(escHtml).join(", ")}</span>`:""}
+          ${x.file_url?`<a class="pl-file" href="${escAttr(x.file_url)}" target="_blank" rel="noopener"><i class="ti ti-file-text"></i> Transcript</a>`:""}</div>
+      </div></div>`;
+  }).join("");
+  return `${mpvLbl("Meetings",canE?`plMeetOpen(null,${m})`:"")}
+    ${rows||`<div class="mpv-empty">No meetings yet.</div>`}`;
+}
+
+/* ── the sheet ────────────────────────────────────────────────────── */
+function plSheetHtml(m,canE){
+  const mp=monthPlanFor(activeBrand,YEAR,m);
+  const goalsAll=canE?mpvRows(mp,"goal"):mpvItems(mp,"goal");
+  const themeSet=String(mp.key_theme||"").trim()!=="";
+  const ed=canE?` contenteditable="true" data-mpv-m="${m}" data-mpv-f="key_theme"
+        onfocus="mpvFocus(this)" onblur="mpvBlurSave(this)"`:"";
+  const svcs=plServicesFor(m);
+  const socialAt=svcs.findIndex(s=>s.kind==="social");
+  const blocks=svcs.map((s,i)=>plBlockHtml(s,m,canE,i===socialAt)).join("");
+  const mpInfl=mpvItems(mp,"influencer").length;
+  /* Influencers belonged to the social layer before and still do. With
+     no social service this month they get a block of their own rather
+     than vanishing. */
+  const loneInfl=(socialAt<0&&(mpInfl||canE))
+    ? `<div class="mpv-band pl-svcband${plIsShut("pl-infl")?" shut":""}" data-band="pl-infl"><div class="mpv-bh" onclick="plToggle('pl-infl')"><i class="ti ti-chevron-down cv"></i><i class="ti ti-users" style="font-size:14px;color:var(--muted)"></i><b>Influencers</b><span class="sum">${mpInfl?mpInfl+" influencer"+(mpInfl===1?"":"s"):""}</span></div><div class="mpv-bb">${plInfluencersHtml(m,canE)}</div></div>`
+    : "";
+  return `<div class="mpv-sheet pl-sheet" data-month="${m}" id="mpv-m${m}">
+    <div class="mpv-top">
+      <div class="mpv-act">${mp.id?mpvStatusCtl(m,mp,canE):""}${canE?`<span class="mp-edit" onclick="mpvFocusTheme(${m})"
+        title="Write the theme for ${MN[m]}"><i class="ti ti-pencil"></i></span>`:""}</div>
+      <div class="mpv-mo"><h2>${MN[m]}</h2><span class="yr">${YEAR}</span></div>
+      <div class="mpv-theme${themeSet?"":" none"}"${ed}>${themeSet?mpRender(mp.key_theme):(canE?"Write the theme for "+MN[m]+"…":"No theme set for "+MN[m])}</div>
+      <div class="mpchips"></div>
+    </div>
+    <div class="mpv-body">
+      ${mpvLbl("Goals",canE?`mpvAdd('goal',${m})`:"")}
+      ${goalsAll.length?`<div class="mpv-goals">${goalsAll.map(g=>mpvGoalPill(g,m,canE)).join("")}</div>`:`<div class="mpv-empty">No goals yet.</div>`}
+      ${PLD.ok.meet?`<div class="pl-meets">${plMeetingsHtml(m,canE)}</div>`:""}
+      <div class="pl-blocks">${blocks}${loneInfl}</div>
+      ${mpvProductionHtml(m,canE)}
+    </div>
+  </div>`;
+}
+
+/* ── the page ─────────────────────────────────────────────────────── */
+(function(){
+  const base=renderMonthPlanView;
+  renderMonthPlanView=function(){
+    if(!plMerged()) return base.apply(this,arguments);
+    const main=document.getElementById("main"); if(!main) return;
+    plEnsure();
+    const canE=canEdit();
+    const months=mpvMonthsWithPlan();
+    const row1=PLMODE==="events"?"":`<div class="pl-wrap"><div class="pl-strip" id="pl-strip"></div></div>`;
+    main.innerHTML=`<div class="mpv plpage">
+      ${pageHead()}
+      <div class="pl-row1" id="pl-row1">${row1}</div>
+      ${PLMODE==="events"?"":`<div class="pgfilter">${filterSummaryHtml()}</div>`}
+      <div class="mpv-eng pl-eng">${engHtml()}</div>
+      <div class="mpv-scroll pl-sheets">
+        ${months.length
+          ? months.map(m=>plSheetHtml(m,canE)).join("")
+          : `<div class="mpv-sheet"><div class="mpv-body"><div class="mpv-empty" style="padding:26px 0;">
+              Nothing in ${YEAR} yet.${canE?` <span class="mpv-start" onclick="mpvStart(${curMonth||1})">Start ${MN[curMonth||1]}</span>`:""}</div></div></div>`}
+        ${canE&&months.length&&mpvNextUnplanned()
+          ? `<div class="mpv-addnext"><span class="mpv-start" onclick="mpvStart(${mpvNextUnplanned()})">
+               <i class="ti ti-plus"></i> Add ${MN[mpvNextUnplanned()]} ${YEAR}</span></div>`
+          : ""}
+      </div>
+    </div>`;
+    if(PLMODE==="events") plListInto(document.getElementById("pl-row1"));
+    else plDrawStrip();
+    document.body.classList.toggle("planning",socialLayer&&PLMODE==="cal"&&canE);
+    months.forEach(m=>mpDrawChips(m));
+    ensureMonthPlanAssets(months);
+    requestAnimationFrame(()=>{ plRange(); mpvSnap(); requestAnimationFrame(mpvSnap); });
+  };
+  /* Landing on a month: the whole page scrolls now, so the sheet is
+     brought to the top of #main, under row 1 and the scope — which is
+     where the eye goes after clicking a month name. */
+  const baseSnap=mpvSnap;
+  mpvSnap=function(){
+    if(!plOn()) return baseSnap.apply(this,arguments);
+    const want=mpvMonth; if(!want) return;
+    const main=document.getElementById("main"); const el=document.getElementById("mpv-m"+want);
+    if(!main||!el) return;
+    const d=el.getBoundingClientRect().top-main.getBoundingClientRect().top;
+    if(Math.abs(d-12)<1) return;
+    main.scrollTop=Math.max(0,main.scrollTop+d-12);
+  };
+  const baseJump=mpvJump;
+  mpvJump=function(m){
+    if(!plOn()) return baseJump.apply(this,arguments);
+    mpvMonth=m; mpvSnap();
+    document.querySelectorAll(".mpj").forEach(x=>x.classList.remove("on"));
+    const t=document.querySelector(`.mpj[data-mpj="${m}"]:not(.empty)`); if(t) t.classList.add("on");
+  };
+  /* A month name on a card jumps to its sheet without redrawing the page
+     when the sheet is already there. */
+  const baseOpen=openMonthPlanView;
+  openMonthPlanView=function(m){
+    if(plOn()&&m&&document.getElementById("mpv-m"+m)){ mpvJump(m); return; }
+    return baseOpen.apply(this,arguments);
+  };
+  /* The control row on Plan is the calendar strip, which sits OUTSIDE the
+     page's .mpv root. mountFrameRow looks for a row inside .mpv, would not
+     find one, and would add an empty band under the strip. */
+  const baseFrame=mountFrameRow;
+  mountFrameRow=function(){ if(plOn()) return; return baseFrame.apply(this,arguments); };
+  /* The Calendar's filters, under the Plan's own months rail. */
+  const baseSide=buildMonthPlanSidebar;
+  buildMonthPlanSidebar=function(){
+    const out=baseSide.apply(this,arguments);
+    if(!plMerged()) return out;
+    const sm=document.getElementById("sb-months");
+    if(sm && typeof buildFilterGroups==="function"){
+      const d=document.createElement("div"); d.className="s-divider"; sm.appendChild(d);
+      sm.appendChild(buildFilterGroups());
+    }
+    return out;
+  };
+})();
+
+/* ── writing a plan ───────────────────────────────────────────────── */
+function plQueue(key,fn){ PLQ[key]=(PLQ[key]||Promise.resolve()).then(fn,fn); return PLQ[key]; }
+function plFocus(el){
+  if(el.classList.contains("none")){ el.classList.remove("none"); el.innerHTML=""; }
+  el.dataset.was=el.innerHTML;
+  mpBarShow(el);
+}
+async function plBlurSave(el){
+  mpBarHide();
+  const svc=el.dataset.plSvc, m=Number(el.dataset.plM);
+  const clean=mpClean(el.innerHTML).trim();
+  if(clean===String(el.dataset.was||"").trim()){
+    if(!clean){ el.classList.add("none"); el.innerHTML="Write the plan…"; }
+    return;
+  }
+  el.dataset.was=clean;
+  if(!clean){ el.classList.add("none"); el.innerHTML="Write the plan…"; }
+  await plQueue("plan|"+svc+"|"+m,()=>plSavePlan(svc,m,clean));
+}
+async function plSavePlan(svc,m,text){
+  const now=new Date().toISOString();
+  let row=plPlanRow(svc,m);
+  if(row){
+    const r=await sb.from("plan_service_months").update({plan:text,updated_at:now,updated_by:ME.id}).eq("id",row.id).select("id");
+    if(r.error||!r.data||!r.data.length){ toast("The plan was not saved — "+(r.error?r.error.message:"not allowed"),"err"); return; }
+    row.plan=text; row.updated_at=now;
+  } else {
+    row={id:crypto.randomUUID(),brand_id:activeBrand,year:YEAR,month:m,service_id:svc,plan:text,updated_by:ME.id,updated_at:now};
+    const r=await sb.from("plan_service_months").insert([row]).select("id");
+    if(r.error){ toast("The plan was not saved — "+r.error.message,"err"); return; }
+    PLD.plans.push(row);
+  }
+  toast("Saved");
+}
+
+/* ── typed figures ────────────────────────────────────────────────── */
+async function plOutAdd(svc,m){
+  if(!canEdit()||!PLD.ok.out) return;
+  const n=plOutRows(svc,m).length;
+  const row={id:crypto.randomUUID(),brand_id:activeBrand,year:YEAR,month:m,service_id:svc,label:"",planned:"",actual:"",sort:n,entered_by:ME.id,source:"typed"};
+  const r=await sb.from("plan_outcomes").insert([row]).select("id");
+  if(r.error){ toast("Could not add a figure — "+r.error.message,"err"); return; }
+  PLD.outs.push(row);
+  render();
+  const inp=document.querySelector(`tr[data-out="${row.id}"] input`); if(inp) inp.focus();
+}
+async function plOutSet(id,k,v){
+  const o=PLD.outs.find(x=>x.id===id); if(!o) return;
+  const val=String(v||"").trim();
+  if((o[k]||"")===val) return;
+  await plQueue("out|"+id,async()=>{
+    const r=await sb.from("plan_outcomes").update({[k]:val,updated_at:new Date().toISOString()}).eq("id",id).select("id");
+    if(r.error||!r.data||!r.data.length){ toast("Not saved — "+(r.error?r.error.message:"not allowed"),"err"); return; }
+    o[k]=val; toast("Saved");
+  });
+}
+async function plOutTrash(id){
+  const o=PLD.outs.find(x=>x.id===id); if(!o) return;
+  if(!confirm(`Move "${o.label||"this figure"}" to Trash?\n\nIt can be restored from History.`)) return;
+  const r=await sb.from("plan_outcomes").update({deleted_at:new Date().toISOString()}).eq("id",id).select("id");
+  if(r.error||!r.data||!r.data.length){ toast("Could not move it — "+(r.error?r.error.message:"not allowed"),"err"); return; }
+  PLD.outs=PLD.outs.filter(x=>x.id!==id);
+  toast("Moved to Trash"); render();
+}
+
+/* ── the meeting form ─────────────────────────────────────────────── */
+let PLM=null;   // the meeting being edited: a copy, saved on Save
+function plMeetOverlay(){
+  let ov=document.getElementById("ov-pl-meet");
+  if(ov) return ov;
+  ov=document.createElement("div");
+  ov.className="overlay"; ov.id="ov-pl-meet";
+  ov.onclick=(e)=>{ if(e.target===ov) closeM("pl-meet"); };
+  document.body.appendChild(ov);
+  return ov;
+}
+function plMeetOpen(id,m){
+  if(!canEdit()||!PLD.ok.meet) return;
+  const x=id?PLD.meet.find(r=>r.id===id):null;
+  if(id&&!x) return;
+  const t=new Date();
+  const mm=m||(x?Number(String(x.held_on).slice(5,7)):(t.getMonth()+1));
+  const day=(t.getFullYear()===YEAR&&t.getMonth()+1===mm)?t.getDate():1;
+  PLM=x?JSON.parse(JSON.stringify(x)):{id:null,brand_id:activeBrand,held_on:`${YEAR}-${plPad(mm)}-${plPad(day)}`,topic:"",location_kind:"online",location_name:"",cc_people:[],client_contact_ids:[],client_names:[],file_url:"",notes:""};
+  PLM.cc_people=PLM.cc_people||[]; PLM.client_contact_ids=PLM.client_contact_ids||[]; PLM.client_names=PLM.client_names||[];
+  plMeetDraw();
+  openM("pl-meet");
+  setTimeout(()=>{ const i=document.getElementById("pl-mt-topic"); if(i&&!PLM.id) i.focus(); },30);
+}
+function plMeetDraw(){
+  const ov=plMeetOverlay(); const x=PLM; if(!x) return;
+  const team=(PEOPLE||[]).filter(pp=>pp.role!=="client");
+  const chip=(label,rm)=>`<span class="pl-chip">${escHtml(label)}<i class="ti ti-x" onclick="${rm}"></i></span>`;
+  const ccChips=x.cc_people.map(id=>{ const pp=team.find(p=>p.id===id); return chip(pp?pp.name:"Someone",`plMtCc('${escAttr(id)}',false)`); }).join("");
+  const ccOpts=team.filter(pp=>x.cc_people.indexOf(pp.id)<0).map(pp=>`<option value="${escAttr(pp.id)}">${escHtml(pp.name)}</option>`).join("");
+  const byId={}; PLD.contacts.forEach(c=>{ byId[c.id]=c; });
+  const clChips=x.client_contact_ids.map(id=>chip(byId[id]?byId[id].name:"Contact",`plMtCl('${escAttr(id)}',false)`)).join("")
+    +x.client_names.map((n,i)=>chip(n,`plMtName(${i})`)).join("");
+  const clOpts=PLD.contacts.filter(c=>x.client_contact_ids.indexOf(c.id)<0).map(c=>`<option value="${escAttr(c.id)}">${escHtml(c.name||c.email||"Contact")}</option>`).join("");
+  ov.innerHTML=`<div class="modal wide" style="max-width:620px;">
+    <div class="modal-top"><div><div class="modal-title">${x.id?"Edit meeting":"Log a meeting"}</div></div>
+      <button class="modal-x" onclick="closeM('pl-meet')">✕</button></div>
+    <div class="modal-body"><div class="fg">
+      <div class="field fw"><label class="fl">Topic *</label>
+        <input class="fi" id="pl-mt-topic" value="${escAttr(x.topic)}" oninput="PLM.topic=this.value"></div>
+      <div class="field"><label class="fl">Date *</label>
+        <input class="fi" id="pl-mt-date" type="date" value="${escAttr(x.held_on)}" onchange="PLM.held_on=this.value" style="height:38px;"></div>
+      <div class="field"><label class="fl">Location</label>
+        <select class="fi" id="pl-mt-loc" onchange="PLM.location_kind=this.value">${Object.keys(PL_LOC).map(k=>`<option value="${k}"${x.location_kind===k?" selected":""}>${PL_LOC[k]}</option>`).join("")}</select></div>
+      <div class="field fw"><label class="fl">Place</label>
+        <input class="fi" id="pl-mt-place" value="${escAttr(x.location_name)}" placeholder="Ahmedabad, Teams…" oninput="PLM.location_name=this.value"></div>
+      <div class="field fw"><label class="fl">CC team</label>
+        <div class="pl-chips">${ccChips}<select class="fi pl-add" id="pl-mt-cc" onchange="if(this.value)plMtCc(this.value,true)"><option value="">Add someone…</option>${ccOpts}</select></div></div>
+      <div class="field fw"><label class="fl">Client team</label>
+        <div class="pl-chips">${clChips}${clOpts?`<select class="fi pl-add" id="pl-mt-cl" onchange="if(this.value)plMtCl(this.value,true)"><option value="">Add a contact…</option>${clOpts}</select>`:""}
+          <input class="fi pl-add" id="pl-mt-newname" placeholder="Add a name" onkeydown="if(event.key==='Enter'){event.preventDefault();plMtNew(this.value);}">
+          <button class="btn btn-g btn-sm" onclick="plMtNew(document.getElementById('pl-mt-newname').value)">Add</button></div></div>
+      <div class="field fw"><label class="fl">Transcript or meeting file (link)</label>
+        <input class="fi" id="pl-mt-file" value="${escAttr(x.file_url)}" placeholder="https://" oninput="PLM.file_url=this.value"></div>
+      <div class="field fw"><label class="fl">Notes</label>
+        <div class="fi pl-notes-box" id="pl-mt-notes" contenteditable="true"
+          onfocus="mpBarShow(this)" onblur="mpBarHide();PLM.notes=mpClean(this.innerHTML).trim()"
+          oninput="fbMentionKey(event,'pl-mt-notes',activeBrand,true)"
+          onkeydown="if(mentionKeyNav(event))return;">${x.notes?mpRender(x.notes):""}</div></div>
+    </div></div>
+    <div class="modal-foot">
+      ${x.id?`<button class="btn btn-d btn-sm" onclick="plMeetTrash()">Move to Trash</button>`:""}
+      <button class="btn btn-g" onclick="closeM('pl-meet')">Cancel</button>
+      <button class="btn btn-p" id="pl-mt-save" onclick="plMeetSave()">Save</button>
+    </div></div>`;
+}
+function plMtKeepNotes(){ const n=document.getElementById("pl-mt-notes"); if(n&&PLM) PLM.notes=mpClean(n.innerHTML).trim(); }
+function plMtCc(id,add){ plMtKeepNotes(); PLM.cc_people=add?[...PLM.cc_people,id]:PLM.cc_people.filter(x=>x!==id); plMeetDraw(); }
+function plMtCl(id,add){ plMtKeepNotes(); PLM.client_contact_ids=add?[...PLM.client_contact_ids,id]:PLM.client_contact_ids.filter(x=>x!==id); plMeetDraw(); }
+function plMtName(i){ plMtKeepNotes(); PLM.client_names=PLM.client_names.filter((_,j)=>j!==i); plMeetDraw(); }
+/* A name typed on the spot becomes a Portfolio contact when the Portfolio
+   lets this person add one. When it does not (adding contacts needs a
+   Portfolio role), the name is kept on the meeting instead — the minutes
+   are not refused over a missing permission in a different tool. */
+async function plMtNew(v){
+  const name=String(v||"").trim(); if(!name) return;
+  plMtKeepNotes();
+  const r=await sb.from("contacts").insert([{brand_id:activeBrand,name,source:"manual"}]).select("id,name,brand_id");
+  const row=(!r.error&&r.data)?(r.data.find(x=>x&&x.name===name&&x.brand_id===activeBrand)||null):null;
+  if(row&&row.id){
+    if(!PLD.contacts.find(c=>c.id===row.id)) PLD.contacts.push({id:row.id,name,brand_id:activeBrand});
+    PLM.client_contact_ids=[...PLM.client_contact_ids,row.id];
+    toast(name+" added to the brand's contacts");
+  } else {
+    PLM.client_names=[...PLM.client_names,name];
+  }
+  plMeetDraw();
+}
+async function plMeetSave(){
+  plMtKeepNotes();
+  const x=PLM; if(!x) return;
+  const topic=String(x.topic||"").trim();
+  if(!topic){ toast("Give the meeting a topic","err"); return; }
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(x.held_on||""))){ toast("Pick the date it was held","err"); return; }
+  if(String(x.held_on).slice(0,4)!==String(YEAR)){ toast(`Pick a date in ${YEAR} — this page shows ${YEAR}`,"err"); return; }
+  const btn=document.getElementById("pl-mt-save"); if(btn) btn.disabled=true;
+  const now=new Date().toISOString();
+  const row={brand_id:activeBrand,held_on:x.held_on,topic,location_kind:x.location_kind||null,location_name:String(x.location_name||"").trim(),
+    cc_people:x.cc_people,client_contact_ids:x.client_contact_ids,client_names:x.client_names,
+    file_url:String(x.file_url||"").trim(),notes:x.notes||"",updated_at:now};
+  let r;
+  if(x.id){
+    r=await sb.from("brand_meetings").update(row).eq("id",x.id).select("id");
+    if(!r.error&&r.data&&r.data.length){ const i=PLD.meet.findIndex(m=>m.id===x.id); if(i>-1) PLD.meet[i]={...PLD.meet[i],...row}; }
+  } else {
+    row.id=crypto.randomUUID(); row.created_by=ME.id;
+    r=await sb.from("brand_meetings").insert([row]).select("id");
+    if(!r.error) PLD.meet.push(row);
+  }
+  if(btn) btn.disabled=false;
+  if(r.error||(x.id&&(!r.data||!r.data.length))){ toast("The meeting was not saved — "+(r.error?r.error.message:"not allowed"),"err"); return; }
+  closeM("pl-meet"); PLM=null; toast("Meeting saved"); render();
+}
+async function plMeetTrash(){
+  const x=PLM; if(!x||!x.id) return;
+  if(!confirm(`Move "${x.topic||"this meeting"}" to Trash?\n\nIt can be restored from History.`)) return;
+  const r=await sb.from("brand_meetings").update({deleted_at:new Date().toISOString()}).eq("id",x.id).select("id");
+  if(r.error||!r.data||!r.data.length){ toast("Could not move it — "+(r.error?r.error.message:"not allowed"),"err"); return; }
+  PLD.meet=PLD.meet.filter(m=>m.id!==x.id);
+  closeM("pl-meet"); PLM=null; toast("Moved to Trash"); render();
+}
 
 </script>
 <!-- NEW YORK: lightbox. Preview only — there is deliberately no download
