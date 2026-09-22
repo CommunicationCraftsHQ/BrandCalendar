@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V108.6 Bologna"/>
+<meta name="cc-tool-version" content="V108.7 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2852,6 +2852,50 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .br-hist span{color:var(--subtle);margin-left:8px;font-size:11.5px;}
 .br-brief{padding:14px 0;font-size:13.5px;line-height:1.6;max-width:760px;}
 .br-empty2{padding:26px 0;font-size:12.5px;color:var(--subtle);}
+
+/* ══ V108.7 · THE OPEN TASK, READ RATHER THAN SCANNED ═════════════
+   Four things, all from Chirag's look at the live page on 22 Sep. */
+
+/* 1 · ONE BAR. The tabs and the actions share a line, so the strip
+      that held five right-aligned buttons and nothing else is gone. */
+.br-tabs{align-items:center;padding-right:14px;}
+.br-tabs .br-gap{flex:1;}
+.br-arch{font-size:11.5px;color:var(--subtle);margin-right:6px;}
+/* The icon buttons carry the square the Copy link button always had —
+   a surface and a border, not a bare glyph. Chirag: "the icons can
+   become slightly more prominent". */
+.br-ico{width:32px;height:32px;border-radius:9px;border:1px solid var(--div);background:var(--surface);
+  color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+  font-family:inherit;margin-left:6px;transition:color 120ms,border-color 120ms,background 120ms;}
+.br-ico i{font-size:15px;}
+.br-ico:hover{color:var(--text);border-color:var(--subtle);background:var(--surface2);}
+
+/* 2 · THE BRIEF IS PINNED, not posted. Three lines and a "more". */
+.br-pin{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--div);
+  border-radius:12px;padding:11px 14px;margin:14px 0 4px;max-width:812px;font-size:13px;line-height:1.55;color:var(--muted);}
+.br-pin .lbl{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);
+  flex:none;margin-top:3px;width:34px;}
+.br-pin .bx{flex:1;min-width:0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.br-pin.open .bx{-webkit-line-clamp:unset;overflow:visible;}
+.br-pin .more{color:var(--text);font-weight:650;cursor:pointer;flex:none;font-size:12.5px;}
+
+/* 3 · A READING WIDTH. A line of 180 characters is not read, it is
+      skimmed; the thread is capped and the messages sit in cards so
+      one person's words end where the next begins. */
+.br-thread{padding:14px 0 4px;}
+.br-thread .th-m{max-width:812px;padding:0 0 16px;}
+.br-thread .th-t{background:var(--surface);border:1px solid var(--div);border-radius:12px;padding:10px 13px;}
+.br-thread .th-m.cli .th-t{background:#F2F8FD;border-color:#D8E7F5;}
+.br-thread .th-div{max-width:812px;}
+.br-thread .th-acts{padding-left:2px;}
+
+/* 4 · THE COMPOSER IS ONE LINE until somebody writes in it. It was
+      the largest thing on the screen before anybody had typed. */
+.br-open .th-c{margin-top:6px;padding-top:14px;max-width:824px;}
+.br-open .th-c textarea{min-height:38px;height:38px;transition:height 120ms;}
+.br-open .th-c textarea:focus{height:76px;}
+.br-open .th-cb{margin-top:7px;}
+
 @media(max-width:1100px){
   .brl-hd,.brl-tr{grid-template-columns:3px 20px minmax(0,1fr) 130px 120px 86px 96px 26px 30px;}
   .brl-hd .c:last-of-type,.brl-tr .c:nth-of-type(3){display:none;}
@@ -8500,6 +8544,19 @@ function brBriefHtml(t){
   return b?`<div class="br-brief">${fbBody(b)}</div>`
           :`<div class="br-empty2">No brief was written when this task was created.</div>`;
 }
+/* THE BRIEF, PINNED. Long ones are clipped to three lines with a "more"
+   that opens them in place — a brief nobody can skip past is a brief
+   that pushes the conversation off the screen. */
+let BR_BRIEF_OPEN=false;
+function brBriefPin(t){
+  const b=(t.brief||"").trim();
+  if(!b) return "";
+  return `<div class="br-pin${BR_BRIEF_OPEN?" open":""}">
+    <span class="lbl">Brief</span><div class="bx">${fbBody(b)}</div>
+    <span class="more" onclick="brBriefMore(event)">${BR_BRIEF_OPEN?"less":"more"}</span></div>`;
+}
+function brBriefMore(e){ if(e){ e.preventDefault(); e.stopPropagation(); } BR_BRIEF_OPEN=!BR_BRIEF_OPEN; render(); }
+
 function brOpenPanelHtml(t){
   const pj=brProject(t.project_id);
   const unread=brUnreadFor(t.id);
@@ -8516,7 +8573,7 @@ function brOpenPanelHtml(t){
     <div class="th-c" data-drop="task:">
       <span class="th-av">${escHtml(brInitials(ME.id)||"··")}</span>
       <div style="flex:1">
-        <textarea id="th-in" rows="2" placeholder="${TASK.asClient?"What the client said…":"Write a message…"}"
+        <textarea id="th-in" rows="1" placeholder="${TASK.asClient?"What the client said…":"Write a message…"}"
           onkeydown="mentionKeyNav(event)"
           oninput="TASK.draft=this.value;fbMentionKey(event,'th-in',activeBrand,true)"
           onblur="closeMentionBox()">${escHtml(TASK.draft||"")}</textarea>
@@ -8536,29 +8593,31 @@ function brOpenPanelHtml(t){
       </div>
     </div>`:"";
   return `<div class="br-open" onclick="event.stopPropagation()">
-    <!-- V108.6 — THE ACTIONS TAKE THE PLACE OF THE REPEATED FACTS.
-         Chirag, 22 Sep: the Ac Manager, the project and the delivery
-         date were "simply repetition of the row above it", and the row
-         above is still on screen. So this strip carries what the ⋯ menu
-         carries, spelled out, because there is room for it here and a
-         menu you have to open is one click more than a button. -->
-    <div class="br-otop">
-      ${t.archived_at?`<span class="k">Archived <b>${fmtShort(t.archived_at)}</b></span><span class="sp"></span>`:`<span class="sp"></span>`}
-      ${canEdit()?`<button class="btn btn-s" onclick="brOpenTask('${t.id}')"><i class="ti ti-pencil"></i> Edit details</button>`:""}
-      ${can("task_create")?`<button class="btn btn-s" onclick="brDuplicateTask('${t.id}')"><i class="ti ti-copy"></i> Duplicate</button>`:""}
-      <button class="btn btn-s" onclick="taskCopyLink('${t.id}')" title="Copy a link that opens this task"><i class="ti ti-link"></i> Copy link</button>
-      ${TASK_SEEN[t.id]?`<button class="btn btn-s" onclick="taskMarkUnread('${t.id}')" title="Put this task back in your bell"><i class="ti ti-bell-plus"></i> Mark unread</button>`:""}
-      ${brCanArchive(t)?`<button class="btn btn-s" onclick="brSetArchived('${t.id}',${t.archived_at?0:1})"
-         title="${t.archived_at?"Put it back in the working list":"Put it out of the way — the status it has is kept"}">
-         <i class="ti ti-${t.archived_at?"archive-off":"archive"}"></i> ${t.archived_at?"Restore":"Archive"}</button>`:""}
-    </div>
-    ${brTrailHtml(t)}
+    <!-- ══ V108.7 · ONE BAR, NOT A BAND ═══════════════════════════════
+         Chirag, 22 Sep, on the live V108.6: "the open task needs to be
+         designed better." Five buttons sat alone in a 60px strip with
+         nothing to their left, and the tabs sat in a second strip under
+         it. They share one line now — the tabs where the eye goes first,
+         the actions at the far end as icon buttons with the same square
+         the Copy link button has always had, which is the shape he
+         pointed at when he said "slightly more prominent". -->
     <div class="br-tabs">
       <span class="${tab==="talk"?"on":""}" onclick="brTabTo(event,'talk')">Conversation${unread?`<span class="n">${unread}</span>`:""}</span>
       <span class="${tab==="files"?"on":""}" onclick="brTabTo(event,'files')">Files${nFiles?` · ${nFiles}`:""}</span>
       <span class="${tab==="brief"?"on":""}" onclick="brTabTo(event,'brief')">Brief</span>
       <span class="${tab==="history"?"on":""}" onclick="brTabTo(event,'history')">History</span>
+      <span class="br-gap"></span>
+      ${t.archived_at?`<span class="br-arch">Archived ${fmtShort(t.archived_at)}</span>`:""}
+      ${canEdit()?`<button class="br-ico" onclick="brOpenTask('${t.id}')" title="Edit details" aria-label="Edit details"><i class="ti ti-pencil"></i></button>`:""}
+      ${can("task_create")?`<button class="br-ico" onclick="brDuplicateTask('${t.id}')" title="Duplicate this task" aria-label="Duplicate"><i class="ti ti-copy"></i></button>`:""}
+      <button class="br-ico" onclick="taskCopyLink('${t.id}')" title="Copy a link that opens this task" aria-label="Copy link"><i class="ti ti-link"></i></button>
+      ${TASK_SEEN[t.id]?`<button class="br-ico" onclick="taskMarkUnread('${t.id}')" title="Put this task back in your bell" aria-label="Mark unread"><i class="ti ti-bell-plus"></i></button>`:""}
+      ${brCanArchive(t)?`<button class="br-ico" onclick="brSetArchived('${t.id}',${t.archived_at?0:1})"
+         title="${t.archived_at?"Put it back in the working list, with the status it has":"Put it out of the way — the status it has is kept"}"
+         aria-label="${t.archived_at?"Restore":"Archive"}"><i class="ti ti-${t.archived_at?"archive-off":"archive"}"></i></button>`:""}
     </div>
+    ${brTrailHtml(t)}
+    ${tab==="talk"?brBriefPin(t):""}
     ${body}${composer}</div>`;
 }
 
@@ -9041,11 +9100,12 @@ function threadHtml(t){
   const marks=ms.filter(m=>m.approved_at)
     .map((m,i)=>({at:m.approved_at,label:`${i+1} · ${m.name} · approved ${fmtShort(m.approved_at)}`}))
     .sort((a,b)=>String(a.at).localeCompare(String(b.at)));
+  /* V108.7 — THE BRIEF IS NOT A MESSAGE AND NO LONGER PRETENDS TO BE.
+     It was drawn as one by the person who owns the task, which on an
+     imported task is nobody — so it arrived with a dash for a name and
+     the word Team beside it. It is pinned above the conversation now,
+     where it belongs, and this draws only what people actually wrote. */
   const rows=[];
-  rows.push(`<div class="th-div"><span>Brief${t.created_at?` · ${fmtShort(t.created_at)}`:""}</span></div>`);
-  if((t.brief||"").trim()) rows.push(msgHtml({
-    author_name:brPersonName(t.owner_id), author_kind:"team",
-    created_at:t.created_at, body:t.brief, _brief:true}));
   let mi=0;
   for(const m of TASK.msgs){
     while(mi<marks.length && String(marks[mi].at)<=String(m.created_at)){
@@ -10215,7 +10275,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V108.6 Bologna";
+const TOOL_VERSION="V108.7 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
