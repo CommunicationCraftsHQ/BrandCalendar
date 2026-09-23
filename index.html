@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V108.8 Bologna"/>
+<meta name="cc-tool-version" content="V108.9 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -1713,6 +1713,27 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .mstrip .mplay i,.mtile .mplay i{width:24px;height:24px;font-size:11px;}
 .mdur{position:absolute;right:5px;bottom:5px;background:rgba(13,13,13,.68);color:#fff;font-size:11px;
   font-weight:700;border-radius:5px;padding:2px 5px;}
+
+/* ══ V108.9 · A DOCUMENT, DRAWN AS A DOCUMENT ═════════════════════ */
+.mdoccard{width:216px;border:1px solid var(--div);border-radius:12px;background:var(--surface);
+  overflow:hidden;box-shadow:0 1px 2px rgba(13,13,13,.05);cursor:pointer;margin-top:9px;
+  transition:box-shadow 120ms,border-color 120ms;}
+.mdoccard:hover{border-color:var(--subtle);box-shadow:0 6px 18px rgba(13,13,13,.10);}
+.mdoccard .mat{background:#EFEDE8;padding:12px;display:flex;justify-content:center;position:relative;}
+/* THE PAGE KEEPS ITS SHAPE. `cover` cropped an A4 to a square and left
+   the white margins showing, which is how a design looked like nothing. */
+.mdoccard .pg{width:120px;height:162px;background:#fff;border-radius:2px;overflow:hidden;
+  box-shadow:0 2px 8px rgba(13,13,13,.18);display:block;}
+.mdoccard .pg img{width:100%;height:100%;object-fit:contain;object-position:top center;display:block;background:#fff;}
+.mdoccard .openit{position:absolute;inset:auto 0 12px 0;margin:0 auto;width:max-content;
+  background:rgba(13,13,13,.82);color:#fff;font-size:11.5px;font-weight:700;border-radius:99px;
+  padding:5px 11px;opacity:0;transition:opacity 120ms;}
+.mdoccard:hover .openit{opacity:1;}
+.mdoccard .meta{padding:9px 11px;border-top:1px solid var(--div);display:flex;align-items:center;gap:8px;}
+.mdoccard .meta .ic{font-size:9.5px;font-weight:800;letter-spacing:.03em;color:#B3261E;background:#FDEBEB;
+  border-radius:6px;padding:3px 6px;flex:none;}
+.mdoccard .meta .nm{font-size:12px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mdoccard .meta .ct{margin-left:auto;font-size:11px;color:var(--subtle);white-space:nowrap;}
 .mcap{font-size:11px;color:var(--subtle);margin-top:7px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
 .mcap b{color:var(--muted);font-weight:700;}
 
@@ -10290,7 +10311,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V108.8 Bologna";
+const TOOL_VERSION="V108.9 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -12205,6 +12226,19 @@ function uploadFailBlock(ownerKind,ownerId){
 }
 
 /* One tile. `cls` decides the weight — mlead / mtile / mstrip. */
+/* One card, drawn from the page-one picture we already keep. Clicking
+   anywhere on it opens the file in its own tab. */
+function docCard(a){
+  const src=a.thumb_path||a.view_path||"";
+  const pg=a.page_count>1?`${a.page_count} pages`:"1 page";
+  return `<div class="mdoccard" data-doctab="${escAttr(a.id)}" title="Open ${escAttr(a.filename)} in a new tab">
+    <div class="mat"><div class="pg" data-sign="${escAttr(src)}"></div>
+      <span class="openit">Open ↗</span></div>
+    <div class="meta"><span class="ic">${(extOf(a.filename)||"file").toUpperCase().slice(0,4)}</span>
+      <span class="nm">${escAttr(a.filename)}</span><span class="ct">${pg}</span></div>
+  </div>`;
+}
+
 function assetTile(a,cls,opts){
   opts=opts||{};
   const up=UPLOADS[a.id];
@@ -12274,6 +12308,19 @@ function mediaBlock(list,opts){
          above the cap there is no downscaled copy to serve, and pushing a
          gigabyte at somebody's phone to preview a reel is not a preview. */
       inner=`<div class="mvidwrap">${assetTile(vis[0],"mvid")}</div>`;
+    }else if(vis.length===1&&isPdf(vis[0])){
+      /* ══ V108.9 · A DOCUMENT IS A PAGE ON A MAT ════════════════════
+         Chirag, 23 Sep: a white page drawn on our near-white panel had
+         no edge at all — "how do we show it in a way that's clearly
+         distinguishable from the background".
+
+         It was worse than flat: .mlead is a 200px SQUARE with
+         object-fit:cover, so page one of an A4 was cropped to its
+         middle and the white margins were all that showed. The page
+         keeps its own shape here, on a grey mat with a shadow, the way
+         artwork sits on a board, and the card says what it is and how
+         many pages it has. */
+      inner=docCard(vis[0]);
     }else if(vis.length===1&&!opts.emphasise){
       /* a lone reference does not earn a 200px hero — decided 2026-08-03 */
       inner=`<div class="mstripwrap">${assetTile(vis[0],"mlead")}</div>`;
@@ -12307,8 +12354,13 @@ function mediaBlock(list,opts){
      with the conversation beside it, so the thread never has to grow to
      make a decision possible. */
   const canReview = vis.length && !opts.history && !opts.quiet;
-  const reviewBtn = canReview
-    ? `<span class="mrevbtn" data-review="${escAttr(vis[0].id)}" title="Open Review — large, with the thread beside it">⤢ Review</span>` : "";
+  /* V108.9 — for a PDF this is the browser's own viewer in its own tab,
+     which is what Chirag asked for; for pictures it is still our Review
+     window, where the conversation sits beside the work. */
+  const reviewBtn = !canReview ? ""
+    : isPdf(vis[0])
+      ? `<span class="mrevbtn" data-doctab="${escAttr(vis[0].id)}" title="Open the document in a new tab, full size">↗ Open</span>`
+      : `<span class="mrevbtn" data-review="${escAttr(vis[0].id)}" title="Open Review — large, with the thread beside it">⤢ Review</span>`;
   const caption = opts.quiet ? "" : `<div class="mcap">${
       slides>1 ? `<b>Carousel · ${slides} slides</b> · one deliverable, in order`
       : pics.length===1&&pics[0].kind==="video" ? `<b>1 video</b>${pics[0].purged_at?" · removed by retention, poster kept":""}`
@@ -12318,6 +12370,30 @@ function mediaBlock(list,opts){
   return `<div class="mw${isIn?" min":""}">
     ${isIn?`<div class="mlabin">◆ References <span class="pill" style="text-transform:none;letter-spacing:0;">input, not work</span></div>`:""}
     ${inner}${docHtml?`<div style="margin-top:9px;">${docHtml}</div>`:""}${caption}</div>`;
+}
+
+/* ══ V108.9 · A PDF OPENS IN ITS OWN TAB ══════════════════════════
+   Chirag, 23 Sep, comparing this with the Portfolio's signed contract:
+   "whatever happens in the case of contract pdf is perfect, a new
+   window opens and the control for zoom etc are right there."
+
+   That is the browser's own viewer with the whole window — its zoom,
+   its page rail, its search and print. Our modal was putting that same
+   viewer inside a 430px box with our toolbar above it, so there were
+   two sets of controls and the artwork sat at 31%.
+
+   THE TAB IS OPENED ON THE CLICK, before the signed address is asked
+   for. Opening it after the await is a pop-up the browser blocks —
+   the same lesson the contract link learnt in Salzburg. */
+function openDocTab(assetId){
+  const own=findAssetOwner(assetId); if(!own) return;
+  const a=(own.list||[]).find(x=>x.id===assetId); if(!a) return;
+  const w=window.open("","_blank");
+  if(w){ try{ w.opener=null; }catch(e){} }
+  signedUrl(a.storage_path).then(u=>{
+    if(!u){ if(w) w.close(); toast("That file is not available","err"); return; }
+    if(w) w.location.href=u; else window.location.href=u;
+  }).catch(()=>{ if(w) w.close(); toast("That file could not be opened","err"); });
 }
 
 /* Hydration: mint signed URLs for whatever is on screen, once. */
@@ -12613,6 +12689,8 @@ document.addEventListener("keydown",e=>{
 
 /* one delegated handler, so tiles rendered later still open */
 document.addEventListener("click",e=>{
+  const dt=e.target.closest("[data-doctab]");
+  if(dt){ openDocTab(dt.getAttribute("data-doctab")); return; }
   const rv=e.target.closest("[data-review]");
   if(rv){ openReview(rv.getAttribute("data-review")); return; }
   const pv=e.target.closest("[data-play]");
