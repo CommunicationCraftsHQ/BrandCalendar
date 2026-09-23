@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V108.7 Bologna"/>
+<meta name="cc-tool-version" content="V108.8 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -8592,7 +8592,13 @@ function brOpenPanelHtml(t){
         ${TASK.asClient?`<div class="th-note">This will be recorded as the client's words, entered by you — both names are kept.</div>`:""}
       </div>
     </div>`:"";
-  return `<div class="br-open" onclick="event.stopPropagation()">
+  /* V108.8 — NO stopPropagation HERE. Review, the lightbox and the video
+     player are ONE delegated listener on `document`, so a panel that
+     swallowed its own clicks silently disabled all three: Review did
+     nothing, and the only way to see a document was to download it. The
+     row decides for itself whether a click was meant for it, in
+     brToggleOpen, which is where that decision belongs. */
+  return `<div class="br-open">
     <!-- ══ V108.7 · ONE BAR, NOT A BAND ═══════════════════════════════
          Chirag, 22 Sep, on the live V108.6: "the open task needs to be
          designed better." Five buttons sat alone in a 60px strip with
@@ -9083,6 +9089,9 @@ function brToggleOpen(e,id){
        not a click on the row. Without this the menu would open the task
        underneath it every time. */
     const t=e.target;
+    /* A click inside the OPEN PANEL is never a click on the row — it is
+       a message, a file, a tab or a button. */
+    if(t&&t.closest&&t.closest('.br-open')) return;
     if(t&&t.closest&&t.closest('.brl-stw,.brl-menu,.brl-dots,.brl-act,a,button,input,textarea,select')) return;
   }
   closeAllPops();
@@ -9557,6 +9566,12 @@ function renderBranding(){
    </div>
      ${body}
    </div>`;
+  /* V108.8 — THE PICTURES HAD NO SIGNED ADDRESS. A tile is drawn with a
+     data-sign path and NOTHING inside it; hydrateMedia is what mints the
+     signed URL and puts the <img> in. The old task screen called it as
+     its last line and this one never did, so every attachment in an open
+     task drew an empty grey box. Chirag found it on 23 Sep. */
+  hydrateMedia(mc);
 }
 
 /* ── year stepper ── */
@@ -10275,7 +10290,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V108.7 Bologna";
+const TOOL_VERSION="V108.8 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
