@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V109.0 Bologna"/>
+<meta name="cc-tool-version" content="V109.1 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -10334,7 +10334,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V109.0 Bologna";
+const TOOL_VERSION="V109.1 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -10600,6 +10600,25 @@ async function logAppEvent(type,detail){
       app:"calendar", actor_email:(ME.email||"").toLowerCase(),
       actor_name:actorName(), type, detail:detail||{}
     }]);
+  }catch(e){ /* analytics must never break the app */ }
+}
+/* ══ V109.1 Bologna · WHICH PAGE DID THEY OPEN? ═════════════════════
+   Chirag, 25 Sep 2026: "what are they using it for?" Saves already say
+   what people change; nothing said what they LOOK at. One row per page
+   per person per Ahmedabad day, so the log stays small — CC Platform's
+   Analytics counts people and days, never clicks. Weekends are kept
+   here and left out there. */
+const PAGE_NAME={year:"Calendar",list:"Calendar",brief:"Vision",mplan:"Plan",content:"Posts",
+  branding:"Tasks",promotions:"Promotions",evmgr:"Events",history:"History"};
+const __pageSeen=new Set();
+function logPageOpen(v){
+  try{
+    const page=PAGE_NAME[v]; if(!page||!ME||!ME.email) return;
+    const day=new Date(Date.now()+330*60000).toISOString().slice(0,10);
+    const k="cc_po:"+day+":"+page;
+    if(__pageSeen.has(k)) return; __pageSeen.add(k);
+    try{ if(localStorage.getItem(k)) return; localStorage.setItem(k,"1"); }catch(e){}
+    logAppEvent("page_opened",{page,brand:activeBrand||null});
   }catch(e){ /* analytics must never break the app */ }
 }
 /* ══ SÃO PAULO · THE COLLAPSE ENDS HERE ════════════════════════════
@@ -22394,6 +22413,7 @@ function render(){
   if(noBrandsAtAll()) view="nobrands";
   else if(view==="nobrands") view="year";
   r=viewRoute(view)||r;
+  logPageOpen(view);            // V109.1 — once per page per day
 
   brSync();                     // Cape Town: fetch if BR is for another brand
   buildSidebar(); syncHeaderState(); syncLayerBar();
