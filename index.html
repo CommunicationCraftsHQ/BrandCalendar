@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V109.6 Bologna"/>
+<meta name="cc-tool-version" content="V109.7 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -10416,7 +10416,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V109.6 Bologna";
+const TOOL_VERSION="V109.7 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -25478,6 +25478,33 @@ function plArm(){
     const hold=(plMerged()&&before&&!PLJUMP)?before.scrollTop:0;
     PL_SHEETS=true;
     let out; try{ out=baseRender.apply(this,arguments); } finally{ PL_SHEETS=false; }
+    /* ══ V109.7 · THE PAGE THAT WIPES THE ROW PUTS IT BACK ════════════
+       Chirag, 26 September: the controls at the top of the Plan page
+       sometimes do not appear, and whether they do varies by brand.
+
+       THE CONTROL ROW LIVES INSIDE #main. render() knows that — it
+       mounts the row AFTER the page is drawn, and says so in a comment.
+       But SIX places call renderMonthPlanView() DIRECTLY, without the
+       mount that render() pairs it with, and each of them writes
+       #main.innerHTML and takes the row down with it:
+
+         · loadEngagement(...).then(... renderMonthPlanView())   — twice
+         · the realtime refresh when a shoot changes
+         · mpvStart, mpvStepMonth and the month-plan reopen
+
+       The engagement one is why it looked random. It only fires when
+       ENG.brand is not this brand, and it fires when the network
+       answers — so a brand whose contract was already loaded keeps its
+       row, and a brand that has to fetch loses it if the answer lands
+       after the first paint. Clicking anything else brings the row back
+       because that goes through render(), which mounts it again.
+
+       Fixing the six call sites would leave the seventh to be written
+       later. Mounting here means the row is restored by whatever draws
+       this page, and render()'s own call a moment later is harmless —
+       mountCalStrip only moves nodes that are not already in place. */
+    mountCalStrip();
+    mountFrameRow();
     if(hold&&plOn()){
       const main=document.getElementById("main");
       if(main){
