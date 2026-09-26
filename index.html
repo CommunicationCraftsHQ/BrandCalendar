@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V109.1 Bologna"/>
+<meta name="cc-tool-version" content="V109.2 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -596,9 +596,6 @@ a.bd-chip.link:hover{border-color:var(--acc);}
 .eng-nm{font-size:15.5px;font-weight:750;letter-spacing:-.015em;}
 .eng-meta{font-size:12.5px;color:var(--muted);}
 /* V107.9 — the signed contract, beside the dates */
-.eng-meta .eng-paper{color:var(--text);font-weight:650;text-decoration:none;border-bottom:1px solid var(--div);}
-.eng-meta .eng-paper:hover{border-bottom-color:var(--text);}
-.eng-meta .eng-paper-off{color:var(--subtle);}
 .eng-row{display:flex;gap:8px;flex-wrap:wrap;}
 .eng-q{flex:0 0 auto;min-width:96px;padding:7px 12px;border-radius:10px;background:var(--surface2);}
 .eng-q .n{font-size:16px;font-weight:750;letter-spacing:-.025em;line-height:1.2;}
@@ -10334,7 +10331,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V109.1 Bologna";
+const TOOL_VERSION="V109.2 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -14624,7 +14621,7 @@ async function loadEngagement(brandId){
   ENG={brand:brandId,lines:[],ok:false,loading:true,err:""};
   try{
     const c=await sb.from("service_contracts")
-      .select("id,name,contract_type,start_date,end_date,actual_end_date,file_item_id")
+      .select("id,name,contract_type,start_date,end_date,actual_end_date")
       .eq("brand_id",brandId).is("deleted_at",null);
     if(c.error) throw c.error;
     const cons=c.data||[];
@@ -14700,7 +14697,7 @@ async function loadEngagement(brandId){
            the fact, never the address: the address is asked for at the
            click, from the contract's own row, by the contract-file
            function, so a rename or a move never breaks it. */
-        contractId: x.service_contract_id, hasFile: !!con.file_item_id,
+        contractId: x.service_contract_id,
         pos: meta.pos||0,
         /* V108.4 — the Plan page keys a service's month plan and figures
            by the SERVICE, not the contract line, so a renewal (a new line
@@ -14782,44 +14779,20 @@ const PAID_BY_SAYS={client_card:"Client's card",ours_reimbursed:"Our card, reimb
    that are over. */
 function engRunning(lines){ return (lines||[]).filter(l=>l.running); }
 
-/* ── V107.9 BOLOGNA · THE SIGNED CONTRACT, BESIDE ITS DATES ──────────
-   Decision 3, 21 Sep: the link is for people who can open the contract
-   drawer in the Portfolio — they already see the fees there, so a link
-   to the paper tells them nothing new. Everyone else is told the paper
-   is on file, with no link: a link that leads to a locked door looks
-   like a fault. The server checks the same role again on the click, so
-   this is manners; the refusal is the rule.
+/* ── V109.2 BOLOGNA · NO CONTRACT IN THE CALENDAR ────────────────────
+   Chirag, 26 September, seeing the link on a brand's Plan page: "This
+   was never supposed to happen. The contract can only be accessed
+   through the Portfolio."
 
-   No amounts. Commercials live on the Portfolio client page only. */
-function engMayOpen(){ return !!(ME&&ME.toolRoles&&ME.toolRoles.portfolio); }
-function engPaper(l){
-  if(!l.hasFile) return "";
-  return engMayOpen()
-    ? ` · <a href="#" class="eng-paper" onclick="engOpenContract(event,'${escAttr(l.contractId)}')">Signed contract ↗</a>`
-    : ` · <span class="eng-paper-off">Signed contract on file</span>`;
-}
-/* The tab opens ON THE CLICK and is pointed at the file when the address
-   arrives; opening it after the await is a pop-up the browser blocks. */
-async function engOpenContract(e,id){
-  if(e){ e.preventDefault(); e.stopPropagation(); }
-  const w=window.open("","_blank");
-  try{ if(w) w.opener=null; }catch(x){}
-  try{
-    const { data:{ session } }=await sb.auth.getSession();
-    if(!session) throw new Error("Your sign-in has expired. Reload the page.");
-    const r=await fetch("https://qsxldzqdjdplffxqdokd.supabase.co/functions/v1/contract-file",{
-      method:"POST",
-      headers:{ authorization:"Bearer "+session.access_token, "content-type":"application/json" },
-      body:JSON.stringify({ action:"open", contract_id:id })
-    });
-    const j=await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(j.error||"The contract could not be opened.");
-    if(w) w.location.href=j.url; else window.location.href=j.url;
-  }catch(err){
-    if(w) w.close();
-    toast(String((err&&err.message)||err),"err");
-  }
-}
+   So the line V107.9 put beside the dates is gone — the link, the
+   "on file" wording for people without a Portfolio role, engMayOpen,
+   engOpenContract, their styles, and the read of file_item_id. The
+   Calendar no longer asks the database whether a contract has paper,
+   which is the honest form of "this is not our business": a screen
+   that cannot know cannot leak.
+
+   The contract opens from the Portfolio's client page, where the
+   commercials already live. See money-stays-in-the-portfolio. */
 function engBlock(l){
   const cells=engCell(l.posts,"Posts a month")+engCell(l.stories,"Stories a month")
              +engCell(l.reels,"Reels a month")
@@ -14837,7 +14810,7 @@ function engBlock(l){
     <div class="eng-l">
       <div class="eng-top"><span class="eng-dot${l.running?" on":""}"></span>
         <span class="eng-nm">${escAttr(l.title)}</span></div>
-      <div class="eng-meta">${escAttr(when)}${engPaper(l)}</div>
+      <div class="eng-meta">${escAttr(when)}</div>
     </div>
     <div class="eng-r">
       ${cells?`<div class="eng-row">${cells}</div>`:""}
