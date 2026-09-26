@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V109.5 Bologna"/>
+<meta name="cc-tool-version" content="V109.6 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -99,7 +99,34 @@
 
 
 
-.months-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;padding:0 32px 32px;}
+/* V109.6 — A CARD THAT IS 315px AT 1920 AND 447px AT 1180 IS NOT A
+   DECISION, IT IS A SIDE EFFECT. With 1fr, dropping a column left the
+   survivors to stretch, so the day cell grew as the window shrank —
+   41px, 50px, 60px measured across three widths, while the Plan page
+   next door drew the same calendar at 36px. The cap ends that: a card
+   is 300 to 380 wherever it is drawn, and the row centres instead of
+   stretching. */
+.months-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  justify-content:start;gap:14px;padding:0 32px 32px;}
+/* ══ V109.6 · THE CARD FILLS ITS TRACK, AND THE ROW STARTS AT THE LEFT
+   Chirag, 26 September: "in any size of screen the months should always
+   be left aligned and not centre aligned… the space between two cards
+   should have a maximum limit… and whenever there is space the card can
+   grow a little."
+
+   THE THREE PULL AGAINST EACH OTHER AND ONLY ONE ARRANGEMENT SATISFIES
+   ALL THREE. A capped card leaves the difference somewhere, and wherever
+   that difference goes it is a gap: capped at 340 and centred it was 58px
+   at 1440 and 127px at 1180, which is what he was looking at. So the card
+   is NOT capped — it fills its track, the gap is the gap and nothing
+   else, and the row starts at the left with whatever is over at the
+   right where it belongs.
+
+   MEASURED at 1920/1600/1440/1280/1180/1100: the gap is 20px at every
+   one of them, the card is 315/318/378/334/300/421, and the day cell is
+   41 to 56px. A card that grows is a cell that grows — that is the
+   consequence of the rule, not a miss. */
+.months-grid > .month-card{width:100%;}
 
 /* month card */
 .month-card{background:var(--surface);border-radius:var(--rc);overflow:hidden;border:1px solid var(--div);transition:box-shadow 150ms;}
@@ -123,7 +150,7 @@
 body.planning .mc-day{cursor:pointer;}
 body.planning .mc-day:hover{box-shadow:0 0 0 2px #0EA5A5 inset;border-radius:5px;}
 .sp-count{position:absolute;top:-4px;right:-4px;min-width:11px;height:11px;padding:0 2px;border-radius:6px;background:#0EA5A5;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;box-sizing:border-box;}
-.mc-day.has-ev .ev-strip{position:absolute;bottom:1px;left:2px;right:2px;height:3px;border-radius:2px;display:flex;gap:1px;}
+.mc-day.has-ev .ev-strip{position:absolute;bottom:3px;left:5px;right:5px;height:3px;border-radius:2px;display:flex;gap:1.5px;}
 /* MINSK — a shoot. Bottom-right is the only corner nothing else uses:
    both counts sit top-right, the event bar owns the bottom edge, the
    wash owns the fill. */
@@ -191,14 +218,14 @@ body.planning .mc-day:hover{box-shadow:0 0 0 2px #0EA5A5 inset;border-radius:5px
 .prodbb .prodfoot{display:flex;justify-content:flex-end;padding:10px 11px 4px;}
 .mpv-bh .prod-cam{width:14px;height:14px;color:#4A55A8;display:inline-block;}
 .mpv-bh .prod-cam svg{width:14px;height:14px;display:block;}
-.mc-day .pr-cam{position:absolute;bottom:0;right:0;width:13px;height:13px;color:#4A55A8;pointer-events:none;}
-.mc-day .pr-cam svg{width:13px;height:13px;display:block;}
+.mc-day .pr-cam{position:absolute;top:2px;right:3px;width:11px;height:11px;color:#4A55A8;pointer-events:none;}
+.mc-day .pr-cam svg{width:11px;height:11px;display:block;}
 .mc-day.today .pr-cam{color:#B9C0F5;}
 /* a solid camcorder, 12px, in the production colour. The number
    appears only when a day carries more than one shoot — the thing an
    icon on its own can never say. */
-.mc-day .pr-mark{position:absolute;bottom:1px;right:1px;display:flex;align-items:center;gap:2px;
-  color:#4A55A8;pointer-events:none;font-size:9px;font-weight:800;line-height:1;}
+.mc-day .pr-mark{position:absolute;top:2px;right:3px;display:flex;align-items:center;gap:1px;
+  color:#4A55A8;pointer-events:none;font-size:8.5px;font-weight:800;line-height:1;}
 .mc-day .pr-mark svg{width:10px;height:10px;display:block;}   /* V109.4 — the foot-right slot is 13px wide */
 .mc-day.today .pr-mark{color:#B9C0F5;}
 .ev-strip-seg{flex:1;border-radius:1px;}
@@ -709,6 +736,10 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 /* ── RESPONSIVE ──────────────────────────────────────────── */
 
 /* Laptop — ≤1440px: tighten nav so everything fits */
+/* V109.6 — 32px each side was costing a whole column at 1180: the grid
+   had 913px of content, two columns of 446 and a 67px gap. Eighteen
+   gives it 941 and a third card fits at 300 with the gap back to 20. */
+@media(max-width:1300px){ .months-grid{padding-left:18px;padding-right:18px;} }
 @media(max-width:1440px){
   
   
@@ -822,7 +853,25 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
    inflate the pill by 2px and push the whole month grid down. */
 .mc-count{background:rgba(255,255,255,.6);color:#8A8880;box-shadow:inset 0 0 0 1px rgba(255,255,255,.9);}
 .mc-count.camp{background:rgba(251,234,240,.85);color:#993556;}
-.mc-day{border-radius:50%;}
+/* ══ V109.6 · THE DAY CELL IS A ROUNDED SQUARE ══════════════════════
+   Chirag, 26 September, after three releases of marks landing in the
+   wrong place: a circle inside a square wastes its four corners and
+   leaves about a fifth less usable area than the square it occupies —
+   so every mark had to hang off an edge, and two of them ended up
+   OUTSIDE the painted cell entirely. There were no corners to put them
+   in. Now there are.
+
+   THE FIVE CHANNELS, AND NOTHING COMPETES FOR ONE:
+     the fill    a campaign (deeper for two), or black for today
+     the centre  the date, and the post ring round it
+     top left    the meeting
+     top right   the shoot
+     the foot    the event bar, FULL WIDTH — the icons are at the top
+                 now, so it never has to shorten for anything
+   A sixth kind of mark takes a slot from something or lives in the
+   tooltip and the day window. It does not get a corner of its own,
+   because there are only two and both are spoken for. */
+.mc-day{border-radius:8px;}
 .mc-day.has-ev:hover{background:rgba(13,13,13,.05);}
 .mc-day.today{box-shadow:0 5px 14px rgba(13,13,13,.25);}
 .ev-strip-seg{border-radius:2px;}
@@ -3095,11 +3144,22 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
    as a whole. */
 .mpv.plpage{display:block;height:auto;padding-bottom:28px;}
 .pl-wrap{container-type:inline-size;padding:0 var(--pg-x,32px);}
-.pl-strip{display:grid;gap:14px;grid-template-columns:1fr;}
+/* V109.6 — THE CARD SIZE DECIDES THE COUNT, NOT THE OTHER WAY ROUND.
+   This row always drew four cards and let them be whatever width was
+   left: 283px at 1440, which is a 36px day cell against the 50px the
+   all-brands page was drawing at the same moment. The breakpoints are
+   now the widths at which a card can still be 320px or more, and the
+   card fills its track, so the gap is 14px and nothing else at any
+   width and the row starts at the left — the same rule the all-brands
+   grid follows. The breakpoints are the container widths at which the
+   next card can still be about 300px: measured, that is 295px at 1180
+   and 382px at 1440. Chirag, 26 September, on losing the fourth card
+   at 1440: "can drop to three cards". */
+.pl-strip{display:grid;gap:14px;grid-template-columns:minmax(0,1fr);justify-content:start;}
 .pl-strip > .month-card:nth-child(n+2){display:none;}
-@container (min-width:520px){ .pl-strip{grid-template-columns:repeat(2,minmax(0,1fr));} .pl-strip > .month-card:nth-child(2){display:block;} }
-@container (min-width:800px){ .pl-strip{grid-template-columns:repeat(3,minmax(0,1fr));} .pl-strip > .month-card:nth-child(3){display:block;} }
-@container (min-width:1080px){ .pl-strip{grid-template-columns:repeat(4,minmax(0,1fr));} .pl-strip > .month-card:nth-child(4){display:block;} }
+@container (min-width:610px){ .pl-strip{grid-template-columns:repeat(2,minmax(0,1fr));} .pl-strip > .month-card:nth-child(2){display:block;} }
+@container (min-width:900px){ .pl-strip{grid-template-columns:repeat(3,minmax(0,1fr));} .pl-strip > .month-card:nth-child(3){display:block;} }
+@container (min-width:1240px){ .pl-strip{grid-template-columns:repeat(4,minmax(0,1fr));} .pl-strip > .month-card:nth-child(4){display:block;} }
 .pl-row1{margin-bottom:14px;}
 /* ══ BOLOGNA V109.4 · ONE CONTROL THAT SPEAKS ABOUT TIME ════════════
    What was here: two arrows, a label that only read back, a year
@@ -3183,13 +3243,12 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 
    A sixth kind of mark does not get invented. It takes a slot from
    something, or it lives in the tooltip and the day window. */
-.pl-meet{position:absolute;top:1px;left:2px;width:10px;height:10px;color:#B8860B;
+.pl-meet{position:absolute;top:2px;left:3px;width:11px;height:11px;color:#B8860B;
   pointer-events:none;line-height:0;}
-.pl-meet svg{width:10px;height:10px;display:block;}
+.pl-meet svg{width:11px;height:11px;display:block;}
 .mc-day.today .pl-meet{color:#F0C674;}
-/* the foot-right slot, reserved out of the bar's run */
-.mc-day.has-ev .ev-strip.shy{right:13px;}
-.mc-day.has-ev .ev-strip.shy2{right:20px;}
+/* V109.6 — the bar no longer yields to anything. The shoot moved to
+   the top corner, so the foot is the bar's alone at every width. */
 /* the day window's meetings */
 .dp-meet{margin-bottom:14px;}
 .dp-meet .lbl{font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
@@ -6072,7 +6131,7 @@ function buildMini(m){
         if(realEvs.some(e=>e.tentative)) cellClass+=" tent";
         if(isToday) cellClass+=" today";
         // Paint campaigns: shade per campaign, gap at boundaries, lanes when overlapping
-        let campStyle="", campBadge="";
+        let campStyle="";
         if(camp&&!isToday){
           const bg=covering.length===1?CAMP_PINK:CAMP_PINK_DEEP;
           const allStart=covering.every(c=>c.sM===m&&c.sD===day);
@@ -6088,7 +6147,13 @@ function buildMini(m){
           if(!allStart && leftN===covering.length)  sh.push(`-2px 0 0 0 ${bg}`);
           if(!allEnd   && rightN===covering.length) sh.push(`2px 0 0 0 ${bg}`);
           if(sh.length) campStyle+=`box-shadow:${sh.join(",")};`;
-          if(covering.length>1) campBadge=`<span style="position:absolute;top:0;right:2px;font-size:11px;font-weight:800;color:#9D174D;">${covering.length}</span>`;
+          /* V109.6 — THE NUMERAL IS RETIRED. It sat in the top-right
+             corner, which the shoot now needs, and it was saying what
+             the fill already says: `bg` is CAMP_PINK for one campaign
+             and CAMP_PINK_DEEP for more than one, and has been since
+             Cape Town. Two marks for one fact, and one of them was
+             occupying the last free corner on the cell. The tooltip
+             and the day window name the campaigns. */
         }
 
         // Plain day number always; events shown by the underline strip (readable over pink)
@@ -6119,7 +6184,7 @@ function buildMini(m){
           ?`<span class="pr-mark" aria-hidden="true">${PROD_CAM_SVG}${
               shoots.length>1?`<b>${shoots.length}</b>`:""}</span>`
           :"";
-        return `<div class="${cellClass}"${campStyle?` style="${campStyle}"`:""} onclick="dayClick(${m},${day})"${tipAttr}>${dateEl}${strips}${campBadge}${camIcon}</div>`;
+        return `<div class="${cellClass}"${campStyle?` style="${campStyle}"`:""} onclick="dayClick(${m},${day})"${tipAttr}>${dateEl}${strips}${camIcon}</div>`;
       }).join("")}
       ${Array(Math.max(0,42-FD[m]-DIM[m])).fill('<div class="mc-empty"></div>').join("")}
     </div>`;
@@ -10351,7 +10416,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V109.5 Bologna";
+const TOOL_VERSION="V109.6 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -25451,16 +25516,13 @@ function plArm(){
   const base=buildMini;
   buildMini=function(m){
     const card=base.apply(this,arguments);
-    if(!plOn()||!PLD.ok.meet) return card;
+    /* V109.6 — NOT `plOn()` ANY MORE. The mark belongs to the day cell,
+       so it draws on every calendar that has this brand's meetings
+       loaded, not only on the page that happens to load them. The old
+       guard meant the all-brands calendar got none of the slot rule at
+       all, which is the page Chirag photographed. */
+    if(!PLD.ok.meet||PLD.key!==plKey()) return card;
     const days=card.querySelectorAll(".mc-grid .mc-day");
-    /* THE BAR YIELDS. Read back from the cell rather than decided when
-       the card was built: whether a day has a shoot is buildMini's
-       business, and all this needs to know is whether the mark is
-       there and how wide it came out. */
-    days.forEach(cell=>{
-      const mark=cell.querySelector(".pr-mark"), bar=cell.querySelector(".ev-strip");
-      if(mark&&bar) bar.classList.add(mark.querySelector("b")?"shy2":"shy");
-    });
     const byDay={};
     plMeetingsIn(m).forEach(x=>{
       const d=Number(String(x.held_on).slice(8,10));
