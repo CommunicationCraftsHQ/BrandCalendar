@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V109.4 Bologna"/>
+<meta name="cc-tool-version" content="V109.5 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -199,7 +199,7 @@ body.planning .mc-day:hover{box-shadow:0 0 0 2px #0EA5A5 inset;border-radius:5px
    icon on its own can never say. */
 .mc-day .pr-mark{position:absolute;bottom:1px;right:1px;display:flex;align-items:center;gap:2px;
   color:#4A55A8;pointer-events:none;font-size:9px;font-weight:800;line-height:1;}
-.mc-day .pr-mark svg{width:12px;height:12px;display:block;}
+.mc-day .pr-mark svg{width:10px;height:10px;display:block;}   /* V109.4 — the foot-right slot is 13px wide */
 .mc-day.today .pr-mark{color:#B9C0F5;}
 .ev-strip-seg{flex:1;border-radius:1px;}
 .mc-empty{aspect-ratio:1;min-height:22px;}
@@ -3133,7 +3133,11 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .pl-pg button{height:32px;border:1px solid transparent;background:var(--surface2);border-radius:7px;
   font:inherit;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;}
 .pl-pg button:hover{color:var(--text);border-color:var(--div);}
-.pl-pg button.in{background:#FBEFF3;color:#8A5A6E;}
+/* V109.5 — the trail was a paler pink, which read as a weaker version
+   of "the month you picked" rather than a different thing. It is the
+   grey the empty months already use, one step darker, so the three
+   states read as off, on screen, picked. */
+.pl-pg button.in{background:#E8E6E0;color:#5C584F;}
 /* the picked month wears the wash in the picker too, so the grid and
    the card are saying the same thing */
 .pl-pg button.on{background:linear-gradient(140deg,rgba(255,240,235,1),rgba(240,238,252,1));
@@ -3157,20 +3161,46 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .pl-strip > .month-card.pl-hero .mc-head{border-bottom-color:rgba(255,255,255,.8);}
 .pl-strip > .month-card.pl-hero .mc-count{background:rgba(255,255,255,.75);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.95);}
-.pl-strip > .month-card.pl-hero .pl-mfoot{border-top-color:rgba(255,255,255,.8);}
 
 /* Add MOM is the page's primary action, and the suite paints those red. */
 .mom-add{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700;}
 .mom-add i{color:#fff;}
 .mom-add:hover{background:var(--acc);border-color:var(--acc);filter:brightness(.94);}
-.pl-meet{position:absolute;top:1px;left:2px;width:5px;height:5px;border-radius:50%;background:#4A55A8;pointer-events:none;}
-.pl-mfoot{border-top:1px solid var(--div);padding:8px 14px 10px;font-size:11.5px;color:var(--muted);
-  display:flex;flex-direction:column;gap:3px;min-height:36px;box-sizing:border-box;}
-.pl-mfoot.none{color:var(--subtle);justify-content:center;}
-.pl-mrow{display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
-.pl-mrow:hover{color:var(--text);}
-.pl-mrow b{color:var(--text);}
-.pl-mdot{width:6px;height:6px;border-radius:50%;background:#4A55A8;flex:none;}
+/* ══ V109.5 · THE DAY CELL'S FIVE SLOTS ══════════════════════════════
+   Every mark on a day used to be positioned against the cell on its own,
+   knowing nothing about the others — so the shoot camera was drawn ON
+   TOP of the event bar, which Chirag photographed on 26 September, and a
+   sixth mark would have made it worse.
+
+   FIVE SLOTS, ONE OCCUPANT EACH, AND NOTHING OVERLAPS:
+     the centre    the date, and the post ring round it — Social's alone
+     top left      the meeting
+     top right     the campaign count, when two campaigns overlap
+     foot left     the event bar
+     foot right    the shoot
+   The bar is the one that had to give: it now STOPS SHORT of the foot-
+   right slot when a shoot is there, instead of running under it.
+
+   A sixth kind of mark does not get invented. It takes a slot from
+   something, or it lives in the tooltip and the day window. */
+.pl-meet{position:absolute;top:1px;left:2px;width:10px;height:10px;color:#B8860B;
+  pointer-events:none;line-height:0;}
+.pl-meet svg{width:10px;height:10px;display:block;}
+.mc-day.today .pl-meet{color:#F0C674;}
+/* the foot-right slot, reserved out of the bar's run */
+.mc-day.has-ev .ev-strip.shy{right:13px;}
+.mc-day.has-ev .ev-strip.shy2{right:20px;}
+/* the day window's meetings */
+.dp-meet{margin-bottom:14px;}
+.dp-meet .lbl{font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--subtle);margin-bottom:8px;}
+.dp-mrow{display:flex;align-items:center;gap:9px;padding:8px 0;cursor:pointer;font-size:13px;}
+.dp-mrow + .dp-mrow{border-top:1px solid var(--div);}
+.dp-mrow .ic{width:14px;height:14px;color:#B8860B;flex:none;line-height:0;}
+.dp-mrow .ic svg{width:14px;height:14px;display:block;}
+.dp-mrow b{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dp-mrow .go{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--acc);flex:none;}
+.dp-mrow:hover .go{text-decoration:underline;}
 .pl-eng{padding:0 var(--pg-x,32px) 14px;}
 /* It keeps the class .mpv-scroll — it is still the list of sheets every
    earlier gate and function looks for — but it no longer scrolls on its own. */
@@ -5920,7 +5950,22 @@ function leadAssetFromRound(roundId){
    and it turns to a smudge. A FILLED silhouette does not: the reels,
    the body and the lens barrel each stay separate down to 11px. That
    is the whole reason this is drawn as fills rather than strokes. */
-const PROD_CAM_SVG='<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><circle cx="7.4" cy="5.2" r="2.7"/><circle cx="14.2" cy="4.6" r="3.3"/><path d="M2.6 9.2h13.2a1.6 1.6 0 0 1 1.6 1.6v6.4a1.6 1.6 0 0 1-1.6 1.6H2.6A1.6 1.6 0 0 1 1 17.2v-6.4A1.6 1.6 0 0 1 2.6 9.2Zm2 3.2h4.2v2.4H4.6v-2.4Z"/><path d="M18.6 12.1 22.3 9.6a.6.6 0 0 1 .95.5v7.8a.6.6 0 0 1-.95.5l-3.7-2.5v-3.8Z"/></svg>';
+/* THE SHOOT MARK, V109.4 — TWO SHAPES, NOT FIVE. What stood here was a
+   camera with two crew heads over it, a window cut out of the body and a
+   lens wedge: five separate shapes. On a month card it is drawn at 10px,
+   where the heads merge into the body and the whole thing reads as a
+   smudge with a tail — Chirag photographed exactly that on 26 September.
+   The crew comes off. A body and a lens survive the shrink, and the mark
+   is still the one the team knows.
+   ONE CONSTANT, FOUR PLACES: the month card, the day tooltip, the bell's
+   production notice and the Production heading on a month sheet. They
+   change together, so none of them can drift. */
+const PROD_CAM_SVG='<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M2.6 6.5h12.2a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H2.6a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z"/><path d="M18.4 10.6 22.3 7.8a.7.7 0 0 1 1.1.57v7.26a.7.7 0 0 1-1.1.57l-3.9-2.8v-2.8Z"/></svg>';
+/* THE MEETING MARK. Filled, because every other mark on the grid is a
+   shape you recognise rather than a drawing you read, and because a
+   stroked icon ten pixels from a solid one reads as two systems. Gold,
+   which is the only colour the grid was not already spending. */
+const PL_MEET_SVG='<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><circle cx="8.6" cy="6.4" r="3.6"/><path d="M8.6 12.1c-3.5 0-6.3 2-6.3 4.6v1.7a.9.9 0 0 0 .9.9h10.8a.9.9 0 0 0 .9-.9v-1.7c0-2.6-2.8-4.6-6.3-4.6Z"/><circle cx="17.4" cy="7.6" r="2.9"/><path d="M17.4 12.6c-1 0-1.9.15-2.7.42 1.15 1.06 1.85 2.4 1.85 3.88v2.4h4.6a.85.85 0 0 0 .85-.85v-1.4c0-2.2-2.06-4.45-4.6-4.45Z"/></svg>';
 
 function buildMini(m){
   const fevs=filtered(m);
@@ -10306,7 +10351,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V109.4 Bologna";
+const TOOL_VERSION="V109.5 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -10334,7 +10379,7 @@ function showDiag(){
     const lines=(t.getAttribute("data-tip")||"").split("\n");
     const socCount=lines.filter(l=>l.indexOf("S|")===0).length;
     const stShortMap={drafting:"Draft",review:"Review",approved:"Approved"};
-    let html="", campHdr=false, socHdr=false, prodHdr=false;
+    let html="", campHdr=false, socHdr=false, prodHdr=false, meetHdr=false;
     lines.forEach(ln=>{
       if(ln.startsWith("C|")){
         if(!campHdr){ if(html) html+='<div style="height:1px;background:rgba(255,255,255,.18);margin:7px 0;"></div>'; campHdr=true; }
@@ -10344,6 +10389,11 @@ function showDiag(){
         if(!prodHdr){ if(html) html+='<div style="height:1px;background:rgba(255,255,255,.18);margin:7px 0;"></div>'; prodHdr=true; }
         const p=ln.slice(2).split("|");
         html+=`<div style="display:flex;align-items:center;gap:8px;margin:4px 0;"><span style="width:13px;height:13px;color:#B9C0F5;flex-shrink:0;">${PROD_CAM_SVG}</span><span style="color:#C7CCF7;font-weight:700;">${escAttr(p[0]||"")}<span style="color:#A9AFE0;font-weight:400;"> · ${escAttr(p[1]||"")}${p[2]?" · "+escAttr(p[2]):""}</span></span></div>`;
+      } else if(ln.startsWith("M|")){
+        /* V109.4 — a mark you cannot read is a puzzle. The meeting gets
+           its own line here and its own row in the day window. */
+        if(!meetHdr){ if(html) html+='<div style="height:1px;background:rgba(255,255,255,.18);margin:7px 0;"></div>'; meetHdr=true; }
+        html+=`<div style="display:flex;align-items:center;gap:8px;margin:4px 0;"><span style="width:12px;height:12px;color:#E8C15C;flex-shrink:0;">${PL_MEET_SVG}</span><span style="color:#F0D89B;font-weight:700;">${escAttr(ln.slice(2))}</span></div>`;
       } else if(ln.startsWith("S|")){
         if(!socHdr){ if(html) html+='<div style="height:1px;background:rgba(255,255,255,.18);margin:7px 0;"></div>'; html+=`<div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:#5EEAD4;margin:0 0 5px;">${socCount} POST${socCount!==1?"S":""}</div>`; socHdr=true; }
         const p=ln.slice(2).split("|");
@@ -24430,30 +24480,13 @@ function plDrawStrip(){}
 function plRange(){}
 window.addEventListener("resize",()=>{ if(plOn()) plRange(); });
 
-/* A meeting on a month card: a dot on its day, and its name under the
-   grid. Every other channel of a day cell is taken (see buildMini's
-   camera note), so the dot sits top-left, the one corner left. */
-(function(){
-  const base=buildMini;
-  buildMini=function(m){
-    const card=base.apply(this,arguments);
-    if(!plOn()||!PLD.ok.meet) return card;
-    const ms=plMeetingsIn(m);
-    const days=card.querySelectorAll(".mc-grid .mc-day");
-    ms.forEach(x=>{
-      const d=Number(String(x.held_on).slice(8,10));
-      const cell=days[d-1];
-      if(cell&&!cell.querySelector(".pl-meet")){ cell.insertAdjacentHTML("beforeend",`<span class="pl-meet" aria-hidden="true"></span>`); cell.classList.add("has-ev"); }
-    });
-    const foot=document.createElement("div");
-    foot.className="pl-mfoot"+(ms.length?"":" none");
-    foot.innerHTML=ms.length
-      ? ms.map(x=>`<div class="pl-mrow" onclick="plMeetOpen('${escAttr(x.id)}')"><span class="pl-mdot"></span><b>${Number(String(x.held_on).slice(8,10))}</b> ${escHtml(x.topic||"Meeting")}</div>`).join("")
-      : "No meetings";
-    card.appendChild(foot);
-    return card;
-  };
-})();
+/* A meeting on a month card. THE STRIP UNDER THE GRID THAT STOOD HERE
+   IS GONE — Chirag, 26 September: "the new meeting section below the
+   calendar view is unnecessary… meeting can appear right on the calendar
+   on the day when it happens." On most cards it read "No meetings" and
+   spent 36px a month saying so, four cards at a time.
+   The mark itself, and the slot rule that keeps it from colliding with
+   the shoot, are in THE DAY CELL'S FIVE SLOTS at the end of the file. */
 
 /* ── the data this page adds ─────────────────────────────────────── */
 function plKey(){ return activeBrand+"|"+YEAR; }
@@ -25400,6 +25433,73 @@ function plArm(){
       return Array.from({length:12-a+1},(_,i)=>a+i);
     }
     return baseVM.apply(this,arguments);
+  };
+})();
+
+/* ══ BOLOGNA V109.5 · THE MARKS ON A DAY ═════════════════════════════
+   Chirag, 26 September, on the strip under the month cards: "I don't
+   see any usage for it… meeting can appear right on the calendar on the
+   day when it happens." And on the grid itself: the shoot mark overlaps
+   everything, so settle where every mark may sit before adding another.
+
+   The slot rule is written out in THE DAY CELL'S FIVE SLOTS in the
+   stylesheet. This is the code that obeys it. Nothing here rebuilds a
+   month card — buildMini still draws it, and this places the meeting,
+   shortens the bar out of the shoot's way, and adds the meeting to what
+   the day already says when you hover it or open it. */
+(function(){
+  const base=buildMini;
+  buildMini=function(m){
+    const card=base.apply(this,arguments);
+    if(!plOn()||!PLD.ok.meet) return card;
+    const days=card.querySelectorAll(".mc-grid .mc-day");
+    /* THE BAR YIELDS. Read back from the cell rather than decided when
+       the card was built: whether a day has a shoot is buildMini's
+       business, and all this needs to know is whether the mark is
+       there and how wide it came out. */
+    days.forEach(cell=>{
+      const mark=cell.querySelector(".pr-mark"), bar=cell.querySelector(".ev-strip");
+      if(mark&&bar) bar.classList.add(mark.querySelector("b")?"shy2":"shy");
+    });
+    const byDay={};
+    plMeetingsIn(m).forEach(x=>{
+      const d=Number(String(x.held_on).slice(8,10));
+      (byDay[d]=byDay[d]||[]).push(x);
+    });
+    Object.keys(byDay).forEach(d=>{
+      const cell=days[Number(d)-1]; if(!cell||cell.querySelector(".pl-meet")) return;
+      cell.insertAdjacentHTML("beforeend",`<span class="pl-meet" aria-hidden="true">${PL_MEET_SVG}</span>`);
+      cell.classList.add("has-ev");
+      /* the mark joins what the day already says on hover, under its own
+         heading, rather than being a shape with nothing behind it */
+      const add=byDay[d].map(x=>"M|"+String(x.topic||"Meeting")).join("\n");
+      const had=cell.getAttribute("data-tip");
+      cell.setAttribute("data-tip",had?had+"\n"+add:add);
+    });
+    return card;
+  };
+  /* THE DAY WINDOW SAYS WHAT THE MARK IS. It listed posts, events and
+     campaigns and had never heard of a meeting, so a day whose only mark
+     was a meeting opened a window that explained nothing. Meetings go
+     first because they are the only thing in there that already
+     happened. */
+  const baseDay=openDay;
+  openDay=function(m,day,expandId){
+    const out=baseDay.apply(this,arguments);
+    if(!plMerged()||!PLD.ok.meet) return out;
+    const body=document.getElementById("dp-body"); if(!body) return out;
+    const ms=plMeetingsIn(m).filter(x=>Number(String(x.held_on).slice(8,10))===Number(day));
+    if(!ms.length) return out;
+    const sec=document.createElement("div");
+    sec.className="dp-meet";
+    sec.innerHTML=`<div class="lbl">Meeting${ms.length>1?"s":""}</div>`+ms.map(x=>
+      `<div class="dp-mrow" onclick="plMeetOpen('${escAttr(x.id)}')">
+         <span class="ic">${PL_MEET_SVG}</span>
+         <b>${escHtml(x.topic||"Meeting")}</b>
+         <span class="go">${canEdit()?"Open":"Read"} ›</span>
+       </div>`).join("");
+    body.insertBefore(sec,body.firstChild);
+    return out;
   };
 })();
 
