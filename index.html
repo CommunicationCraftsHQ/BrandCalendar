@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V109.8 Bologna"/>
+<meta name="cc-tool-version" content="V109.9 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -614,6 +614,9 @@ a.bd-chip.link:hover{border-color:var(--acc);}
 .eng-strip .bd-chev{margin-left:0;}
 .eng-dot{width:7px;height:7px;border-radius:50%;background:var(--div);flex:none;display:inline-block;}
 .eng-dot.on{background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.16);}
+/* V109.9 — a term that has run out while the work goes on */
+.eng-dot.due{background:#B8860B;box-shadow:0 0 0 3px rgba(184,134,11,.16);}
+.bd-chip.eng-due,.bd-chip.eng-soon{background:#FBF1DC;color:#8A5A12;}
 .eng-body{border-top:1px solid var(--div);padding:0 18px;}
 .eng-svc{display:grid;grid-template-columns:minmax(190px,0.9fr) 2fr;gap:10px 22px;padding:14px 0;border-bottom:1px solid var(--div);align-items:start;}
 .eng-svc:last-child{border-bottom:none;}
@@ -10426,7 +10429,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V109.8 Bologna";
+const TOOL_VERSION="V109.9 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -14773,6 +14776,30 @@ async function loadEngagement(brandId){
         title: meta.title||"Service", basis: meta.type||"", category: meta.category||"",
         start, end,
         running: !!start && start<=today && (!end || end>=today),
+        /* ── V109.9 BOLOGNA · UP FOR RENEWAL ────────────────────────
+           Chirag, 28 September: "The lapsed contracts are not required
+           to be seen. However, the contracts which are ongoing or are
+           due for renewal, but the client is current, they have to be
+           visible here."
+
+           THE RULE IS THE PORTFOLIO'S, COPIED WORD FOR WORD — its
+           isRenewalDue: a retainer whose agreed end has passed and
+           which nobody marked lapsed. A one-time job that reached its
+           end is finished, not due; a line stopped by hand is ended,
+           not due. Two tools answering the same question differently
+           is how Amar Cars would read Renewal due on one screen and
+           nothing on the other.
+
+           `termEnd` is the AGREED end and never the hand-marked one:
+           the two are different facts and collapsing them loses the
+           only thing that tells a renewal from a closure. */
+        termEnd: x.end_date||con.end_date||null,
+        closedEnd: x.actual_end_date||con.actual_end_date||null,
+        renewalDue: (meta.type||"")!=="Ad Hoc"
+                    && !!start && start<=today
+                    && !!(x.end_date||con.end_date)
+                    && (x.end_date||con.end_date)<today
+                    && !(x.actual_end_date||con.actual_end_date),
         posts:commits?x.posts_per_month:null,
         stories:commits?x.stories_per_month:null,
         reels:commits?x.reels_per_month:null,
@@ -14879,6 +14906,27 @@ const PAID_BY_SAYS={client_card:"Client's card",ours_reimbursed:"Our card, reimb
    that are over. */
 function engRunning(lines){ return (lines||[]).filter(l=>l.running); }
 
+/* ── V109.9 · WHAT THE PLAN PAGE SHOWS ──────────────────────────────
+   Running, plus anything waiting on a renewal. The service the team is
+   still delivering does not disappear on the day its paper runs out —
+   that is exactly the day somebody needs to see it. Finished jobs and
+   lines closed by hand stay out, as they have since 20 September. */
+function engShown(lines){ return (lines||[]).filter(l=>l.running||l.renewalDue); }
+function engDue(lines){ return (lines||[]).filter(l=>l.renewalDue&&!l.running); }
+
+/* Whole days between two plain dates, counted in UTC so a clock never
+   shifts the answer by one. */
+function engDaysBetween(a,b){
+  const x=new Date(String(a)+"T00:00:00Z"), y=new Date(String(b)+"T00:00:00Z");
+  if(isNaN(x.getTime())||isNaN(y.getTime())) return null;
+  return Math.round((y-x)/86400000);
+}
+/* THE WARNING WINDOW, in one place. Inside it the chip warns; outside
+   it states the date, as it always has. */
+const ENG_SOON_DAYS=30;
+function engAgo(n){ return n===0?"today":n===1?"yesterday":n+" days ago"; }
+function engIn(n){ return n===0?"today":n===1?"tomorrow":"in "+n+" days"; }
+
 /* ── V109.2 BOLOGNA · NO CONTRACT IN THE CALENDAR ────────────────────
    Chirag, 26 September, seeing the link on a brand's Plan page: "This
    was never supposed to happen. The contract can only be accessed
@@ -14904,11 +14952,12 @@ function engBlock(l){
              +(l.paidBy&&PAID_BY_SAYS[l.paidBy]
                ? `<div class="eng-q"><div class="n" style="font-size:12.5px;">${escAttr(PAID_BY_SAYS[l.paidBy])}</div><div class="k">Ad spend paid</div></div>`
                : "");
-  const when=[l.basis,l.start?engDate(l.start)+(l.end?" – "+engDate(l.end):""):""]
+  const when=[l.basis,l.start?engDate(l.start)+(l.end?" – "+engDate(l.end):""):"",
+              l.renewalDue?"renewal due":""]
              .filter(Boolean).join(" · ");
   return `<div class="eng-svc">
     <div class="eng-l">
-      <div class="eng-top"><span class="eng-dot${l.running?" on":""}"></span>
+      <div class="eng-top"><span class="eng-dot${l.running?" on":(l.renewalDue?" due":"")}"></span>
         <span class="eng-nm">${escAttr(l.title)}</span></div>
       <div class="eng-meta">${escAttr(when)}</div>
     </div>
@@ -14946,7 +14995,9 @@ function engToggle(e){
    committing it is dropped rather than printed as zero - null is not
    zero here either. */
 function engMonthly(){
-  const add=(k)=>engRunning(ENG.lines).reduce((t,l)=>l[k]==null?t:t+l[k],null);
+  /* V109.9 — the sum covers what the page shows, so a retainer
+     waiting on its renewal keeps counting its monthly commitment. */
+  const add=(k)=>engShown(ENG.lines).reduce((t,l)=>l[k]==null?t:t+l[k],null);
   const bits=[[add("posts"),"post"],[add("stories"),"story"],[add("reels"),"reel"]]
     .filter(([n])=>n!=null)
     .map(([n,w])=>n+" "+(n===1?w:(w==="story"?"stories":w+"s")));
@@ -14997,7 +15048,7 @@ function engHtml(){
   if(!ENG.lines.length) return `<div class="bd-card" style="padding:14px 18px;"><div class="bd-note" style="margin:0;">No contract is recorded for this brand yet.</div></div>`;
   /* RUNNING ONLY, from here down. A lapsed service is Portfolio's
      record, not this month's scope. */
-  const live=engRunning(ENG.lines);
+  const live=engShown(ENG.lines);
   if(!live.length) return `<div class="bd-card" style="padding:14px 18px;"><div class="bd-note" style="margin:0;">No service is running for this brand right now.</div></div>`;
   /* THE NEXT ONE DUE, and nothing at all when none of them end. An
      open-ended retainer has no renewal and an empty space says so
@@ -15005,13 +15056,28 @@ function engHtml(){
   const today=new Date().toISOString().slice(0,10);
   const renew=live.map(x=>x.end).filter(d=>d&&d>=today).sort()[0]||null;
   const n=live.length, mth=engMonthly();
+  /* V109.9 — the strip reads one of three ways. A term that has run
+     out is said first and loudest, because it is the one that needs
+     somebody to do something. The date it names is the LATEST of the
+     ended terms: the day the last of them ran out. */
+  const due=engDue(live);
+  const dueEnd=due.map(x=>x.termEnd).filter(Boolean).sort().slice(-1)[0]||null;
+  const dueAgo=dueEnd?engDaysBetween(dueEnd,today):null;
+  const soonIn=(!due.length&&renew)?engDaysBetween(today,renew):null;
+  const soon=soonIn!=null&&soonIn<=ENG_SOON_DAYS;
+  const head=due.length
+    ? `<span class="bd-chip"><span class="eng-dot due"></span> ${n} service${n===1?"":"s"}, renewal due</span>`
+      +(dueEnd?`<span class="bd-chip eng-due">Term ended ${escAttr(engDate(dueEnd))}${
+          dueAgo==null?"":" · "+escAttr(engAgo(dueAgo))}</span>`:"")
+    : `<span class="bd-chip"><span class="eng-dot on"></span> ${n} service${n===1?"":"s"} running</span>`;
   return `<div class="bd-card eng-sec${ENG_OPEN?" open":""}" id="bd-scope" style="scroll-margin-top:calc(var(--hdrh) + 14px);">
       <div class="eng-strip" onclick="engToggle(event)">
         <span class="bd-lbl" style="margin:0;">Engagement &amp; scope</span>
-        <span class="bd-chip"><span class="eng-dot on"></span> ${n} service${n===1?"":"s"} running</span>
+        ${head}
         ${engDeliveryChip()}
         ${mth?`<span class="bd-chip">${escAttr(mth)}</span>`:""}
-        ${renew?`<span class="bd-chip">Renews ${escAttr(engDate(renew))}</span>`:""}
+        ${(!due.length&&renew)?`<span class="bd-chip${soon?" eng-soon":""}">Renews ${escAttr(engDate(renew))}${
+          soon?" · "+escAttr(engIn(soonIn)):""}</span>`:""}
         <span class="eng-gap"></span>
         <button class="bd-chev${ENG_OPEN?" open":""}" aria-expanded="${ENG_OPEN?"true":"false"}" aria-controls="eng-body" onclick="engToggle(event)"><span class="bd-chevlbl">${ENG_OPEN?"Hide":"Show"} the scope</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5"/></svg></button>
       </div>
