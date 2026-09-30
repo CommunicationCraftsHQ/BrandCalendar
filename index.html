@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V110.3 Bologna"/>
+<meta name="cc-tool-version" content="V110.4 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3552,6 +3552,44 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .probjtbl td{padding:8px;border-bottom:1px solid rgba(13,13,13,.05);}
 .probjtbl tr:last-child td{border-bottom:0;}
 .prsw{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;}
+/* ══ V110.4 — THE OBJECTIVES PAGE. One line per entry, one white card,
+   the listing rule the suite already follows. The grid is shared by the
+   header, every row and the add row so the columns cannot drift. */
+.obja-wrap{padding-bottom:40px;}
+.obja-h{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--subtle);margin:26px 0 10px;}
+.objlst{background:#fff;border:1px solid var(--div);border-radius:12px;overflow:hidden;}
+.objhd,.objli,.objadd{display:grid;grid-template-columns:minmax(0,1fr) 230px 200px 104px 34px;
+  align-items:center;gap:12px;padding:0 14px;}
+.objhd{height:34px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--subtle);border-bottom:1px solid var(--div);background:var(--surface2);}
+.objli{min-height:48px;border-bottom:1px solid rgba(13,13,13,.05);}
+.objli:last-of-type{border-bottom:0;}
+.objli.off{background:#FAFAF8;}
+.objli.off .ce{color:var(--subtle);}
+.objlst .ce{border:1px solid transparent;border-radius:6px;background:transparent;height:30px;
+  padding:0 8px;font-size:13.5px;font-family:inherit;color:var(--text);width:100%;}
+.objlst .ce:hover{border-color:var(--div);background:#fff;}
+.objlst .ce:focus{border-color:var(--text);background:#fff;outline:none;}
+.objlst .ce.nm{font-weight:600;}
+.objlst .ce.unit{color:var(--muted);font-size:13px;}
+.objlst .use{font-size:12.5px;color:var(--muted);}
+.objlst .use b{color:var(--text);font-weight:600;}
+.objlst .use .none{color:var(--subtle);}
+.objlst .swlbl{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;}
+.objlst .rm{color:var(--subtle);font-size:15px;cursor:pointer;justify-self:center;}
+.objlst .rm:hover{color:var(--acc);}
+.objlst .rm.dim{opacity:.25;cursor:not-allowed;}
+.objlst .rm.dim:hover{color:var(--subtle);}
+.objadd{height:52px;background:var(--surface2);border-top:1px solid var(--div);}
+.objadd .ce{border:1px dashed #C9C8C3;background:#fff;height:34px;}
+/* the add row inside a brand's dialog */
+.mrow{display:flex;align-items:center;gap:8px;padding:12px 8px 2px;border-top:1px dashed var(--div);margin-top:4px;}
+.mrow .fi{height:34px;font-size:12.5px;}
+.lock{font-size:12px;color:var(--subtle);display:inline-flex;align-items:center;gap:5px;}
+@media(max-width:1100px){
+  .objhd,.objli,.objadd{grid-template-columns:minmax(0,1fr) 150px 140px 96px 34px;}
+}
 .prcgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;}
 .prcr{background:#fff;border:1px solid var(--div);border-radius:12px;padding:10px;cursor:pointer;}
 .prcr:hover{border-color:#C9C8C3;}
@@ -3717,6 +3755,10 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
              The email keeps its own hairline rather than a .bpsep, so the three
              dividers in the markup are exactly the three group breaks. -->
         <div class="brow" data-need="manage_events" onclick="closeAllPops();openEventManager()"><i class="ti ti-calendar-cog"></i><span class="bnm">Event Manager</span></div>
+        <!-- V110.4 — the objective and segment master lists. Beside Event
+             Manager because it is the same kind of thing: a list every brand
+             reads, edited in one place. data-need="admin" is Bergen's rule. -->
+        <div class="brow" data-need="admin" onclick="closeAllPops();openObjAdmin()"><i class="ti ti-target-arrow"></i><span class="bnm">Objectives</span></div>
         <div class="brow" data-need="edit" id="acct-playbooks-row" onmouseenter="openPlaybooksFlyout()" onmouseleave="closePlaybooksFlyout()"><i class="ti ti-notebook"></i><span class="bnm">Playbooks</span><i class="ti ti-chevron-right" style="margin-left:auto;font-size:12px;opacity:.5;"></i></div>
         <div class="brow" data-need="edit" onclick="closeAllPops();carryForward()"><i class="ti ti-arrow-forward"></i><span class="bnm" id="acct-carry">Carry forward to next year</span></div>
         <div class="brow" data-need="edit" onclick="closeAllPops();openImportHistory()"><i class="ti ti-file-import"></i><span class="bnm">Import history</span></div>
@@ -10509,7 +10551,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V110.3 Bologna";
+const TOOL_VERSION="V110.4 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -23541,7 +23583,7 @@ renderBnTabs=function(){
    and the old target-audience line in the database. Nothing here reads
    them. */
 
-const PR={key:null,loading:false,err:null,list:[],objs:[],bobjs:[],
+const PR={key:null,loading:false,err:null,list:[],objs:[],bobjs:[],segs:[],bsegs:[],
   streams:{},auds:{},months:{},cr:[],crc:{},
   open:null,seg:"running",obj:"",edit:null,prog:null,aud:null,
   creative:null,th:{id:null,msgs:[],acts:[],loading:false,err:""},staged:[],draft:""};
@@ -23658,15 +23700,21 @@ function prKey(){ return String(activeBrand||""); }
 async function prLoad(k){
   PR.loading=true; PR.err=null;
   try{
-    const [mo,bo,a]=await Promise.all([
+    const [mo,bo,ms,bs,a]=await Promise.all([
       sb.from("promotion_objectives").select("*").eq("active",true).order("sort"),
       sb.from("brand_objectives").select("*").eq("brand_id",k),
+      sb.from("promotion_segments").select("*").eq("active",true).order("sort"),
+      sb.from("brand_segments").select("*").eq("brand_id",k),
       sb.from("promotions").select("*").eq("brand_id",k).is("deleted_at",null).order("starts_on",{ascending:false,nullsFirst:true})
     ]);
-    const bad=[mo,bo,a].find(r=>r.error);
+    const bad=[mo,bo,ms,bs,a].find(r=>r.error);
     if(bad) throw new Error(bad.error.message);
     PR.objs=(mo.data||[]).filter(o=>o.active!==false);
     PR.bobjs=(bo.data||[]).filter(x=>x.brand_id===k).map(x=>x.objective_key);
+    /* V110.4 — segments load the same way objectives do: the master
+       list, then the keys this brand works to. */
+    PR.segs=(ms.data||[]).filter(o=>o.active!==false);
+    PR.bsegs=(bs.data||[]).filter(x=>x.brand_id===k).map(x=>x.segment_key);
     const list=a.data||[], ids=list.map(p=>p.id);
     let streams=[],auds=[],months=[],cr=[],crc=[];
     if(ids.length){
@@ -23698,6 +23746,7 @@ async function prLoad(k){
     months.forEach(m=>{ (PR.months[m.promotion_id]=PR.months[m.promotion_id]||[]).push(m); });
   }catch(e){
     PR.err=(e&&e.message)||String(e); PR.list=[]; PR.streams={}; PR.auds={}; PR.months={}; PR.cr=[];
+    PR.segs=[]; PR.bsegs=[];
   }
   PR.loading=false; PR.key=k;
   if(view==="promotions") render();
@@ -23918,7 +23967,7 @@ function prEditOpen(id){
   const have=p?prStreams(p.id).map(s=>s.platform):["meta"];
   /* `had` is what already has a block in the database — empty for a new
      promotion, or every platform picked would be treated as existing */
-  PR.edit={id:id||null, obj:chosen, kind:p?(p.kind||"one_off"):"ongoing", plats:have.slice(), had:p?have.slice():[]};
+  PR.edit={id:id||null, obj:chosen, seg:p?(p.segment_key||null):null, kind:p?(p.kind||"one_off"):"ongoing", plats:have.slice(), had:p?have.slice():[]};
   const cur=p?prCur(p):"INR", basis=(p&&p.budget_basis)||"total";
   const curs=PR_CUR.indexOf(cur)<0?PR_CUR.concat([cur]):PR_CUR;
   prBox(`<div class="modal-top"><div><div class="modal-title">${p?"Edit promotion":"New promotion"}</div>
@@ -23928,6 +23977,13 @@ function prEditOpen(id){
       <div class="field"><label class="fl">Objective</label>
         <div class="prchips" id="pr-objs">${mine.length?mine.map(o=>`<span class="propt${chosen===o.key?" on":""}" onclick="prPickObj('${escAttr(o.key)}')">${escHtml(o.label)}</span>`).join("")
           :'<span class="nsdim">No objectives switched on for this brand yet</span>'}</div></div>
+      ${/* V110.4 — SEGMENT SITS UNDER OBJECTIVE because the two are one
+            thought: what this should produce, and who it is aimed at.
+            Keeping them apart is what let "Specifier marketing" become
+            an objective in the first place. Optional: a promotion aimed
+            at everyone is a real promotion. */""}
+      <div class="field"><label class="fl">Segment</label>
+        <div class="prchips" id="pr-segs">${prSegChips(p)}</div></div>
       <div class="field"><label class="fl">Name</label><input class="fi" id="pr-name" value="${escAttr(p?p.name:"")}" maxlength="120"></div>
       <div class="field"><label class="fl">Kind</label>
         <div class="prseg" id="pr-kind" style="width:fit-content">
@@ -23963,6 +24019,16 @@ function prKindBits(p){
              <div class="field"><label class="fl">Ends</label><input class="fi" type="date" id="pr-e" value="${p&&p.ends_on||""}"></div>`}
     </div>`;
 }
+/* V110.4 — the brand's segments, as chips. Clicking the chosen one
+   again clears it, because "aimed at everyone" has to be reachable
+   without a None chip cluttering the row. */
+function prSegChips(p){
+  const mine=PR.segs.filter(o=>PR.bsegs.indexOf(o.key)>-1);
+  if(!mine.length) return '<span class="nsdim">No segments switched on for this brand yet</span>';
+  const cur=PR.edit?PR.edit.seg:(p?p.segment_key:null);
+  return mine.map(o=>`<span class="propt${cur===o.key?" on":""}" onclick="prPickSeg('${escAttr(o.key)}')">${escHtml(o.label)}</span>`).join("");
+}
+function prPickSeg(k){ PR.edit.seg=(PR.edit.seg===k)?null:k; prEditRedraw(); }
 function prPickObj(k){ PR.edit.obj=k; prEditRedraw(); }
 function prPickKind(k){ PR.edit.kind=k; prEditRedraw(); }
 function prPickPlat(k){
@@ -23977,6 +24043,7 @@ function prEditRedraw(){
   const keep={tv:g("pr-tv")?g("pr-tv").value:"", s:g("pr-s")?g("pr-s").value:"", e:g("pr-e")?g("pr-e").value:"", by:g("pr-by")?g("pr-by").value:""};
   const mine=PR.objs.filter(o=>PR.bobjs.indexOf(o.key)>-1);
   g("pr-objs").innerHTML=mine.map(o=>`<span class="propt${PR.edit.obj===o.key?" on":""}" onclick="prPickObj('${escAttr(o.key)}')">${escHtml(o.label)}</span>`).join("");
+  if(g("pr-segs")) g("pr-segs").innerHTML=prSegChips(PR.edit.id?PR.list.find(x=>x.id===PR.edit.id):null);
   g("pr-kind").innerHTML=`<button class="prseg-b${PR.edit.kind==="one_off"?" on":""}" onclick="prPickKind('one_off')">One-off</button>
     <button class="prseg-b${PR.edit.kind==="ongoing"?" on":""}" onclick="prPickKind('ongoing')">Ongoing</button>`;
   const p=PR.edit.id?PR.list.find(x=>x.id===PR.edit.id):null;
@@ -24001,7 +24068,7 @@ async function prEditSave(){
   if(plan!==null&&(isNaN(plan)||plan<0)){ toast("The budget must be a number","err"); g("pr-plan").focus(); return; }
   if(!PR.edit.plats.length){ toast("Pick at least one platform","err"); return; }
   const o=prObj(PR.edit.obj);
-  const row={brand_id:activeBrand,name,objective_key:PR.edit.obj,kind:PR.edit.kind,
+  const row={brand_id:activeBrand,name,objective_key:PR.edit.obj,segment_key:PR.edit.seg||null,kind:PR.edit.kind,
     target_value:tv,target_unit:o?o.unit:null,
     target_on: ong?null:(g("pr-by")?g("pr-by").value||null:null),
     starts_on:s, ends_on:ong?null:e,
@@ -24017,8 +24084,13 @@ async function prEditSave(){
     }else{
       row.created_by=ME.id||null;
       /* the old columns are still not-null in the database */
-      row.objective=({lead_generation:"leads",footfall:"footfall",targeted_visibility:"traffic",
-        awareness:"awareness",d2c_sale:"sales"})[PR.edit.obj]||"leads";
+      /* V110.4 — THE RETIRED COLUMN IS NO LONGER WRITTEN. promotions.objective
+         is the pre-rebuild text field. Nothing reads it any more, and the map
+         that used to fill it covered five of the seven keys — Specifier
+         marketing and Follower increase both recorded themselves as "leads",
+         so it has been lying for as long as it has existed. The V110.4
+         migration drops its not-null; extending a wrong map to cover two new
+         objectives would have been the wrong repair. */
       row.platform=PR.edit.plats[0]==="linkedin"?"other":PR.edit.plats[0];
       const r=await sb.from("promotions").insert([row]).select("id");
       if(r.error) throw new Error(r.error.message);
@@ -24736,21 +24808,49 @@ function plSocialAuto(m){
   add("Content views",sum("views"));
   return out;
 }
+/* ══ V110.4 · THIS FUNCTION HAD NOT WORKED SINCE THE PROMOTIONS REBUILD
+   Chirag, 29 September: Move to Trash on a meeting says it worked and
+   the meeting stays on screen; the Plan tab refuses to open; only a
+   full refresh gets him back.
+
+   BOTH WERE THIS ONE FUNCTION. It was written against the OLD
+   Promotions model — weekly figure rows and client outcomes — and the
+   rebuild replaced that with one row per month (PR.months, prMonthRow).
+   Six names went with the old model and nothing renamed the callers:
+
+     prFigRows · prSum · prSources · prLabel · PR_OBJ · PR_CLIENT
+
+   None of them exist anywhere in this file. Checked every name the
+   Plan and MOM code references — 193 of them — and these six were the
+   only ones missing. So the moment a brand had a promotion overlapping
+   a planned month, building the sheet threw a ReferenceError BEFORE
+   main.innerHTML was ever assigned, and the page on screen stayed
+   exactly where it was. The first paint survived only because
+   Promotions had not loaded yet; every redraw after that fetch failed.
+
+   That is why it looked like a navigation bug: view DID change to
+   mplan, the tool thought it had left, and the paint never landed.
+   It is also why a refresh worked, and why it varied by brand — a
+   brand with no promotion in a planned month never reached the throw.
+
+   Reproduced, then proved by neutralising this one function and
+   changing nothing else: the Plan tab navigated and Move to Trash
+   removed the meeting and returned to Plan.
+
+   AD SPEND IS DELIBERATELY NOT HERE. The monthly row carries spend,
+   and the suite rule is that ad spend is for admins and account
+   managers only. Rather than add a half-guard on the busiest page in
+   the tool, the Plan page reports what the money bought and not what
+   it cost. The Promotions page is where spend belongs. */
 function plAdsAuto(m){
   if(!canCap("view_promotions")) return [];
-  const [ms,me]=plMonthRange(m);
+  const ms=plMonthRange(m)[0];          /* month_start is the 1st, as stored */
   const out=[];
   plPromosIn(m).forEach(p=>{
-    const fr=prFigRows(p.id).filter(f=>f.period_start>=ms&&f.period_start<=me);
-    const res=prSum(fr,"results");
-    const obj=PR_OBJ[p.objective]||{result:"results"};
-    if(res!==null) out.push({label:`${p.name} · ${obj.result}`,actual:prFmt(res),src:prSources(fr)});
-    const lab=prLabel(p);
-    if(lab){
-      let t=null;
-      PR.outs.forEach(o=>{ if(o.promotion_id===p.id&&o.outcome_key===PR_CLIENT&&o.week_start>=ms&&o.week_start<=me) t=(t===null?0:t)+Number(o.value); });
-      if(t!==null) out.push({label:`${p.name} · ${lab}`,actual:prFmt(t),src:`<span class="prtag t-client">client</span>`});
-    }
+    const row=prMonthRow(p.id,ms); if(!row) return;
+    const res=prNumOr(row.result_value); if(res===null) return;
+    out.push({label:`${p.name} · ${prUnit(p)}`,actual:prFmt(res),
+              src:`<span class="prtag t-typed">entered</span>`});
   });
   return out;
 }
@@ -24861,7 +24961,30 @@ function plSheetHtml(m,canE){
         onfocus="mpvFocus(this)" onblur="mpvBlurSave(this)"`:"";
   const svcs=plServicesFor(m);
   const socialAt=svcs.findIndex(s=>s.kind==="social");
-  const blocks=svcs.map((s,i)=>plBlockHtml(s,m,canE,i===socialAt)).join("");
+  /* ══ V110.4 · ONE BLOCK MUST NOT BE ABLE TO TAKE THE PAGE DOWN ══════
+     plAdsAuto threw for a week and the symptom nobody could read was
+     "the Plan page will not open" — because a throw here happens while
+     the sheet's HTML is still being built, so main.innerHTML is never
+     assigned and whatever was on screen stays there, including a
+     meeting that has already been deleted.
+
+     A service block that cannot be drawn is now a block that says so,
+     in its own row, while the other eleven months draw normally. The
+     console keeps the real error for whoever is looking.
+
+     This is a net, not a fix: it does not make a broken block work, it
+     stops one broken block from hiding every working one and from
+     making the tool look like it has frozen. */
+  const blocks=svcs.map((s,i)=>{
+    try{ return plBlockHtml(s,m,canE,i===socialAt); }
+    catch(e){
+      console.error("[plan] "+(s&&s.title?s.title:"a service")+" could not be drawn for month "+m,e);
+      return `<div class="mpv-band pl-svcband"><div class="mpv-bh">
+        <i class="ti ti-alert-triangle" style="font-size:14px;color:var(--acc)"></i>
+        <b>${escHtml((s&&s.title)||"Service")}</b><span class="sum">could not be drawn</span>
+      </div></div>`;
+    }
+  }).join("");
   const mpInfl=mpvItems(mp,"influencer").length;
   /* Influencers belonged to the social layer before and still do. With
      no social service this month they get a block of their own rather
@@ -25647,6 +25770,421 @@ function plArm(){
        </div>`).join("");
     body.insertBefore(sec,body.firstChild);
     return out;
+  };
+})();
+
+
+/* ══ V110.4 BOLOGNA · OBJECTIVES AND SEGMENTS ════════════════════════
+   Chirag, 29–30 September. Two problems in one conversation.
+
+   THE LIST WAS WRONG, and not by accident. "Lead generation" and
+   "Specifier marketing" overlapped; so did "Awareness" and "Targeted
+   visibility". The tell is in the data: awareness and
+   targeted_visibility were stored with the SAME unit, "people
+   reached". Two objectives that count the same thing are one
+   objective wearing two names.
+
+   The reason they multiplied is that THREE axes were in play and only
+   two had a home:
+
+     what the promotion should produce   → the objective
+     who it is aimed at                  → NOWHERE
+     how the platform finds them         → promotion_audiences
+
+   With nowhere to put the audience, it leaked into the objective's
+   name — Specifier marketing is leads aimed at specifiers. Every new
+   audience grew another near-duplicate. So this release gives the
+   audience its own field, called a SEGMENT to keep it clear of
+   promotion_audiences, which means the platform's targeting mechanism
+   (retargeting, lookalike, client list) and is a different thing.
+
+   THE MASTER LIST COULD NOT BE EDITED. It had a read rule and nothing
+   else — the migration that created it says so in as many words,
+   "nobody edits it from the app". Adding an objective meant SQL.
+
+   Renaming and retiring are ADMINS ONLY, because one rename here
+   changes the word every brand sees. Adding is open to anyone who may
+   edit promotions, which is what makes the add row at the foot of a
+   brand's dialog worth having.                                        */
+
+/* ── the admin page's own state, loaded on its own ───────────────────
+   PR.objs is loaded per brand by prLoad. This page is not about one
+   brand, so it reads the master lists and their usage across every
+   brand rather than borrowing a brand-scoped cache. */
+const OBJA={loading:false,err:"",objs:[],segs:[],
+            objBrands:{},objPromos:{},segBrands:{},segPromos:{},
+            q:"",show:"all",adding:null};
+
+function objaIsAdmin(){ return ME.role==="admin"; }
+
+async function objaLoad(){
+  OBJA.loading=true; OBJA.err="";
+  try{
+    const [o,s,bo,bs,pr]=await Promise.all([
+      sb.from("promotion_objectives").select("*").order("sort"),
+      sb.from("promotion_segments").select("*").order("sort"),
+      sb.from("brand_objectives").select("brand_id,objective_key"),
+      sb.from("brand_segments").select("brand_id,segment_key"),
+      sb.from("promotions").select("objective_key,segment_key").is("deleted_at",null)
+    ]);
+    const bad=[o,s,bo,bs,pr].find(r=>r&&r.error);
+    if(bad) throw new Error(bad.error.message);
+    OBJA.objs=(o.data||[]).slice().sort((a,b)=>(a.sort||0)-(b.sort||0)||String(a.label).localeCompare(String(b.label)));
+    OBJA.segs=(s.data||[]).slice().sort((a,b)=>(a.sort||0)-(b.sort||0)||String(a.label).localeCompare(String(b.label)));
+    const tally=(rows,k)=>{ const m={}; (rows||[]).forEach(r=>{ const v=r[k]; if(v) m[v]=(m[v]||0)+1; }); return m; };
+    OBJA.objBrands=tally(bo.data,"objective_key");
+    OBJA.segBrands=tally(bs.data,"segment_key");
+    OBJA.objPromos=tally(pr.data,"objective_key");
+    OBJA.segPromos=tally(pr.data,"segment_key");
+  }catch(e){ OBJA.err=(e&&e.message)||String(e); }
+  OBJA.loading=false;
+}
+
+function openObjAdmin(){
+  if(!objaIsAdmin()){ toast("Objectives are managed by an admin","err"); return; }
+  setView("objadmin");
+  objaLoad().then(()=>{ if(view==="objadmin") renderObjAdmin(); });
+}
+
+/* a key is made once, from the label, and never changes afterwards —
+   it is what every promotion and every brand link points at */
+function objaKeyFor(label,taken){
+  let k=String(label||"").toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,40);
+  if(!k) k="item";
+  if(taken.indexOf(k)<0) return k;
+  for(let i=2;i<200;i++){ if(taken.indexOf(k+"_"+i)<0) return k+"_"+i; }
+  return k+"_"+Date.now();
+}
+
+function objaRows(kind){
+  const list=kind==="obj"?OBJA.objs:OBJA.segs;
+  const q=OBJA.q.trim().toLowerCase();
+  return list.filter(r=>{
+    if(OBJA.show==="live"&&!r.active) return false;
+    if(OBJA.show==="retired"&&r.active) return false;
+    if(q&&String(r.label||"").toLowerCase().indexOf(q)<0&&String(r.key||"").toLowerCase().indexOf(q)<0) return false;
+    return true;
+  });
+}
+
+function objaUse(kind,key){
+  const b=(kind==="obj"?OBJA.objBrands:OBJA.segBrands)[key]||0;
+  const p=(kind==="obj"?OBJA.objPromos:OBJA.segPromos)[key]||0;
+  return {brands:b,promos:p,free:(b===0&&p===0)};
+}
+
+function objaUseHtml(u){
+  if(u.free) return `<span class="use"><span class="none">nothing yet</span></span>`;
+  const bits=[];
+  if(u.brands) bits.push(`<b>${u.brands}</b> brand${u.brands===1?"":"s"}`);
+  if(u.promos) bits.push(`<b>${u.promos}</b> promotion${u.promos===1?"":"s"}`);
+  else bits.push(`<span class="none">no promotions</span>`);
+  return `<span class="use">${bits.join(" · ")}</span>`;
+}
+
+function objaListHtml(kind){
+  const rows=objaRows(kind);
+  const unitCol=kind==="obj";
+  const body=rows.map(r=>{
+    const u=objaUse(kind,r.key);
+    return `<div class="objli${r.active?"":" off"}" data-key="${escAttr(r.key)}" data-kind="${kind}">
+      <input class="ce nm" value="${escAttr(r.label)}" aria-label="Name"
+        onchange="objaSetField('${kind}','${escAttr(r.key)}','label',this.value)"
+        onkeydown="if(event.key==='Enter')this.blur()">
+      ${unitCol?`<input class="ce unit" value="${escAttr(r.unit||"")}" aria-label="Counts in"
+        onchange="objaSetField('obj','${escAttr(r.key)}','unit',this.value)"
+        onkeydown="if(event.key==='Enter')this.blur()">`:`<span></span>`}
+      ${objaUseHtml(u)}
+      <label class="swlbl"><input type="checkbox" class="objsw"${r.active?" checked":""}
+        onchange="objaSetActive('${kind}','${escAttr(r.key)}',this.checked)"> ${r.active?"Live":"Retired"}</label>
+      <i class="ti ti-trash rm${u.free?"":" dim"}" data-free="${u.free?1:0}"
+         title="${u.free?"Delete":"In use — retire it instead"}"
+         onclick="objaDelete('${kind}','${escAttr(r.key)}')"></i>
+    </div>`;
+  }).join("");
+  const empty=`<div class="objli"><span class="use"><span class="none">Nothing matches those filters.</span></span></div>`;
+  return `<div class="objlst" data-list="${kind}">
+    <div class="objhd"><span>${kind==="obj"?"Objective":"Segment"}</span>
+      <span>${unitCol?"Counts in":""}</span><span>Used by</span><span>Status</span><span></span></div>
+    ${rows.length?body:empty}
+    <div class="objadd">
+      <input class="ce nm" id="obja-new-${kind}" placeholder="${kind==="obj"?"New objective":"New segment"}"
+        onkeydown="if(event.key==='Enter')objaAdd('${kind}')">
+      ${unitCol?`<input class="ce unit" id="obja-newunit-obj" placeholder="What it counts"
+        onkeydown="if(event.key==='Enter')objaAdd('obj')">`:`<span></span>`}
+      <span></span><span></span>
+      <button class="btn btn-p btn-sm" style="height:30px" onclick="objaAdd('${kind}')"><i class="ti ti-check"></i></button>
+    </div>
+  </div>`;
+}
+
+function renderObjAdmin(){
+  const main=document.getElementById("main"); if(!main) return;
+  if(!objaIsAdmin()){ setView("year"); return; }
+  const live=OBJA.objs.filter(o=>o.active).length, ret=OBJA.objs.length-live;
+  main.innerHTML=`
+  <div class="obja-page">
+    <div class="year-head">
+      <div class="year-headtxt">
+        <div class="year-title">Objectives</div>
+        <div class="year-sub">${OBJA.loading?"Reading…":OBJA.err?escHtml(OBJA.err)
+          :`${live} live${ret?` · ${ret} retired`:""} · ${OBJA.segs.filter(s=>s.active).length} segments`}</div>
+      </div>
+      <div class="em2-headacts"><button class="btn btn-s btn-sm" onclick="setView('year')"><i class="ti ti-arrow-left"></i> Back to the calendar</button></div>
+    </div>
+    <div class="em2-ctl">
+      <input class="fi" style="width:230px" placeholder="Search…" value="${escAttr(OBJA.q)}"
+        oninput="OBJA.q=this.value;objaRedraw(this)">
+      <select class="fi" onchange="OBJA.show=this.value;renderObjAdmin()">
+        <option value="all"${OBJA.show==="all"?" selected":""}>Live and retired</option>
+        <option value="live"${OBJA.show==="live"?" selected":""}>Live only</option>
+        <option value="retired"${OBJA.show==="retired"?" selected":""}>Retired only</option>
+      </select>
+    </div>
+    <div class="wrap obja-wrap">
+      ${objaListHtml("obj")}
+      <div class="obja-h">Segments</div>
+      ${objaListHtml("seg")}
+    </div>
+  </div>`;
+}
+
+/* redraw without losing the caret in the search box */
+function objaRedraw(el){
+  const v=el?el.value:"";
+  renderObjAdmin();
+  const n=document.querySelector(".em2-ctl .fi");
+  if(n){ n.focus(); n.value=v; n.setSelectionRange(v.length,v.length); }
+}
+
+const OBJA_TBL={obj:"promotion_objectives",seg:"promotion_segments"};
+const OBJA_ARR={obj:"objs",seg:"segs"};
+
+async function objaSetField(kind,key,field,value){
+  const v=String(value||"").trim();
+  if(!v){ toast(field==="unit"?"Give it a unit":"Give it a name","err"); renderObjAdmin(); return; }
+  const arr=OBJA[OBJA_ARR[kind]], row=arr.find(x=>x.key===key); if(!row) return;
+  const was=row[field]; if(was===v){ return; }
+  row[field]=v;
+  const r=await sb.from(OBJA_TBL[kind]).update({[field]:v}).eq("key",key).select("key");
+  if(r.error||!r.data||!r.data.length){
+    row[field]=was; renderObjAdmin();
+    toast("Not saved — "+(r.error?r.error.message:"admins only"),"err"); return;
+  }
+  if(kind==="obj"&&PR.objs.length){ const p=PR.objs.find(x=>x.key===key); if(p) p[field]=v; }
+  toast("Saved");
+}
+
+async function objaSetActive(kind,key,on){
+  const arr=OBJA[OBJA_ARR[kind]], row=arr.find(x=>x.key===key); if(!row) return;
+  row.active=!!on;
+  const r=await sb.from(OBJA_TBL[kind]).update({active:!!on}).eq("key",key).select("key");
+  if(r.error||!r.data||!r.data.length){
+    row.active=!on; renderObjAdmin();
+    toast("Not changed — "+(r.error?r.error.message:"admins only"),"err"); return;
+  }
+  renderObjAdmin();
+  toast(on?"Live again":"Retired");
+}
+
+/* Deleting is only ever offered on a row nothing points at. Everything
+   else retires, which is the suite's rule: a row somebody's work
+   references is never removed, it is taken out of the pickers. */
+async function objaDelete(kind,key){
+  const u=objaUse(kind,key);
+  if(!u.free){ toast("It is in use — retire it instead","err"); return; }
+  const arr=OBJA[OBJA_ARR[kind]], row=arr.find(x=>x.key===key); if(!row) return;
+  if(!confirm(`Delete "${row.label}"?\n\nNothing points at it, so this cannot affect any promotion.`)) return;
+  const r=await sb.from(OBJA_TBL[kind]).delete().eq("key",key).select("key");
+  if(r.error){ toast("Not deleted — "+r.error.message,"err"); return; }
+  OBJA[OBJA_ARR[kind]]=arr.filter(x=>x.key!==key);
+  if(kind==="obj") PR.objs=PR.objs.filter(x=>x.key!==key);
+  renderObjAdmin(); toast("Deleted");
+}
+
+async function objaAdd(kind){
+  const nameEl=document.getElementById("obja-new-"+kind);
+  const unitEl=document.getElementById("obja-newunit-obj");
+  const label=String(nameEl?nameEl.value:"").trim();
+  const unit=kind==="obj"?String(unitEl?unitEl.value:"").trim():"";
+  if(!label){ toast(kind==="obj"?"Name the objective":"Name the segment","err"); if(nameEl) nameEl.focus(); return; }
+  if(kind==="obj"&&!unit){ toast("Say what it counts","err"); if(unitEl) unitEl.focus(); return; }
+  const row=await objaCreate(kind,label,unit);
+  if(!row) return;
+  if(nameEl) nameEl.value=""; if(unitEl) unitEl.value="";
+  renderObjAdmin(); toast(label+" added");
+}
+
+/* Shared by the admin page and by the add row inside a brand's dialog,
+   so an objective created in either place is the same object made the
+   same way. */
+async function objaCreate(kind,label,unit){
+  const arr=OBJA[OBJA_ARR[kind]];
+  const taken=arr.map(x=>x.key).concat(kind==="obj"?PR.objs.map(x=>x.key):[]);
+  const clash=arr.find(x=>String(x.label).toLowerCase()===label.toLowerCase());
+  if(clash){
+    toast(clash.active?"That one is already in the list":"That one is in the list, retired","err");
+    return null;
+  }
+  const sort=(arr.reduce((t,x)=>Math.max(t,x.sort||0),0)||0)+10;
+  const rec=kind==="obj"?{key:objaKeyFor(label,taken),label,unit,sort,active:true}
+                        :{key:objaKeyFor(label,taken),label,sort,active:true};
+  const r=await sb.from(OBJA_TBL[kind]).insert([rec]).select("key");
+  if(r.error){ toast("Not added — "+r.error.message,"err"); return null; }
+  arr.push(rec);
+  arr.sort((a,b)=>(a.sort||0)-(b.sort||0));
+  if(kind==="obj"&&PR.key) PR.objs.push(rec);
+  return rec;
+}
+
+/* ── the route and the door ──────────────────────────────────────── */
+(function(){
+  const baseRoute=viewRoute;
+  viewRoute=function(v){
+    if(v==="objadmin") return {render:renderObjAdmin,sidebar:null,needs:"admin"};
+    return baseRoute(v);
+  };
+  /* routeAllows knows brand, brand+edit and edit, and sends anything
+     else to canCap — which would ask for a capability called "admin"
+     that does not exist. The menu already has the right test; this
+     makes the route use the same one rather than inventing a second. */
+  const baseAllows=routeAllows;
+  routeAllows=function(r){
+    if(r&&r.needs==="admin") return ME.role==="admin";
+    return baseAllows.apply(this,arguments);
+  };
+})();
+
+
+/* ══ V110.4 · THE BRAND'S TWO LISTS ══════════════════════════════════
+   SWITCHING AN OBJECTIVE OFF HAS NEVER WORKED. The dialog has always
+   attempted a real delete on brand_objectives, and the rebuild's
+   migration revoked delete on that table from every app user and gave
+   it no delete policy. So every untick since it shipped has come back
+   "Could not save" and left the objective switched on. The V110.4
+   migration grants the delete and adds the policy; this rewrite is
+   what finally exercises it.
+
+   THE ADD ROW is Chirag's own ask, 30 September: "if the list is
+   missing that objective, it can be simply added manually." Typing a
+   name here creates it in the master list AND switches it on for this
+   brand, in one action. Adding is safe, so it is open to anyone who
+   may edit promotions; renaming and retiring stay on the admin page.
+
+   A row that promotions already carry shows a count instead of a
+   switch, so a brand cannot drop an objective its own work is being
+   measured against. */
+(function(){
+
+function pbLists(kind){
+  return kind==="obj"
+    ? {master:PR.objs, mine:PR.bobjs, table:"brand_objectives", col:"objective_key",
+       title:"Objectives", add:"New objective", unit:true}
+    : {master:PR.segs, mine:PR.bsegs, table:"brand_segments",  col:"segment_key",
+       title:"Segments",  add:"New segment", unit:false};
+}
+
+function pbUsed(kind){
+  const m={};
+  PR.list.forEach(p=>{ const v=kind==="obj"?p.objective_key:p.segment_key; if(v) m[v]=(m[v]||0)+1; });
+  return m;
+}
+
+function pbOpen(kind){
+  if(!canCap("edit_promotions")){ capDenied(pbLists(kind).title); return; }
+  const L=pbLists(kind), used=pbUsed(kind);
+  prBox(`<div class="modal-top"><div><div class="modal-title">${L.title}</div>
+      <div class="modal-sub">${escHtml(brands[activeBrand]?.name||"")}</div></div>
+      <button class="modal-x" onclick="closeM('promo')">✕</button></div>
+    <div class="modal-body"><table class="probjtbl"><tbody>
+      ${L.master.map(o=>{
+        const on=L.mine.indexOf(o.key)>-1, n=used[o.key]||0;
+        return `<tr><td><span class="probj ${on?prObjClass(o.key):"o-off"}">${escHtml(o.label)}</span></td>
+          <td class="nsdim">${escHtml(L.unit?(o.unit||""):"")}</td>
+          <td style="text-align:right">${n
+            ? `<span class="lock"><i class="ti ti-lock"></i> in use · ${n}</span>`
+            : `<label class="prsw"><input type="checkbox" value="${escAttr(o.key)}"${on?" checked":""}> ${on?"on":"off"}</label>`}</td></tr>`;
+      }).join("")||`<tr><td class="nsdim">Nothing in the list yet.</td></tr>`}
+    </tbody></table>
+      <div class="mrow">
+        <input class="fi" style="flex:1" id="pb-new" placeholder="${L.add}"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();pbAddNew('${kind}');}">
+        ${L.unit?`<input class="fi" style="width:180px" id="pb-newunit" placeholder="What it counts"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();pbAddNew('${kind}');}">`:""}
+        <button class="btn btn-s btn-sm" onclick="pbAddNew('${kind}')"><i class="ti ti-plus"></i> Add</button>
+      </div>
+    </div>
+    <div class="modal-foot"><span style="flex:1"></span>
+      <button class="btn btn-s" onclick="closeM('promo')">Close</button>
+      <button class="btn btn-p" id="pr-osave" onclick="pbSave('${kind}')">Save</button></div>`);
+}
+
+/* The new one is created in the master list and switched on here, so
+   the person who needed it does not have to go and find an admin. */
+async function pbAddNew(kind){
+  const L=pbLists(kind);
+  const nameEl=document.getElementById("pb-new"), unitEl=document.getElementById("pb-newunit");
+  const label=String(nameEl?nameEl.value:"").trim();
+  const unit=L.unit?String(unitEl?unitEl.value:"").trim():"";
+  if(!label){ toast(L.add,"err"); if(nameEl) nameEl.focus(); return; }
+  if(L.unit&&!unit){ toast("Say what it counts","err"); if(unitEl) unitEl.focus(); return; }
+  /* keep whatever is already ticked — the dialog is about to be redrawn */
+  const pending=[...document.querySelectorAll("#promo-body .prsw input")].filter(b=>b.checked).map(b=>b.value);
+  const arrName=kind==="obj"?"objs":"segs";
+  if(!OBJA[OBJA_ARR[kind]].length) OBJA[OBJA_ARR[kind]]=L.master.slice();
+  const rec=await objaCreate(kind,label,unit);
+  if(!rec) return;
+  if(kind==="obj"){ if(!PR.objs.find(x=>x.key===rec.key)) PR.objs.push(rec); }
+  else            { if(!PR.segs.find(x=>x.key===rec.key)) PR.segs.push(rec); }
+  const r=await sb.from(L.table).insert([{brand_id:activeBrand,[L.col]:rec.key}]);
+  if(r.error){ toast("Added to the list, but not switched on — "+r.error.message,"err"); }
+  else { (kind==="obj"?PR.bobjs:PR.bsegs).push(rec.key); }
+  pbOpen(kind);
+  pending.forEach(k=>{
+    const b=[...document.querySelectorAll("#promo-body .prsw input")].find(x=>x.value===k);
+    if(b) b.checked=true;
+  });
+  toast(label+" added");
+}
+
+async function pbSave(kind){
+  const L=pbLists(kind);
+  const boxes=[...document.querySelectorAll("#promo-body .prsw input")];
+  const btn=document.getElementById("pr-osave"); if(btn) btn.disabled=true;
+  try{
+    for(const b of boxes){
+      const on=b.checked, had=L.mine.indexOf(b.value)>-1;
+      if(on&&!had){
+        const r=await sb.from(L.table).insert([{brand_id:activeBrand,[L.col]:b.value}]);
+        if(r.error) throw new Error(r.error.message);
+      }else if(!on&&had){
+        /* the delete the migration finally allows */
+        const r=await sb.from(L.table).delete().eq("brand_id",activeBrand).eq(L.col,b.value).select(L.col);
+        if(r.error) throw new Error(r.error.message);
+      }
+    }
+    closeM("promo"); toast("Saved"); prReload();
+  }catch(e){ toast("Could not save — "+((e&&e.message)||e),"err"); if(btn) btn.disabled=false; }
+}
+
+window.pbOpen=pbOpen; window.pbAddNew=pbAddNew; window.pbSave=pbSave;
+/* the old names keep working — two gates and the page's own button
+   call prObjOpen by name */
+prObjOpen=function(){ pbOpen("obj"); };
+prObjSave=function(){ return pbSave("obj"); };
+window.prSegOpen=function(){ pbOpen("seg"); };
+
+})();
+
+/* ── the Segments button, beside Objectives on the Promotions bar ──── */
+(function(){
+  const base=prListHtml;
+  prListHtml=function(){
+    const html=base.apply(this,arguments);
+    if(!canCap("edit_promotions")) return html;
+    const btn=`<button class="btn btn-s" onclick="prObjOpen()">Objectives</button>`;
+    if(html.indexOf(btn)<0) return html;
+    return html.replace(btn, btn+`\n        <button class="btn btn-s" onclick="prSegOpen()">Segments</button>`);
   };
 })();
 
