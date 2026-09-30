@@ -4,16 +4,16 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Marketing Calendar 2026</title>
-<!-- V110.1 — the Calendar's own icon (sculpted-ribbon calendar), from the CC favicon pack, 30 Sep 2026 -->
-<link rel="icon" href="https://communicationcraftshq.github.io/BrandCalendar/icons/marketing-calendar/favicon.ico?v=1" sizes="16x16 32x32 48x48 256x256"/>
-<link rel="icon" type="image/png" sizes="32x32" href="https://communicationcraftshq.github.io/BrandCalendar/icons/marketing-calendar/favicon-32x32.png?v=1"/>
-<link rel="icon" type="image/png" sizes="16x16" href="https://communicationcraftshq.github.io/BrandCalendar/icons/marketing-calendar/favicon-16x16.png?v=1"/>
-<link rel="apple-touch-icon" sizes="180x180" href="https://communicationcraftshq.github.io/BrandCalendar/icons/marketing-calendar/apple-touch-icon.png?v=1"/>
+<!-- V110.2 — the Calendar's own icon, satin set v2 (transparent), 30 Sep 2026 -->
+<link rel="icon" href="https://communicationcraftshq.github.io/BrandCalendar/icons/marketing-calendar/favicon.ico?v=satin2" sizes="16x16 32x32 48x48 256x256"/>
+<link rel="icon" type="image/png" sizes="32x32" href="https://communicationcraftshq.github.io/BrandCalendar/icons/marketing-calendar/favicon-32x32.png?v=satin2"/>
+<link rel="icon" type="image/png" sizes="16x16" href="https://communicationcraftshq.github.io/BrandCalendar/icons/marketing-calendar/favicon-16x16.png?v=satin2"/>
+<link rel="apple-touch-icon" sizes="180x180" href="https://communicationcraftshq.github.io/BrandCalendar/icons/marketing-calendar/apple-touch-icon.png?v=satin2"/>
 <!-- The deploy guard reads THIS marker (first 8KB). Without it the guard
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V110.1 Bologna"/>
+<meta name="cc-tool-version" content="V110.2 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -1481,6 +1481,25 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .bp-x:hover{color:var(--acc);border-color:var(--div);}
 .bp-empty{padding:26px 20px;text-align:center;font-size:12.5px;color:var(--muted);}
 .bp-add{display:flex;align-items:center;gap:8px;padding:12px 20px;}
+/* V110.2 — the people window as a checklist */
+.bp-count{height:21px;padding:0 8px;border-radius:999px;background:#EEF2FA;border:1px solid #CDD7EE;font-size:11px;font-weight:600;color:#2B4C8C;display:inline-flex;align-items:center;white-space:nowrap;}
+.bp-wrap{padding:12px 20px 10px;max-height:66vh;}
+.bp-ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+.bp-sel{height:30px;padding:0 8px;border:1.5px solid var(--div);border-radius:var(--r);background:var(--surface);font-family:inherit;font-size:12px;font-weight:600;color:var(--text);}
+.bp-find{width:240px;height:30px;padding:0 10px;margin:2px 0 6px;border:1.5px solid var(--div);border-radius:var(--r);background:var(--surface2);font-family:inherit;font-size:12.5px;color:var(--text);outline:none;}
+.bp-find:focus{border-color:var(--muted);}
+.bp-gh{display:flex;align-items:center;gap:8px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--subtle);margin-top:10px;padding-bottom:4px;border-bottom:1px solid var(--div);}
+.bp-fold{margin-left:auto;text-transform:none;letter-spacing:0;font-size:11px;color:#0E8A8A;cursor:pointer;}
+.bp-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;margin-top:4px;}
+.bp-grid .bp-r{padding:6px 6px;border-bottom:0;border-radius:7px;gap:9px;cursor:pointer;min-width:0;}
+.bp-grid .bp-r:hover{background:var(--surface2);}
+.bp-grid .bp-r input{width:15px;height:15px;margin:0;accent-color:var(--text);flex:0 0 15px;}
+.bp-grid .bp-r .bp-av{width:24px;height:24px;font-size:10px;}
+.bp-grid .bp-r .bp-nm b{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bp-grid .bp-r .bp-nm span{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bp-r.lock{color:var(--muted);} .bp-r.lock .bp-nm b{color:var(--muted);} .bp-r.lock input{accent-color:#B5B5B2;}
+.bp-none{grid-column:1/-1;font-size:12px;color:var(--subtle);padding:6px;}
+@media (max-width:760px){.bp-grid{grid-template-columns:1fr;}}
 .bp-note{padding:0 20px 14px;font-size:11.5px;line-height:1.6;color:var(--subtle);}
 
 
@@ -4129,7 +4148,7 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
      the brand switcher, which is where Chirag put it: reachable from
      any screen rather than from one page. -->
 <div class="overlay" id="ov-brand-people" onclick="if(event.target===this)closeM('brand-people')">
-  <div class="modal" style="max-width:520px;"><div id="bp-body"></div></div>
+  <div class="modal" style="max-width:820px;"><div id="bp-body"></div></div>
 </div>
 
 <!-- SOCIAL POST EDITOR -->
@@ -7719,10 +7738,10 @@ function toggleBrandSw(e){ buildBrandPanel(); popOpen("brand-panel",e); }
    This only says which of them belongs to which brand. Inventing a
    second source of people is how two directories start disagreeing
    about who left in March. */
-let BP={brand:null,adding:false};
+let BP={brand:null,q:"",showAlways:false};
 function openBrandPeople(bid){
   closeAllPops();
-  BP={brand:bid,adding:false};
+  BP={brand:bid,q:"",showAlways:false};
   renderBrandPeople(); openM("brand-people");
 }
 function bpPerson(email){
@@ -7738,15 +7757,9 @@ function renderBrandPeople(){
   const bid=BP.brand, b=brands[bid];
   if(!b){ el.innerHTML=""; return; }
   const can=canManagePeople(bid);
-  const mem=membersOf(bid).slice()
-    .sort((x,y)=>(y.am?1:0)-(x.am?1:0)||x.email.localeCompare(y.email));
-  const ROLE_LBL={admin:"Admin",account_manager:"Ac Manager",creator:"Creator",
-                  client_reviewer:"Client reviewer",client_viewer:"Client viewer"};
 
   /* THE TABLE MISSING IS A DIFFERENT FACT FROM THE BRAND BEING EMPTY,
-     and the screen has to say which. Everywhere else in this app that
-     collapsed the two, it lied — see the three states on the Branding
-     list. */
+     and the screen has to say which. */
   if(!ASSIGN_OK){
     el.innerHTML=`<div class="brs-h"><b>People on ${escAttr(b.name)}</b>
         <button class="brs-x" onclick="closeM('brand-people')">&times;</button></div>
@@ -7758,88 +7771,137 @@ function renderBrandPeople(){
     return;
   }
 
-  const rows=mem.map(m=>{
-    const p=bpPerson(m.email);
-    const client=p&&p.role==="client";
-    const me=String(ME.email||"").toLowerCase()===m.email;
-    return `<div class="bp-r">
-      <span class="bp-av${client?" cli":""}" style="${avatarSkin(m.email||m.name,client)}">${avatarInner(m.email||m.name,escAttr((m.name||m.email).slice(0,2).toUpperCase()))}</span>
-      <div class="bp-nm"><b>${escAttr(m.name||m.email)}${me?" <span class='bp-you'>you</span>":""}</b>
-        <span>${escAttr(m.email)}</span></div>
-      ${m.am?`<span class="bp-tag am">Ac Manager</span>`
-            :`<span class="bp-tag">${escAttr(ROLE_LBL[m.role]||m.role||"—")}</span>`}
-      ${m.always?`<span class="bp-tag" title="Set in CC Platform → People & access">Always all brands</span>`:""}
-      ${can&&!m.always?`<button class="bp-x" title="Take off this brand"
-         onclick="bpRemove('${escAttr(m.email)}')">&times;</button>`:""}
+  /* ══ V110.2 — THE PEOPLE WINDOW, REDRAWN (mockup 01, 30 Sep) ═══════
+     The same shape as the Platform's Brand access panel: a count in
+     the header, one control row, a search, and a checklist instead of
+     a dropdown-and-×. The always-on people (the flag, or the Admin
+     role) used to fill the top of every brand's window with the same
+     rows before you reached anyone you could change; they fold to one
+     line now. A client is only ever listed on their own brand. */
+  const g=bpGroups(bid);
+  const onCount=g.always.length+g.team.filter(p=>g.on(p)).length+g.clients.filter(p=>g.on(p)).length;
+  const total=g.always.length+g.team.length+g.clients.length;
+  const others=Object.keys(brands).filter(k=>k!==bid&&(ASSIGN[k]||[]).length)
+    .sort((x,y)=>String(brands[x].name).localeCompare(String(brands[y].name)));
+  const ctl=!can?"":`<div class="bp-ctl">
+      <select class="bp-sel" onchange="if(this.value){bpCopy(this.value);this.value='';}">
+        <option value="">Same as another brand…</option>
+        ${others.map(k=>`<option value="${escAttr(k)}">${escAttr(brands[k].name)} · ${(ASSIGN[k]||[]).length} people</option>`).join("")}
+      </select>
+      <button class="btn btn-w btn-sm" onclick="bpEveryone()">Everyone (${g.team.length+g.clients.length})</button>
+      <button class="btn btn-g btn-sm" onclick="bpClear()">Clear</button>
     </div>`;
-  }).join("")||`<div class="bp-empty">Nobody is on this brand yet.</div>`;
-
-  const onIt=new Set(mem.map(m=>m.email));
-  /* A CLIENT IS ONLY EVER OFFERED FOR THEIR OWN BRAND. Putting a client
-     on somebody else's brand is the one row in this table with a real
-     consequence, so the menu cannot offer it in the first place. */
-  const spare=(PEOPLE||[]).filter(p=>!onIt.has(String(p.email||"").toLowerCase()))
-    .filter(p=>p.role!=="client"||p.brand_id===bid)
-    .sort((x,y)=>String(x.name).localeCompare(String(y.name)));
-
-  const add=!can?"":(BP.adding
-    ? `<div class="bp-add">
-         ${spare.length?`<select id="bp-pick" class="fi" style="flex:1;height:34px;">
-             ${spare.map(p=>`<option value="${escAttr(p.email)}">${escAttr(p.name)} · ${escAttr(p.email)}</option>`).join("")}
-           </select>
-           <button class="btn btn-p btn-sm" onclick="bpAdd()">Add</button>`
-          :`<span style="flex:1;font-size:12.5px;color:var(--muted);">Everybody in the directory is already on this brand.</span>`}
-         <button class="btn btn-g btn-sm" onclick="BP.adding=false;renderBrandPeople()">Cancel</button>
-       </div>`
-    : `<div class="bp-add"><button class="btn btn-p btn-sm" onclick="BP.adding=true;renderBrandPeople()">
-         <i class="ti ti-plus"></i> Add someone</button></div>`);
-
   el.innerHTML=`<div class="brs-h"><b>People on ${escAttr(b.name)}</b>
+      <span class="bp-count">${onCount} of ${total} people</span>
       <button class="brs-x" onclick="closeM('brand-people')">&times;</button></div>
-    <div class="brs-b" style="padding:0;">${rows}${add}</div>
-    ${can?"":`<div class="bp-note">Only an admin or this brand's Ac Manager can change this list.</div>`}
+    <div class="brs-b bp-wrap">
+      ${ctl}
+      <input class="bp-find" placeholder="Find a person" value="${escAttr(BP.q||"")}" oninput="BP.q=this.value;bpRenderList()">
+      <div id="bp-people-list"></div>
+      ${can?"":`<div class="bp-note">Only an admin or this brand's Ac Manager can change this list.</div>`}
+    </div>
     <div class="modal-foot"><button class="btn btn-g" onclick="closeM('brand-people')">Done</button></div>`;
+  bpRenderList();
 }
-async function bpAdd(){
-  const bid=BP.brand; if(!canManagePeople(bid)) return;
-  const sel=document.getElementById("bp-pick"); if(!sel||!sel.value) return;
-  const email=String(sel.value).toLowerCase();
-  const p=personByEmail(email); if(!p) return;
-  /* KEYED ON THE USER ID, not the email. brand_members was keyed on
-     email and user_brands is not — People & access has written user_id
-     since the day it shipped, and a second key for one relationship is
-     how the two lists would have drifted apart again. */
-  (ASSIGN[bid]=ASSIGN[bid]||[]).push(p.id);
-  BP.adding=false; renderBrandPeople(); buildBrandPanel();
-  const r=await sb.from("user_brands").insert([{user_id:p.id,brand_id:bid}]);
-  if(r.error){ ASSIGN[bid]=(ASSIGN[bid]||[]).filter(x=>x!==p.id);
-    renderBrandPeople(); dbErr(r); return; }
-  toast(p.name+" is on "+((brands[bid]||{}).name||"this brand"));
+/* Who belongs where on this brand's window. `always` is on by a rule
+   (the flag or the Admin role) and cannot be ticked off here; `team`
+   is everyone else on staff; `clients` is this brand's own clients. A
+   client of another brand is not offered at all. */
+function bpGroups(bid){
+  const ids=ASSIGN[bid]||[];
+  const isAlways=p=>p.role!=="client"&&(!!p.allBrands||p.toolRole==="admin");
+  const byName=(x,y)=>String(x.name||x.email).localeCompare(String(y.name||y.email));
+  const all=(PEOPLE||[]).slice().sort(byName);
+  return {
+    always:all.filter(isAlways),
+    team:all.filter(p=>!isAlways(p)&&p.role!=="client"),
+    clients:all.filter(p=>p.role==="client"&&p.brand_id===bid),
+    on:p=>ids.indexOf(p.id)>-1
+  };
 }
-async function bpRemove(email){
+function bpRenderList(){
+  /* not "bp-list" — the brand form already owns that id */
+  const list=document.getElementById("bp-people-list"); if(!list) return;
+  const bid=BP.brand, can=canManagePeople(bid), g=bpGroups(bid);
+  const q=String(BP.q||"").trim().toLowerCase();
+  const hit=p=>!q||String(p.name||"").toLowerCase().includes(q)||String(p.email||"").toLowerCase().includes(q);
+  const ROLE_LBL={admin:"Admin",account_manager:"Ac Manager",creator:"Creator",
+                  client_reviewer:"Client reviewer",client_viewer:"Client viewer"};
+  const row=(p,lock)=>{
+    const client=p.role==="client", on=lock||g.on(p), role=p.toolRole||p.role;
+    const me=String(ME.email||"").toLowerCase()===String(p.email||"").toLowerCase();
+    return `<label class="bp-r${lock?" lock":""}">
+      <input type="checkbox" ${on?"checked":""} ${lock||!can?"disabled":""} onchange="bpSet('${escAttr(p.id)}',this.checked)">
+      <span class="bp-av${client?" cli":""}" style="${avatarSkin(p.email||p.name,client)}">${avatarInner(p.email||p.name,escAttr(String(p.name||p.email).slice(0,2).toUpperCase()))}</span>
+      <span class="bp-nm"><b>${escAttr(p.name||p.email)}${me?" <span class='bp-you'>you</span>":""}</b><span>${escAttr(p.email)}</span></span>
+      ${role==="account_manager"?`<span class="bp-tag am">Ac Manager</span>`:`<span class="bp-tag">${escAttr(ROLE_LBL[role]||role||"—")}</span>`}
+    </label>`;
+  };
+  const always=g.always.filter(hit), team=g.team.filter(hit), clients=g.clients.filter(hit);
+  const openAlways=BP.showAlways||!!q;
+  let h="";
+  if(g.always.length) h+=`<div class="bp-gh">Always on this brand · ${g.always.length}
+      ${q?"":`<span class="bp-fold" onclick="BP.showAlways=!BP.showAlways;bpRenderList()">${BP.showAlways?"Hide":"Show"}</span>`}</div>`
+    +(openAlways?`<div class="bp-grid">${always.map(p=>row(p,true)).join("")||`<span class="bp-none">No match.</span>`}</div>`:"");
+  h+=`<div class="bp-gh">Team · ${g.team.length}</div>
+      <div class="bp-grid">${team.map(p=>row(p,false)).join("")||`<span class="bp-none">${q?"No match.":"Nobody on staff yet."}</span>`}</div>`;
+  if(g.clients.length) h+=`<div class="bp-gh">Client · ${g.clients.length}</div>
+      <div class="bp-grid">${clients.map(p=>row(p,false)).join("")||`<span class="bp-none">No match.</span>`}</div>`;
+  list.innerHTML=h;
+  const c=document.querySelector("#bp-body .bp-count");
+  if(c){ const on=g.always.length+g.team.filter(p=>g.on(p)).length+g.clients.filter(p=>g.on(p)).length;
+         c.textContent=on+" of "+(g.always.length+g.team.length+g.clients.length)+" people"; }
+}
+/* One tick, one row. Keyed on the user id, as People & access writes it. */
+async function bpSet(id,on){
   const bid=BP.brand; if(!canManagePeople(bid)) return;
-  const e=String(email||"").toLowerCase();
-  const row=membersOf(bid).find(m=>m.email===e); if(!row) return;
-  /* A STANDING EXCEPTION IS NOT REMOVED FROM ONE BRAND. Somebody
-     flagged "always all brands" is on this one by a rule, not a row —
-     deleting a row that does not exist would appear to do nothing, so
-     the button is absent and this is the second lock. */
-  if(row.always){
-    toast(row.name+" is on every brand — change that in CC Platform → People & access","err");
-    return;
+  const p=personById(id); if(!p) return;
+  const g=bpGroups(bid);
+  if(g.always.indexOf(p)>-1){ toast(p.name+" is on every brand — change that in CC Platform → People & access","err"); bpRenderList(); return; }
+  if(p.role==="client"&&p.brand_id!==bid){ bpRenderList(); return; }
+  if(!on){
+    const mine=String(ME.email||"").toLowerCase()===String(p.email||"").toLowerCase();
+    const lastAM=p.toolRole==="account_manager"&&membersOf(bid).filter(m=>m.am).length===1;
+    const warn=[mine?"That is you.":"",lastAM?"They are the only Account manager on this brand.":""].filter(Boolean).join(" ");
+    if(!confirm(`Take ${mine?"yourself":p.name} off ${(brands[bid]||{}).name||"this brand"}? ${warn}
+The brand disappears from their switcher. Nothing they have written is deleted.`)){ bpRenderList(); return; }
   }
-  const mine=String(ME.email||"").toLowerCase()===e;
-  const lastAM=row.am&&membersOf(bid).filter(m=>m.am).length===1;
-  const warn=[mine?"That is you.":"",lastAM?"They are the only Account manager on this brand.":""]
-    .filter(Boolean).join(" ");
-  if(!confirm(`Take ${mine?"yourself":row.name} off ${(brands[bid]||{}).name||"this brand"}? ${warn}
-The brand disappears from their switcher. Nothing they have written is deleted.`)) return;
-  ASSIGN[bid]=(ASSIGN[bid]||[]).filter(x=>x!==row.id);
-  renderBrandPeople(); buildBrandPanel(); render();
-  const r=await sb.from("user_brands").delete().eq("brand_id",bid).eq("user_id",row.id);
-  if(r.error){ (ASSIGN[bid]=ASSIGN[bid]||[]).push(row.id); renderBrandPeople(); dbErr(r); return; }
-  toast("Taken off "+((brands[bid]||{}).name||"the brand"));
+  const had=(ASSIGN[bid]||[]).indexOf(id)>-1;
+  if(on&&!had) (ASSIGN[bid]=ASSIGN[bid]||[]).push(id);
+  if(!on&&had) ASSIGN[bid]=(ASSIGN[bid]||[]).filter(x=>x!==id);
+  bpRenderList(); buildBrandPanel(); if(!on) render();
+  const r=on?await sb.from("user_brands").insert([{user_id:id,brand_id:bid}])
+            :await sb.from("user_brands").delete().eq("brand_id",bid).eq("user_id",id);
+  if(r.error){ if(on) ASSIGN[bid]=(ASSIGN[bid]||[]).filter(x=>x!==id); else (ASSIGN[bid]=ASSIGN[bid]||[]).push(id);
+    bpRenderList(); dbErr(r); return; }
+  toast(on?p.name+" is on "+((brands[bid]||{}).name||"this brand"):"Taken off "+((brands[bid]||{}).name||"the brand"));
 }
+/* Make the tickable list EXACTLY `ids`: add what is missing, remove what
+   is extra, never touch the always-on people. Everyone / Clear / Same
+   as… all come through here. */
+async function bpSetMany(ids,what){
+  const bid=BP.brand; if(!canManagePeople(bid)) return;
+  const g=bpGroups(bid);
+  const eligible=new Set([...g.team,...g.clients].map(p=>p.id));
+  const want=new Set(ids.filter(id=>eligible.has(id)));
+  const have=(ASSIGN[bid]||[]).filter(id=>eligible.has(id));
+  const add=[...want].filter(id=>have.indexOf(id)<0), drop=have.filter(id=>!want.has(id));
+  if(!add.length&&!drop.length){ toast("Nothing to change"); return; }
+  if(drop.length&&!confirm(`${what}: ${add.length} added, ${drop.length} taken off ${(brands[bid]||{}).name||"this brand"}. Nothing anyone has written is deleted.`)) return;
+  const before=(ASSIGN[bid]||[]).slice();
+  ASSIGN[bid]=before.filter(id=>drop.indexOf(id)<0).concat(add);
+  bpRenderList(); buildBrandPanel(); if(drop.length) render();
+  if(add.length){ const r=await sb.from("user_brands").insert(add.map(id=>({user_id:id,brand_id:bid})));
+    if(r.error){ ASSIGN[bid]=before; bpRenderList(); dbErr(r); return; } }
+  if(drop.length){ const r=await sb.from("user_brands").delete().eq("brand_id",bid).in("user_id",drop);
+    if(r.error){ ASSIGN[bid]=before; bpRenderList(); dbErr(r); return; } }
+  toast(`${what}: ${add.length} added, ${drop.length} taken off`);
+}
+function bpEveryone(){ const g=bpGroups(BP.brand); bpSetMany([...g.team,...g.clients].map(p=>p.id),"Everyone"); }
+function bpClear(){ bpSetMany([],"Clear"); }
+function bpCopy(k){ bpSetMany((ASSIGN[k]||[]).slice(),"Same as "+((brands[k]||{}).name||"that brand")); }
+/* kept for the gates that call it by email */
+async function bpRemove(email){ const p=personByEmail(email); if(p) return bpSet(p.id,false); }
 /* bpToggleAM IS GONE. It set brand_members.is_ac_manager, a second
    place to say something the role already says. Chirag, 22 August:
    an Account manager who is on a brand IS that brand's Ac Manager. To
@@ -10447,7 +10509,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V110.1 Bologna";
+const TOOL_VERSION="V110.2 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
