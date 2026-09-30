@@ -12,7 +12,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V109.9 Bologna"/>
+<meta name="cc-tool-version" content="V110.0 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -7994,9 +7994,21 @@ let ASSIGN_OK=false;       // false = unreadable; everybody is on everything
 async function loadAssignments(){
   ASSIGN={}; ASSIGN_OK=false;
   try{
-    const r=await sb.from("user_brands").select("user_id,brand_id");
-    if(r.error) return;
-    (r.data||[]).forEach(x=>{ (ASSIGN[x.brand_id]=ASSIGN[x.brand_id]||[]).push(x.user_id); });
+    /* V110.0 — READ IN PAGES. Supabase hands back at most 1,000 rows per
+       request, and this used to ask once. That was fine while the table
+       was empty; on 29 Sep the handover wrote 34,712 rows and everybody
+       whose rows fell past the first 1,000 was on no brands. Ordered on
+       the primary key so the pages cannot overlap or skip. */
+    const PAGE=1000; let from=0, rows=[];
+    for(;;){
+      const r=await sb.from("user_brands").select("user_id,brand_id")
+        .order("user_id").order("brand_id").range(from,from+PAGE-1);
+      if(r.error) return;
+      const got=r.data||[]; rows=rows.concat(got);
+      if(got.length<PAGE) break;
+      from+=PAGE;
+    }
+    rows.forEach(x=>{ (ASSIGN[x.brand_id]=ASSIGN[x.brand_id]||[]).push(x.user_id); });
     ASSIGN_OK=true;
   }catch(e){}
 }
@@ -8018,9 +8030,14 @@ function whoIsAsking(email){
 function membersOf(bid){
   if(!bid) return [];
   const ids=ASSIGN[bid]||[];
-  return (PEOPLE||[]).filter(p=>p.allBrands||ids.indexOf(p.id)>-1).map(p=>({
+  /* V110.0 — A MARKETING CALENDAR ADMIN IS ON EVERY BRAND, by role.
+     People & access has said so on screen since Kazan ("All brands,
+     with the Admin role") and hid the flag switch for admins on the
+     strength of it; the Calendar never read the role and only looked
+     at the flag, so an admin without the flag was on nothing. */
+  return (PEOPLE||[]).filter(p=>p.allBrands||p.toolRole==="admin"||ids.indexOf(p.id)>-1).map(p=>({
     id:p.id, email:String(p.email||"").toLowerCase(), name:p.name,
-    always:!!p.allBrands, role:p.toolRole||p.role,
+    always:!!p.allBrands||p.toolRole==="admin", role:p.toolRole||p.role,
     /* AN ACCOUNT MANAGER WHO IS ON THIS BRAND *IS* ITS AC MANAGER.
        Chirag, 22 August. That is the whole of what brand_members'
        is_ac_manager column used to hold, expressed as a role plus an
@@ -8037,7 +8054,7 @@ function isOnBrand(bid,email){
      network. BA5 learned this the hard way with the @ menu. */
   if(!(PEOPLE||[]).length) return true;
   const p=whoIsAsking(email); if(!p) return false;
-  if(p.allBrands) return true;
+  if(p.allBrands||p.toolRole==="admin") return true;   /* V110.0 — the role counts */
   return (ASSIGN[bid]||[]).indexOf(p.id)>-1;
 }
 function isBrandAM(bid,email){
@@ -10429,7 +10446,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V109.9 Bologna";
+const TOOL_VERSION="V110.0 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
