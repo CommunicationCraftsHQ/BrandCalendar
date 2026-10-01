@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V110.9 Bologna"/>
+<meta name="cc-tool-version" content="V111.0 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -10656,7 +10656,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V110.9 Bologna";
+const TOOL_VERSION="V111.0 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -26575,65 +26575,55 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     const edit = may();
     return `<tr>
       <td>${edit
-        ? `<input class="vb-in" value="${escA(w.label)}" data-k="${escA(r.objective_key)}" data-f="label"
+        ? `<input class="vb-ce vb-nm" value="${escA(w.label)}" data-k="${escA(r.objective_key)}" data-f="label"
              onblur="vbObjSave(this)" onkeydown="if(event.key==='Enter')this.blur()">`
         : `<span class="vb-ro">${esc(w.label)}</span>`}</td>
-      <td>${edit
-        ? `<input class="vb-in u" value="${escA(w.unit)}" data-k="${escA(r.objective_key)}" data-f="unit"
+      <td class="w-unit">${edit
+        ? `<input class="vb-ce" value="${escA(w.unit)}" data-k="${escA(r.objective_key)}" data-f="unit"
              onblur="vbObjSave(this)" onkeydown="if(event.key==='Enter')this.blur()">`
         : `<span class="vb-ro u">${esc(w.unit)}</span>`}</td>
-      <td class="vb-m">${w.renamed ? esc(w.master) : ""}</td>
+      <td class="vb-m w-master">${w.renamed ? esc(w.master) : ""}</td>
       <td class="vb-x">${edit
         ? `<button class="vb-del" title="Take it off this brand"
              onclick="vbObjOff('${escA(r.objective_key)}')">✕</button>` : ""}</td>
     </tr>`;
   }
 
-  function segRow(r){
-    const edit = may();
-    const bits = [];
-    if (r.buyer)   bits.push(({ b2c:"B2C", b2b:"B2B", govt:"Govt" })[r.buyer] || r.buyer);
-    if (r.channel) bits.push(mlabel(VB.chans, r.channel));
-    (r.sway || []).forEach(k => bits.push(mlabel(VB.sways, k)));
-    return `<tr>
-      <td><span class="vb-ro">${esc(r.label || "—")}</span></td>
-      <td><span class="bd-chip">${esc(mlabel(VB.segs, r.segment_key))}</span></td>
-      <td class="vb-m">${bits.map(b => `<span class="vb-bit">${esc(b)}</span>`).join("") || ""}</td>
-      <td class="vb-x">${edit
-        ? `<button class="vb-ed" onclick="vbSegOpen('${escA(r.id)}')">Edit</button>` : ""}</td>
-    </tr>`;
-  }
-
+  /* ── DRAWING ──────────────────────────────────────────────────────
+     V111.0 — the two cards are stacked, not side by side. Segments
+     went from three columns to six when the dialog was removed, and at
+     1440 a half-width card gave each column about 90px, which broke
+     every channel name over two lines. */
   function html(){
     if (VB.busy) return `<div class="bd-card"><div class="bd-note" style="margin:0;">Reading the lists…</div></div>`;
     if (VB.err)  return `<div class="bd-card"><div class="bd-note" style="margin:0;">Could not read them — ${esc(VB.err)}</div></div>`;
     const spare = VB.objs.filter(o => !VB.bobjs.find(r => r.objective_key === o.key));
     return `
-    <div class="bd-grid g-2 vb-grid">
+    <div class="vb-stack">
       <div class="bd-card">
         <div class="bd-lbl">Objectives</div>
-        ${VB.bobjs.length ? `<table class="vb-t"><thead><tr>
-            <th>Called here</th><th>Counted in</th><th>On the master list</th><th></th>
-          </tr></thead><tbody>${VB.bobjs.map(objRow).join("")}</tbody></table>`
-          : `<div class="bd-note" style="margin:6px 0 0;">None yet.</div>`}
-        ${may() && spare.length ? `<div class="vb-add">
-          <select class="fi" id="vb-objpick">
-            ${spare.map(o => `<option value="${escA(o.key)}">${esc(o.label)} · ${esc(o.unit || "")}</option>`).join("")}
-          </select>
-          <button class="btn btn-s btn-sm" onclick="vbObjOn()"><i class="ti ti-plus"></i> Add</button>
-        </div>` : ""}
+        <table class="vb-t"><thead><tr>
+            <th>Called here</th><th class="w-unit">Counted in</th><th class="w-master">On the master list</th><th></th>
+          </tr></thead><tbody>${VB.bobjs.map(objRow).join("")}
+          ${may() && spare.length ? `<tr class="vb-new">
+            <td><select class="vb-ce vb-sel vb-nm" id="vb-objpick" onchange="vbObjOn()">
+              <option value="">Add one…</option>
+              ${spare.map(o => `<option value="${escA(o.key)}">${esc(o.label)}</option>`).join("")}
+            </select></td>
+            <td class="w-unit nsdim" style="font-size:12px">follows the objective</td>
+            <td class="w-master"></td><td class="vb-x"></td></tr>` : ""}
+          </tbody></table>
+        ${(!VB.bobjs.length && !may()) ? `<div class="bd-note" style="margin:6px 0 0;">None yet.</div>` : ""}
         ${may() && !spare.length ? `<div class="bd-note" style="margin-top:10px;">Every objective on the master list is already here. New ones are added in the Portfolio.</div>` : ""}
       </div>
 
       <div class="bd-card">
         <div class="bd-lbl">Segments</div>
-        ${VB.bsegs.length ? `<table class="vb-t"><thead><tr>
-            <th>Called here</th><th>Kind</th><th>How it is reached</th><th></th>
-          </tr></thead><tbody>${VB.bsegs.map(segRow).join("")}</tbody></table>`
-          : `<div class="bd-note" style="margin:6px 0 0;">None yet.</div>`}
-        ${may() ? `<div class="vb-add">
-          <button class="btn btn-s btn-sm" onclick="vbSegOpen('')"><i class="ti ti-plus"></i> Add a segment</button>
-        </div>` : ""}
+        <table class="vb-t vb-seg"><thead><tr>
+            <th>Called here</th><th class="w-kind">Kind</th><th class="w-buy">Who buys</th>
+            <th class="w-chan">Reached by</th><th>Influenced by</th><th></th>
+          </tr></thead><tbody>${VB.bsegs.map(segRow).join("")}${may() ? segNewRow() : ""}</tbody></table>
+        ${(!VB.bsegs.length && !may()) ? `<div class="bd-note" style="margin:6px 0 0;">None yet.</div>` : ""}
       </div>
     </div>`;
   }
@@ -26666,114 +26656,161 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     vbPaint();
   };
 
+  /* V111.0 — PICKING IS ADDING. The Add button beside it only ever
+     confirmed a choice already made, which is the same thing the brand
+     dialog's Save was doing before V110.6 removed it. */
   window.vbObjOn = async function(){
     const sel = document.getElementById("vb-objpick"); if (!sel || !sel.value) return;
     const key = sel.value;
     const r = await sb.from("brand_objectives").insert([{ brand_id: VB.key, objective_key: key }]);
     if (r.error) return say("Not added — " + r.error.message, "err");
     VB.bobjs.push({ brand_id: VB.key, objective_key: key, label: null, unit: null });
-    vbPaint(); say("Added");
+    vbPaint();
   };
 
-  window.vbObjOff = async function(key){
-    /* A promotion measured against it must not lose what it is being
-       measured against, so the check is the same one the brand dialog
-       makes: in use, no removal. */
-    const used = (typeof PR === "object" && PR && Array.isArray(PR.list))
-      ? PR.list.filter(p => p.objective_key === key).length : 0;
-    if (used) return say(used + (used === 1 ? " promotion uses it" : " promotions use it"), "err");
-    const r = await sb.from("brand_objectives").delete()
-                      .eq("brand_id", VB.key).eq("objective_key", key).select("objective_key");
-    if (r.error) return say("Not removed — " + r.error.message, "err");
-    VB.bobjs = VB.bobjs.filter(x => x.objective_key !== key);
-    vbPaint(); say("Taken off this brand");
-  };
 
-  /* ── THE SEGMENT DIALOG ───────────────────────────────────────────
-     Its own overlay rather than the page's, because this block has to
-     be liftable in one piece. */
-  function dlg(inner){
-    let ov = document.getElementById("vb-ov");
-    if (!ov){ ov = document.createElement("div"); ov.id = "vb-ov"; ov.className = "overlay";
-              ov.addEventListener("mousedown", e => { if (e.target === ov) vbSegClose(); });
-              document.body.appendChild(ov); }
-    ov.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${inner}</div>`;
-    ov.classList.add("open");
+  /* ══ V111.0 · THE SEGMENTS CARD IS A GRID YOU TYPE INTO ════════════
+     Chirag, 1 October, looking at the dialog: "There should not be a
+     need to open a form to enter segments. The entry can simply happen
+     in line or through a drop down."
+
+     So every cell is edited where it sits and the last row is always
+     empty. Typing a name in that row makes it a real segment at once,
+     which is why there is no Add button: a spreadsheet has never
+     needed one, and an Add button is one more thing to find before you
+     can start.
+
+     EVERY CELL WRITES ON ITS OWN and puts itself back if the write
+     fails — the rule the brand dialog settled in V110.6. Influenced by
+     stays a picker rather than a dropdown, because it takes several
+     and a dropdown cannot say that. */
+
+  const BUYERS = [["", "—"], ["b2c", "B2C"], ["b2b", "B2B"], ["govt", "Govt"]];
+
+  function cellSel(id, field, cur, opts){
+    return `<select class="vb-ce vb-sel" onchange="vbSegSet('${escA(id)}','${field}',this.value)">
+      ${opts.map(([k, l]) => `<option value="${escA(k)}"${String(cur || "") === String(k) ? " selected" : ""}>${esc(l)}</option>`).join("")}
+    </select>`;
   }
-  window.vbSegClose = function(){ const ov = document.getElementById("vb-ov"); if (ov) ov.classList.remove("open"); VB.editing = null; };
 
-  window.vbSegOpen = function(id){
-    const r = id ? VB.bsegs.find(x => x.id === id) : null;
-    VB.editing = r ? { ...r, sway: (r.sway || []).slice() } : { id:"", label:"", segment_key:(VB.segs[0]||{}).key||"", buyer:"", channel:"", sway:[], note:"" };
-    const e = VB.editing;
-    dlg(`<div class="modal-top"><div>
-        <div class="modal-title">${id ? "Segment" : "Add a segment"}</div>
-        <div class="modal-sub">${esc((brands[activeBrand]||{}).name||"")}</div></div>
-        <button class="modal-x" onclick="vbSegClose()">✕</button></div>
-      <div class="modal-body">
-        <div class="field"><div class="fl">Called here</div>
-          <input class="fi" id="vb-s-label" value="${escA(e.label||"")}" placeholder="Carpenters, Architects, Patients…"></div>
-        <div class="field" style="margin-top:12px;"><div class="fl">Kind</div>
-          <select class="fi" id="vb-s-kind">
-            ${VB.segs.map(k => `<option value="${escA(k.key)}"${e.segment_key===k.key?" selected":""}>${esc(k.label)}</option>`).join("")}
-          </select></div>
-        <div class="mrow" style="margin-top:12px;gap:12px;">
-          <div class="field" style="flex:1"><div class="fl">Who buys</div>
-            <select class="fi" id="vb-s-buyer">
-              <option value=""${!e.buyer?" selected":""}>—</option>
-              ${[["b2c","B2C"],["b2b","B2B"],["govt","Govt"]].map(([k,l]) =>
-                `<option value="${k}"${e.buyer===k?" selected":""}>${l}</option>`).join("")}
-            </select></div>
-          <div class="field" style="flex:1"><div class="fl">Sales channel</div>
-            <select class="fi" id="vb-s-chan">
-              <option value=""${!e.channel?" selected":""}>—</option>
-              ${VB.chans.map(c => `<option value="${escA(c.key)}"${e.channel===c.key?" selected":""}>${esc(c.label)}</option>`).join("")}
-            </select></div>
-        </div>
-        <div class="field" style="margin-top:12px;"><div class="fl">Influenced by</div>
-          <div class="vb-sw">${VB.sways.map(s =>
-            `<label class="vb-swi"><input type="checkbox" value="${escA(s.key)}"${(e.sway||[]).indexOf(s.key)>-1?" checked":""}> ${esc(s.label)}</label>`).join("")}</div></div>
-        <div class="field" style="margin-top:12px;"><div class="fl">Note</div>
-          <input class="fi" id="vb-s-note" value="${escA(e.note||"")}" placeholder="Anything the performance team should know"></div>
-      </div>
-      <div class="modal-foot">
-        ${e.id ? `<button class="btn btn-s" onclick="vbSegDel()">Remove</button>` : ""}
-        <span style="flex:1"></span>
-        <button class="btn btn-s" onclick="vbSegClose()">Cancel</button>
-        <button class="btn btn-p" onclick="vbSegSave()">Save</button>
-      </div>`);
-    const f = document.getElementById("vb-s-label"); if (f) f.focus();
+  const kindOpts = () => VB.segs.map(k => [k.key, k.label]);
+  const chanOpts = () => [["", "—"]].concat(VB.chans.map(c => [c.key, c.label]));
+
+  function inflCell(r){
+    const on = r.sway || [];
+    return `<div class="vb-inf">
+      ${on.map(k => `<b class="on" title="Take it off"
+          onclick="vbSegSway('${escA(r.id)}','${escA(k)}')">${esc(mlabel(VB.sways, k))}</b>`).join("")}
+      <span class="vb-plus" onclick="vbInfOpen(event,'${escA(r.id)}')">+ add</span>
+    </div>`;
+  }
+
+  /* The picker is a small list under the cell rather than a dialog: it
+     is a choice, not a form, and it closes on the next click anywhere. */
+  window.vbInfOpen = function(ev, id){
+    ev.stopPropagation();
+    vbInfClose();
+    const r = VB.bsegs.find(x => x.id === id); if (!r) return;
+    const left = (r.sway || []);
+    const spare = VB.sways.filter(s => left.indexOf(s.key) < 0);
+    const box = document.createElement("div");
+    box.className = "vb-pop"; box.id = "vb-pop";
+    box.innerHTML = spare.length
+      ? spare.map(s => `<div class="vb-popi" onclick="vbSegSway('${escA(id)}','${escA(s.key)}')">${esc(s.label)}</div>`).join("")
+      : `<div class="vb-popi off">Everything on the list is already here</div>`;
+    document.body.appendChild(box);
+    const b = ev.target.getBoundingClientRect();
+    box.style.left = Math.max(8, Math.min(window.innerWidth - box.offsetWidth - 8, b.left)) + "px";
+    box.style.top = (b.bottom + window.scrollY + 4) + "px";
+    setTimeout(() => document.addEventListener("click", vbInfClose, { once: true }), 0);
+  };
+  window.vbInfClose = function(){ const p = document.getElementById("vb-pop"); if (p) p.remove(); };
+
+  function segRow(r){
+    if (!may()) return `<tr>
+      <td><span class="vb-ro">${esc(r.label || "—")}</span></td>
+      <td><span class="bd-chip">${esc(mlabel(VB.segs, r.segment_key))}</span></td>
+      <td>${esc((BUYERS.find(b => b[0] === (r.buyer || "")) || ["", "—"])[1])}</td>
+      <td>${esc(r.channel ? mlabel(VB.chans, r.channel) : "—")}</td>
+      <td>${(r.sway || []).map(k => `<span class="vb-bit">${esc(mlabel(VB.sways, k))}</span>`).join("") || "—"}</td>
+      <td></td></tr>`;
+    return `<tr>
+      <td><input class="vb-ce vb-nm" value="${escA(r.label || "")}" placeholder="Name it"
+            onblur="vbSegSet('${escA(r.id)}','label',this.value)"
+            onkeydown="if(event.key==='Enter')this.blur()"></td>
+      <td class="w-kind">${cellSel(r.id, "segment_key", r.segment_key, kindOpts())}</td>
+      <td class="w-buy">${cellSel(r.id, "buyer", r.buyer, BUYERS)}</td>
+      <td class="w-chan">${cellSel(r.id, "channel", r.channel, chanOpts())}</td>
+      <td>${inflCell(r)}</td>
+      <td class="vb-x"><button class="vb-del" title="Take this segment off"
+            onclick="vbSegDel('${escA(r.id)}')">✕</button></td></tr>`;
+  }
+
+  /* The always-empty row. It carries no id until it is typed in, and
+     the moment it has a name it becomes a row of its own and a fresh
+     empty one takes its place. */
+  function segNewRow(){
+    return `<tr class="vb-new">
+      <td><input class="vb-ce vb-nm" id="vb-newseg" placeholder="Type a name…"
+            onblur="vbSegNew(this)" onkeydown="if(event.key==='Enter')this.blur()"></td>
+      <td class="w-kind">${`<select class="vb-ce vb-sel" id="vb-newkind">${VB.segs.map(k =>
+            `<option value="${escA(k.key)}">${esc(k.label)}</option>`).join("")}</select>`}</td>
+      <td class="w-buy">${`<select class="vb-ce vb-sel" id="vb-newbuy">${BUYERS.map(([k, l]) =>
+            `<option value="${escA(k)}">${esc(l)}</option>`).join("")}</select>`}</td>
+      <td class="w-chan">${`<select class="vb-ce vb-sel" id="vb-newchan">${chanOpts().map(([k, l]) =>
+            `<option value="${escA(k)}">${esc(l)}</option>`).join("")}</select>`}</td>
+      <td class="nsdim" style="font-size:12px">after it is named</td>
+      <td class="vb-x"></td></tr>`;
+  }
+
+  window.vbSegSet = async function(id, field, value){
+    const r = VB.bsegs.find(x => x.id === id); if (!r) return;
+    const v = (field === "label") ? (String(value || "").trim() || null) : (value || null);
+    if ((r[field] || null) === v) return;
+    const was = r[field] || null;
+    r[field] = v;
+    const u = await sb.from("brand_segments").update({ [field]: v }).eq("id", id);
+    if (u.error){ r[field] = was; say("Not saved — " + u.error.message, "err"); vbPaint(); }
   };
 
-  window.vbSegSave = async function(){
+  window.vbSegSway = async function(id, key){
+    const r = VB.bsegs.find(x => x.id === id); if (!r) return;
+    vbInfClose();
+    const was = (r.sway || []).slice();
+    const i = was.indexOf(key);
+    const now = i > -1 ? was.filter(x => x !== key) : was.concat([key]);
+    r.sway = now;
+    vbPaint();
+    const u = await sb.from("brand_segments").update({ sway: now }).eq("id", id);
+    if (u.error){ r.sway = was; say("Not saved — " + u.error.message, "err"); vbPaint(); }
+  };
+
+  window.vbSegNew = async function(el){
+    const label = String(el.value || "").trim();
+    if (!label) return;
     const g = (id) => document.getElementById(id);
-    const row = {
-      brand_id: VB.key,
-      label: String(g("vb-s-label").value || "").trim() || null,
-      segment_key: g("vb-s-kind").value,
-      buyer: g("vb-s-buyer").value || null,
-      channel: g("vb-s-chan").value || null,
-      sway: [...document.querySelectorAll("#vb-ov .vb-sw input:checked")].map(x => x.value),
-      note: String(g("vb-s-note").value || "").trim() || null,
-    };
-    if (!row.label) return say("Give it a name", "err");
-    const id = VB.editing && VB.editing.id;
-    const r = id ? await sb.from("brand_segments").update(row).eq("id", id)
-                 : await sb.from("brand_segments").insert([row]);
-    if (r.error) return say("Not saved — " + r.error.message, "err");
-    vbSegClose(); say("Saved"); vbLoad(VB.key);
+    const row = { brand_id: VB.key, label,
+      segment_key: (g("vb-newkind") || {}).value || (VB.segs[0] || {}).key,
+      buyer: (g("vb-newbuy") || {}).value || null,
+      channel: (g("vb-newchan") || {}).value || null,
+      sway: [], sort: (VB.bsegs.length + 1) * 10 };
+    el.value = "";
+    const r = await sb.from("brand_segments").insert([row]).select("*");
+    if (r.error) return say("Not added — " + r.error.message, "err");
+    if (r.data && r.data[0]) VB.bsegs.push(r.data[0]); else return vbLoad(VB.key);
+    vbPaint();
   };
 
-  window.vbSegDel = async function(){
-    const id = VB.editing && VB.editing.id; if (!id) return;
+  window.vbSegDel = async function(id){
     /* A promotion aimed at it keeps it, for the same reason an
-       objective in use is kept: the row would be pointing at nothing. */
+       objective in use is kept: the row would point at nothing. */
     const used = (typeof PR === "object" && PR && Array.isArray(PR.list))
       ? PR.list.filter(p => p.brand_segment_id === id).length : 0;
     if (used) return say(used + (used === 1 ? " promotion is aimed at it" : " promotions are aimed at it"), "err");
     const r = await sb.from("brand_segments").update({ deleted_at: new Date().toISOString() }).eq("id", id);
     if (r.error) return say("Not removed — " + r.error.message, "err");
-    vbSegClose(); say("Removed"); vbLoad(VB.key);
+    VB.bsegs = VB.bsegs.filter(x => x.id !== id);
+    vbPaint(); say("Removed");
   };
 
   /* ── MOUNTING ─────────────────────────────────────────────────────
@@ -26800,40 +26837,70 @@ window.prSegOpen=function(){ pbOpen("seg"); };
 })();
 </script>
 <style>
-/* ══ V110.9 · THE VISION PAGE'S TWO LISTS ════════════════════════════
+/* ══ V111.0 · THE VISION PAGE'S TWO LISTS ════════════════════════════
    Geometry only. Every colour and every surface is the Vision page's
-   own — `.bd-card`, `.bd-chip`, `.bd-note`, `.fi`, `.field`. */
-.vb-grid{margin-top:12px;}
-.bd-grid.g-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-/* TWO CARDS SIDE BY SIDE NEED THE ROOM. At 1180 they each got about
-   460px, which clipped the objective names and broke every channel
-   chip over two lines. Below 1280 they stack instead. */
-@media(max-width:1280px){.bd-grid.g-2{grid-template-columns:1fr;}}
+   own — `.bd-card`, `.bd-chip`, `.bd-note`. No frame of its own.
+
+   THE TWO CARDS ARE STACKED, NOT SIDE BY SIDE. Segments grew from
+   three columns to six when the dialog went; at 1440 a half-width card
+   gave each column about 90px and the channel names broke over two
+   lines. The objective card is the narrow one, so it keeps a maximum
+   width rather than stretching to fill a row it no longer shares. */
+.vb-stack{display:flex;flex-direction:column;gap:12px;margin-top:12px;}
+.vb-stack > .bd-card:first-child{max-width:720px;}
 .vb-t{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px;}
 .vb-t th{text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
-  color:var(--subtle);padding:0 6px 6px;border-bottom:1px solid var(--div);white-space:nowrap;}
-.vb-t td{padding:7px 6px;border-bottom:1px solid var(--div);vertical-align:middle;}
+  color:var(--subtle);padding:0 6px 7px;border-bottom:1px solid var(--div);white-space:nowrap;}
+.vb-t td{padding:5px 6px;border-bottom:1px solid var(--div);vertical-align:middle;}
 .vb-t tr:last-child td{border-bottom:0;}
-.vb-t th:last-child,.vb-t td.vb-x{width:64px;text-align:right;}
-.vb-in{border:1px solid transparent;background:transparent;font:inherit;font-weight:600;
-  color:inherit;padding:3px 7px;border-radius:6px;width:100%;max-width:240px;}
-.vb-in:hover{border-color:var(--div);}
-.vb-in:focus{border-color:var(--acc);background:#fff;outline:none;}
-.vb-in.u,.vb-ro.u{font-weight:400;color:var(--muted);}
+.vb-t th:last-child,.vb-t td.vb-x{width:36px;text-align:right;}
+/* THE COLUMNS ARE WIDE ENOUGH FOR THEIR WORDS. "engagements" showed as
+   "engagem" and "store visits" as "store visit" — a unit cut off
+   mid-word reads as a different unit. */
+.vb-t td.w-unit,.vb-t th.w-unit{width:200px;}
+.vb-t td.w-master,.vb-t th.w-master{width:150px;}
+.vb-seg td.w-kind,.vb-seg th.w-kind{width:170px;}
+.vb-seg td.w-buy,.vb-seg th.w-buy{width:92px;}
+.vb-seg td.w-chan,.vb-seg th.w-chan{width:216px;}
+.vb-seg td.w-kind .vb-sel,.vb-seg td.w-chan .vb-sel{text-overflow:ellipsis;}
+/* A CELL THAT DOES NOT LOOK LIKE A FORM UNTIL IT IS TOUCHED. The same
+   treatment the industry name has in the Portfolio, so editing in
+   place feels the same in both tools. */
+.vb-ce{border:1px solid transparent;background:transparent;font:inherit;font-size:13px;
+  color:inherit;padding:5px 8px;border-radius:6px;width:100%;}
+.vb-ce:hover{border-color:var(--div);background:#fff;}
+.vb-ce:focus{border-color:var(--acc);background:#fff;outline:none;}
+.vb-ce.vb-nm{font-weight:600;}
+.vb-sel{appearance:none;cursor:pointer;padding-right:22px;
+  background-image:linear-gradient(45deg,transparent 50%,#9A9890 50%),linear-gradient(135deg,#9A9890 50%,transparent 50%);
+  background-position:calc(100% - 12px) 13px,calc(100% - 7px) 13px;background-size:5px 5px,5px 5px;background-repeat:no-repeat;}
 .vb-ro{font-weight:600;padding:3px 0;display:inline-block;}
 .vb-m{color:var(--muted);font-size:12px;}
 .vb-bit{display:inline-block;background:var(--surface2);border-radius:999px;padding:2px 8px;margin:0 4px 3px 0;}
-/* The kind is one word and must stay one word — 'Specifier' broke to
-   'Speci / fier' at 1440 before this. */
 .vb-t td .bd-chip{white-space:nowrap;}
-.vb-t td:nth-child(2){white-space:nowrap;width:1%;}
-.vb-del,.vb-ed{border:1px solid var(--div);background:#fff;border-radius:6px;cursor:pointer;
-  font:inherit;font-size:11.5px;font-weight:600;color:var(--muted);padding:2px 8px;}
-.vb-del:hover,.vb-ed:hover{border-color:var(--acc);color:var(--acc);}
+/* THE ALWAYS-EMPTY ROW. Dashed, so it reads as somewhere to type
+   rather than as a segment with nothing in it. */
+.vb-new td{background:#FBFBF9;}
+.vb-new .vb-ce{border-style:dashed;border-color:#D8D7D2;}
+.vb-inf{display:flex;gap:4px;flex-wrap:wrap;align-items:center;}
+.vb-inf b{font-weight:600;font-size:11.5px;background:#EFE7F7;color:#5A4796;
+  border-radius:999px;padding:3px 9px;cursor:pointer;}
+.vb-inf b:hover{background:#E4D8F2;}
+.vb-plus{border:1px dashed #D8D7D2;border-radius:999px;padding:3px 9px;font-size:11.5px;
+  color:var(--muted);cursor:pointer;white-space:nowrap;}
+.vb-plus:hover{border-color:var(--acc);color:var(--acc);}
+/* The picker: a list, not a dialog. It closes on the next click. */
+.vb-pop{position:absolute;z-index:9000;background:#fff;border:1px solid var(--div);
+  border-radius:10px;box-shadow:0 8px 24px rgba(13,13,13,.12);padding:4px;min-width:200px;}
+.vb-popi{padding:7px 10px;border-radius:7px;font-size:12.5px;cursor:pointer;white-space:nowrap;}
+.vb-popi:hover{background:var(--surface2);}
+.vb-popi.off{color:var(--subtle);cursor:default;}
+.vb-popi.off:hover{background:none;}
+.vb-del{border:1px solid var(--div);background:#fff;border-radius:6px;cursor:pointer;
+  font:inherit;font-size:11.5px;font-weight:600;color:var(--muted);padding:2px 7px;}
+.vb-del:hover{border-color:var(--acc);color:var(--acc);}
 .vb-add{display:flex;gap:8px;align-items:center;margin-top:12px;}
 .vb-add .fi{flex:1;max-width:280px;}
-.vb-sw{display:flex;flex-wrap:wrap;gap:6px 14px;}
-.vb-swi{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text);}
 </style>
 
 </body>
