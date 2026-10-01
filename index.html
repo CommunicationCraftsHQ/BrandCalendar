@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V111.1 Bologna"/>
+<meta name="cc-tool-version" content="V111.2 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3604,6 +3604,13 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
   padding:5px 12px;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:5px;}
 .praddchip{border-style:dashed;}
 .propt.on{border-color:var(--text);color:var(--text);box-shadow:inset 0 0 0 1px var(--text);}
+/* V111.2 — the ✕ beside a platform heading. It appears on hover, the
+   same manner as the one on an audience chip, so a resting page is
+   not a row of crosses. */
+.nssec.prsec{display:flex;align-items:center;gap:8px;}
+.prsecx{font-size:12px;color:var(--subtle);cursor:pointer;opacity:0;transition:opacity .12s;}
+.nssec.prsec:hover .prsecx{opacity:.7;}
+.prsecx:hover{opacity:1;}
 .praddbig{padding:12px 16px;border:1px dashed #C9C8C3;border-radius:12px;text-align:center;color:var(--muted);
   font-size:12.5px;font-weight:600;cursor:pointer;margin-bottom:14px;}
 .praddbig:hover{border-color:#AFAEA9;}
@@ -10656,7 +10663,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V111.1 Bologna";
+const TOOL_VERSION="V111.2 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -24112,7 +24119,13 @@ function prDetailHtml(p){
 
   const blocks=st.map(s=>{
     const auds=prAuds(s.id), crs=prCrFor(p.id,s.id);
-    return `<div class="nssec">${escHtml((PR_PLAT[s.platform]||PR_PLAT.other).label)}</div>
+    /* V111.2 — A PLATFORM CAN COME OFF AGAIN. The edit box has always
+       refused to untick one, because a tick would take a block of
+       audiences and creatives with it, and it sent you here — where
+       there was nothing to click. */
+    return `<div class="nssec prsec">${escHtml((PR_PLAT[s.platform]||PR_PLAT.other).label)}${
+      canEditP?`<i class="ti ti-x prsecx" title="Take this platform off the promotion"
+        onclick="prStreamDel('${escAttr(s.id)}')"></i>`:""}</div>
       <div class="prcard">
         <div class="prlbl">Audiences</div>
         <div class="prchips">${auds.map(a=>`<span class="praud a-${a.kind}">${escHtml(PR_AUD[a.kind]||a.kind)}${a.description?" — "+escHtml(a.description):""}
@@ -24272,7 +24285,7 @@ function prPickObj(k){ PR.edit.obj=k; prEditRedraw(); }
 function prPickKind(k){ PR.edit.kind=k; prEditRedraw(); }
 function prPickPlat(k){
   const i=PR.edit.plats.indexOf(k);
-  if(i>-1){ if(PR.edit.had.indexOf(k)>-1){ toast("Remove that platform from the promotion itself","err"); return; } PR.edit.plats.splice(i,1); }
+  if(i>-1){ if(PR.edit.had.indexOf(k)>-1){ toast("Open the promotion and use the ✕ beside the platform","err"); return; } PR.edit.plats.splice(i,1); }
   else PR.edit.plats.push(k);
   document.getElementById("pr-plats").innerHTML=["meta","google","linkedin"].map(x=>
     `<span class="propt${PR.edit.plats.indexOf(x)>-1?" on":""}" onclick="prPickPlat('${x}')">${PR_PLAT[x].label}</span>`).join("");
@@ -24375,6 +24388,30 @@ async function prStreamAdd(pid){
     <div class="modal-body"><div class="prchips">${left.map(k=>
       `<span class="propt" onclick="prStreamSave('${pid}','${k}')">${PR_PLAT[k].label}</span>`).join("")}</div></div>`);
 }
+/* It refuses while anything is under it rather than carrying the
+   audiences and creatives into the dark with it. Taking those off
+   first is a decision someone has to make with their eyes open. */
+async function prStreamDel(sid){
+  if(!canCap("edit_promotions")){ capDenied("Removing a platform"); return; }
+  let pid=null; Object.keys(PR.streams).forEach(k=>{ if((PR.streams[k]||[]).some(x=>x.id===sid)) pid=k; });
+  const row=pid?(PR.streams[pid]||[]).find(x=>x.id===sid):null;
+  if(!row){ toast("That platform is no longer here","err"); return; }
+  const label=(PR_PLAT[row.platform]||PR_PLAT.other).label;
+  const auds=prAuds(sid).length, crs=prCrFor(pid,sid).length;
+  if(auds||crs){
+    const bits=[];
+    if(crs) bits.push(crs+(crs===1?" creative":" creatives"));
+    if(auds) bits.push(auds+(auds===1?" audience":" audiences"));
+    toast(label+" still has "+bits.join(" and ")+" — take those off first","err"); return;
+  }
+  if(prStreams(pid).length<2){ toast("A promotion keeps at least one platform","err"); return; }
+  if(!confirm(`Take ${label} off this promotion?`)) return;
+  const r=await sb.from("promotion_streams").update({deleted_at:new Date().toISOString()})
+                  .eq("id",sid).select("id");
+  if(r.error||!r.data||!r.data.length){ toast("Could not take it off — "+(r.error?r.error.message:"not allowed"),"err"); return; }
+  toast(label+" taken off"); prReload();
+}
+
 async function prStreamSave(pid,platform){
   const n=prStreams(pid).length;
   const r=await sb.from("promotion_streams").insert([{promotion_id:pid,platform,sort:n}]);
