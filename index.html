@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V111.0 Bologna"/>
+<meta name="cc-tool-version" content="V111.1 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -10656,7 +10656,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V111.0 Bologna";
+const TOOL_VERSION="V111.1 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -26563,6 +26563,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     return { label: (mine.label || master.label || key),
              unit:  (mine.unit  || master.unit  || ""),
              master: master.label || key,
+             own:   !!mine.unit,
              renamed: !!(mine.label && master.label && mine.label !== master.label) };
   }
   window.vbObjWords = vbObjWords;
@@ -26570,19 +26571,44 @@ window.prSegOpen=function(){ pbOpen("seg"); };
   /* ── DRAWING ──────────────────────────────────────────────────────
      Two cards in the Vision page's own furniture — `.bd-sec`,
      `.bd-card`, `.bd-lbl`, `.bd-chip`. No frame of its own. */
+  /* V111.1 — THE MASTER WORD IS A HOVER, NOT A COLUMN. Chirag, 1
+     October: "do we need to write : was Store visits ? why ?" It is
+     asked once per brand, by whoever renames the objective, and the
+     brand's own word is the one every other screen uses. A column
+     spent a sixth of the card on it and read as a second unit. The
+     word is still a column of its own in the Portfolio's Lists screen
+     and on the Calendar's own objectives page, which is where the
+     question belongs. */
+  const vbUnitFor = (label) => {
+    const w = String(label || "").trim().toLowerCase();
+    if (!w) return "";
+    if (/s$/.test(w)) return w;
+    if (/[^aeiou]y$/.test(w)) return w.slice(0, -1) + "ies";
+    if (/(ch|sh|s|x|z)$/.test(w)) return w + "es";
+    return w + "s";
+  };
+
   function objRow(r){
     const w = vbObjWords(r.objective_key);
     const edit = may();
+    /* Renaming an objective never touched its unit, so "Site Visit"
+       went on counting in "store visits" and the Promotions row read
+       410 of 900 store visits. The matching word is offered rather
+       than written: the unit is what the client's own report says, and
+       it does not always follow the name. */
+    const sug = vbUnitFor(w.label);
+    const offer = edit && w.renamed && !w.own && sug && sug !== w.unit;
     return `<tr>
       <td>${edit
-        ? `<input class="vb-ce vb-nm" value="${escA(w.label)}" data-k="${escA(r.objective_key)}" data-f="label"
+        ? `<input class="vb-ce vb-nm" value="${escA(w.label)}"${w.renamed ? ` title="On the master list: ${escA(w.master)}"` : ""} data-k="${escA(r.objective_key)}" data-f="label"
              onblur="vbObjSave(this)" onkeydown="if(event.key==='Enter')this.blur()">`
-        : `<span class="vb-ro">${esc(w.label)}</span>`}</td>
+        : `<span class="vb-ro"${w.renamed ? ` title="On the master list: ${escA(w.master)}"` : ""}>${esc(w.label)}</span>`}</td>
       <td class="w-unit">${edit
-        ? `<input class="vb-ce" value="${escA(w.unit)}" data-k="${escA(r.objective_key)}" data-f="unit"
-             onblur="vbObjSave(this)" onkeydown="if(event.key==='Enter')this.blur()">`
+        ? `<div class="vb-uw"><input class="vb-ce" value="${escA(w.unit)}" data-k="${escA(r.objective_key)}" data-f="unit"
+             onblur="vbObjSave(this)" onkeydown="if(event.key==='Enter')this.blur()">${offer
+             ? `<span class="vb-sug" title="Count it in this instead"
+                  onclick="vbObjUnit('${escA(r.objective_key)}','${escA(sug)}')">${esc(sug)}</span>` : ""}</div>`
         : `<span class="vb-ro u">${esc(w.unit)}</span>`}</td>
-      <td class="vb-m w-master">${w.renamed ? esc(w.master) : ""}</td>
       <td class="vb-x">${edit
         ? `<button class="vb-del" title="Take it off this brand"
              onclick="vbObjOff('${escA(r.objective_key)}')">✕</button>` : ""}</td>
@@ -26603,7 +26629,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
       <div class="bd-card">
         <div class="bd-lbl">Objectives</div>
         <table class="vb-t"><thead><tr>
-            <th>Called here</th><th class="w-unit">Counted in</th><th class="w-master">On the master list</th><th></th>
+            <th>Called here</th><th class="w-unit">Counted in</th><th></th>
           </tr></thead><tbody>${VB.bobjs.map(objRow).join("")}
           ${may() && spare.length ? `<tr class="vb-new">
             <td><select class="vb-ce vb-sel vb-nm" id="vb-objpick" onchange="vbObjOn()">
@@ -26611,7 +26637,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
               ${spare.map(o => `<option value="${escA(o.key)}">${esc(o.label)}</option>`).join("")}
             </select></td>
             <td class="w-unit nsdim" style="font-size:12px">follows the objective</td>
-            <td class="w-master"></td><td class="vb-x"></td></tr>` : ""}
+            <td class="vb-x"></td></tr>` : ""}
           </tbody></table>
         ${(!VB.bobjs.length && !may()) ? `<div class="bd-note" style="margin:6px 0 0;">None yet.</div>` : ""}
         ${may() && !spare.length ? `<div class="bd-note" style="margin-top:10px;">Every objective on the master list is already here. New ones are added in the Portfolio.</div>` : ""}
@@ -26654,6 +26680,18 @@ window.prSegOpen=function(){ pbOpen("seg"); };
                       .eq("brand_id", VB.key).eq("objective_key", key);
     if (r.error){ row[field] = was; say("Not saved — " + r.error.message, "err"); }
     vbPaint();
+  };
+
+  /* The offered unit, taken. It writes exactly what the unit cell
+     would have written, so there is one path into the column. */
+  window.vbObjUnit = async function(key, text){
+    const row = VB.bobjs.find(r => r.objective_key === key); if (!row) return;
+    const was = row.unit || null;
+    row.unit = text;
+    vbPaint();
+    const u = await sb.from("brand_objectives").update({ unit: text })
+                      .eq("brand_id", VB.key).eq("objective_key", key);
+    if (u.error){ row.unit = was; say("Not saved — " + u.error.message, "err"); vbPaint(); }
   };
 
   /* V111.0 — PICKING IS ADDING. The Add button beside it only ever
@@ -26847,7 +26885,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
    lines. The objective card is the narrow one, so it keeps a maximum
    width rather than stretching to fill a row it no longer shares. */
 .vb-stack{display:flex;flex-direction:column;gap:12px;margin-top:12px;}
-.vb-stack > .bd-card:first-child{max-width:720px;}
+.vb-stack > .bd-card:first-child{max-width:560px;}  /* V111.1 — one column lighter, so the card is narrower too */
 .vb-t{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px;}
 .vb-t th{text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
   color:var(--subtle);padding:0 6px 7px;border-bottom:1px solid var(--div);white-space:nowrap;}
@@ -26858,7 +26896,14 @@ window.prSegOpen=function(){ pbOpen("seg"); };
    "engagem" and "store visits" as "store visit" — a unit cut off
    mid-word reads as a different unit. */
 .vb-t td.w-unit,.vb-t th.w-unit{width:200px;}
-.vb-t td.w-master,.vb-t th.w-master{width:150px;}
+/* V111.1 — the master word left the table, so its column did too.
+   The offered unit sits beside the unit cell rather than under it: the
+   row is one line high everywhere else in the card. */
+.vb-uw{display:flex;align-items:center;gap:6px;}
+.vb-uw .vb-ce{flex:1 1 auto;min-width:0;}
+.vb-sug{flex:0 0 auto;font-size:11px;color:var(--subtle);background:var(--surface2);
+  border:1px solid var(--div);border-radius:999px;padding:2px 8px;cursor:pointer;white-space:nowrap;}
+.vb-sug:hover{color:var(--text);border-color:var(--acc);}
 .vb-seg td.w-kind,.vb-seg th.w-kind{width:170px;}
 .vb-seg td.w-buy,.vb-seg th.w-buy{width:92px;}
 .vb-seg td.w-chan,.vb-seg th.w-chan{width:216px;}
