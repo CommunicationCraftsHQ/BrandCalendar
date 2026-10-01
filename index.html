@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V110.8 Bologna"/>
+<meta name="cc-tool-version" content="V110.9 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3645,7 +3645,11 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .obja-h{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
   color:var(--subtle);margin:26px 0 10px;}
 .objlst{background:#fff;border:1px solid var(--div);border-radius:12px;overflow:hidden;}
-.objhd,.objli,.objadd{display:grid;grid-template-columns:minmax(0,1fr) 230px 200px 104px 34px;
+.objhd,.objli,.objli .ce.ro{display:flex;align-items:center;padding:0 8px;font-weight:600;}
+.objli .ce.unit.ro{font-weight:400;color:var(--muted);}
+.objst{display:flex;align-items:center;font-size:12px;color:var(--muted);}
+.objadd.objadd-ro{grid-template-columns:1fr;padding:10px 8px;}
+.objadd{display:grid;grid-template-columns:minmax(0,1fr) 230px 200px 104px 34px;
   align-items:center;gap:12px;padding:0 14px;}
 .objhd{height:34px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
   color:var(--subtle);border-bottom:1px solid var(--div);background:var(--surface2);}
@@ -10652,7 +10656,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V110.8 Bologna";
+const TOOL_VERSION="V110.9 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -23686,7 +23690,7 @@ renderBnTabs=function(){
 
 const PR={key:null,loading:false,err:null,list:[],objs:[],bobjs:[],segs:[],bsegs:[],
   streams:{},auds:{},months:{},cr:[],crc:{},
-  open:null,seg:"running",obj:"",sg:"",edit:null,prog:null,aud:null,
+  open:null,seg:"running",obj:"",sg:"",sort:"updated",edit:null,prog:null,aud:null,
   creative:null,th:{id:null,msgs:[],acts:[],loading:false,err:""},staged:[],draft:""};
 
 const PR_CST={drafting:["Drafting","#EF9F27"],review:["Review","#378ADD"],approved:["Approved","#639922"],
@@ -23718,9 +23722,28 @@ function prThisMonth(){ return prMonthStart(new Date()); }
 function prMonthName(ms){ const d=prDate(ms); return d?`${MN[d.getMonth()+1]} ${d.getFullYear()}`:""; }
 function prIsOngoing(p){ return (p.kind||"one_off")==="ongoing"; }
 function prObj(key){ return PR.objs.find(o=>o.key===key)||null; }
-function prObjLabel(key){ const o=prObj(key); return o?o.label:(key?String(key).replace(/_/g," "):"—"); }
+/* ══ V110.9 · THE BRAND'S OWN WORDS ══════════════════════════════════
+   Banker IVF does not say store visits, it says centre visits; Mobex
+   does not say sales, it says bill cuts. The master row keeps its word
+   so two brands can still be compared; the brand's label is what every
+   screen shows. Empty means "use the master word", which is why no
+   brand read differently the day this shipped. */
+function prBrandObj(key){ return (PR.bobjrows||[]).find(r=>r.objective_key===key)||null; }
+function prObjLabel(key){
+  const b=prBrandObj(key); if(b&&b.label) return b.label;
+  const o=prObj(key); return o?o.label:(key?String(key).replace(/_/g," "):"—"); }
+function prObjUnit(key){
+  const b=prBrandObj(key); if(b&&b.unit) return b.unit;
+  return (prObj(key)||{}).unit||null; }
+/* A segment's word is the brand's; the kind is what it falls back to,
+   because a row migrated from the old stream data has no name yet. */
+function prSegOf(p){ return p&&p.brand_segment_id
+  ? ((PR.bsegs||[]).find(x=>x.id===p.brand_segment_id)||null) : null; }
+function prSegLabel(r){
+  if(!r) return "";
+  return r.label || ((PR.segs.find(o=>o.key===r.segment_key)||{}).label) || "—"; }
 function prObjClass(key){ return "o-"+String(key||"other").replace(/_/g,"-"); }
-function prUnit(p){ return p.target_unit || (prObj(p.objective_key)||{}).unit || "results"; }
+function prUnit(p){ return prObjUnit(p.objective_key) || p.target_unit || "results"; }
 
 /* ── status ───────────────────────────────────────────────────────── */
 function prStatus(p){
@@ -23811,11 +23834,17 @@ async function prLoad(k){
     const bad=[mo,bo,ms,bs,a].find(r=>r.error);
     if(bad) throw new Error(bad.error.message);
     PR.objs=(mo.data||[]).filter(o=>o.active!==false);
-    PR.bobjs=(bo.data||[]).filter(x=>x.brand_id===k).map(x=>x.objective_key);
-    /* V110.4 — segments load the same way objectives do: the master
-       list, then the keys this brand works to. */
+    PR.bobjrows=(bo.data||[]).filter(x=>x.brand_id===k);   /* V110.9 — labels live here */
+    PR.bobjs=PR.bobjrows.map(x=>x.objective_key);
+    /* V110.9 — THE BRAND'S SEGMENTS ARE ROWS, NOT KEYS. V110.4 kept a
+       list of master keys, which could only ever say "this brand has
+       specifiers". A tile brand works Architects AND Carpenters and
+       both are specifiers, so the brand's segments became rows of
+       their own, named by the brand, on the Vision page. The master
+       list stays here to name the KIND each row is. */
     PR.segs=(ms.data||[]).filter(o=>o.active!==false);
-    PR.bsegs=(bs.data||[]).filter(x=>x.brand_id===k).map(x=>x.segment_key);
+    PR.bsegs=(bs.data||[]).filter(x=>x.brand_id===k&&!x.deleted_at)
+      .sort((a,b)=>(a.sort||0)-(b.sort||0)||String(a.label||"").localeCompare(String(b.label||"")));
     const list=a.data||[], ids=list.map(p=>p.id);
     let streams=[],auds=[],months=[],cr=[],crc=[];
     if(ids.length){
@@ -23884,6 +23913,7 @@ function renderPromotions(){
   hydrateMedia(mc);
 }
 function prSetSeg(s){ PR.seg=s; render(); }
+function prSetSort(v){ PR.sort=v; render(); }
 function prSetObj(v){ PR.obj=v; render(); }
 function prSetSg(v){ PR.sg=v; render(); }
 function prOpen(id){ PR.open=id; PR.creative=null; render(); window.scrollTo(0,0); }
@@ -23896,14 +23926,45 @@ function prVisible(){
     if(PR.seg==="running" && st==="ended") return false;
     if(PR.seg==="ended" && st!=="ended") return false;
     if(PR.obj && p.objective_key!==PR.obj) return false;
-    if(PR.sg && p.segment_key!==PR.sg) return false;   /* V110.6 */
+    if(PR.sg && p.brand_segment_id!==PR.sg) return false;   /* V110.9 — the row, not the kind */
     return true;
-  });
+  }).sort(prSortCmp);
+}
+/* V110.9 — the sort the row's new control asks for. A promotion with
+   nothing recorded sorts last on Result and on Spend rather than as a
+   zero: no figure and a figure of nought are different facts, which is
+   the same rule the blank cells on this page already follow. */
+function prSortCmp(a,b){
+  const s=PR.sort||"updated";
+  const last=(v)=>v===null||v===undefined;
+  if(s==="name") return String(a.name||"").localeCompare(String(b.name||""));
+  if(s==="start") return String(b.starts_on||"").localeCompare(String(a.starts_on||""));
+  if(s==="result"||s==="spend"){
+    const va=s==="result"?prProgress(a).value:prNumOr(prProgress(a).spend),
+          vb=s==="result"?prProgress(b).value:prNumOr(prProgress(b).spend);
+    if(last(va)&&last(vb)) return 0;
+    if(last(va)) return 1;
+    if(last(vb)) return -1;
+    return vb-va;
+  }
+  return String(b.updated_at||"").localeCompare(String(a.updated_at||""));
 }
 function prListHtml(){
   const rows=prVisible(), canEditP=canCap("edit_promotions");
-  const seg=["running","ended","all"].map(x=>
-    `<button class="prseg-b${PR.seg===x?" on":""}" onclick="prSetSeg('${x}')">${{running:"Running",ended:"Ended",all:"All"}[x]}</button>`).join("");
+  /* ══ V110.9 · ONE ROW, AS EVERY OTHER LISTING WEARS IT ═════════════
+     Chirag's listing rules: no rows of predefined pills in the header,
+     because they clutter and push the row onto two lines; filters and
+     a sort instead, with Sort by at the end and nothing after it.
+
+     Promotions had three header rows — the black bar, the Promotions
+     and Numbers switch on its own line, and Running / Ended / All with
+     two selects under that. The switch was given its own row in V108.3
+     for a real reason: at 1180 the combined row needed 1,096px of a
+     977px band and wrapped. Three pills becoming one select is what
+     buys the room back, so the switch can come up beside it. */
+  const seg=`<select class="prsel" onchange="prSetSeg(this.value)">
+      ${[["running","Running"],["ended","Ended"],["all","All promotions"]].map(([k,l])=>
+        `<option value="${k}"${PR.seg===k?" selected":""}>${l}</option>`).join("")}</select>`;
   const used=PR.objs.filter(o=>PR.bobjs.indexOf(o.key)>-1);
   const objSel=`<select class="prsel" onchange="prSetObj(this.value)">
       <option value="">All objectives</option>
@@ -23913,16 +23974,32 @@ function prListHtml(){
      segments should be the same." They were level in the dialogs and on
      the promotion form and nowhere else: the listing had an objective
      chip and an objective filter, and segment had neither. */
-  const mySegs=PR.segs.filter(o=>PR.bsegs.indexOf(o.key)>-1);
+  const mySegs=PR.bsegs;
   const sgSel=mySegs.length?`<select class="prsel" onchange="prSetSg(this.value)">
       <option value="">All segments</option>
-      ${mySegs.map(o=>`<option value="${escAttr(o.key)}"${PR.sg===o.key?" selected":""}>${escHtml(o.label)}</option>`).join("")}</select>`:"";
+      ${mySegs.map(o=>`<option value="${escAttr(o.id)}"${PR.sg===o.id?" selected":""}>${escHtml(prSegLabel(o))}</option>`).join("")}</select>`:"";
+  const nsw=(typeof prNumSwitchHtml==="function")?prNumSwitchHtml("promotions"):"";
+  /* THE SORT. Five ways, and the one people asked for first is last
+     updated: the question this page answers on a Monday is which
+     promotion nobody has touched. */
+  const sortSel=`<select class="prsel prsort" onchange="prSetSort(this.value)">
+      ${/* SHORT WORDS ON PURPOSE. The control is capped at 116px below
+            1300 so the row stays on one line — widening it for "Last
+            updated" put the row onto two, which the gate caught. One
+            word each survives the truncation. */""}
+      ${[["updated","updated"],["name","name"],["result","result"],
+         ["spend","spend"],["start","start"]].map(([k,l])=>
+        `<option value="${k}"${PR.sort===k?" selected":""}>Sort by ${l}</option>`).join("")}</select>`;
   const bar=`<div class="pgbar">
-      <div class="prseg">${seg}</div>${objSel}${sgSel}
+      ${nsw}${seg}${objSel}${sgSel}
       <span style="flex:1"></span>
-      ${canEditP?`<button class="btn btn-s" onclick="prObjOpen()">Objectives</button>
-        <button class="btn btn-s" onclick="prSegOpen()">Segments</button>
-        <button class="btn btn-p" onclick="prEditOpen(null)"><i class="ti ti-plus"></i> New promotion</button>`:""}
+      ${/* V110.9 — THE TWO LIST BUTTONS ARE GONE. Objectives and segments
+            are allocated on the Vision page and defined in the Portfolio;
+            a third door onto the same lists is how a suite ends up with
+            three of them. What is left here is the one action this page
+            owns. */""}
+      ${canEditP?`<button class="btn btn-p" onclick="prEditOpen(null)"><i class="ti ti-plus"></i> New promotion</button>`:""}
+      ${sortSel}
     </div>`;
 
   if(!PR.list.length){
@@ -23957,7 +24034,7 @@ function prCardHtml(p){
   const tgt=prNumOr(g.target), val=g.value;
   const pc=(tgt&&val!==null)?Math.max(2,Math.min(100,Math.round(val/tgt*100))):0;
   const crN=prCrFor(p.id).length;
-  const segLbl=p.segment_key?((PR.segs.find(o=>o.key===p.segment_key)||{}).label||""):"";
+  const segLbl=prSegOf(p)?prSegLabel(prSegOf(p)):"";
   const auds=[];
   st.forEach(x=>prAuds(x.id).forEach(a=>{ if(auds.indexOf(a.kind)<0) auds.push(a.kind); }));
   const audRow=Object.keys(PR_AUD).map(k=>
@@ -24128,7 +24205,7 @@ function prEditOpen(id){
   const have=p?prStreams(p.id).map(s=>s.platform):["meta"];
   /* `had` is what already has a block in the database — empty for a new
      promotion, or every platform picked would be treated as existing */
-  PR.edit={id:id||null, obj:chosen, seg:p?(p.segment_key||null):null, kind:p?(p.kind||"one_off"):"ongoing", plats:have.slice(), had:p?have.slice():[]};
+  PR.edit={id:id||null, obj:chosen, seg:p?(p.brand_segment_id||null):null, kind:p?(p.kind||"one_off"):"ongoing", plats:have.slice(), had:p?have.slice():[]};
   const cur=p?prCur(p):"INR", basis=(p&&p.budget_basis)||"total";
   const curs=PR_CUR.indexOf(cur)<0?PR_CUR.concat([cur]):PR_CUR;
   prBox(`<div class="modal-top"><div><div class="modal-title">${p?"Edit promotion":"New promotion"}</div>
@@ -24136,7 +24213,7 @@ function prEditOpen(id){
       <button class="modal-x" onclick="closeM('promo')">✕</button></div>
     <div class="modal-body">
       <div class="field"><label class="fl">Objective</label>
-        <div class="prchips" id="pr-objs">${mine.length?mine.map(o=>`<span class="propt${chosen===o.key?" on":""}" onclick="prPickObj('${escAttr(o.key)}')">${escHtml(o.label)}</span>`).join("")
+        <div class="prchips" id="pr-objs">${mine.length?mine.map(o=>`<span class="propt${chosen===o.key?" on":""}" onclick="prPickObj('${escAttr(o.key)}')">${escHtml(prObjLabel(o.key))}</span>`).join("")
           :'<span class="nsdim">No objectives switched on for this brand yet</span>'}</div></div>
       ${/* V110.4 — SEGMENT SITS UNDER OBJECTIVE because the two are one
             thought: what this should produce, and who it is aimed at.
@@ -24166,7 +24243,8 @@ function prEditOpen(id){
   setTimeout(()=>{ const n=document.getElementById("pr-name"); if(n) n.focus(); },30);
 }
 function prKindBits(p){
-  const o=prObj(PR.edit.obj), unit=o?o.unit:"results";
+  /* V110.9 — the brand's unit, so the form says what the row will say. */
+  const o=prObj(PR.edit.obj), unit=prObjUnit(PR.edit.obj)||"results";
   const tv=p&&prNumOr(p.target_value)!==null?Number(p.target_value):"";
   const ong=PR.edit.kind==="ongoing";
   return `<div class="prgrid2">
@@ -24184,10 +24262,10 @@ function prKindBits(p){
    again clears it, because "aimed at everyone" has to be reachable
    without a None chip cluttering the row. */
 function prSegChips(p){
-  const mine=PR.segs.filter(o=>PR.bsegs.indexOf(o.key)>-1);
-  if(!mine.length) return '<span class="nsdim">No segments switched on for this brand yet</span>';
-  const cur=PR.edit?PR.edit.seg:(p?p.segment_key:null);
-  return mine.map(o=>`<span class="propt${cur===o.key?" on":""}" onclick="prPickSeg('${escAttr(o.key)}')">${escHtml(o.label)}</span>`).join("");
+  const mine=PR.bsegs;
+  if(!mine.length) return '<span class="nsdim">No segments on this brand yet — they are added on the Vision page</span>';
+  const cur=PR.edit?PR.edit.seg:(p?p.brand_segment_id:null);
+  return mine.map(o=>`<span class="propt${cur===o.id?" on":""}" onclick="prPickSeg('${escAttr(o.id)}')">${escHtml(prSegLabel(o))}</span>`).join("");
 }
 function prPickSeg(k){ PR.edit.seg=(PR.edit.seg===k)?null:k; prEditRedraw(); }
 function prPickObj(k){ PR.edit.obj=k; prEditRedraw(); }
@@ -24229,8 +24307,14 @@ async function prEditSave(){
   if(plan!==null&&(isNaN(plan)||plan<0)){ toast("The budget must be a number","err"); g("pr-plan").focus(); return; }
   if(!PR.edit.plats.length){ toast("Pick at least one platform","err"); return; }
   const o=prObj(PR.edit.obj);
-  const row={brand_id:activeBrand,name,objective_key:PR.edit.obj,segment_key:PR.edit.seg||null,kind:PR.edit.kind,
-    target_value:tv,target_unit:o?o.unit:null,
+  /* V110.9 — BOTH ARE WRITTEN. brand_segment_id is what every screen
+     reads; segment_key keeps the KIND beside it so a report can group
+     across brands without joining, and so nothing that still reads the
+     old column goes blank. */
+  const segRow=PR.bsegs.find(x=>x.id===PR.edit.seg)||null;
+  const row={brand_id:activeBrand,name,objective_key:PR.edit.obj,
+    brand_segment_id:PR.edit.seg||null, segment_key:segRow?segRow.segment_key:null, kind:PR.edit.kind,
+    target_value:tv,target_unit:prObjUnit(PR.edit.obj),
     target_on: ong?null:(g("pr-by")?g("pr-by").value||null:null),
     starts_on:s, ends_on:ong?null:e,
     planned_spend:plan, budget_basis:g("pr-basis").value, budget_currency:g("pr-cur").value,
@@ -24710,9 +24794,13 @@ function prNumRowMount(mc,sw){
   const baseR=renderPromotions, baseN=renderNumbers;
   renderPromotions=function(){
     const out=baseR.apply(this,arguments);
+    /* V110.9 — NOT MOUNTED HERE ANY MORE on the list. prListHtml draws
+       the switch at the front of its own single row, which is what the
+       listing rules ask for. Inside one promotion there is no such row,
+       so the switch still gets one of its own. */
     const sw=prNumSwitchHtml("promotions");
     const mc=document.getElementById("main");
-    if(sw && !PR.open && mc && !mc.querySelector(".prnum")) prNumRowMount(mc,sw);
+    if(sw && PR.open && mc && !mc.querySelector(".prnum")) prNumRowMount(mc,sw);
     return out;
   };
   renderNumbers=function(){
@@ -25984,8 +26072,8 @@ async function objaLoad(){
     const [o,s,bo,bs,pr]=await Promise.all([
       sb.from("promotion_objectives").select("*").order("sort"),
       sb.from("promotion_segments").select("*").order("sort"),
-      sb.from("brand_objectives").select("brand_id,objective_key"),
-      sb.from("brand_segments").select("brand_id,segment_key"),
+      sb.from("brand_objectives").select("brand_id,objective_key,label,unit"),
+      sb.from("brand_segments").select("*"),
       sb.from("promotions").select("objective_key,segment_key").is("deleted_at",null)
     ]);
     const bad=[o,s,bo,bs,pr].find(r=>r&&r.error);
@@ -26043,24 +26131,28 @@ function objaUseHtml(u){
   return `<span class="use">${bits.join(" · ")}</span>`;
 }
 
+/* ══ V110.9 · THIS PAGE READS, IT NO LONGER EDITS ════════════════════
+   Chirag, 30 September: master lists live in the Portfolio, "so we
+   will not have any competing categorisation." This page was the
+   second editor — rename here, rename there, and within a month two
+   tools disagree about what an objective is called.
+
+   IT IS NOT DELETED, because what it shows is worth keeping and is
+   not available in the Portfolio: which brands work to each term and
+   how many promotions are measured against it. So the fields become
+   text, the switch and the bin go, and the add row becomes the
+   sentence that says where the list is kept. */
 function objaListHtml(kind){
   const rows=objaRows(kind);
   const unitCol=kind==="obj";
   const body=rows.map(r=>{
     const u=objaUse(kind,r.key);
     return `<div class="objli${r.active?"":" off"}" data-key="${escAttr(r.key)}" data-kind="${kind}">
-      <input class="ce nm" value="${escAttr(r.label)}" aria-label="Name"
-        onchange="objaSetField('${kind}','${escAttr(r.key)}','label',this.value)"
-        onkeydown="if(event.key==='Enter')this.blur()">
-      ${unitCol?`<input class="ce unit" value="${escAttr(r.unit||"")}" aria-label="Counts in"
-        onchange="objaSetField('obj','${escAttr(r.key)}','unit',this.value)"
-        onkeydown="if(event.key==='Enter')this.blur()">`:`<span></span>`}
+      <span class="ce nm ro">${escHtml(r.label)}</span>
+      ${unitCol?`<span class="ce unit ro">${escHtml(r.unit||"")}</span>`:`<span></span>`}
       ${objaUseHtml(u)}
-      <label class="swlbl"><input type="checkbox" class="objsw"${r.active?" checked":""}
-        onchange="objaSetActive('${kind}','${escAttr(r.key)}',this.checked)"> ${r.active?"Live":"Retired"}</label>
-      <i class="ti ti-trash rm${u.free?"":" dim"}" data-free="${u.free?1:0}"
-         title="${u.free?"Delete":"In use — retire it instead"}"
-         onclick="objaDelete('${kind}','${escAttr(r.key)}')"></i>
+      <span class="objst">${r.active?"Live":"Retired"}</span>
+      <span></span>
     </div>`;
   }).join("");
   const empty=`<div class="objli"><span class="use"><span class="none">Nothing matches those filters.</span></span></div>`;
@@ -26068,13 +26160,8 @@ function objaListHtml(kind){
     <div class="objhd"><span>${kind==="obj"?"Objective":"Segment"}</span>
       <span>${unitCol?"Counts in":""}</span><span>Used by</span><span>Status</span><span></span></div>
     ${rows.length?body:empty}
-    <div class="objadd">
-      <input class="ce nm" id="obja-new-${kind}" placeholder="${kind==="obj"?"New objective":"New segment"}"
-        onkeydown="if(event.key==='Enter')objaAdd('${kind}')">
-      ${unitCol?`<input class="ce unit" id="obja-newunit-obj" placeholder="What it counts"
-        onkeydown="if(event.key==='Enter')objaAdd('obj')">`:`<span></span>`}
-      <span></span><span></span>
-      <button class="btn btn-p btn-sm" style="height:30px" onclick="objaAdd('${kind}')"><i class="ti ti-check"></i></button>
+    <div class="objadd objadd-ro">
+      <span class="use"><span class="none">Added, renamed and retired in the Portfolio, under Lists. A brand picks from this list on its Vision page.</span></span>
     </div>
   </div>`;
 }
@@ -26121,82 +26208,25 @@ function objaRedraw(el){
 const OBJA_TBL={obj:"promotion_objectives",seg:"promotion_segments"};
 const OBJA_ARR={obj:"objs",seg:"segs"};
 
-async function objaSetField(kind,key,field,value){
-  const v=String(value||"").trim();
-  if(!v){ toast(field==="unit"?"Give it a unit":"Give it a name","err"); renderObjAdmin(); return; }
-  const arr=OBJA[OBJA_ARR[kind]], row=arr.find(x=>x.key===key); if(!row) return;
-  const was=row[field]; if(was===v){ return; }
-  row[field]=v;
-  const r=await sb.from(OBJA_TBL[kind]).update({[field]:v}).eq("key",key).select("key");
-  if(r.error||!r.data||!r.data.length){
-    row[field]=was; renderObjAdmin();
-    toast("Not saved — "+(r.error?r.error.message:"admins only"),"err"); return;
-  }
-  if(kind==="obj"&&PR.objs.length){ const p=PR.objs.find(x=>x.key===key); if(p) p[field]=v; }
-  toast("Saved");
-}
+/* ══ V110.9 · THE FIVE WRITERS ARE CLOSED ════════════════════════════
+   The controls came off the page above; these are the functions they
+   called. Leaving them live would be a door with the handle taken off
+   — still a door, and the next person to wire a button to one would
+   have no way of knowing the list is not this tool's to change.
 
-async function objaSetActive(kind,key,on){
-  const arr=OBJA[OBJA_ARR[kind]], row=arr.find(x=>x.key===key); if(!row) return;
-  row.active=!!on;
-  const r=await sb.from(OBJA_TBL[kind]).update({active:!!on}).eq("key",key).select("key");
-  if(r.error||!r.data||!r.data.length){
-    row.active=!on; renderObjAdmin();
-    toast("Not changed — "+(r.error?r.error.message:"admins only"),"err"); return;
-  }
-  renderObjAdmin();
-  toast(on?"Live again":"Retired");
+   They are kept rather than deleted so an old call site fails loudly
+   and in words, instead of throwing "objaAdd is not a function" at
+   somebody who then works around it. */
+function objaElsewhere(){
+  toast("Objectives and segments are edited in the Portfolio, under Lists","err");
+  return null;
 }
+async function objaSetField(){ return objaElsewhere(); }
+async function objaSetActive(){ return objaElsewhere(); }
+async function objaDelete(){ return objaElsewhere(); }
+async function objaAdd(){ return objaElsewhere(); }
+async function objaCreate(){ return objaElsewhere(); }
 
-/* Deleting is only ever offered on a row nothing points at. Everything
-   else retires, which is the suite's rule: a row somebody's work
-   references is never removed, it is taken out of the pickers. */
-async function objaDelete(kind,key){
-  const u=objaUse(kind,key);
-  if(!u.free){ toast("It is in use — retire it instead","err"); return; }
-  const arr=OBJA[OBJA_ARR[kind]], row=arr.find(x=>x.key===key); if(!row) return;
-  if(!confirm(`Delete "${row.label}"?\n\nNothing points at it, so this cannot affect any promotion.`)) return;
-  const r=await sb.from(OBJA_TBL[kind]).delete().eq("key",key).select("key");
-  if(r.error){ toast("Not deleted — "+r.error.message,"err"); return; }
-  OBJA[OBJA_ARR[kind]]=arr.filter(x=>x.key!==key);
-  if(kind==="obj") PR.objs=PR.objs.filter(x=>x.key!==key);
-  renderObjAdmin(); toast("Deleted");
-}
-
-async function objaAdd(kind){
-  const nameEl=document.getElementById("obja-new-"+kind);
-  const unitEl=document.getElementById("obja-newunit-obj");
-  const label=String(nameEl?nameEl.value:"").trim();
-  const unit=kind==="obj"?String(unitEl?unitEl.value:"").trim():"";
-  if(!label){ toast(kind==="obj"?"Name the objective":"Name the segment","err"); if(nameEl) nameEl.focus(); return; }
-  if(kind==="obj"&&!unit){ toast("Say what it counts","err"); if(unitEl) unitEl.focus(); return; }
-  const row=await objaCreate(kind,label,unit);
-  if(!row) return;
-  if(nameEl) nameEl.value=""; if(unitEl) unitEl.value="";
-  renderObjAdmin(); toast(label+" added");
-}
-
-/* Shared by the admin page and by the add row inside a brand's dialog,
-   so an objective created in either place is the same object made the
-   same way. */
-async function objaCreate(kind,label,unit){
-  const arr=OBJA[OBJA_ARR[kind]];
-  const taken=arr.map(x=>x.key).concat(kind==="obj"?PR.objs.map(x=>x.key):[]);
-  const clash=arr.find(x=>String(x.label).toLowerCase()===label.toLowerCase());
-  if(clash){
-    toast(clash.active?"That one is already in the list":"That one is in the list, retired","err");
-    return null;
-  }
-  const sort=(arr.reduce((t,x)=>Math.max(t,x.sort||0),0)||0)+10;
-  const rec=kind==="obj"?{key:objaKeyFor(label,taken),label,unit,sort,active:true}
-                        :{key:objaKeyFor(label,taken),label,sort,active:true};
-  const r=await sb.from(OBJA_TBL[kind]).insert([rec]).select("key");
-  if(r.error){ toast("Not added — "+r.error.message,"err"); return null; }
-  arr.push(rec);
-  arr.sort((a,b)=>(a.sort||0)-(b.sort||0));
-  if(kind==="obj"&&PR.key) PR.objs.push(rec);
-  return rec;
-}
 
 /* ── the route and the door ──────────────────────────────────────── */
 (function(){
@@ -26445,6 +26475,366 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     </div>
   </div>
 </div>
+
+<!-- BOLOGNA V110.9 — THE BRAND'S OBJECTIVES AND SEGMENTS, ON THE VISION
+     PAGE. In a script of its own so it can be lifted out whole, and it
+     wraps renderBriefDash rather than editing it: the Vision page is
+     rendered from an imported sheet and this section is live database
+     rows, so the two have no business in one function. -->
+<script>
+/* ══ BOLOGNA V110.9 · WHO THIS BRAND TALKS TO, AND WHAT FOR ══════════
+   Chirag, 30 September 2026: "All master list should live in the
+   portfolio. And all per client allocations should live in the vision
+   page." The reason he gave is the one that decides every question
+   below — "so we will not have any competing categorisation."
+
+   SO THIS SCREEN ALLOCATES AND NEVER DEFINES. The four master lists —
+   objectives, segment kinds, sales channels, influenced by — are the
+   Portfolio's, edited there and nowhere else. Here a brand says which
+   of them it works to, and in its own words.
+
+   THE OWN WORDS ARE THE POINT. Banker IVF does not say store visits,
+   it says centre visits; Mobex does not say sales, it says bill cuts.
+   The master row keeps its word so two brands can still be compared;
+   the brand's label sits beside it and is what every screen shows.
+   An empty label means "use the master word", which is why nothing on
+   any brand reads differently the moment this ships.
+
+   SEGMENTS ARE ROWS, NOT TICKS. A tile brand works Architects AND
+   Carpenters, and both are specifiers. A tick list against the master
+   kinds cannot say that, which is exactly why the master list started
+   filling up with one brand's vocabulary. So a segment is a row of
+   this brand's own: its name, which kind it is, and how it is reached.
+
+   NOTHING HERE DELETES A MASTER TERM. Retiring one is the Portfolio's
+   business and is refused there while anything points at it.        */
+(function(){
+  if (typeof renderBriefDash !== "function") return;   /* nothing to hang on */
+
+  const VB = { key:null, busy:false, err:"", objs:[], segs:[], chans:[], sways:[],
+               bobjs:[], bsegs:[], editing:null };
+
+  const esc  = (s) => (typeof escHtml === "function" ? escHtml(s == null ? "" : s) : String(s == null ? "" : s));
+  const escA = (s) => (typeof escAttr === "function" ? escAttr(s == null ? "" : s) : String(s == null ? "" : s));
+  const may  = () => (typeof canEditVision === "function" ? !!canEditVision() : false);
+  const say  = (m, k) => { if (typeof toast === "function") toast(m, k); };
+
+  /* ── READING ──────────────────────────────────────────────────────
+     Six small reads, together, and the master lists are filtered to
+     the live rows here rather than in the markup: a retired term must
+     not be offered, but a brand already on one keeps showing it until
+     somebody moves it, which is the honest state of the data. */
+  async function vbLoad(bid){
+    VB.busy = true; VB.err = "";
+    try{
+      const [mo, ms, mc, mw, bo, bs] = await Promise.all([
+        sb.from("promotion_objectives").select("key,label,unit,sort,active"),
+        sb.from("promotion_segments").select("key,label,sort,active"),
+        sb.from("stream_channel_options").select("key,label,pos,deleted_at"),
+        sb.from("stream_sway_options").select("key,label,pos,deleted_at"),
+        sb.from("brand_objectives").select("brand_id,objective_key,label,unit").eq("brand_id", bid),
+        sb.from("brand_segments").select("*").eq("brand_id", bid).is("deleted_at", null),
+      ]);
+      const bad = [mo, ms, mc, mw, bo, bs].find(r => r.error);
+      if (bad) throw new Error(bad.error.message);
+      const srt = (a, b) => (a.sort || a.pos || 0) - (b.sort || b.pos || 0)
+                            || String(a.label).localeCompare(String(b.label));
+      VB.objs  = (mo.data || []).filter(o => o.active !== false).sort(srt);
+      VB.segs  = (ms.data || []).filter(o => o.active !== false).sort(srt);
+      VB.chans = (mc.data || []).filter(o => !o.deleted_at).sort(srt);
+      VB.sways = (mw.data || []).filter(o => !o.deleted_at).sort(srt);
+      VB.bobjs = (bo.data || []).filter(r => r.brand_id === bid);
+      VB.bsegs = (bs.data || []).filter(r => r.brand_id === bid)
+                   .sort((a, b) => (a.sort || 0) - (b.sort || 0)
+                                   || String(a.label || "").localeCompare(String(b.label || "")));
+      VB.key = bid;
+    }catch(e){ VB.err = (e && e.message) || String(e); }
+    VB.busy = false;
+    vbPaint();
+  }
+
+  const mlabel = (list, key) => { const r = list.find(x => x.key === key); return r ? r.label : key; };
+
+  /* The word this brand uses, and the master word underneath it. Every
+     other screen asks this file rather than working it out again. */
+  function vbObjWords(key){
+    const mine = VB.bobjs.find(r => r.objective_key === key) || {};
+    const master = VB.objs.find(o => o.key === key) || {};
+    return { label: (mine.label || master.label || key),
+             unit:  (mine.unit  || master.unit  || ""),
+             master: master.label || key,
+             renamed: !!(mine.label && master.label && mine.label !== master.label) };
+  }
+  window.vbObjWords = vbObjWords;
+
+  /* ── DRAWING ──────────────────────────────────────────────────────
+     Two cards in the Vision page's own furniture — `.bd-sec`,
+     `.bd-card`, `.bd-lbl`, `.bd-chip`. No frame of its own. */
+  function objRow(r){
+    const w = vbObjWords(r.objective_key);
+    const edit = may();
+    return `<tr>
+      <td>${edit
+        ? `<input class="vb-in" value="${escA(w.label)}" data-k="${escA(r.objective_key)}" data-f="label"
+             onblur="vbObjSave(this)" onkeydown="if(event.key==='Enter')this.blur()">`
+        : `<span class="vb-ro">${esc(w.label)}</span>`}</td>
+      <td>${edit
+        ? `<input class="vb-in u" value="${escA(w.unit)}" data-k="${escA(r.objective_key)}" data-f="unit"
+             onblur="vbObjSave(this)" onkeydown="if(event.key==='Enter')this.blur()">`
+        : `<span class="vb-ro u">${esc(w.unit)}</span>`}</td>
+      <td class="vb-m">${w.renamed ? esc(w.master) : ""}</td>
+      <td class="vb-x">${edit
+        ? `<button class="vb-del" title="Take it off this brand"
+             onclick="vbObjOff('${escA(r.objective_key)}')">✕</button>` : ""}</td>
+    </tr>`;
+  }
+
+  function segRow(r){
+    const edit = may();
+    const bits = [];
+    if (r.buyer)   bits.push(({ b2c:"B2C", b2b:"B2B", govt:"Govt" })[r.buyer] || r.buyer);
+    if (r.channel) bits.push(mlabel(VB.chans, r.channel));
+    (r.sway || []).forEach(k => bits.push(mlabel(VB.sways, k)));
+    return `<tr>
+      <td><span class="vb-ro">${esc(r.label || "—")}</span></td>
+      <td><span class="bd-chip">${esc(mlabel(VB.segs, r.segment_key))}</span></td>
+      <td class="vb-m">${bits.map(b => `<span class="vb-bit">${esc(b)}</span>`).join("") || ""}</td>
+      <td class="vb-x">${edit
+        ? `<button class="vb-ed" onclick="vbSegOpen('${escA(r.id)}')">Edit</button>` : ""}</td>
+    </tr>`;
+  }
+
+  function html(){
+    if (VB.busy) return `<div class="bd-card"><div class="bd-note" style="margin:0;">Reading the lists…</div></div>`;
+    if (VB.err)  return `<div class="bd-card"><div class="bd-note" style="margin:0;">Could not read them — ${esc(VB.err)}</div></div>`;
+    const spare = VB.objs.filter(o => !VB.bobjs.find(r => r.objective_key === o.key));
+    return `
+    <div class="bd-grid g-2 vb-grid">
+      <div class="bd-card">
+        <div class="bd-lbl">Objectives</div>
+        ${VB.bobjs.length ? `<table class="vb-t"><thead><tr>
+            <th>Called here</th><th>Counted in</th><th>On the master list</th><th></th>
+          </tr></thead><tbody>${VB.bobjs.map(objRow).join("")}</tbody></table>`
+          : `<div class="bd-note" style="margin:6px 0 0;">None yet.</div>`}
+        ${may() && spare.length ? `<div class="vb-add">
+          <select class="fi" id="vb-objpick">
+            ${spare.map(o => `<option value="${escA(o.key)}">${esc(o.label)} · ${esc(o.unit || "")}</option>`).join("")}
+          </select>
+          <button class="btn btn-s btn-sm" onclick="vbObjOn()"><i class="ti ti-plus"></i> Add</button>
+        </div>` : ""}
+        ${may() && !spare.length ? `<div class="bd-note" style="margin-top:10px;">Every objective on the master list is already here. New ones are added in the Portfolio.</div>` : ""}
+      </div>
+
+      <div class="bd-card">
+        <div class="bd-lbl">Segments</div>
+        ${VB.bsegs.length ? `<table class="vb-t"><thead><tr>
+            <th>Called here</th><th>Kind</th><th>How it is reached</th><th></th>
+          </tr></thead><tbody>${VB.bsegs.map(segRow).join("")}</tbody></table>`
+          : `<div class="bd-note" style="margin:6px 0 0;">None yet.</div>`}
+        ${may() ? `<div class="vb-add">
+          <button class="btn btn-s btn-sm" onclick="vbSegOpen('')"><i class="ti ti-plus"></i> Add a segment</button>
+        </div>` : ""}
+      </div>
+    </div>`;
+  }
+
+  function vbPaint(){
+    const host = document.getElementById("vb-host");
+    if (host) host.innerHTML = html();
+  }
+
+  /* ── WRITING ──────────────────────────────────────────────────────
+     Every control writes at once and puts itself back if the write
+     fails — the rule V110.6 settled on the brand dialog's switch. A
+     control that moves when nothing was saved is worse than one that
+     refuses. */
+  window.vbObjSave = async function(el){
+    const key = el.dataset.k, field = el.dataset.f;
+    const row = VB.bobjs.find(r => r.objective_key === key); if (!row) return;
+    const master = VB.objs.find(o => o.key === key) || {};
+    const val = String(el.value || "").trim();
+    /* Typing the master word back is how you clear a rename, so it is
+       stored as empty rather than as a copy that would stop following
+       the master if it were ever renamed. */
+    const store = (val && val !== (field === "label" ? master.label : master.unit)) ? val : null;
+    if ((row[field] || null) === store) return;
+    const was = row[field] || null;
+    row[field] = store;
+    const r = await sb.from("brand_objectives").update({ [field]: store })
+                      .eq("brand_id", VB.key).eq("objective_key", key);
+    if (r.error){ row[field] = was; say("Not saved — " + r.error.message, "err"); }
+    vbPaint();
+  };
+
+  window.vbObjOn = async function(){
+    const sel = document.getElementById("vb-objpick"); if (!sel || !sel.value) return;
+    const key = sel.value;
+    const r = await sb.from("brand_objectives").insert([{ brand_id: VB.key, objective_key: key }]);
+    if (r.error) return say("Not added — " + r.error.message, "err");
+    VB.bobjs.push({ brand_id: VB.key, objective_key: key, label: null, unit: null });
+    vbPaint(); say("Added");
+  };
+
+  window.vbObjOff = async function(key){
+    /* A promotion measured against it must not lose what it is being
+       measured against, so the check is the same one the brand dialog
+       makes: in use, no removal. */
+    const used = (typeof PR === "object" && PR && Array.isArray(PR.list))
+      ? PR.list.filter(p => p.objective_key === key).length : 0;
+    if (used) return say(used + (used === 1 ? " promotion uses it" : " promotions use it"), "err");
+    const r = await sb.from("brand_objectives").delete()
+                      .eq("brand_id", VB.key).eq("objective_key", key).select("objective_key");
+    if (r.error) return say("Not removed — " + r.error.message, "err");
+    VB.bobjs = VB.bobjs.filter(x => x.objective_key !== key);
+    vbPaint(); say("Taken off this brand");
+  };
+
+  /* ── THE SEGMENT DIALOG ───────────────────────────────────────────
+     Its own overlay rather than the page's, because this block has to
+     be liftable in one piece. */
+  function dlg(inner){
+    let ov = document.getElementById("vb-ov");
+    if (!ov){ ov = document.createElement("div"); ov.id = "vb-ov"; ov.className = "overlay";
+              ov.addEventListener("mousedown", e => { if (e.target === ov) vbSegClose(); });
+              document.body.appendChild(ov); }
+    ov.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${inner}</div>`;
+    ov.classList.add("open");
+  }
+  window.vbSegClose = function(){ const ov = document.getElementById("vb-ov"); if (ov) ov.classList.remove("open"); VB.editing = null; };
+
+  window.vbSegOpen = function(id){
+    const r = id ? VB.bsegs.find(x => x.id === id) : null;
+    VB.editing = r ? { ...r, sway: (r.sway || []).slice() } : { id:"", label:"", segment_key:(VB.segs[0]||{}).key||"", buyer:"", channel:"", sway:[], note:"" };
+    const e = VB.editing;
+    dlg(`<div class="modal-top"><div>
+        <div class="modal-title">${id ? "Segment" : "Add a segment"}</div>
+        <div class="modal-sub">${esc((brands[activeBrand]||{}).name||"")}</div></div>
+        <button class="modal-x" onclick="vbSegClose()">✕</button></div>
+      <div class="modal-body">
+        <div class="field"><div class="fl">Called here</div>
+          <input class="fi" id="vb-s-label" value="${escA(e.label||"")}" placeholder="Carpenters, Architects, Patients…"></div>
+        <div class="field" style="margin-top:12px;"><div class="fl">Kind</div>
+          <select class="fi" id="vb-s-kind">
+            ${VB.segs.map(k => `<option value="${escA(k.key)}"${e.segment_key===k.key?" selected":""}>${esc(k.label)}</option>`).join("")}
+          </select></div>
+        <div class="mrow" style="margin-top:12px;gap:12px;">
+          <div class="field" style="flex:1"><div class="fl">Who buys</div>
+            <select class="fi" id="vb-s-buyer">
+              <option value=""${!e.buyer?" selected":""}>—</option>
+              ${[["b2c","B2C"],["b2b","B2B"],["govt","Govt"]].map(([k,l]) =>
+                `<option value="${k}"${e.buyer===k?" selected":""}>${l}</option>`).join("")}
+            </select></div>
+          <div class="field" style="flex:1"><div class="fl">Sales channel</div>
+            <select class="fi" id="vb-s-chan">
+              <option value=""${!e.channel?" selected":""}>—</option>
+              ${VB.chans.map(c => `<option value="${escA(c.key)}"${e.channel===c.key?" selected":""}>${esc(c.label)}</option>`).join("")}
+            </select></div>
+        </div>
+        <div class="field" style="margin-top:12px;"><div class="fl">Influenced by</div>
+          <div class="vb-sw">${VB.sways.map(s =>
+            `<label class="vb-swi"><input type="checkbox" value="${escA(s.key)}"${(e.sway||[]).indexOf(s.key)>-1?" checked":""}> ${esc(s.label)}</label>`).join("")}</div></div>
+        <div class="field" style="margin-top:12px;"><div class="fl">Note</div>
+          <input class="fi" id="vb-s-note" value="${escA(e.note||"")}" placeholder="Anything the performance team should know"></div>
+      </div>
+      <div class="modal-foot">
+        ${e.id ? `<button class="btn btn-s" onclick="vbSegDel()">Remove</button>` : ""}
+        <span style="flex:1"></span>
+        <button class="btn btn-s" onclick="vbSegClose()">Cancel</button>
+        <button class="btn btn-p" onclick="vbSegSave()">Save</button>
+      </div>`);
+    const f = document.getElementById("vb-s-label"); if (f) f.focus();
+  };
+
+  window.vbSegSave = async function(){
+    const g = (id) => document.getElementById(id);
+    const row = {
+      brand_id: VB.key,
+      label: String(g("vb-s-label").value || "").trim() || null,
+      segment_key: g("vb-s-kind").value,
+      buyer: g("vb-s-buyer").value || null,
+      channel: g("vb-s-chan").value || null,
+      sway: [...document.querySelectorAll("#vb-ov .vb-sw input:checked")].map(x => x.value),
+      note: String(g("vb-s-note").value || "").trim() || null,
+    };
+    if (!row.label) return say("Give it a name", "err");
+    const id = VB.editing && VB.editing.id;
+    const r = id ? await sb.from("brand_segments").update(row).eq("id", id)
+                 : await sb.from("brand_segments").insert([row]);
+    if (r.error) return say("Not saved — " + r.error.message, "err");
+    vbSegClose(); say("Saved"); vbLoad(VB.key);
+  };
+
+  window.vbSegDel = async function(){
+    const id = VB.editing && VB.editing.id; if (!id) return;
+    /* A promotion aimed at it keeps it, for the same reason an
+       objective in use is kept: the row would be pointing at nothing. */
+    const used = (typeof PR === "object" && PR && Array.isArray(PR.list))
+      ? PR.list.filter(p => p.brand_segment_id === id).length : 0;
+    if (used) return say(used + (used === 1 ? " promotion is aimed at it" : " promotions are aimed at it"), "err");
+    const r = await sb.from("brand_segments").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+    if (r.error) return say("Not removed — " + r.error.message, "err");
+    vbSegClose(); say("Removed"); vbLoad(VB.key);
+  };
+
+  /* ── MOUNTING ─────────────────────────────────────────────────────
+     The section is appended after the page has drawn, so this block
+     never has to know what the rest of the page looks like. */
+  const inner = renderBriefDash;
+  renderBriefDash = function(){
+    const out = inner.apply(this, arguments);
+    try{
+      const wrap = document.querySelector(".bd-wrap");
+      if (wrap && !document.getElementById("vb-host")){
+        const sec = document.createElement("div");
+        sec.innerHTML = `
+          <div class="bd-sec" id="bd-vb"><div class="bd-secnum">09</div>
+            <div class="bd-sectitle">Objectives and segments</div><div class="bd-secrule"></div>
+            <div class="bd-secsub">What this brand is trying to achieve, and who it talks to</div></div>
+          <div id="vb-host"></div>`;
+        wrap.appendChild(sec);
+      }
+      if (activeBrand && VB.key !== activeBrand) vbLoad(activeBrand); else vbPaint();
+    }catch(e){ /* the Vision page must render even if this section cannot */ }
+    return out;
+  };
+})();
+</script>
+<style>
+/* ══ V110.9 · THE VISION PAGE'S TWO LISTS ════════════════════════════
+   Geometry only. Every colour and every surface is the Vision page's
+   own — `.bd-card`, `.bd-chip`, `.bd-note`, `.fi`, `.field`. */
+.vb-grid{margin-top:12px;}
+.bd-grid.g-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+/* TWO CARDS SIDE BY SIDE NEED THE ROOM. At 1180 they each got about
+   460px, which clipped the objective names and broke every channel
+   chip over two lines. Below 1280 they stack instead. */
+@media(max-width:1280px){.bd-grid.g-2{grid-template-columns:1fr;}}
+.vb-t{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px;}
+.vb-t th{text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--subtle);padding:0 6px 6px;border-bottom:1px solid var(--div);white-space:nowrap;}
+.vb-t td{padding:7px 6px;border-bottom:1px solid var(--div);vertical-align:middle;}
+.vb-t tr:last-child td{border-bottom:0;}
+.vb-t th:last-child,.vb-t td.vb-x{width:64px;text-align:right;}
+.vb-in{border:1px solid transparent;background:transparent;font:inherit;font-weight:600;
+  color:inherit;padding:3px 7px;border-radius:6px;width:100%;max-width:240px;}
+.vb-in:hover{border-color:var(--div);}
+.vb-in:focus{border-color:var(--acc);background:#fff;outline:none;}
+.vb-in.u,.vb-ro.u{font-weight:400;color:var(--muted);}
+.vb-ro{font-weight:600;padding:3px 0;display:inline-block;}
+.vb-m{color:var(--muted);font-size:12px;}
+.vb-bit{display:inline-block;background:var(--surface2);border-radius:999px;padding:2px 8px;margin:0 4px 3px 0;}
+/* The kind is one word and must stay one word — 'Specifier' broke to
+   'Speci / fier' at 1440 before this. */
+.vb-t td .bd-chip{white-space:nowrap;}
+.vb-t td:nth-child(2){white-space:nowrap;width:1%;}
+.vb-del,.vb-ed{border:1px solid var(--div);background:#fff;border-radius:6px;cursor:pointer;
+  font:inherit;font-size:11.5px;font-weight:600;color:var(--muted);padding:2px 8px;}
+.vb-del:hover,.vb-ed:hover{border-color:var(--acc);color:var(--acc);}
+.vb-add{display:flex;gap:8px;align-items:center;margin-top:12px;}
+.vb-add .fi{flex:1;max-width:280px;}
+.vb-sw{display:flex;flex-wrap:wrap;gap:6px 14px;}
+.vb-swi{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text);}
+</style>
 
 </body>
 </html>
