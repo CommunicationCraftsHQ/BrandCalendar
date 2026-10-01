@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V111.2 Bologna"/>
+<meta name="cc-tool-version" content="V111.3 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -10663,7 +10663,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V111.2 Bologna";
+const TOOL_VERSION="V111.3 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -23751,6 +23751,14 @@ function prSegLabel(r){
   return r.label || ((PR.segs.find(o=>o.key===r.segment_key)||{}).label) || "—"; }
 function prObjClass(key){ return "o-"+String(key||"other").replace(/_/g,"-"); }
 function prUnit(p){ return prObjUnit(p.objective_key) || p.target_unit || "results"; }
+/* V111.3 — A TARGET CARRIES ITS OWN BASIS. Until now the page guessed
+   it from the kind: ongoing meant a month, one-off meant the whole
+   run. "500 leads in total, running always" could not be written down.
+   A row saved before migration 08 has no basis, so the old guess is
+   the fallback and nothing reads differently. */
+const PR_TB={total:["","total"],per_month:[" a month","a month"],per_day:[" a day","a day"]};
+function prBasis(p){ const b=p&&p.target_basis; return PR_TB[b]?b:(prIsOngoing(p)?"per_month":"total"); }
+function prBasisTail(p){ return PR_TB[prBasis(p)][0]; }
 
 /* ── status ───────────────────────────────────────────────────────── */
 function prStatus(p){
@@ -23797,7 +23805,7 @@ function prMonthRow(pid,ms){ return (PR.months[pid]||[]).find(m=>m.month_start==
 /* an ongoing promotion is measured by the month it is in; a one-off by
    everything entered against it so far */
 function prProgress(p){
-  if(prIsOngoing(p)){
+  if(prBasis(p)==="per_month"){
     const r=prMonthRow(p.id,prThisMonth());
     return {label:prMonthName(prThisMonth()),
             target:r&&prNumOr(r.target_value)!==null?prNumOr(r.target_value):prNumOr(p.target_value),
@@ -23818,11 +23826,15 @@ function prBar(g){
   return `<div class="prbar"><b style="width:${pc}%"></b></div>`;
 }
 function prTargetLine(p){
-  const g=prProgress(p), u=prUnit(p);
+  const g=prProgress(p), u=prUnit(p), b=prBasis(p);
   if(g.target===null&&g.value===null) return '<span class="nsdim">No target</span>';
+  /* A DAILY TARGET IS NOT COMPARED TO A MONTH'S FIGURE. The months
+     table holds one row a month, so a bar against a daily number would
+     be arithmetic nobody asked for. Both numbers are shown instead. */
+  if(b==="per_day") return `<div class="prtgt">${g.value===null?"":`<b>${prFmt(g.value)}</b> so far · `}${prFmt(g.target)} ${escHtml(u)} a day</div>`;
   const head=g.value===null
-    ? `${prFmt(g.target)} ${escHtml(u)}${prIsOngoing(p)?" a month":""}`
-    : `<b>${prFmt(g.value)}</b> of ${prFmt(g.target)} ${escHtml(u)}${prIsOngoing(p)?" this month":""}`;
+    ? `${prFmt(g.target)} ${escHtml(u)}${prBasisTail(p)}`
+    : `<b>${prFmt(g.value)}</b> of ${prFmt(g.target)} ${escHtml(u)}${b==="per_month"?" this month":""}`;
   return `<div class="prtgt">${head}</div>${prBar(g)}`;
 }
 
@@ -24110,7 +24122,7 @@ function prDetailHtml(p){
       <div class="prtbox">
         <div><div class="prlbl">Target</div>
           <div class="prfv big">${g.target===null?'<span class="nsdim">Not set</span>'
-            :`${prFmt(g.target)} ${escHtml(prUnit(p))}${prIsOngoing(p)?" a month":(p.target_on?` <span class="nsdim">by ${prShort(p.target_on)}</span>`:"")}`}</div></div>
+            :`${prFmt(g.target)} ${escHtml(prUnit(p))}${prBasisTail(p)}${(prBasis(p)==="total"&&p.target_on)?` <span class="nsdim">by ${prShort(p.target_on)}</span>`:""}`}</div></div>
         <div>${g.label?`<span class="nsdim">${escHtml(g.label)}</span><br>`:""}
           <b class="prnow">${prFmt(g.value)}</b> so far${prBar(g)}
           <span class="nsdim">${g.spend!==null?prMoney(g.spend,cur)+" spent":"nothing spent yet"}${g.at?` · updated ${prShort(String(g.at).slice(0,10))}`:""}</span></div>
@@ -24218,25 +24230,31 @@ function prEditOpen(id){
   const have=p?prStreams(p.id).map(s=>s.platform):["meta"];
   /* `had` is what already has a block in the database — empty for a new
      promotion, or every platform picked would be treated as existing */
-  PR.edit={id:id||null, obj:chosen, seg:p?(p.brand_segment_id||null):null, kind:p?(p.kind||"one_off"):"ongoing", plats:have.slice(), had:p?have.slice():[]};
+  PR.edit={id:id||null, obj:chosen, seg:p?(p.brand_segment_id||null):null, kind:p?(p.kind||"one_off"):"ongoing",
+    tb:p?prBasis(p):"per_month", plats:have.slice(), had:p?have.slice():[]};
   const cur=p?prCur(p):"INR", basis=(p&&p.budget_basis)||"total";
   const curs=PR_CUR.indexOf(cur)<0?PR_CUR.concat([cur]):PR_CUR;
   prBox(`<div class="modal-top"><div><div class="modal-title">${p?"Edit promotion":"New promotion"}</div>
       <div class="modal-sub">${escHtml(brands[activeBrand]?.name||"")}</div></div>
       <button class="modal-x" onclick="closeM('promo')">✕</button></div>
     <div class="modal-body">
+      ${/* V111.3 — THE ORDER IS THE SENTENCE. What it is called, what it
+            must do, who for, when it runs, how much, where. The box used
+            to ask for the objective before the thing had a name, and put
+            the target four fields away from the objective it belongs to.
+            Mockup 15, option A. */""}
+      <div class="field"><label class="fl">Promotion name</label><input class="fi" id="pr-name" value="${escAttr(p?p.name:"")}" maxlength="120"></div>
       <div class="field"><label class="fl">Objective</label>
         <div class="prchips" id="pr-objs">${mine.length?mine.map(o=>`<span class="propt${chosen===o.key?" on":""}" onclick="prPickObj('${escAttr(o.key)}')">${escHtml(prObjLabel(o.key))}</span>`).join("")
           :'<span class="nsdim">No objectives switched on for this brand yet</span>'}</div></div>
-      ${/* V110.4 — SEGMENT SITS UNDER OBJECTIVE because the two are one
-            thought: what this should produce, and who it is aimed at.
-            Keeping them apart is what let "Specifier marketing" become
-            an objective in the first place. Optional: a promotion aimed
-            at everyone is a real promotion. */""}
-      <div class="field"><label class="fl">Segment</label>
+      <div id="pr-tgtbits">${prTargetBits(p)}</div>
+      ${/* V110.4 — the target group sits with the objective because the
+            two are one thought: what this should produce, and who it is
+            aimed at. Optional: a promotion aimed at everyone is a real
+            promotion. */""}
+      <div class="field"><label class="fl">Target group</label>
         <div class="prchips" id="pr-segs">${prSegChips(p)}</div></div>
-      <div class="field"><label class="fl">Name</label><input class="fi" id="pr-name" value="${escAttr(p?p.name:"")}" maxlength="120"></div>
-      <div class="field"><label class="fl">Kind</label>
+      <div class="field"><label class="fl">Runs</label>
         <div class="prseg" id="pr-kind" style="width:fit-content">
           <button class="prseg-b${PR.edit.kind==="one_off"?" on":""}" onclick="prPickKind('one_off')">One-off</button>
           <button class="prseg-b${PR.edit.kind==="ongoing"?" on":""}" onclick="prPickKind('ongoing')">Ongoing</button></div></div>
@@ -24255,20 +24273,29 @@ function prEditOpen(id){
       <button class="btn btn-p" id="pr-save" onclick="prEditSave()">${p?"Save":"Create"}</button></div>`);
   setTimeout(()=>{ const n=document.getElementById("pr-name"); if(n) n.focus(); },30);
 }
-function prKindBits(p){
-  /* V110.9 — the brand's unit, so the form says what the row will say. */
-  const o=prObj(PR.edit.obj), unit=prObjUnit(PR.edit.obj)||"results";
+/* V111.3 — THE TARGET AND ITS BASIS, together and next to the
+   objective they belong to. The basis is the same control the budget
+   has had since V108, so the two read alike. */
+function prTargetBits(p){
+  const unit=prObjUnit(PR.edit.obj)||"results";
   const tv=p&&prNumOr(p.target_value)!==null?Number(p.target_value):"";
+  const b=PR.edit.tb||"total";
+  return `<div class="field"><label class="fl">Target</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="fi" id="pr-tv" inputmode="numeric" style="width:110px" value="${tv}">
+        <span class="prunitbox">${escHtml(unit)}</span>
+        <select class="cl-basis" id="pr-tb" aria-label="That target is" onchange="prPickTB(this.value)">${
+          Object.keys(PR_TB).map(k=>`<option value="${k}"${k===b?" selected":""}>${PR_TB[k][1]}</option>`).join("")}</select>
+      </div></div>`;
+}
+function prPickTB(v){ PR.edit.tb=v; }
+function prKindBits(p){
   const ong=PR.edit.kind==="ongoing";
   return `<div class="prgrid2">
-      <div class="field"><label class="fl">Target</label>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input class="fi" id="pr-tv" inputmode="numeric" style="width:110px" value="${tv}">
-          <span class="prunitbox">${escHtml(unit)}${ong?" a month":""}</span></div></div>
       ${ong?`<div class="field"><label class="fl">Starts</label><input class="fi" type="date" id="pr-s" value="${p&&p.starts_on||""}"></div>`
-           :`<div class="field"><label class="fl">Hit it by</label><input class="fi" type="date" id="pr-by" value="${p&&p.target_on||""}"></div>
-             <div class="field"><label class="fl">Starts</label><input class="fi" type="date" id="pr-s" value="${p&&p.starts_on||""}"></div>
-             <div class="field"><label class="fl">Ends</label><input class="fi" type="date" id="pr-e" value="${p&&p.ends_on||""}"></div>`}
+           :`<div class="field"><label class="fl">Starts</label><input class="fi" type="date" id="pr-s" value="${p&&p.starts_on||""}"></div>
+             <div class="field"><label class="fl">Ends</label><input class="fi" type="date" id="pr-e" value="${p&&p.ends_on||""}"></div>
+             <div class="field"><label class="fl">Hit it by</label><input class="fi" type="date" id="pr-by" value="${p&&p.target_on||""}"></div>`}
     </div>`;
 }
 /* V110.4 — the brand's segments, as chips. Clicking the chosen one
@@ -24293,12 +24320,14 @@ function prPickPlat(k){
 function prEditRedraw(){
   const g=id=>document.getElementById(id);
   const keep={tv:g("pr-tv")?g("pr-tv").value:"", s:g("pr-s")?g("pr-s").value:"", e:g("pr-e")?g("pr-e").value:"", by:g("pr-by")?g("pr-by").value:""};
+  if(g("pr-tb")) PR.edit.tb=g("pr-tb").value;
   const mine=PR.objs.filter(o=>PR.bobjs.indexOf(o.key)>-1);
-  g("pr-objs").innerHTML=mine.map(o=>`<span class="propt${PR.edit.obj===o.key?" on":""}" onclick="prPickObj('${escAttr(o.key)}')">${escHtml(o.label)}</span>`).join("");
+  g("pr-objs").innerHTML=mine.map(o=>`<span class="propt${PR.edit.obj===o.key?" on":""}" onclick="prPickObj('${escAttr(o.key)}')">${escHtml(prObjLabel(o.key))}</span>`).join("");
   if(g("pr-segs")) g("pr-segs").innerHTML=prSegChips(PR.edit.id?PR.list.find(x=>x.id===PR.edit.id):null);
   g("pr-kind").innerHTML=`<button class="prseg-b${PR.edit.kind==="one_off"?" on":""}" onclick="prPickKind('one_off')">One-off</button>
     <button class="prseg-b${PR.edit.kind==="ongoing"?" on":""}" onclick="prPickKind('ongoing')">Ongoing</button>`;
   const p=PR.edit.id?PR.list.find(x=>x.id===PR.edit.id):null;
+  if(g("pr-tgtbits")) g("pr-tgtbits").innerHTML=prTargetBits(p);
   g("pr-kindbits").innerHTML=prKindBits(p);
   if(g("pr-tv")) g("pr-tv").value=keep.tv;
   if(g("pr-s")) g("pr-s").value=keep.s;
@@ -24328,6 +24357,7 @@ async function prEditSave(){
   const row={brand_id:activeBrand,name,objective_key:PR.edit.obj,
     brand_segment_id:PR.edit.seg||null, segment_key:segRow?segRow.segment_key:null, kind:PR.edit.kind,
     target_value:tv,target_unit:prObjUnit(PR.edit.obj),
+    target_basis:(g("pr-tb")?g("pr-tb").value:PR.edit.tb)||"total",
     target_on: ong?null:(g("pr-by")?g("pr-by").value||null:null),
     starts_on:s, ends_on:ong?null:e,
     planned_spend:plan, budget_basis:g("pr-basis").value, budget_currency:g("pr-cur").value,
