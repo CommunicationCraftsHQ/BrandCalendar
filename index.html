@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V111.9 Bologna"/>
+<meta name="cc-tool-version" content="V112.0 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -10842,7 +10842,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V111.9 Bologna";
+const TOOL_VERSION="V112.0 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -22052,7 +22052,9 @@ async function mpvBlurSave(el){
   const mp=monthPlanFor(activeBrand,YEAR,m);
   if(el.dataset.mpvF==="key_theme"){
     mp.key_theme=clean;
-    if(!clean){ el.classList.add("none"); el.innerHTML=canEdit()?("Write the theme for "+MN[m]+"…"):("No theme set for "+MN[m]); }
+    /* EMPTY, not the prompt sentence — the theme box had the same fault
+       as the objective above it, and for the same reason. */
+    if(!clean){ el.classList.add("none"); el.innerHTML=""; }
     if(!mp.id) mp.id=newMonthPlanId();
     await dbSaveMonthPlan(activeBrand,YEAR,m);
   } else if(el.dataset.mpvI){
@@ -25809,13 +25811,21 @@ function plSheetHtml(m,canE){
   const loneInfl=(socialAt<0&&(mpInfl||canE))
     ? `<div class="mpv-band pl-svcband${plIsShut("pl-infl")?" shut":""}" data-band="pl-infl"><div class="mpv-bh" onclick="plToggle('pl-infl')"><i class="ti ti-chevron-down cv"></i><i class="ti ti-users" style="font-size:14px;color:var(--muted)"></i><b>Influencers</b><span class="sum">${mpInfl?mpInfl+" influencer"+(mpInfl===1?"":"s"):""}</span></div><div class="mpv-bb">${plInfluencersHtml(m,canE)}</div></div>`
     : "";
+  /* ══ V112.0 · THE SAME BLOCK AS THE POSTS PAGE ═══════════════════
+     The objective, the theme, the status pill, the pencil and the four
+     segment cards used to be written out twice — once here and once in
+     monthPlanCardHtml — and the two drifted until they looked like
+     different features. They are one call now, and the month's own
+     heading stays outside it, because this page stacks twelve of them
+     and the Posts page does not need naming twice.
+
+     Production has left this page's body with it: the block carries a
+     Production card, and the same shoots listed twice on one screen is
+     what this merge was meant to stop. */
   return `<div class="mpv-sheet pl-sheet" data-month="${m}" id="mpv-m${m}">
-    <div class="mpv-top">
-      <div class="mpv-act">${mp.id?mpvStatusCtl(m,mp,canE):""}${canE?`<span class="mp-edit" onclick="mpvFocusTheme(${m})"
-        title="Write the theme for ${MN[m]}"><i class="ti ti-pencil"></i></span>`:""}</div>
+    <div class="mpv-top pl-top">
       <div class="mpv-mo"><h2>${MN[m]}</h2><span class="yr">${YEAR}</span></div>
-      <div class="mpv-obj${objSet?"":" none"}"${oed}>${objSet?escHtml(mp.objective_line):(canE?"The objective for "+MN[m]+", in one line…":"No objective set")}</div>
-      <div class="mpv-theme${themeSet?"":" none"}"${ed}>${themeSet?mpRender(mp.key_theme):(canE?"Write the theme for "+MN[m]+"…":"No theme set for "+MN[m])}</div>
+      ${monthPlanCardHtml(m,{wide:true})}
       <div class="mpchips"></div>
     </div>
     <div class="mpv-body">
@@ -25823,7 +25833,6 @@ function plSheetHtml(m,canE){
       ${goalsAll.length?`<div class="mpv-goals">${goalsAll.map(g=>mpvGoalPill(g,m,canE)).join("")}</div>`:`<div class="mpv-empty">No goals yet.</div>`}
       ${PLD.ok.meet?`<div class="pl-meets">${plMeetingsHtml(m,canE)}</div>`:""}
       <div class="pl-blocks">${blocks}${loneInfl}</div>
-      ${mpvProductionHtml(m,canE)}
     </div>
   </div>`;
 }
@@ -27665,6 +27674,17 @@ window.prSegOpen=function(){ pbOpen("seg"); };
 .mp-pan.grown .mp-p .rm{display:none;}
 
 /* ── the four cards ───────────────────────────────────────────────── */
+/* ══ V112.0 · THE SAME BLOCK, WIDER ═══════════════════════════════
+   On the Posts page the panel is locked to the calendar standing beside
+   it. On the Plan page there is no calendar, so there is nothing to
+   match and nothing to ration: the block takes the height its contents
+   ask for and `read more` never appears. That is the only difference
+   between the two, and it is the one Chirag named — the width, and what
+   the width allows. */
+.mp-pan.mp-wide{height:auto;min-height:0;}
+.mp-pan.mp-wide .mp-p{max-height:none!important;}
+.mp-pan.mp-wide .mp-p .rm{display:none!important;}
+.mp-pan.mp-wide .mp-g{max-height:none!important;}
 /* rows size to their content. `1fr` was what made an empty card as tall
    as a full one — four equal quarters whatever was in them. `.packed` is
    the other case: when the cards want MORE room than the panel has, the
@@ -27707,6 +27727,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
    a sentence saying there was nothing — three rows to say "none". The
    word rides the title now and the card is 41px instead of 110. */
 .mp-none-inline{font-size:11.5px;font-weight:700;color:var(--subtle);white-space:nowrap;}
+.mp-nop{font-size:11.5px;font-weight:700;color:var(--subtle);margin-top:4px;flex:none;}
 /* ONLY WHEN THERE IS MORE. The fade was on every list, so a card with
    two rows and room for three had its second row dimmed for no reason —
    it read as cut when nothing was. CSS cannot ask whether a box
@@ -27784,6 +27805,21 @@ window.prSegOpen=function(){ pbOpen("seg"); };
 /* ── the one-liner on the Monthly plan page, where it is written ──── */
 .mpv-obj{font-size:16px;font-weight:800;line-height:1.34;letter-spacing:-.015em;margin-top:2px;}
 .mpv-obj.none{font-weight:600;color:var(--subtle);}
+/* ══ V112.0 — THE PROMPT WAS REAL TEXT, AND YOU COULD NOT TYPE OVER IT
+   Chirag, 2 Oct: "when I am trying to add the title, it gets added
+   below it rather than replacing that placeholder line."
+
+   He was right, and it was worse than it looked. "The objective for
+   October, in one line…" was not a placeholder — it was a sentence the
+   code had typed into the box. Clicking in put the caret inside that
+   sentence, so his words joined it, and the blur handler saved the
+   whole thing. October's objective in the database WAS that sentence.
+
+   It is drawn by CSS now, on an element that is genuinely empty, the
+   way `.rt:empty::before` already does it elsewhere in this file.
+   Nothing to type over, nothing to save by accident. */
+.mpv-obj.none:empty::before,.mpv-theme.none:empty::before{
+  content:attr(data-ph);color:var(--subtle);pointer-events:none;}
 .mpv-obj[contenteditable="true"]:hover{outline:1px dashed var(--div);outline-offset:3px;border-radius:6px;}
 
 /* ── NARROW ───────────────────────────────────────────────────────
@@ -27908,6 +27944,13 @@ function mpSegToggle(k){
 function mpPanelRedraw(){
   const host=document.getElementById("content-plancard");
   if(host){ host.innerHTML=monthPlanCardHtml(contentMonth); mpFit(); }
+  /* the block is on the Plan page too now, and a card opened there has
+     to repaint there — one redraw per block, in place, rather than a
+     whole-page render that would scroll twelve months back to the top */
+  document.querySelectorAll(".mp-pan.mp-wide").forEach(p=>{
+    const m=Number(p.dataset.mpMonth);
+    if(!isNaN(m)) p.outerHTML=monthPlanCardHtml(m,{wide:true});
+  });
 }
 /* the one thing the stylesheet cannot work out for itself */
 function mpFadeLists(){
@@ -27930,8 +27973,8 @@ function mpFadeLists(){
    month the floor holds, the cards share the rest equally (`.packed`)
    and their lists clip under the fade. Read more is set from one
    question only — did the words actually not fit. */
-function mpFit(){
-  const pan=document.querySelector(".mp-pan"); if(!pan) return;
+function mpFit(pan){
+  pan=pan||document.querySelector(".mp-pan:not(.mp-wide)"); if(!pan) return;
   const g=pan.querySelector(".mp-g"); if(!g) return;
   const p=pan.querySelector(".mp-p");
 
@@ -27939,8 +27982,8 @@ function mpFit(){
   if(p){ p.style.maxHeight=""; p.classList.remove("more"); }
 
   /* a panel the user has opened a card in is no longer height-locked,
-     and nothing needs rationing */
-  if(pan.classList.contains("grown")){ mpFadeLists(); return; }
+     and neither is the wide one on the Plan page — nothing to ration */
+  if(pan.classList.contains("grown")||pan.classList.contains("mp-wide")){ mpFadeLists(); return; }
 
   const lh=p?(parseFloat(getComputedStyle(p).lineHeight)||20):20;
   const room=pan.clientHeight
@@ -27976,6 +28019,25 @@ function mpFit(){
   const base=renderSocial;
   renderSocial=function(){ const r=base.apply(this,arguments); mpFit(); return r; };
 })();
+/* A CLAMPED BOX IS A BAD PLACE TO WRITE. The fitting pass may have cut
+   the paragraph to two lines; the moment somebody puts a caret in it,
+   the cut comes off and the panel grows, exactly as read more does. */
+function mpUnfit(el){
+  const pan=el.closest(".mp-pan"); if(!pan) return;
+  pan.classList.add("grown");
+  el.style.maxHeight=""; el.classList.remove("more");
+  const g=pan.querySelector(".mp-g");
+  if(g){ g.style.maxHeight=""; g.classList.remove("packed"); }
+}
+/* the pencil, which now writes here instead of going somewhere else */
+function mpEditHere(m){
+  if(!canEdit()){ toast("View-only account","err"); return; }
+  const el=document.querySelector(".mp-pan .mpv-obj[contenteditable]");
+  if(!el){ if(typeof mpvStart==="function") mpvStart(m); return; }
+  el.focus();
+  try{ const r=document.createRange(); r.selectNodeContents(el); r.collapse(false);
+       const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(r); }catch(e){}
+}
 function mpReadMore(){
   const el=document.querySelector(".mp-pan"); if(el){
     el.classList.add("grown");
@@ -28187,7 +28249,8 @@ function mpSegCard(seg,m,canE){
 }
 
 /* ── THE PANEL ────────────────────────────────────────────────────── */
-monthPlanCardHtml=function(m){
+monthPlanCardHtml=function(m,opt){
+  const wide=!!(opt&&opt.wide);
   const mp=monthPlanFor(activeBrand,YEAR,m);
   const canE=canEdit();
   const st=mp.status==="approved";
@@ -28203,7 +28266,10 @@ monthPlanCardHtml=function(m){
     ?`<select class="mp-status" onchange="mpCardSetStatus(this.value)" style="appearance:none;-webkit-appearance:none;border:none;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border-radius:999px;padding:5px 24px 5px 10px;color:${st?"#791F1F":"#854F0B"};background-color:${st?"#FCEBEB":"#FAEEDA"};background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${st?"%23791F1F":"%23854F0B"}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 9px center;">
         <option value="drafted"${st?"":" selected"}>Drafted</option><option value="approved"${st?" selected":""}>Approved</option></select>`
     :`<span class="mp-status" style="font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px;color:${st?"#791F1F":"#854F0B"};background:${st?"#FCEBEB":"#FAEEDA"};">${st?"Approved":"Drafted"}</span>`;
-  const editBtn=canE?`<span class="mp-edit" onclick="mpvStart(${m})" title="Open the full month plan"><i class="ti ti-pencil" style="font-size:13px;"></i></span>`:"";
+  /* the pencil puts the caret in the objective, where it is standing.
+     It used to open the Plan page, which is the jump Chirag asked to
+     stop — the block is editable where you are looking at it. */
+  const editBtn=canE?`<span class="mp-edit" onclick="mpEditHere(${m})" title="Write the objective for ${MN[m]}"><i class="ti ti-pencil" style="font-size:13px;"></i></span>`:"";
 
   const one=String(mp.objective_line||"").trim();
   const para=String(mp.key_theme||"").trim();
@@ -28211,18 +28277,45 @@ monthPlanCardHtml=function(m){
 
   /* THE OBJECTIVE IS THE HEADER. No eyebrow over it — the month is
      already named by the page bar and by the calendar beside it. */
+  /* ══ V112.0 · ONE BLOCK, TWO PAGES ═══════════════════════════════
+     Chirag, 2 Oct: "I really want the same blocks accessible through
+     two different pages and can be edited on either one."
+
+     So the title and the paragraph are no longer read-only copies of
+     what the Plan page holds — they ARE the Plan page's fields,
+     `.mpv-obj` and `.mpv-theme`, carrying the same data attributes and
+     the same blur handlers. Nothing was reimplemented: mpObjBlur and
+     mpvBlurSave already knew how to save them, mpvFocus already knew
+     how to clear a prompt, and the writing bar already knew how to
+     follow the caret. They work here because the markup is the same
+     markup. */
+  const oed=canE?` contenteditable="true" data-mpo-m="${m}"
+      onblur="mpObjBlur(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"`:"";
   const head=`<div class="mp-h">
-      <div class="ttl${one?"":" none"}">${one?escHtml(one):(hasPlan?"No objective set for "+MN[m]:"No plan for "+MN[m]+" yet"+(canE?" — use the pencil to start one":""))}</div>
+      <div class="ttl mpv-obj${one?"":" none"}" data-ph="${escAttr(canE?"The objective for "+MN[m]+", in one line…":"No objective set")}"${oed}>${one?escHtml(one):""}</div>
       <div class="acts">${statusCtl}${editBtn}</div>
     </div>`;
+  /* BEETLE'S RULE SURVIVES THE MERGE — "a shoot is not a plan". A month
+     with shoots and no plan still says so, in words, because that
+     sentence IS the content in that state and a CSS prompt is seen by
+     neither a screen reader nor a gate. It is its own line, outside
+     every editable box: the prompts above and below say what to WRITE,
+     this says where the month STANDS, and writing either one starts the
+     plan and takes the line away. */
+  const nop=hasPlan?"":`<div class="mp-nop">No plan for ${MN[m]} yet.</div>`;
 
-  /* read more rides the paragraph's last line, so it costs no row */
-  const body=para
-    ? `<div class="mp-p">${mpRender(mp.key_theme)}<span class="rm" onclick="mpReadMore()">read more</span></div>`
+  /* read more rides the paragraph's last line, so it costs no row.
+     The box is drawn even when it is empty now, because an empty box
+     is where you write the first version of the theme — it was the one
+     field on this panel you could not start from here. */
+  const ted=canE?` contenteditable="true" data-mpv-m="${m}" data-mpv-f="key_theme"
+      onfocus="mpvFocus(this);mpUnfit(this)" onblur="mpvBlurSave(this)"`:"";
+  const body=(para||canE)
+    ? `<div class="mp-p mpv-theme${para?"":" none"}" data-ph="${escAttr(canE?"Write the theme for "+MN[m]+"…":"")}"${ted}>${para?mpRender(mp.key_theme):""}<span class="rm" contenteditable="false" onclick="mpReadMore()">read more</span></div>`
     : "";
 
-  return `<div class="month-card mp-hero mp-pan${grown?" grown":""}">
-    ${head}${body}
+  return `<div class="month-card mp-hero mp-pan${wide?" mp-wide":""}${grown&&!wide?" grown":""}" data-mp-month="${m}">
+    ${head}${nop}${body}
     <div class="mp-g">
       ${mpSegCard("camp",m,canE)}
       ${mpSegCard("prod",m,canE)}
@@ -28261,7 +28354,8 @@ async function mpObjBlur(el){
   mp.objective_line=now;
   if(!mp.id) mp.id=newMonthPlanId();
   await dbSaveMonthPlan(activeBrand,YEAR,m);
-  if(!now){ el.classList.add("none"); el.textContent="The objective for "+MN[m]+", in one line…"; }
+  /* EMPTY, not the prompt sentence — see the note by .mpv-obj.none */
+  if(!now){ el.classList.add("none"); el.textContent=""; }
   else el.classList.remove("none");
 }
 </script>
