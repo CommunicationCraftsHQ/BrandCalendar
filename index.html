@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V112.4 Bologna"/>
+<meta name="cc-tool-version" content="V112.5 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3655,7 +3655,7 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .praudm i{font-size:11px;}
 .praudm.on{border-color:transparent;}
 .praudm.on.a-inner-circle{background:#F1ECFA;color:#5A4796;}
-.praudm.on.a-client-list{background:#E8F1FA;color:#245C8F;}
+.praudm.on.a-customer-list{background:#E8F1FA;color:#245C8F;}
 .praudm.on.a-target-group{background:#EAF3EC;color:#2E6B3F;}
 .praudm.on.a-retargeting{background:#FBEFE3;color:#9A5413;}
 .praudm.on.a-lookalike{background:#F7EAF1;color:#8E3A66;}
@@ -3713,7 +3713,7 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .prchips{display:flex;flex-wrap:wrap;gap:7px;}
 .praud{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;border-radius:999px;
   padding:5px 12px;background:#EEEDEA;color:var(--text);max-width:100%;}
-.praud.a-inner_circle{background:#F1ECFA;color:#5A4796;} .praud.a-client_list{background:#E8F1FA;color:#245C8F;}
+.praud.a-inner_circle{background:#F1ECFA;color:#5A4796;} .praud.a-customer_list{background:#E8F1FA;color:#245C8F;}
 .praud.a-target_group{background:#EAF3EC;color:#2E6B3F;} .praud.a-retargeting{background:#FBEFE3;color:#9A5413;}
 .praud.a-lookalike{background:#F7EAF1;color:#8E3A66;}
 .praud .rm{font-size:12px;cursor:pointer;opacity:0;transition:opacity .12s;}
@@ -10842,7 +10842,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V112.4 Bologna";
+const TOOL_VERSION="V112.5 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -23886,7 +23886,7 @@ const PR_CST={drafting:["Drafting","#EF9F27"],review:["Review","#378ADD"],approv
 const PR_FMT=["1:1 image","4:5 image","9:16 image","Carousel","9:16 reel","16:9 video","Search ad","Other"];
 const PR_PLAT={meta:{label:"Meta",icon:"ti-brand-meta"},google:{label:"Google",icon:"ti-brand-google"},
   linkedin:{label:"LinkedIn",icon:"ti-brand-linkedin"},other:{label:"Other",icon:"ti-speakerphone"}};
-const PR_AUD={inner_circle:"Inner circle",client_list:"Client list",target_group:"Target group",
+const PR_AUD={inner_circle:"Inner circle",customer_list:"Customer list",target_group:"Target group",
   retargeting:"Retargeting",lookalike:"Lookalike"};
 /* the budget control is Portfolio's contract amount (Clients.jsx Money) */
 const PR_CUR=["INR","USD","AED"];
@@ -24504,7 +24504,7 @@ function prPanelHtml(p){
         <div class="prpnm">${escHtml((PR_PLAT[x.platform]||PR_PLAT.other).label)}${
           canEditP?`<i class="ti ti-x prsecx" title="Take this platform off the promotion"
             onclick="prStreamDel('${escAttr(x.id)}')"></i>`:""}</div>
-        <div class="prchips">${auds.map(a=>`<span class="praud a-${a.kind}">${escHtml(PR_AUD[a.kind]||a.kind)}${a.description?" — "+escHtml(a.description):""}
+        <div class="prchips">${auds.map(a=>`<span class="praud a-${a.kind}">${escHtml(PR_AUD[a.kind]||a.kind)}${a.source?" of "+escHtml(a.source):""}${a.description?" — "+escHtml(a.description):""}
             ${canEditP?`<i class="ti ti-x rm" title="Remove" onclick="prAudDel('${a.id}')"></i>`:""}</span>`).join("")}
           ${canEditP?`<span class="praddchip" onclick="prAudOpen('${x.id}')"><i class="ti ti-plus"></i>Audience</span>`:""}</div>
         <div class="prthumbs">${crs.map(c=>prCrTile(c)).join("")}
@@ -24940,6 +24940,8 @@ function prAudOpen(sid){
       <div class="field"><label class="fl">Type</label>
         <div class="prchips" id="pr-audk">${Object.keys(PR_AUD).map(k=>
           `<span class="propt${PR.aud.kind===k?" on":""}" onclick="prPickAud('${k}')">${PR_AUD[k]}</span>`).join("")}</div></div>
+      <div class="field" id="pr-audsrcf" style="display:none;"><label class="fl">Modelled on</label>
+        <input class="fi" id="pr-audsrc" maxlength="200"/></div>
       <div class="field"><label class="fl">Describe it</label>
         <textarea class="fi" id="pr-audd" rows="2" maxlength="300" style="height:auto;padding:10px 12px;"></textarea></div>
     </div>
@@ -24948,16 +24950,27 @@ function prAudOpen(sid){
       <button class="btn btn-p" id="pr-audsave" onclick="prAudSave()">Add</button></div>`);
   setTimeout(()=>{ const n=document.getElementById("pr-audd"); if(n) n.focus(); },30);
 }
+/* ══ V112.5 — A LOOKALIKE SAYS WHAT IT IS MODELLED ON ═════════════
+   Every other audience describes itself. A lookalike cannot: it is
+   built FROM something, and without naming that something the row
+   reads "Lookalike" and tells you nothing. The field only appears
+   for that one kind, so the box stays as short as it was. */
+function prAudSrcOn(){ return PR.aud.kind==="lookalike"; }
 function prPickAud(k){
   PR.aud.kind=k;
   document.getElementById("pr-audk").innerHTML=Object.keys(PR_AUD).map(x=>
     `<span class="propt${k===x?" on":""}" onclick="prPickAud('${x}')">${PR_AUD[x]}</span>`).join("");
+  const f=document.getElementById("pr-audsrcf");
+  if(f) f.style.display=prAudSrcOn()?"":"none";
 }
 async function prAudSave(){
   const d=document.getElementById("pr-audd").value.trim();
   const btn=document.getElementById("pr-audsave"); btn.disabled=true;
   const n=prAuds(PR.aud.sid).length;
-  const r=await sb.from("promotion_audiences").insert([{stream_id:PR.aud.sid,kind:PR.aud.kind,description:d,sort:n}]);
+  const srcEl=document.getElementById("pr-audsrc");
+  const src=(prAudSrcOn()&&srcEl)?srcEl.value.trim():"";
+  const r=await sb.from("promotion_audiences").insert([{stream_id:PR.aud.sid,kind:PR.aud.kind,
+    description:d,source:src,sort:n}]);
   if(r.error){ toast("Could not add it — "+r.error.message,"err"); btn.disabled=false; return; }
   closeM("promo"); toast("Audience added"); prReload();
 }
@@ -26656,8 +26669,8 @@ function plArm(){
 const LKIND={
   obj: {label:"Objectives",     noun:"objective",    table:"promotion_objectives",  live:"active",     order:"sort", unit:true},
   seg: {label:"Target groups",  noun:"target group", table:"promotion_segments",    live:"active",     order:"sort"},
-  chan:{label:"Sales channels", noun:"sales channel",table:"stream_channel_options",live:"deleted_at", order:"pos"},
-  sway:{label:"Influenced by",  noun:"influence",    table:"stream_sway_options",   live:"deleted_at", order:"pos"}
+  chan:{label:"Trade Channel",  noun:"trade channel",table:"stream_channel_options",live:"deleted_at", order:"pos"},
+  sway:{label:"Specifiers",     noun:"specifier",   table:"stream_sway_options",   live:"deleted_at", order:"pos"}
 };
 const LKEYS=["obj","seg","chan","sway"];
 
@@ -27298,8 +27311,8 @@ window.prSegOpen=function(){ pbOpen("seg"); };
       <div class="bd-card">
         <div class="bd-lbl">Target groups</div>
         <table class="vb-t vb-seg"><thead><tr>
-            <th>Called here</th><th class="w-kind">Kind</th><th class="w-buy">Who buys</th>
-            <th class="w-chan">Reached by</th><th>Influenced by</th><th></th>
+            <th>Called here</th><th class="w-kind">Kind</th><th class="w-buy">Customer type</th>
+            <th class="w-chan">Trade Channel</th><th>Specifiers</th><th></th>
           </tr></thead><tbody>${VB.bsegs.map(segRow).join("")}${may() ? segNewRow() : ""}</tbody></table>
         ${(!VB.bsegs.length && !may()) ? `<div class="bd-note" style="margin:6px 0 0;">None yet.</div>` : ""}
       </div>
