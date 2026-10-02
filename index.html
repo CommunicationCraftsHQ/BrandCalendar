@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V111.4 Bologna"/>
+<meta name="cc-tool-version" content="V111.5 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -10710,7 +10710,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V111.4 Bologna";
+const TOOL_VERSION="V111.5 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -11487,8 +11487,8 @@ function buildYearView(){
   G.posts.forEach(p=>{if(brands[p.brand_id])brands[p.brand_id].posts.push({id:p.id,month:p.month,date:p.date,type:p.type,notes:p.notes,year:p.year||2026});});
   G.briefs.forEach(b2=>{if(brands[b2.brand_id])brands[b2.brand_id].notes[b2.event_id]={note:b2.note,arcStart:b2.arc_start,arcEnd:b2.arc_end,arcFreq:b2.arc_freq};});
   (G.social||[]).forEach(p=>{if(brands[p.brand_id])brands[p.brand_id].social.push(normalizeSocial(p));});
-  (G.monthPlans||[]).forEach(r=>{const b=brands[r.brand_id]; if(!b) return; b.monthPlans[r.year+"_"+r.month]={id:r.id,key_theme:r.key_theme||"",status:r.status||"drafted",influencer_target:r.influencer_target||0,items:[],_uat:r.updated_at||null};});
-  (G.monthItems||[]).forEach(r=>{const b=brands[r.brand_id]; if(!b) return; const key=r.year+"_"+r.month; if(!b.monthPlans[key]) b.monthPlans[key]={id:null,key_theme:"",status:"drafted",influencer_target:0,items:[]}; b.monthPlans[key].items.push({id:r.id,category:r.category,label:r.label||"",status:r.status||"",sort_order:r.sort_order||0,link_instagram:r.link_instagram||"",link_facebook:r.link_facebook||"",link_youtube:r.link_youtube||"",discipline:r.discipline||null,value:r.value||"",_uat:r.updated_at||null});});
+  (G.monthPlans||[]).forEach(r=>{const b=brands[r.brand_id]; if(!b) return; b.monthPlans[r.year+"_"+r.month]={id:r.id,key_theme:r.key_theme||"",objective_line:r.objective_line||"",status:r.status||"drafted",influencer_target:r.influencer_target||0,items:[],_uat:r.updated_at||null};});
+  (G.monthItems||[]).forEach(r=>{const b=brands[r.brand_id]; if(!b) return; const key=r.year+"_"+r.month; if(!b.monthPlans[key]) b.monthPlans[key]={id:null,key_theme:"",objective_line:"",status:"drafted",influencer_target:0,items:[]}; b.monthPlans[key].items.push({id:r.id,category:r.category,label:r.label||"",status:r.status||"",sort_order:r.sort_order||0,link_instagram:r.link_instagram||"",link_facebook:r.link_facebook||"",link_youtube:r.link_youtube||"",discipline:r.discipline||null,value:r.value||"",_uat:r.updated_at||null});});
   initEvs(); mergeCustom(); refreshAllBrandEvIds(); sanitizeBrands();
 }
 
@@ -11735,10 +11735,10 @@ async function dbTrashSocialPost(id){ if(!canCap("delete_post")) return; rtGRemo
 const INFLUENCER_STAGES={pending:["Pending","#AAAAAA"],approved:["Approved","#378ADD"],briefed:["Briefed","#8B5CF6"],content_approved:["Content OK","#0E8A8A"],published:["Published","#639922"]};
 const PRODUCTION_STAGES={pending:["Pending","#AAAAAA"],moodboard_shared:["Moodboard shared","#378ADD"],complete:["Complete","#639922"]};
 function monthPlanFor(brandId,year,month){
-  const b=brands[brandId]; if(!b) return {id:null,key_theme:"",status:"drafted",influencer_target:0,items:[]};
+  const b=brands[brandId]; if(!b) return {id:null,key_theme:"",objective_line:"",status:"drafted",influencer_target:0,items:[]};
   b.monthPlans=b.monthPlans||{};
   const key=year+"_"+month;
-  if(!b.monthPlans[key]) b.monthPlans[key]={id:null,key_theme:"",status:"drafted",influencer_target:0,items:[]};
+  if(!b.monthPlans[key]) b.monthPlans[key]={id:null,key_theme:"",objective_line:"",status:"drafted",influencer_target:0,items:[]};
   return b.monthPlans[key];
 }
 // Atlas: plan has data if theme text OR at least one named goal exists.
@@ -11753,7 +11753,7 @@ async function dbSaveMonthPlan(brandId,year,month){
   const mp=monthPlanFor(brandId,year,month);
   if(!mp.id) mp.id=newMonthPlanId();
   return rtChain("social_month_plan:"+mp.id,async()=>{
-    const row={id:mp.id,brand_id:brandId,year,month,key_theme:mp.key_theme||"",status:mp.status||"drafted",influencer_target:mp.influencer_target||0,updated_at:new Date().toISOString()};
+    const row={id:mp.id,brand_id:brandId,year,month,key_theme:mp.key_theme||"",objective_line:mp.objective_line||"",status:mp.status||"drafted",influencer_target:mp.influencer_target||0,updated_at:new Date().toISOString()};
     if(mp._uat){
       const r=await sb.from("social_month_plan").update(row).eq("id",row.id).eq("updated_at",mp._uat).select();
       if(r&&r.error){ dbErr(r); return; }
@@ -14581,15 +14581,15 @@ function rtApplyMonthPlanRow(row){
   const b=brands[row.brand_id]; if(!b) return;
   b.monthPlans=b.monthPlans||{};
   const key=row.year+"_"+row.month;
-  const mp=b.monthPlans[key]=b.monthPlans[key]||{id:null,key_theme:"",status:"drafted",influencer_target:0,items:[]};
-  mp.id=row.id; mp.key_theme=row.key_theme||""; mp.status=row.status||"drafted"; mp.influencer_target=row.influencer_target||0; mp._uat=row.updated_at||null;
+  const mp=b.monthPlans[key]=b.monthPlans[key]||{id:null,key_theme:"",objective_line:"",status:"drafted",influencer_target:0,items:[]};
+  mp.id=row.id; mp.key_theme=row.key_theme||""; mp.objective_line=row.objective_line||""; mp.status=row.status||"drafted"; mp.influencer_target=row.influencer_target||0; mp._uat=row.updated_at||null;
 }
 function rtApplyMonthItemRow(row){
   rtGUpsert("monthItems",row);
   const b=brands[row.brand_id]; if(!b) return;
   b.monthPlans=b.monthPlans||{};
   const key=row.year+"_"+row.month;
-  const mp=b.monthPlans[key]=b.monthPlans[key]||{id:null,key_theme:"",status:"drafted",influencer_target:0,items:[]};
+  const mp=b.monthPlans[key]=b.monthPlans[key]||{id:null,key_theme:"",objective_line:"",status:"drafted",influencer_target:0,items:[]};
   const it={id:row.id,category:row.category,label:row.label||"",status:row.status||"",sort_order:row.sort_order||0,link_instagram:row.link_instagram||"",link_facebook:row.link_facebook||"",link_youtube:row.link_youtube||"",discipline:row.discipline||null,value:row.value||"",_uat:row.updated_at||null};
   mp.items=mp.items||[];
   const i=mp.items.findIndex(x=>x.id===it.id);
@@ -23946,6 +23946,12 @@ async function prLoad(k){
   }
   PR.loading=false; PR.key=k;
   if(view==="promotions") render();
+  /* V111.5 — and the Posts page’s monthly plan panel, whose Boosting
+     segment is these same rows. It is told here rather than from a
+     .then() at the call site: mpPromoEnsure() returns early when a
+     load is already in flight, and a panel that asked second would
+     otherwise never hear that the answer came. */
+  else if(view==="content" && typeof mpPanelRedraw==="function") mpPanelRedraw();
 }
 function prReload(){ PR.key=null; render(); }
 function prStreams(pid){ return (PR.streams[pid]||[]).slice().sort((a,b)=>(a.sort||0)-(b.sort||0)); }
@@ -25360,6 +25366,14 @@ function plSheetHtml(m,canE){
   const themeSet=String(mp.key_theme||"").trim()!=="";
   const ed=canE?` contenteditable="true" data-mpv-m="${m}" data-mpv-f="key_theme"
         onfocus="mpvFocus(this)" onblur="mpvBlurSave(this)"`:"";
+  /* ══ V111.5 — THE MONTH'S OBJECTIVE, IN ONE LINE ═════════════════
+     The Posts panel shows it; the pencil is how it is set, and the
+     pencil comes here. Its own blur handler rather than mpvBlurSave's:
+     one field, one line of plain text, and no formatting bar summoned
+     over it. Enter means done. */
+  const objSet=String(mp.objective_line||"").trim()!=="";
+  const oed=canE?` contenteditable="true" data-mpo-m="${m}"
+        onblur="mpObjBlur(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"`:"";
   const svcs=plServicesFor(m);
   const socialAt=svcs.findIndex(s=>s.kind==="social");
   /* ══ V110.4 · ONE BLOCK MUST NOT BE ABLE TO TAKE THE PAGE DOWN ══════
@@ -25398,6 +25412,7 @@ function plSheetHtml(m,canE){
       <div class="mpv-act">${mp.id?mpvStatusCtl(m,mp,canE):""}${canE?`<span class="mp-edit" onclick="mpvFocusTheme(${m})"
         title="Write the theme for ${MN[m]}"><i class="ti ti-pencil"></i></span>`:""}</div>
       <div class="mpv-mo"><h2>${MN[m]}</h2><span class="yr">${YEAR}</span></div>
+      <div class="mpv-obj${objSet?"":" none"}"${oed}>${objSet?escHtml(mp.objective_line):(canE?"The objective for "+MN[m]+", in one line…":"No objective set")}</div>
       <div class="mpv-theme${themeSet?"":" none"}"${ed}>${themeSet?mpRender(mp.key_theme):(canE?"Write the theme for "+MN[m]+"…":"No theme set for "+MN[m])}</div>
       <div class="mpchips"></div>
     </div>
@@ -26533,7 +26548,15 @@ function pbOpen(kind){
   if(!canCap("edit_promotions")){ capDenied(pbLists(kind).title); return; }
   const L=pbLists(kind), mine=pbMine(kind);
   const taken=mine.map(m=>m.key);
-  const spare=(L.master||[]).filter(o=>taken.indexOf(o.key)<0);
+  /* V111.5 — A TARGET GROUP MAY BE TAKEN MORE THAN ONCE, so a brand can
+     carry a sub-segment: Investors and Home Buyers both answer to the
+     master term Customers. Each is its own row with its own id, which
+     is what the brand's word, the ✕ and the promotion all point at.
+     An objective stays one to a brand — the chip leaves the row once
+     it is taken. */
+  const spare=kind==="obj"
+    ? (L.master||[]).filter(o=>taken.indexOf(o.key)<0)
+    : (L.master||[]);
   prBox(`<div class="modal-top"><div><div class="modal-title">${L.title}</div>
       <div class="modal-sub">${escHtml(brands[activeBrand]?.name||"")}</div></div>
       <button class="modal-x" onclick="closeM('promo')">✕</button></div>
@@ -27144,5 +27167,538 @@ window.prSegOpen=function(){ pbOpen("seg"); };
 .vb-add .fi{flex:1;max-width:280px;}
 </style>
 
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   V111.5 BOLOGNA — THE MONTHLY PLAN PANEL ON THE POSTS PAGE
+   Approved over six passes with Chirag, 1–2 October 2026. The panel to
+   the right of the month calendar, rebuilt.
+
+   The one measurement everything here hangs on: THE CALENDAR BESIDE IT
+   IS 359px TALL AT EVERY WIDTH — 1440, 1280, 1180 and 1024 — because it
+   is a fixed six-row grid. The panel was whatever its contents happened
+   to be, which is why the two never lined up. It is 359px closed now,
+   and grows below that line when a card is opened, the way a post card
+   does.
+
+   What else came out of those passes, each one a thing Chirag said:
+     · the eyebrow line went; the objective IS the header
+     · the status pill and the pencil sit in that header row
+     · four segments as cards across two columns, not stacked strips
+     · no Expand control — each card opens on its own
+     · read more rides the paragraph's last line, costing no row
+     · NO SUMMARY PILLS ABOVE A LISTING, in any section — each item
+       carries its own status pill on its own row
+     · one line per item, pill included, and a production never wraps
+     · every row is a GRID, so a column is a column
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── the panel ────────────────────────────────────────────────────── */
+.mp-pan{position:relative;padding:15px 16px 12px;display:flex;flex-direction:column;height:359px;}
+/* it stops being 359 the moment a card is opened — that is the growth
+   Chirag asked for, and it is why there is no Expand button */
+.mp-pan.grown{height:auto;min-height:359px;}
+
+.mp-h{display:flex;align-items:flex-start;gap:10px;flex:none;}
+.mp-h .ttl{flex:1;min-width:0;font-size:15.5px;font-weight:800;line-height:1.34;letter-spacing:-.015em;}
+.mp-pan:not(.grown) .mp-h .ttl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mp-h .ttl.none{font-weight:600;color:var(--subtle);}
+.mp-h .acts{display:flex;align-items:center;gap:6px;flex:none;margin-top:-1px;}
+/* THE PENCIL WAS 0x0 AND NOBODY COULD HAVE CLICKED IT. The card it came
+   from sized .mp-edit with inline styles; this one does not, and the
+   shared sheet only ever paints that class, never measures it. Caught by
+   photographing the built page — no assertion was looking. */
+.mp-h .mp-edit{width:26px;height:26px;border-radius:50%;border:1px solid rgba(255,255,255,.95);
+  background:rgba(255,255,255,.8);color:var(--muted);display:inline-flex;align-items:center;
+  justify-content:center;cursor:pointer;flex:none;}
+.mp-h .mp-edit:hover{color:var(--acc);}
+
+/* THE PARAGRAPH, and read more on its last line. The fade behind the
+   link is #F6EFF5 because that is the pixel the panel actually paints
+   there — sampled off the rendered card, not guessed. A flat white chip
+   on a gradient shows as a patch. */
+.mp-p{position:relative;font-size:12.5px;line-height:1.6;color:var(--muted);margin-top:5px;flex:none;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.mp-pan.grown .mp-p{-webkit-line-clamp:unset;display:block;}
+.mp-p.none{color:var(--subtle);}
+.mp-p .rm{position:absolute;right:0;bottom:0;padding-left:34px;font-weight:800;color:#8A5A6A;
+  cursor:pointer;background:linear-gradient(to right,rgba(246,239,245,0),#F6EFF5 28px);}
+.mp-p .rm:hover{color:var(--acc);}
+.mp-pan.grown .mp-p .rm{display:none;}
+
+/* ── the four cards ───────────────────────────────────────────────── */
+.mp-g{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:9px;margin-top:11px;}
+.mp-pan.grown .mp-g{flex:none;grid-auto-rows:auto;align-items:start;}
+.mp-sg{min-height:0;background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.9);
+  border-radius:11px;padding:9px 11px 10px;display:flex;flex-direction:column;min-width:0;
+  box-shadow:0 1px 2px rgba(13,13,13,.04);transition:box-shadow .14s, background .14s;}
+.mp-sg:hover{background:#fff;box-shadow:0 4px 14px rgba(120,90,110,.14);}
+/* an opened card takes both columns, which is where a full row gets the
+   width for its date, title, pill and controls */
+.mp-sg.open{grid-column:1 / -1;background:#fff;}
+.mp-sgt{display:flex;align-items:center;gap:7px;flex:none;min-height:20px;cursor:pointer;}
+.mp-sgt b{font-size:12.5px;font-weight:800;letter-spacing:-.01em;}
+.mp-sgt .cv{margin-left:7px;color:var(--subtle);flex:none;transition:transform .15s;}
+.mp-sg.open .mp-sgt .cv{transform:rotate(90deg);}
+.mp-sg:hover .mp-sgt .cv{color:var(--muted);}
+/* the figure the segment is judged on rides in the TITLE row. Pushing it
+   to the foot of a stretched card left a hole in every card — the same
+   wasted space in a smaller box. */
+.mp-fig{font-size:11.5px;font-weight:700;color:var(--muted);white-space:nowrap;margin-left:auto;}
+.mp-fig s{text-decoration:none;color:var(--subtle);font-weight:600;}
+.mp-add{font-size:11px;font-weight:800;color:#8A5A6A;cursor:pointer;white-space:nowrap;margin-left:auto;}
+.mp-add:hover{color:var(--acc);}
+.mp-sgb{height:20px;border:1px solid var(--div);background:var(--surface);border-radius:6px;
+  font:inherit;font-size:11px;font-weight:700;color:var(--text);padding:0 7px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:3px;flex:none;margin-left:auto;}
+.mp-sgb:hover{border-color:var(--acc);color:var(--acc);}
+/* A HALF ROW READS AS BROKEN. The list is clipped to whatever height the
+   card has left, which lands mid-row as often as not — the built page
+   showed "11 Sep  Catalo" with the bottom of the letters sliced off. The
+   last visible row fades instead, which is also true: there IS more, and
+   opening the card is how you see it. Costs no row. */
+.mp-l{flex:1;min-height:0;overflow:hidden;margin-top:7px;}
+/* ONLY WHEN THERE IS MORE. The fade was on every list, so a card with
+   two rows and room for three had its second row dimmed for no reason —
+   it read as cut when nothing was. CSS cannot ask whether a box
+   overflows, so mpFadeLists() asks after each paint and this class is
+   the answer. */
+.mp-l.ov{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 11px),transparent 100%);
+  mask-image:linear-gradient(to bottom,#000 calc(100% - 11px),transparent 100%);}
+.mp-sg.open .mp-l.ov{-webkit-mask-image:none;mask-image:none;}
+.mp-sg.open .mp-l{flex:none;overflow:visible;}
+.mp-none{font-size:11.5px;color:var(--subtle);padding:2px 0;}
+
+/* ══ A COLUMN IS A COLUMN ══════════════════════════════════════════
+   These rows were flex and each one sized itself, so a wider pill on
+   one row pushed that row's figures left and nothing lined up down the
+   card. They are grids with fixed tracks. A status track set to fit its
+   content is NOT a column — "To start" and "Completed" are different
+   widths — so every status track is a fixed width with the pill against
+   its left edge. Numbers keep their right edge, which is how numbers
+   line up. */
+.mp-r{display:grid;align-items:center;gap:7px;font-size:12px;padding:1px 0;line-height:1.4;white-space:nowrap;}
+.mp-l.c-camp  .mp-r{grid-template-columns:7px 60px 1fr;}
+.mp-l.c-prod  .mp-r{grid-template-columns:44px 1fr 78px;}
+.mp-l.c-infl  .mp-r{grid-template-columns:1fr 16px 78px;}
+.mp-l.c-boost .mp-r{grid-template-columns:60px 1fr 78px;}
+.mp-r .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.mp-r .when{font-size:11px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;}
+.mp-r .when.soft{color:var(--subtle);}
+/* THE PILL HAD TO BE TOLD IT LIVES IN A TRACK. justify-self:start sizes
+   a grid item to its CONTENT, so "COMPLETED" simply grew past the 68px
+   column, through the card's padding, and up to 3px from its edge —
+   where the photograph caught it. max-width is the whole fix: it
+   resolves against the grid area, so the pill can never leave it. */
+.mp-r .st{font-size:9.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
+  border-radius:5px;padding:2px 5px;justify-self:start;max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;}
+.mp-r .dot{width:6px;height:6px;border-radius:50%;}
+
+/* ── the opened row: ONE LINE PER ITEM, PILL INCLUDED ─────────────── */
+.mp-rw{display:grid;align-items:center;gap:10px;font-size:12.5px;padding:4px 0;line-height:1.45;
+  white-space:nowrap;border-top:1px solid rgba(13,13,13,.05);}
+.mp-rw:first-child{border-top:none;}
+/* an empty cell still holds its column, which is the point: one shoot
+   has an output folder and the next has not, and Planner stays put */
+.c-camp  .mp-rw{grid-template-columns:7px 92px 1fr 78px;}
+.c-prod  .mp-rw{grid-template-columns:52px 1fr 100px 24px 24px 70px;}
+.c-infl  .mp-rw{grid-template-columns:1fr 92px 118px;}
+.c-boost .mp-rw{grid-template-columns:92px 1fr 104px 92px 78px 86px;}
+.c-boost.nospend .mp-rw{grid-template-columns:92px 1fr 0 92px 78px 86px;}
+.mp-rw .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.mp-rw .nm s{text-decoration:none;color:var(--subtle);}
+.mp-rw .when{font-size:11.5px;font-weight:800;color:var(--text);}
+.mp-rw .when.soft{color:var(--subtle);font-weight:700;}
+.mp-rw .mt{font-size:11.5px;font-weight:700;color:var(--muted);justify-self:end;}
+.mp-rw .st{font-size:10px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
+  border-radius:5px;padding:2px 6px;justify-self:start;}
+.mp-rw .dot{width:6px;height:6px;border-radius:50%;}
+.mp-rw > .mp-ic{justify-self:center;}
+.mp-rw > .mp-go{justify-self:end;}
+.mp-money{font-size:11.5px;font-weight:800;color:var(--text);justify-self:end;overflow:hidden;}
+.mp-money s{text-decoration:none;font-weight:600;color:var(--subtle);}
+.mp-ic{width:24px;height:24px;border-radius:7px;border:1px solid var(--div);background:#fff;
+  color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
+.mp-ic:hover{border-color:var(--acc);color:var(--acc);}
+.mp-ic.on{border-color:#C3D9A8;background:#F2F8EA;color:#3B6D11;}
+.mp-go{font-size:11.5px;font-weight:800;color:#8A5A6A;cursor:pointer;}
+.mp-go:hover{color:var(--acc);}
+.mp-sel{height:24px;font-size:11px;font-family:inherit;font-weight:700;border:1px solid var(--div);
+  border-radius:6px;background:#fff;color:var(--muted);cursor:pointer;padding:0 4px;}
+/* the influencer's profile is its OWN column, not the name wearing a link */
+.mp-prof{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;
+  color:var(--muted);text-decoration:none;justify-self:start;}
+.mp-prof:hover{color:var(--acc);}
+.mp-prof.off{color:var(--subtle);cursor:default;}
+
+/* ── the one-liner on the Monthly plan page, where it is written ──── */
+.mpv-obj{font-size:16px;font-weight:800;line-height:1.34;letter-spacing:-.015em;margin-top:2px;}
+.mpv-obj.none{font-weight:600;color:var(--subtle);}
+.mpv-obj[contenteditable="true"]:hover{outline:1px dashed var(--div);outline-offset:3px;border-radius:6px;}
+
+/* ── NARROW ───────────────────────────────────────────────────────
+   Measured, not assumed: at 1024 the panel is 406px wide, the objective
+   takes two lines and Production's controls take the row past one. The
+   Request button leaves the card first (it is still there when the card
+   is opened), then the preview list gives up a row — that order, because
+   that is the order of what the card is for. */
+@media(max-width:1200px){
+  .mp-sgb{display:none;}
+  /* a 182px card cannot carry a date, a name and a 78px pill, so the
+     pill gives up the width first and ellipsises. The whole word is on
+     the row when the card is opened, which is where it is read anyway. */
+  .mp-l.c-prod  .mp-r{grid-template-columns:40px 1fr 62px;}
+  .mp-l.c-infl  .mp-r{grid-template-columns:1fr 16px 62px;}
+  .mp-l.c-boost .mp-r{grid-template-columns:52px 1fr 62px;}
+  .mp-l.c-camp  .mp-r{grid-template-columns:7px 52px 1fr;}
+}
+</style>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   V111.5 BOLOGNA — THE MONTHLY PLAN PANEL ON THE POSTS PAGE
+   The five segments Chirag asked for, built from what the tool already
+   holds. Only the objective's one-liner and a production's output
+   folder are new, and both are one column each.
+
+   REUSED, NOT REBUILT, and each one deliberately:
+     · campaigns are cat5 brand events — the pink runs on the calendar
+       beside this panel. openNewEvDay() is the same box the calendar
+       uses, so adding one here paints the pink there. One record, two
+       doors, and no second editor to drift.
+     · production is prodsForBrandMonth(), and `Open ›` was already the
+       jump to the Planner. It is called `Planner ›` now so the link
+       says where it goes.
+     · influencers are the month plan's own rows, and the dropdown is
+       INFLUENCER_STAGES through mpvSetItemStatus — the same control the
+       Monthly plan page has.
+     · boosting is plPromosIn(), the brand's promotions whose dates fall
+       in the month, loaded by the Plan page's own prLoad().
+
+   THE BUDGET IS AD SPEND, and ad spend is admins and account managers
+   only. Everyone else gets the row with that column collapsed to zero
+   width, so the rest of the row keeps its grid.
+
+   THE CALENDAR HAS NEVER WRITTEN A PRODUCTION — it only ever selects
+   them, and asks for a shoot by opening the Planner in a frame. So the
+   output folder is READ here and the box you paste it into belongs in
+   the Planner, which owns the row. Same for attaching a mood board.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── the brand's promotions, fetched once, the way the Plan page does
+      it ───────────────────────────────────────────────────────────── */
+function mpPromoEnsure(){
+  if(!canCap("view_promotions")) return;
+  if(!activeBrand||!brands[activeBrand]) return;
+  if(PR.key===String(activeBrand)||PR.loading) return;
+  prLoad(String(activeBrand));   /* prLoad repaints this panel when it lands */
+}
+function mpSeeSpend(){ return ME.role==="admin"||ME.role==="account_manager"; }
+
+/* ── dates, written the way a person writes them ──────────────────── */
+function mpDay(m,d){ return d+" "+MN[m].slice(0,3); }
+function mpSpan(sM,sD,eM,eD,wide){
+  if(sM===eM&&sD===eD) return mpDay(sM,sD);
+  if(sM===eM) return sD+(wide?" – ":"–")+eD+" "+MN[sM].slice(0,3);
+  /* MEASURED: "28 Sep – 2 Oct" wants 81px and a closed card’s
+     date column has 60. A clipped date is worse than a shorter one,
+     so the closed row carries the day it STARTS and the opened row
+     carries the whole span. */
+  if(!wide) return mpDay(sM,sD);
+  return mpDay(sM,sD)+" – "+mpDay(eM,eD);
+}
+function mpYMD(s){ const t=String(s||"").split("-"); return t.length===3?{m:+t[1],d:+t[2]}:null; }
+function mpPrSpan(p,wide){
+  const a=mpYMD(p.starts_on), b=mpYMD(p.ends_on);
+  if(a&&b) return mpSpan(a.m,a.d,b.m,b.d,wide);
+  if(a) return (wide?"from ":"")+mpDay(a.m,a.d);
+  if(b) return (wide?"to ":"")+mpDay(b.m,b.d);
+  return "—";
+}
+function mpToday(){ const d=new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+
+/* ── the pills. Every row carries its own; no section has a summary
+      row above its listing. ───────────────────────────────────────── */
+function mpPill(st,big){
+  return `<span class="st" style="background:${st[1]};color:${st[2]};">${escHtml(st[0])}</span>`;
+}
+function mpProdState(p){
+  if(prodDated(p)) return p.status==="done"?["Completed","#EAF3DE","#3B6D11"]
+    : p.status==="cancelled"?["Cancelled","#EFEDF6","#5C5077"]
+    : ["Scheduled","#E8F0FE","#1D4ED8"];
+  return prodIsRequest(p)?["Requested","#FCEBEB","#8E2323"]:["Not dated","#EFEDF6","#5C5077"];
+}
+function mpPrState(p){
+  const t=mpToday();
+  if(p.starts_on&&String(p.starts_on)>t) return ["To start","#FBF1DC","#8A5A12"];
+  if(p.ends_on&&String(p.ends_on)<t)     return ["Ended","#EFEDF6","#5C5077"];
+  return ["Running","#E8F0FE","#1D4ED8"];
+}
+function mpInflState(it){
+  const s=INFLUENCER_STAGES[it.status]||["Pending","#AAAAAA"];
+  return [s[0],s[1]+"1A",s[1]];
+}
+
+/* ── the fold, in the same store the plan's bands use, so a segment is
+      one preference and not twelve ──────────────────────────────── */
+function mpSegShut(k){ return mpvIsShut("mpseg-"+k); }
+function mpSegToggle(k){
+  const f=mpvFolds(); const shut=!mpSegShut(k); f["mpseg-"+k]=shut;
+  try{ localStorage.setItem(mpvFoldKey(),JSON.stringify(f)); }catch(e){}
+  mpPanelRedraw();
+}
+function mpPanelRedraw(){
+  const host=document.getElementById("content-plancard");
+  if(host){ host.innerHTML=monthPlanCardHtml(contentMonth); mpFadeLists(); }
+}
+/* the one thing the stylesheet cannot work out for itself */
+function mpFadeLists(){
+  document.querySelectorAll(".mp-pan .mp-l").forEach(l=>{
+    l.classList.toggle("ov", l.scrollHeight > l.clientHeight + 1);
+  });
+}
+/* and the panel is also drawn by renderSocial, which is not ours —
+   wrapped rather than rewritten, so the Posts page keeps every other
+   thing that function does. */
+(function(){
+  const base=renderSocial;
+  renderSocial=function(){ const r=base.apply(this,arguments); mpFadeLists(); return r; };
+})();
+function mpReadMore(){
+  const el=document.querySelector(".mp-pan"); if(el) el.classList.add("grown");
+}
+
+/* ── what each segment holds ──────────────────────────────────────── */
+function mpCamps(m){ return allCampaigns().filter(c=>c.sM<=m&&c.eM>=m).sort(campSort); }
+function mpProds(m){
+  const r=prodsForBrandMonth(activeBrand,YEAR,m);
+  return r.dated.slice().sort((a,b)=>a.date_day-b.date_day)
+    .concat(r.open.slice().sort((a,b)=>(prodIsRequest(b)?1:0)-(prodIsRequest(a)?1:0)));
+}
+function mpInfls(m){
+  const mp=monthPlanFor(activeBrand,YEAR,m);
+  return mpvItems(mp,"influencer").filter(i=>!i.discipline||i.discipline==="social");
+}
+function mpBoosts(m){
+  if(!canCap("view_promotions")) return [];
+  return plPromosIn(m);
+}
+/* the one profile link an influencer row has: whichever of the three it
+   carries. The Calendar does not read the Roster, so this is the link
+   that is actually on the row. */
+const MP_PROF=[["link_instagram","ti-brand-instagram","Instagram"],
+               ["link_facebook","ti-brand-facebook","Facebook"],
+               ["link_youtube","ti-brand-youtube","YouTube"]];
+function mpProfOf(it){
+  for(const [k,ic,nm] of MP_PROF){ const u=(it[k]||"").trim(); if(u) return {u,ic,nm}; }
+  return null;
+}
+function mpMood(p){
+  const cids=(typeof PRODCOMMENTS!=="undefined"?(PRODCOMMENTS[p.id]||[]):[]).map(c=>c.id);
+  return prodFilesFor(p,cids).length>0;
+}
+
+/* ── going somewhere ──────────────────────────────────────────────── */
+function mpGoCampaign(mm,id){ openEdit(mm,id); }
+function mpAddCampaign(m){
+  if(!canEdit()){ toast("View-only account","err"); return; }
+  openNewEvDay(m,1);
+}
+function mpGoPromo(id){ PR.open=id; PR.creative=null; setView("promotions"); window.scrollTo(0,0); }
+function mpOpenFolder(u){
+  const s=String(u||"").trim();
+  if(!s||!MP_SAFE_HREF.test(s)){ toast("That link cannot be opened","err"); return; }
+  window.open(s,"_blank","noopener,noreferrer");
+}
+
+/* ── the rows ─────────────────────────────────────────────────────── */
+const MP_CV=`<svg class="cv" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg>`;
+const MP_MB=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l5-4 4 3 3-2 6 4"/></svg>`;
+const MP_FD=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`;
+
+function mpRowsFor(seg,m,open){
+  const R=[];
+  if(seg==="camp"){
+    mpCamps(m).forEach(c=>{
+      const nm=escHtml(c.e.name||"Campaign");
+      const dot=`<span class="dot" style="background:${c.sM===c.eM?CAMP_PINK_DEEP:CAMP_PINK}"></span>`;
+      R.push(open
+        ? `<div class="mp-rw">${dot}<span class="when">${escHtml(mpSpan(c.sM,c.sD,c.eM,c.eD,true))}</span>
+             <span class="nm">${nm}</span>
+             <span class="mp-go" onclick="mpGoCampaign(${c.m},'${escAttr(c.e.id)}')">Calendar &rsaquo;</span></div>`
+        : `<div class="mp-r">${dot}<span class="when">${escHtml(mpSpan(c.sM,c.sD,c.eM,c.eD,false))}</span>
+             <span class="nm">${nm}</span></div>`);
+    });
+  }
+  if(seg==="prod"){
+    mpProds(m).forEach(p=>{
+      const st=mpProdState(p), dated=prodDated(p);
+      const when=dated?mpDay(p.date_month,p.date_day):"—";
+      const mood=mpMood(p), fold=String(p.output_folder_url||"").trim();
+      R.push(open
+        ? `<div class="mp-rw"><span class="when${dated?"":" soft"}">${escHtml(when)}</span>
+             <span class="nm">${escHtml(prodWhat(p))}</span>${mpPill(st)}
+             <span class="mp-ic${mood?" on":""}" title="${mood?"Mood board attached":"No mood board yet — add it in the Planner"}"
+               onclick="openProdInPlanner('${escAttr(p.id)}')">${MP_MB}</span>
+             ${fold?`<span class="mp-ic" title="Output folder" onclick="mpOpenFolder('${escAttr(fold)}')">${MP_FD}</span>`:`<span></span>`}
+             <span class="mp-go" onclick="openProdInPlanner('${escAttr(p.id)}')">Planner &rsaquo;</span></div>`
+        : `<div class="mp-r"><span class="when${dated?"":" soft"}">${escHtml(when)}</span>
+             <span class="nm">${escHtml(prodWhat(p))}</span>${mpPill(st)}</div>`);
+    });
+  }
+  if(seg==="infl"){
+    mpInfls(m).forEach(it=>{
+      const st=mpInflState(it), pf=mpProfOf(it), nm=mpRender(it.label);
+      const sel=canEdit()
+        ? `<select class="mp-sel" onchange="mpvSetItemStatus('${escAttr(it.id)}',${m},this.value)">${
+            Object.keys(INFLUENCER_STAGES).map(k=>`<option value="${k}"${k===it.status?" selected":""}>${escHtml(INFLUENCER_STAGES[k][0])}</option>`).join("")
+          }</select>`
+        : mpPill(st);
+      R.push(open
+        ? `<div class="mp-rw"><span class="nm">${nm}</span>
+             ${pf?`<a class="mp-prof" href="${escAttr(pf.u)}" target="_blank" rel="noreferrer" title="${escAttr(pf.nm)}"><i class="ti ${pf.ic}"></i> Profile</a>`
+                 :`<span class="mp-prof off">No profile</span>`}
+             ${sel}</div>`
+        : `<div class="mp-r"><span class="nm">${nm}</span>
+             ${pf?`<a class="mp-prof" href="${escAttr(pf.u)}" target="_blank" rel="noreferrer" title="${escAttr(pf.nm)}" onclick="event.stopPropagation();"><i class="ti ${pf.ic}" style="font-size:13px;"></i></a>`:`<span></span>`}
+             ${mpPill(st)}</div>`);
+    });
+  }
+  if(seg==="boost"){
+    const spend=mpSeeSpend(), ms=plMonthRange(m)[0];
+    mpBoosts(m).forEach(p=>{
+      const st=mpPrState(p), cur=prCur(p);
+      const row=prMonthRow(p.id,ms);
+      const tv=row&&prNumOr(row.target_value)!==null?row.target_value:p.target_value;
+      const tgt=prNumOr(tv)!==null?`${prFmt(tv)} ${escHtml(prUnit(p))}`:"—";
+      const bud=prNumOr(p.planned_spend)!==null
+        ? `${prMoney(p.planned_spend,cur)} <s>${escHtml((PR_BASIS[p.budget_basis||"total"]||PR_BASIS.total)[1])}</s>`
+        : `<s>no budget</s>`;
+      R.push(open
+        ? `<div class="mp-rw"><span class="when">${escHtml(mpPrSpan(p,true))}</span>
+             <span class="nm">${escHtml(p.name||"Promotion")}</span>
+             ${spend?`<span class="mp-money">${bud}</span>`:`<span></span>`}
+             <span class="mt">${tgt}</span>${mpPill(st)}
+             <span class="mp-go" onclick="mpGoPromo('${escAttr(p.id)}')">Promotion &rsaquo;</span></div>`
+        : `<div class="mp-r"><span class="when">${escHtml(mpPrSpan(p,false))}</span>
+             <span class="nm">${escHtml(p.name||"Promotion")}</span>${mpPill(st)}</div>`);
+    });
+  }
+  return R;
+}
+
+/* ── one card ─────────────────────────────────────────────────────── */
+function mpSegCard(seg,m,canE){
+  const open=!mpSegShut(seg);
+  const T={camp:"Campaigns",prod:"Production",infl:"Influencers",boost:"Boosting"}[seg];
+  const rows=mpRowsFor(seg,m,open);
+  const mp=monthPlanFor(activeBrand,YEAR,m);
+
+  /* the figure the segment is judged on, in the title row */
+  let tail="";
+  if(seg==="camp"){
+    tail=canE?`<span class="mp-add" onclick="event.stopPropagation();mpAddCampaign(${m})">+ Add</span>`:"";
+  } else if(seg==="prod"){
+    tail=canE?`<button class="mp-sgb" onclick="event.stopPropagation();openProdRequest()">+ Request</button>`:"";
+  } else if(seg==="infl"){
+    const t=mp.influencer_target||0;
+    tail=t?`<span class="mp-fig">${mpInfls(m).length} of ${t} <s>targeted</s></span>`:"";
+  } else if(seg==="boost"){
+    let got=null;
+    mpBoosts(m).forEach(p=>{ const r=prMonthRow(p.id,plMonthRange(m)[0]);
+      const v=r?prNumOr(r.result_value):null; if(v!==null) got=(got===null?0:got)+v; });
+    tail=got!==null?`<span class="mp-fig">${prFmt(got)} <s>delivered</s></span>`:"";
+  }
+
+  const body=rows.length
+    ? rows.join("")
+    : `<div class="mp-none">${{camp:"No campaigns this month.",prod:"Nothing planned.",
+        infl:"None planned.",boost:canCap("view_promotions")?"No promotions this month.":""}[seg]}</div>`;
+
+  return `<div class="mp-sg${open?" open":""}" data-seg="${seg}">
+    <div class="mp-sgt" onclick="mpSegToggle('${seg}')"><b>${T}</b>${tail}${MP_CV}</div>
+    <div class="mp-l c-${seg}${seg==="boost"&&!mpSeeSpend()?" nospend":""}">${body}</div>
+  </div>`;
+}
+
+/* ── THE PANEL ────────────────────────────────────────────────────── */
+monthPlanCardHtml=function(m){
+  const mp=monthPlanFor(activeBrand,YEAR,m);
+  const canE=canEdit();
+  const st=mp.status==="approved";
+  mpPromoEnsure();
+
+  /* BEETLE's rule still holds: a shoot is not a plan. The card draws
+     its segments either way, but the status control and the objective
+     only appear once somebody has actually started a month. */
+  const infl=mpInfls(m), targets=mpvItems(mp,"target");
+  const hasPlan=!!mp.id||monthPlanHasData(activeBrand,YEAR,m)||infl.length||targets.length||(mp.influencer_target>0);
+
+  const statusCtl=!hasPlan?"":canE
+    ?`<select class="mp-status" onchange="mpCardSetStatus(this.value)" style="appearance:none;-webkit-appearance:none;border:none;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border-radius:999px;padding:5px 24px 5px 10px;color:${st?"#791F1F":"#854F0B"};background-color:${st?"#FCEBEB":"#FAEEDA"};background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${st?"%23791F1F":"%23854F0B"}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 9px center;">
+        <option value="drafted"${st?"":" selected"}>Drafted</option><option value="approved"${st?" selected":""}>Approved</option></select>`
+    :`<span class="mp-status" style="font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px;color:${st?"#791F1F":"#854F0B"};background:${st?"#FCEBEB":"#FAEEDA"};">${st?"Approved":"Drafted"}</span>`;
+  const editBtn=canE?`<span class="mp-edit" onclick="mpvStart(${m})" title="Open the full month plan"><i class="ti ti-pencil" style="font-size:13px;"></i></span>`:"";
+
+  const one=String(mp.objective_line||"").trim();
+  const para=String(mp.key_theme||"").trim();
+  const grown=!mpSegShut("camp")||!mpSegShut("prod")||!mpSegShut("infl")||!mpSegShut("boost");
+
+  /* THE OBJECTIVE IS THE HEADER. No eyebrow over it — the month is
+     already named by the page bar and by the calendar beside it. */
+  const head=`<div class="mp-h">
+      <div class="ttl${one?"":" none"}">${one?escHtml(one):(hasPlan?"No objective set for "+MN[m]:"No plan for "+MN[m]+" yet"+(canE?" — use the pencil to start one":""))}</div>
+      <div class="acts">${statusCtl}${editBtn}</div>
+    </div>`;
+
+  /* read more rides the paragraph's last line, so it costs no row */
+  const body=para
+    ? `<div class="mp-p">${mpRender(mp.key_theme)}<span class="rm" onclick="mpReadMore()">read more</span></div>`
+    : "";
+
+  return `<div class="month-card mp-hero mp-pan${grown?" grown":""}">
+    ${head}${body}
+    <div class="mp-g">
+      ${mpSegCard("camp",m,canE)}
+      ${mpSegCard("prod",m,canE)}
+      ${mpSegCard("infl",m,canE)}
+      ${mpSegCard("boost",m,canE)}
+    </div>
+  </div>`;
+};
+
+/* ── WHERE THE ONE-LINER IS WRITTEN, AND A TRAP ───────────────
+   The first build of this put the field into `mpvSheetHtml`, which is
+   the obvious place: it is the function named after the month plan
+   sheet, it draws `.mpv-top`, and it sits there in the file looking
+   entirely live.
+
+   IT IS DEAD. The merged Plan page overrode `renderMonthPlanView`
+   twice over, and the live one draws `plSheetHtml`. `mpvSheetHtml` has
+   one caller left, inside a function nothing calls any more. The field
+   went in, the page rendered, and nothing appeared.
+
+   So the field is in `plSheetHtml`, above the theme it introduces, and
+   this note is here because the next person will reach for the other
+   one too. Section 9 of the gate is what caught it — it types into the
+   field and watches for the write, which is the only test that could
+   have. Same shape as the two dead `monthPlanCardHtml` declarations
+   this file already warns about: the LAST declaration wins, and in
+   this file that is rarely the one you find first. */
+
+async function mpObjBlur(el){
+  if(!canEdit()) return;
+  const m=Number(el.dataset.mpoM);
+  const was=String(monthPlanFor(activeBrand,YEAR,m).objective_line||"").trim();
+  const now=(el.textContent||"").replace(/\s+/g," ").trim();
+  if(now===was) return;
+  const mp=monthPlanFor(activeBrand,YEAR,m);
+  mp.objective_line=now;
+  if(!mp.id) mp.id=newMonthPlanId();
+  await dbSaveMonthPlan(activeBrand,YEAR,m);
+  if(!now){ el.classList.add("none"); el.textContent="The objective for "+MN[m]+", in one line…"; }
+  else el.classList.remove("none");
+}
+</script>
 </body>
 </html>
