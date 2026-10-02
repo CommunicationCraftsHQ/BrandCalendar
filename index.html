@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V111.6 Bologna"/>
+<meta name="cc-tool-version" content="V111.7 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3512,6 +3512,76 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
    Values lifted from `08 - Promotions rebuild - mockup.html` unchanged;
    only the class names are prefixed, because `.q` and `.ch` in a file
    this size are a collision waiting to happen. */
+/* ══ V111.7 · THE PROMOTIONS LIST ══════════════════════════════════
+   One line per promotion on one white card, and the promotion opens
+   underneath its own row. The head row and every row share ONE grid
+   template — written once in .prhd,.prrow so a column can never drift
+   between the heading and the line under it, which is how the target
+   groups panel went ragged a release ago. */
+.prlist{background:#fff;border-radius:13px;box-shadow:0 1px 3px rgba(0,0,0,.05);overflow:hidden;}
+.prhd,.prrow{display:grid;
+  grid-template-columns:minmax(150px,1.5fr) 96px minmax(90px,130px) 140px 86px minmax(160px,1fr) 104px 84px 20px;
+  gap:12px;align-items:center;padding:0 16px;}
+.prhd{height:34px;border-bottom:1px solid var(--div);font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.07em;color:var(--subtle);}
+.prrow{min-height:46px;border-bottom:1px solid var(--div);cursor:pointer;}
+.prrow:last-child{border-bottom:0;}
+.prrow:hover{background:rgba(13,13,13,.014);}
+.prrow.open{background:#fafbfc;}
+.prnm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.prrow .prdt{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.prrow .prmn{font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.prrow .prsg{display:inline-block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom;}
+.prpg{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.prpg .t{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.prpgb{height:4px;border-radius:2px;background:#eceef1;overflow:hidden;}
+.prpgb i{display:block;height:100%;background:var(--acc);}
+.prcv{color:var(--subtle);font-size:13px;text-align:right;}
+.prtbs{color:var(--muted);}
+
+/* the promotion, opened under its row */
+.prpanel{border-bottom:1px solid var(--div);background:#fafbfc;padding:6px 16px 16px;}
+.prpanel:last-child{border-bottom:0;}
+.prfs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 18px;padding:12px 0 6px;}
+.prfs.chiprow{grid-template-columns:repeat(2,minmax(0,1fr));padding-top:4px;padding-bottom:12px;}
+.prf label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--subtle);margin-bottom:5px;}
+/* A FIELD ONLY LOOKS LIKE A BOX ONCE YOU ARE IN IT. Eight bordered
+   inputs under every opened row turned the list into a form. */
+.prfi{width:100%;height:32px;border:1px solid transparent;border-radius:7px;padding:0 8px;
+  font:inherit;font-size:13px;background:transparent;color:var(--text);}
+.prfi:hover:not(:disabled){border-color:var(--div);background:#fff;}
+.prfi:focus{border-color:#cfd3da;background:#fff;outline:none;}
+.prfi:disabled{color:var(--subtle);}
+.prtwo{display:flex;gap:7px;align-items:center;min-width:0;}
+.prtwo .prfi{flex:1;min-width:0;}
+.prfs-sel,.prfs-cur{height:32px;border:1px solid var(--div);border-radius:7px;padding:0 6px;
+  font:inherit;font-size:12.5px;background:#fff;color:var(--muted);}
+.prfs-sel{width:104px;}
+.prfs-sel.wide{width:116px;}
+.prfs-cur{width:52px;}
+.prfseg{width:fit-content;}
+.prplat{border:1px solid var(--div);border-radius:10px;background:#fff;margin-top:8px;overflow:hidden;}
+.prplat h4{margin:0;padding:9px 13px;font-size:12.5px;font-weight:700;
+  border-bottom:1px solid var(--div);display:flex;align-items:center;gap:8px;}
+.prplat h4 .prsecx{margin-left:auto;}
+.prpin{padding:11px 13px;}
+.prpl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--subtle);margin:0 0 7px;}
+.prpin .prchips+.prpl{margin-top:14px;}
+.prpfoot{display:flex;align-items:center;gap:9px;padding-top:14px;}
+.btn.prdel{color:var(--acc);}
+/* MEASURED, NOT GUESSED. At 1180 the band is 913px inside its 16px
+   gutters; the columns and gaps must add to less than that or the row
+   scrolls sideways, which the gate checks. */
+@media(max-width:1300px){
+  /* the target group column keeps 88px even when squeezed, or its own
+     heading wraps onto two lines */
+  .prhd,.prrow{grid-template-columns:minmax(94px,1.4fr) 82px minmax(88px,112px) 134px 76px minmax(150px,1fr) 96px 74px 18px;gap:8px;}
+  .prhd{font-size:9.5px;letter-spacing:.03em;white-space:nowrap;}
+  .prfs{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .prfs.chiprow{grid-template-columns:minmax(0,1fr);}
+}
 .prlhead{display:grid;grid-template-columns:1fr 300px;gap:24px;padding:0 16px 8px;}
 .prlhead .h{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle);}
 .prlhead .r{padding-left:20px;}
@@ -10723,7 +10793,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V111.6 Bologna";
+const TOOL_VERSION="V111.7 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -23770,7 +23840,22 @@ const PR_AUD={inner_circle:"Inner circle",client_list:"Client list",target_group
 /* the budget control is Portfolio's contract amount (Clients.jsx Money) */
 const PR_CUR=["INR","USD","AED"];
 const PR_CUR_SYM={INR:"₹",USD:"$",AED:"د.إ"};
-const PR_BASIS={total:["total","in total"],per_day:["a day","a day"],per_week:["a week","a week"],per_month:["a month","a month"]};
+/* V111.7 — A BUDGET THE TEAM SETS. Chirag, 2 October: "Sometimes we
+   don't have a pre-defined budget and the promotion team has to
+   define on their own." An empty budget showed a dash, which read
+   exactly like one nobody had filled in. This is a deliberate state
+   with no amount behind it, so it says so in words. */
+const PR_BASIS={total:["total","in total"],per_day:["a day","a day"],per_week:["a week","a week"],
+                per_month:["a month","a month"],team_to_set:["Team to set","Team to set"]};
+function prBudgetOpen(p){ return (p&&p.budget_basis)==="team_to_set"; }
+/* the one place every screen asks "what does this promotion's budget
+   say" — a figure, the words, or nothing at all. */
+function prBudgetCell(p){
+  if(prBudgetOpen(p)) return '<span class="prtbs">Team to set</span>';
+  if(prNumOr(p.planned_spend)===null) return '<span class="nsdim">—</span>';
+  return prMoney(p.planned_spend,prCur(p))+(((p.budget_basis||"total")==="total")?""
+         :" "+escHtml(PR_BASIS[p.budget_basis][1]));
+}
 
 /* ── small helpers ────────────────────────────────────────────────── */
 function prFmt(v){ return (v===null||v===undefined||v===""||isNaN(v)) ? '<span class="nsdim">—</span>'
@@ -23833,6 +23918,15 @@ function prStatusHtml(p){
   const lbl={running:"Running",ended:"Ended",upcoming:"Starts "+prShort(p.starts_on),undated:"No dates"}[st];
   return `<span class="prst ${st==="running"?"run":""}"><i></i>${lbl}</span>`;
 }
+/* V111.7 — THE RUNS COLUMN SAYS THE SAME THING IN LESS ROOM. prRuns
+   puts "Ongoing" in a pill, which in a 140px column clipped to "On…".
+   One line of a listing has no room for a pill, so the row spells it
+   out and the pill stays where there is space for it. */
+function prRunsRow(p){
+  if(prIsOngoing(p)) return `${p.starts_on?"From "+prShort(p.starts_on):"No start"} · ongoing`;
+  if(!p.starts_on&&!p.ends_on) return '<span class="nsdim">—</span>';
+  return `${prShort(p.starts_on)||"…"} – ${prShort(p.ends_on)||"…"}`;
+}
 function prRuns(p){
   if(prIsOngoing(p)) return `${p.starts_on?"From "+prShort(p.starts_on):"No start"} <span class="prkind">Ongoing</span>`;
   if(!p.starts_on&&!p.ends_on) return '<span class="nsdim">—</span>';
@@ -23845,6 +23939,7 @@ function prDays(p){
   return Math.round((e-s)/864e5)+1;
 }
 function prBudgetTotal(p){
+  if(prBudgetOpen(p)) return null;          /* no figure to work from */
   const a=prNumOr(p.planned_spend); if(a===null) return null;
   const b=p.budget_basis||"total";
   if(b==="total") return a;
@@ -23852,6 +23947,7 @@ function prBudgetTotal(p){
   return Math.round(a*(b==="per_day"?d:b==="per_week"?d/7:d/30));
 }
 function prBudgetLine(p){
+  if(prBudgetOpen(p)) return '<span class="prtbs">Team to set</span>';
   const a=prNumOr(p.planned_spend); if(a===null) return "";
   const b=p.budget_basis||"total", cur=prCur(p);
   if(b==="total") return `${prMoney(a,cur)} in total`;
@@ -23999,17 +24095,27 @@ function renderPromotions(){
       <span class="lbl">Promotions could not be read</span><span class="sub">${escHtml(PR.err)}</span></div></div>`;
     return;
   }
+  /* V111.7 — THERE IS NO SECOND PAGE. A promotion opens underneath its
+     own row, on the list. Chirag, 2 October: "I don't see much point
+     of moving to a completely new page just to see the creatives...
+     In any case to edit anything you further have to go down and
+     click on edit and get into a pop-up?" It was row, then page, then
+     dialog — three layers to alter one date. A creative keeps a view
+     of its own, because it carries a thread and files. */
   const p=PR.open && PR.list.find(x=>x.id===PR.open);
   const c=p && PR.creative && PR.cr.find(x=>x.id===PR.creative);
-  mc.innerHTML=pageHead()+(c?prCreativeHtml(p,c):p?prDetailHtml(p):prListHtml());
+  mc.innerHTML=pageHead()+(c?prCreativeHtml(p,c):prListHtml());
   hydrateMedia(mc);
 }
 function prSetSeg(s){ PR.seg=s; render(); }
 function prSetSort(v){ PR.sort=v; render(); }
 function prSetObj(v){ PR.obj=v; render(); }
 function prSetSg(v){ PR.sg=v; render(); }
-function prOpen(id){ PR.open=id; PR.creative=null; render(); window.scrollTo(0,0); }
-function prBack(){ PR.open=null; PR.creative=null; render(); }
+/* ONE AT A TIME, Chirag's call: opening a second row closes the first,
+   so the list stays short and you always know where you are. Clicking
+   the open row again closes it. */
+function prOpen(id){ PR.open=(PR.open===id)?null:id; PR.creative=null; render(); }
+function prBack(){ PR.creative=null; render(); }
 
 /* ── the list ─────────────────────────────────────────────────────── */
 function prVisible(){
@@ -24043,6 +24149,11 @@ function prSortCmp(a,b){
 }
 function prListHtml(){
   const rows=prVisible(), canEditP=canCap("edit_promotions");
+  /* V111.7 — AN OPEN ROW THAT A FILTER HAS TAKEN AWAY IS CLOSED. The
+     promotion opens underneath its own row, so without this the page
+     would hold an open state with nothing on screen to show it, and
+     clearing the filter would spring a panel open unasked. */
+  if(PR.open && !rows.some(r=>r.id===PR.open)) PR.open=null;
   /* ══ V110.9 · ONE ROW, AS EVERY OTHER LISTING WEARS IT ═════════════
      Chirag's listing rules: no rows of predefined pills in the header,
      because they clutter and push the row onto two lines; filters and
@@ -24103,128 +24214,131 @@ function prListHtml(){
       <span class="val none">Nothing matches these filters</span></div></div>`;
   }
 
-  const body=rows.map(p=>prCardHtml(p)).join("");
-  return bar+`<div class="nswrap" style="padding-top:0">
-    <div class="prlhead"><div class="h">Promotion</div><div class="h r">Where it has reached</div></div>
-    ${body}</div>`;
+  /* V111.7 — ONE LINE PER PROMOTION, as the suite's listing rule has
+     said all along: one line, one white card, filters rather than
+     pills. The cards this replaces stacked Platforms, Budget and
+     Audience inside every row, so one promotion took the room eight
+     should. Mockup 18. */
+  const body=rows.map(p=>prRowHtml(p)+(PR.open===p.id?prPanelHtml(p):"")).join("");
+  return bar+`<div class="nswrap" style="padding-top:0"><div class="prlist">
+    <div class="prhd">
+      <div>Promotion</div><div>Objective</div><div>Target group</div><div>Runs</div>
+      <div>Status</div><div>Progress</div><div>Budget</div><div>Spent</div><div></div>
+    </div>${body}</div></div>`;
 }
 
-/* ══ V110.6 · THE LISTING IS CARDS, as the approved mockup draws it ═══
-   `08 - Promotions rebuild - mockup.html`. The table it replaces showed
-   seven narrow columns and made the outcome — the only number anyone
-   opens this page for — the same size as everything else. Here each
-   promotion is a card: what it is on the left, how far it has got on the
-   right, in type you can read across a room.
-
-   Class names are prefixed. The mockup called these `.q`, `.ch`, `.ob`
-   and `.p6-*`, which are fine in a file of its own and a hazard in a
-   25,000-line one — the same mistake that left the Objectives list with
-   no gutter when a mockup's `.wrap` came across with the markup and its
-   stylesheet did not. */
-function prCardHtml(p){
-  const g=prProgress(p), st=prStreams(p.id), cur=prCur(p), unit=prUnit(p);
+/* ── one promotion, one line ──────────────────────────────────────── */
+function prRowHtml(p){
+  const g=prProgress(p), unit=prUnit(p), cur=prCur(p), open=PR.open===p.id;
   const tgt=prNumOr(g.target), val=g.value;
   const pc=(tgt&&val!==null)?Math.max(2,Math.min(100,Math.round(val/tgt*100))):0;
-  const crN=prCrFor(p.id).length;
-  const segLbl=prSegOf(p)?prSegLabel(prSegOf(p)):"";
-  const auds=[];
-  st.forEach(x=>prAuds(x.id).forEach(a=>{ if(auds.indexOf(a.kind)<0) auds.push(a.kind); }));
-  const audRow=Object.keys(PR_AUD).map(k=>
-    `<span class="praudm${auds.indexOf(k)>-1?" on a-"+k.replace(/_/g,"-"):""}"><i class="ti ti-${auds.indexOf(k)>-1?"check":"minus"}"></i>${escHtml(PR_AUD[k])}</span>`).join("");
-  return `<div class="prq"><div class="prq-t" onclick="prOpen('${escAttr(p.id)}')">
-    <div>
-      <div class="prq-h">
-        <span class="prq-nm">${escHtml(p.name)}</span>
-        <span class="probj ${prObjClass(p.objective_key)}">${escHtml(prObjLabel(p.objective_key))}</span>
-        ${segLbl?`<span class="prsg">${escHtml(segLbl)}</span>`:""}
-        ${prStatusHtml(p)}
-        <span class="d">${prRuns(p)}</span>
-      </div>
-      <div class="prq-g">
-        <div><div class="prq-k">Platforms</div><div class="prq-ch">${st.length
-          ? st.map(x=>`<span class="prch ${x.platform}">${escHtml((PR_PLAT[x.platform]||PR_PLAT.other).label)}</span>`).join("")
-          : '<span class="nsdim">—</span>'}</div></div>
-        <div><div class="prq-k">Budget</div><div class="prq-v">${prNumOr(p.planned_spend)!==null
-          ? prMoney(p.planned_spend,cur)+" "+escHtml((PR_BASIS[p.budget_basis||"total"]||PR_BASIS.total)[1])
-          : '<span class="nsdim">—</span>'}<span class="s">${crN?crN+" creative"+(crN===1?"":"s"):"no creatives yet"}</span></div></div>
-        <div><div class="prq-k">Audience</div><div class="prq-a">${audRow}</div></div>
-      </div>
-    </div>
-    <div class="prres">
-      <div class="prres-n"><b>${val!==null?prFmt(val):'<span class="nsdim">—</span>'}</b>${tgt?`<span>of ${prFmt(tgt)}</span>`:""}</div>
-      <div class="prres-k">${escHtml(unit)}${g.label?" · "+escHtml(g.label):""}</div>
-      <div class="prres-bar"><i style="width:${pc}%"></i></div>
-      ${/* SPEND BELONGS HERE and not on the Plan page. The suite rule keeps
-           ad spend to admins and account managers, and Promotions is the
-           screen those people open; the old table had a Spend column, so
-           dropping it here would have been a quiet regression.
-
-           "of <budget>" ONLY WHEN THE BUDGET IS A TOTAL. A promotion set at
-           ₹5,000 a day read "Spent ₹1,81,000 of ₹5,000", which is a
-           cumulative number measured against a daily one — true of neither
-           and alarming to read. */""}
-      <div class="prres-sub">${g.spend!==null&&g.spend!==undefined
-        ? `<span>Spent <b>${prMoney(g.spend,cur)}</b>${(prNumOr(p.planned_spend)!==null&&(p.budget_basis||"total")==="total")?" of "+prMoney(p.planned_spend,cur):""}</span>`
-        : `<span>Spent <span class="nsdim">—</span></span>`}${
-        (g.spend&&val)?`<span><b>${prMoney(Math.round(g.spend/val),cur)}</b> a ${escHtml(String(unit).replace(/s$/,""))}</span>`:""}</div>
-      <div class="prres-u">${g.at?escHtml(prShort(String(g.at).slice(0,10))):"nothing recorded yet"}</div>
-    </div>
-  </div></div>`;
+  const seg=prSegOf(p);
+  return `<div class="prrow${open?" open":""}" onclick="prOpen('${escAttr(p.id)}')">
+    <div class="prnm">${escHtml(p.name)}</div>
+    <div><span class="probj ${prObjClass(p.objective_key)}">${escHtml(prObjLabel(p.objective_key))}</span></div>
+    <div>${seg?`<span class="prsg">${escHtml(prSegLabel(seg))}</span>`:'<span class="nsdim">—</span>'}</div>
+    <div class="prdt">${prRunsRow(p)}</div>
+    <div>${prStatusHtml(p)}</div>
+    <div class="prpg">
+      ${/* NO TARGET IS NOT A TARGET OF NOUGHT. A promotion nobody set a
+            number on says so, rather than reading "— of —". */""}
+      ${/* THE UNIT IS NOT REPEATED HERE. The objective column, one
+            across, already says Leads or Centre visits; carrying the
+            same word again cost the cell the room it needed and clipped
+            to "leads…" at 1180. What the column does owe is WHICH
+            PERIOD the figures belong to, because 312 of 450 means a
+            different thing for a month than for a whole run. */""}
+      <div class="t">${tgt===null
+        ? '<span class="nsdim">No target</span>'
+        : `${val!==null?`<b>${prFmt(val)}</b>`:'<span class="nsdim">—</span>'} of ${prFmt(tgt)}${
+            prBasis(p)==="per_month"?' <span class="nsdim">this month</span>':""}`}</div>
+      <div class="prpgb"><i style="width:${pc}%"></i></div></div>
+    <div class="prmn">${prBudgetCell(p)}</div>
+    <div class="prmn">${g.spend!==null&&g.spend!==undefined?prMoney(g.spend,cur):'<span class="nsdim">—</span>'}</div>
+    <div class="prcv"><i class="ti ti-chevron-${open?"up":"down"}"></i></div>
+  </div>`;
 }
 
-/* ── one promotion ────────────────────────────────────────────────── */
-function prDetailHtml(p){
+/* V111.7 — prCardHtml is gone. The card listing it drew (V110.6) put
+   Platforms, Budget and Audience inside every row, so one promotion
+   filled the room eight should and the listing rule — one line per
+   entry — was broken by the page that most needed it. prRowHtml above
+   replaces it. */
+
+/* ══ V111.7 · ONE PROMOTION, OPENED UNDER ITS OWN ROW ═══════════════
+   What was a second page and then a dialog on top of it. The fields
+   are edited where they sit and save as you leave them; a field only
+   looks like a box once you are in it, so a resting list stays calm.
+   Objective and target group stay CHIPS — Chirag, 2 October: picking
+   an objective is a thought, not a form-filling step, and seeing the
+   choices is half of it. */
+function prPanelHtml(p){
   const canEditP=canCap("edit_promotions"), canOut=canCap("enter_promotion_outcomes");
-  const g=prProgress(p), cur=prCur(p), st=prStreams(p.id);
-  const bar=`<div class="pgbar">
-      <a class="prback" href="javascript:void 0" onclick="prBack()">← Promotions</a>
-      <b class="prtitle">${escHtml(p.name)}</b>
-      <span style="flex:1"></span>
-      ${canOut?`<button class="btn btn-s" onclick="prProgOpen('${p.id}')">Update progress</button>`:""}
-      ${canEditP?`<button class="btn btn-s" onclick="prEditOpen('${p.id}')">Edit</button>
-        <button class="btn btn-s" onclick="prTrash('${p.id}')" title="Move to Trash"><i class="ti ti-trash"></i></button>`:""}
-    </div>`;
+  const g=prProgress(p), cur=prCur(p), st=prStreams(p.id), ong=prIsOngoing(p);
+  const id=escAttr(p.id), ro=canEditP?"":" disabled";
+  const curs=PR_CUR.indexOf(cur)<0?PR_CUR.concat([cur]):PR_CUR;
+  const bb=p.budget_basis||"total", open=prBudgetOpen(p);
+  const f=(lbl,inner)=>`<div class="prf"><label>${lbl}</label>${inner}</div>`;
 
-  const facts=`<div class="prcard">
-      <div class="prfrow">
-        <div><div class="prlbl">Objective</div><span class="probj ${prObjClass(p.objective_key)}">${escHtml(prObjLabel(p.objective_key))}</span></div>
-        <div><div class="prlbl">Runs</div><div class="prfv">${prRuns(p)}</div></div>
-        <div><div class="prlbl">Budget</div><div class="prfv">${prNumOr(p.planned_spend)===null?'<span class="nsdim">—</span>':prBudgetLine(p)}</div></div>
-        <div><div class="prlbl">Platforms</div><div class="prfv">${st.length?st.map(s=>`<span class="prpl ${s.platform}">${escHtml((PR_PLAT[s.platform]||PR_PLAT.other).label)}</span>`).join(""):'<span class="nsdim">—</span>'}</div></div>
-      </div>
-      <div class="prtbox">
-        <div><div class="prlbl">Target</div>
-          <div class="prfv big">${g.target===null?'<span class="nsdim">Not set</span>'
-            :`${prFmt(g.target)} ${escHtml(prUnit(p))}${prBasisTail(p)}${(prBasis(p)==="total"&&p.target_on)?` <span class="nsdim">by ${prShort(p.target_on)}</span>`:""}`}</div></div>
-        <div>${g.label?`<span class="nsdim">${escHtml(g.label)}</span><br>`:""}
-          <b class="prnow">${prFmt(g.value)}</b> so far${prBar(g)}
-          <span class="nsdim">${g.spend!==null?prMoney(g.spend,cur)+" spent":"nothing spent yet"}${g.at?` · updated ${prShort(String(g.at).slice(0,10))}`:""}</span></div>
-      </div>
-    </div>`;
+  const dates=ong
+    ? f("Starts",`<input class="prfi" type="date" value="${escAttr(p.starts_on||"")}"${ro}
+         onchange="prSet('${id}',{starts_on:this.value||null})">`)
+    : f("Starts",`<input class="prfi" type="date" value="${escAttr(p.starts_on||"")}"${ro}
+         onchange="prSet('${id}',{starts_on:this.value||null})">`)
+      +f("Ends",`<input class="prfi" type="date" value="${escAttr(p.ends_on||"")}"${ro}
+         onchange="prSet('${id}',{ends_on:this.value||null})">`)
+      +f("Hit it by",`<input class="prfi" type="date" value="${escAttr(p.target_on||"")}"${ro}
+         onchange="prSet('${id}',{target_on:this.value||null})">`);
 
-  const blocks=st.map(s=>{
-    const auds=prAuds(s.id), crs=prCrFor(p.id,s.id);
-    /* V111.2 — A PLATFORM CAN COME OFF AGAIN. The edit box has always
-       refused to untick one, because a tick would take a block of
-       audiences and creatives with it, and it sent you here — where
-       there was nothing to click. */
-    return `<div class="nssec prsec">${escHtml((PR_PLAT[s.platform]||PR_PLAT.other).label)}${
-      canEditP?`<i class="ti ti-x prsecx" title="Take this platform off the promotion"
-        onclick="prStreamDel('${escAttr(s.id)}')"></i>`:""}</div>
-      <div class="prcard">
-        <div class="prlbl">Audiences</div>
+  const fields=`<div class="prfs">
+    ${f("Promotion name",`<input class="prfi" value="${escAttr(p.name||"")}" maxlength="120"${ro}
+        onblur="prSetName('${id}',this)" onkeydown="if(event.key==='Enter')this.blur()">`)}
+    ${f("Target",`<div class="prtwo">
+        <input class="prfi" inputmode="numeric" value="${prNumOr(p.target_value)!==null?Number(p.target_value):""}"${ro}
+          onblur="prSetNum('${id}','target_value',this)" onkeydown="if(event.key==='Enter')this.blur()">
+        <span class="prunitbox">${escHtml(prUnit(p))}</span>
+        <select class="prfs-sel" ${ro} onchange="prSet('${id}',{target_basis:this.value})">${
+          Object.keys(PR_TB).map(k=>`<option value="${k}"${k===prBasis(p)?" selected":""}>${PR_TB[k][1]}</option>`).join("")}</select>
+      </div>`)}
+    ${f("Runs",`<div class="prseg prfseg">
+        <button class="prseg-b${!ong?" on":""}"${ro} onclick="prSet('${id}',{kind:'one_off'})">One-off</button>
+        <button class="prseg-b${ong?" on":""}"${ro} onclick="prSet('${id}',{kind:'ongoing',ends_on:null,target_on:null})">Ongoing</button>
+      </div>`)}
+    ${f("Budget",`<div class="prtwo">
+        <select class="prfs-cur" ${ro} onchange="prSet('${id}',{budget_currency:this.value})">${
+          curs.map(c=>`<option value="${c}"${c===cur?" selected":""}>${escHtml(PR_CUR_SYM[c]||c)}</option>`).join("")}</select>
+        <input class="prfi" inputmode="decimal" value="${(!open&&prNumOr(p.planned_spend)!==null)?Number(p.planned_spend):""}"
+          ${open?"disabled":ro} onblur="prSetNum('${id}','planned_spend',this)" onkeydown="if(event.key==='Enter')this.blur()">
+        <select class="prfs-sel wide" ${ro} onchange="prSetBB('${id}',this.value)">${
+          Object.keys(PR_BASIS).map(k=>`<option value="${k}"${k===bb?" selected":""}>${PR_BASIS[k][0]}</option>`).join("")}</select>
+      </div>`)}
+    ${dates}
+  </div>
+  <div class="prfs chiprow">
+    ${f("Objective",`<div class="prchips">${prRowObjChips(p)}</div>`)}
+    ${f("Target group",`<div class="prchips">${prRowSegChips(p)}</div>`)}
+  </div>`;
+
+  const blocks=st.map(x=>{
+    const auds=prAuds(x.id), crs=prCrFor(p.id,x.id);
+    return `<div class="prplat">
+      <h4>${escHtml((PR_PLAT[x.platform]||PR_PLAT.other).label)}${
+        canEditP?`<i class="ti ti-x prsecx" title="Take this platform off the promotion"
+          onclick="prStreamDel('${escAttr(x.id)}')"></i>`:""}</h4>
+      <div class="prpin">
+        <div class="prpl">Audiences</div>
         <div class="prchips">${auds.map(a=>`<span class="praud a-${a.kind}">${escHtml(PR_AUD[a.kind]||a.kind)}${a.description?" — "+escHtml(a.description):""}
             ${canEditP?`<i class="ti ti-x rm" title="Remove" onclick="prAudDel('${a.id}')"></i>`:""}</span>`).join("")}
-          ${canEditP?`<span class="praddchip" onclick="prAudOpen('${s.id}')"><i class="ti ti-plus"></i>Add</span>`:""}</div>
-        <div class="prlbl" style="margin-top:16px">Creatives · ${crs.length}</div>
+          ${canEditP?`<span class="praddchip" onclick="prAudOpen('${x.id}')"><i class="ti ti-plus"></i>Add</span>`:""}</div>
+        <div class="prpl">Creatives · ${crs.length}</div>
         <div class="prcgrid">${crs.map(c=>prCrCard(c)).join("")}
-          ${canCap("edit_ad_creatives")?`<div class="prcr add" onclick="prCrNew('${p.id}','${s.id}')"><i class="ti ti-plus"></i>Add creative</div>`:""}</div>
-      </div>`;
+          ${canCap("edit_ad_creatives")?`<div class="prcr add" onclick="prCrNew('${p.id}','${x.id}')"><i class="ti ti-plus"></i>Add creative</div>`:""}</div>
+      </div></div>`;
   }).join("");
   const addPlat=canEditP?`<div class="praddbig" onclick="prStreamAdd('${p.id}')"><i class="ti ti-plus"></i> Add a platform</div>`:"";
 
   let months="";
-  if(prIsOngoing(p)){
+  if(ong){
     const ms=prMonths(p.id);
     const body=ms.length?ms.map(m=>`<tr><td style="text-align:left"><b>${escHtml(prMonthName(m.month_start))}</b></td>
         <td style="text-align:left">${prFmt(prNumOr(m.target_value)!==null?m.target_value:p.target_value)}</td>
@@ -24232,15 +24346,82 @@ function prDetailHtml(p){
         <td style="text-align:left" class="nsdim">${escHtml(m.note||"—")}</td>
         <td>${canOut?`<a class="prlink" href="javascript:void 0" onclick="prProgOpen('${p.id}','${m.month_start}')">Update</a>`:""}</td></tr>`).join("")
       :`<tr><td colspan="6" class="nsdim">Nothing recorded yet</td></tr>`;
-    months=`<div class="nssec">Month by month</div>
+    months=`<div class="prpl" style="margin-top:14px">Month by month</div>
       <div class="nsscroll"><table class="nstbl"><thead><tr><th style="text-align:left">Month</th>
         <th style="text-align:left">Target</th><th>${escHtml(prUnit(p).replace(/^./,c=>c.toUpperCase()))}</th>
         <th>Spend</th><th style="text-align:left">Note</th><th style="width:80px"></th></tr></thead>
         <tbody>${body}</tbody></table></div>`;
   }
 
-  return bar+`<div class="nswrap" style="padding-top:0">${facts}${blocks}${addPlat}${months}</div>`;
+  const foot=`<div class="prpfoot">
+    ${canOut?`<button class="btn btn-s" onclick="prProgOpen('${p.id}')">Update progress</button>`:""}
+    ${canEditP?`<button class="btn btn-s prdel" onclick="prTrash('${p.id}')"><i class="ti ti-trash"></i> Move to Trash</button>`:""}
+    <span style="flex:1"></span>
+    <span class="nsdim">${g.at?"Last recorded "+escHtml(prShort(String(g.at).slice(0,10))):"Nothing recorded yet"}</span>
+  </div>`;
+
+  return `<div class="prpanel">${fields}${blocks}${addPlat}${months}${foot}</div>`;
 }
+
+/* The chips inside an opened row write straight away — there is no
+   Save, because there is no dialog to save from. Clicking the chosen
+   target group again clears it, so "aimed at everyone" stays
+   reachable without a None chip in the row. */
+function prRowObjChips(p){
+  const mine=PR.objs.filter(o=>PR.bobjs.indexOf(o.key)>-1);
+  return mine.map(o=>`<span class="propt${p.objective_key===o.key?" on":""}"
+      onclick="prSetObjOf('${escAttr(p.id)}','${escAttr(o.key)}')">${escHtml(prObjLabel(o.key))}</span>`).join("")
+    +`<span class="propt add" onclick="pbOpen('obj')">${mine.length?"+ More":"+ Pick one"}</span>`;
+}
+function prRowSegChips(p){
+  const mine=PR.bsegs||[];
+  return mine.map(o=>`<span class="propt${p.brand_segment_id===o.id?" on":""}"
+      onclick="prSetSegOf('${escAttr(p.id)}','${escAttr(o.id)}')">${escHtml(prSegLabel(o))}</span>`).join("")
+    +`<span class="propt add" onclick="pbOpen('seg')">${mine.length?"+ More":"+ Pick one"}</span>`;
+}
+
+/* ── writing one field, from where it sits ────────────────────────── */
+/* Optimistic: the row is changed on screen first so the list does not
+   flicker, and put back exactly as it was if the database refuses. */
+async function prSet(id,patch){
+  if(!canCap("edit_promotions")) return capDenied("Editing promotions");
+  const row=PR.list.find(x=>x.id===id); if(!row) return;
+  const was={}; Object.keys(patch).forEach(k=>{ was[k]=row[k]; });
+  Object.assign(row,patch); render();
+  const r=await sb.from("promotions").update(Object.assign({},patch,{updated_at:new Date().toISOString()}))
+                  .eq("id",id).select("id");
+  if(r.error||!r.data||!r.data.length){
+    Object.assign(row,was); render();
+    toast("Not saved — "+(r.error?r.error.message:"not allowed"),"err");
+  }
+}
+function prSetName(id,el){
+  const v=String(el.value||"").trim();
+  const row=PR.list.find(x=>x.id===id); if(!row) return;
+  if(!v){ el.value=row.name||""; toast("Give the promotion a name","err"); return; }
+  if(v===row.name) return;
+  prSet(id,{name:v});
+}
+function prSetNum(id,field,el){
+  const row=PR.list.find(x=>x.id===id); if(!row) return;
+  const raw=String(el.value||"").replace(/[,\s₹$]/g,"");
+  const v=raw===""?null:Number(raw);
+  if(v!==null&&(isNaN(v)||v<0)){ el.value=prNumOr(row[field])!==null?Number(row[field]):""; toast("That must be a number","err"); return; }
+  if(v===prNumOr(row[field])) return;
+  prSet(id,{[field]:v});
+}
+/* Team to set carries no amount, so choosing it clears the one that
+   was there rather than leaving a figure behind the words. */
+function prSetBB(id,v){ prSet(id, v==="team_to_set"?{budget_basis:v,planned_spend:null}:{budget_basis:v}); }
+/* the unit follows the objective, the same rule the new-promotion box has */
+function prSetObjOf(id,key){ prSet(id,{objective_key:key,target_unit:prObjUnit(key)}); }
+function prSetSegOf(id,sid){
+  const row=PR.list.find(x=>x.id===id); if(!row) return;
+  const off=row.brand_segment_id===sid, seg=(PR.bsegs||[]).find(x=>x.id===sid);
+  prSet(id,{brand_segment_id:off?null:sid, segment_key:off?null:(seg?seg.segment_key:null)});
+}
+window.prSet=prSet; window.prSetName=prSetName; window.prSetNum=prSetNum; window.prSetBB=prSetBB;
+window.prSetObjOf=prSetObjOf; window.prSetSegOf=prSetSegOf;
 
 /* ── the box every window opens in ────────────────────────────────── */
 function prBox(html,wide){
@@ -24333,8 +24514,8 @@ function prEditOpen(id){
       <div id="pr-kindbits">${prKindBits(p)}</div>
       <div class="field"><label class="fl">Budget</label><div class="cl-money">
         <select class="cl-cur" id="pr-cur" aria-label="Currency">${curs.map(c=>`<option value="${c}"${c===cur?" selected":""}>${escHtml(PR_CUR_SYM[c]||c)}</option>`).join("")}</select>
-        <input class="fi" id="pr-plan" inputmode="decimal" value="${p&&prNumOr(p.planned_spend)!==null?Number(p.planned_spend):""}">
-        <select class="cl-basis" id="pr-basis" aria-label="That amount is">${Object.keys(PR_BASIS).map(k=>`<option value="${k}"${k===basis?" selected":""}>${PR_BASIS[k][0]}</option>`).join("")}</select>
+        <input class="fi" id="pr-plan" inputmode="decimal"${basis==="team_to_set"?" disabled":""} value="${(basis!=="team_to_set"&&p&&prNumOr(p.planned_spend)!==null)?Number(p.planned_spend):""}">
+        <select class="cl-basis" id="pr-basis" aria-label="That amount is" onchange="prPickBB(this.value)">${Object.keys(PR_BASIS).map(k=>`<option value="${k}"${k===basis?" selected":""}>${PR_BASIS[k][0]}</option>`).join("")}</select>
       </div></div>
       <div class="field"><label class="fl">Platforms</label>
         <div class="prchips" id="pr-plats">${["meta","google","linkedin"].map(k=>
@@ -24377,6 +24558,12 @@ function prTargetBits(p){
       </div></div>`;
 }
 function prPickTB(v){ PR.edit.tb=v; }
+/* Team to set has no amount behind it, so the box empties and goes
+   quiet rather than keeping a figure nobody agreed. */
+function prPickBB(v){
+  const el=document.getElementById("pr-plan"); if(!el) return;
+  if(v==="team_to_set"){ el.value=""; el.disabled=true; } else el.disabled=false;
+}
 function prKindBits(p){
   const ong=PR.edit.kind==="ongoing";
   return `<div class="prgrid2">
@@ -24455,7 +24642,8 @@ async function prEditSave(){
   if(s&&e&&e<s){ toast("The end date is before the start","err"); return; }
   const tv=prNumOr(String(g("pr-tv").value).replace(/[,\s]/g,""));
   if(tv!==null&&tv<0){ toast("The target must be a number","err"); g("pr-tv").focus(); return; }
-  const planRaw=g("pr-plan").value.replace(/[,\s₹$]/g,"");
+  const bb=g("pr-basis").value;
+  const planRaw=(bb==="team_to_set")?"":g("pr-plan").value.replace(/[,\s₹$]/g,"");
   const plan=planRaw===""?null:Number(planRaw);
   if(plan!==null&&(isNaN(plan)||plan<0)){ toast("The budget must be a number","err"); g("pr-plan").focus(); return; }
   if(!PR.edit.plats.length){ toast("Pick at least one platform","err"); return; }
@@ -24471,7 +24659,7 @@ async function prEditSave(){
     target_basis:(g("pr-tb")?g("pr-tb").value:PR.edit.tb)||"total",
     target_on: ong?null:(g("pr-by")?g("pr-by").value||null:null),
     starts_on:s, ends_on:ong?null:e,
-    planned_spend:plan, budget_basis:g("pr-basis").value, budget_currency:g("pr-cur").value,
+    planned_spend:plan, budget_basis:bb, budget_currency:g("pr-cur").value,
     updated_at:new Date().toISOString()};
   const btn=g("pr-save"); btn.disabled=true;
   try{
