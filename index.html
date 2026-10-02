@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V111.8 Bologna"/>
+<meta name="cc-tool-version" content="V111.9 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -10842,7 +10842,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V111.8 Bologna";
+const TOOL_VERSION="V111.9 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -27640,17 +27640,39 @@ window.prSegOpen=function(){ pbOpen("seg"); };
    link is #F6EFF5 because that is the pixel the panel actually paints
    there — sampled off the rendered card, not guessed. A flat white chip
    on a gradient shows as a patch. */
+/* ══ V111.9 — THE EMPTY SECTIONS WERE HOLDING THE TEXT'S ROOM ═════
+   Chirag, 2 Oct, on the live page: the paragraph was asking to be
+   expanded while Campaigns, Influencers and Boosting each sat there
+   empty, taking a quarter of the panel to say "none". "They should be
+   taking least amount of space. So the maximum space can be utilised
+   to show the data right there rather than need for clicking read
+   more."
+
+   So three lines is no longer a fixed clamp. The cards take what they
+   actually need, the paragraph takes everything left over, and read
+   more appears ONLY when the words genuinely do not fit — which, on a
+   month with little planned, is never. mpFit() below does the
+   arithmetic after each paint, because CSS cannot ask how tall a
+   sibling wants to be. */
 .mp-p{position:relative;font-size:12.5px;line-height:1.6;color:var(--muted);margin-top:5px;flex:none;
-  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+  overflow:hidden;}
 .mp-pan.grown .mp-p{-webkit-line-clamp:unset;display:block;}
 .mp-p.none{color:var(--subtle);}
-.mp-p .rm{position:absolute;right:0;bottom:0;padding-left:34px;font-weight:800;color:#8A5A6A;
+.mp-p .rm{display:none;position:absolute;right:0;bottom:0;padding-left:34px;font-weight:800;color:#8A5A6A;
   cursor:pointer;background:linear-gradient(to right,rgba(246,239,245,0),#F6EFF5 28px);}
+.mp-p.more .rm{display:inline;}
 .mp-p .rm:hover{color:var(--acc);}
 .mp-pan.grown .mp-p .rm{display:none;}
 
 /* ── the four cards ───────────────────────────────────────────────── */
-.mp-g{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:9px;margin-top:11px;}
+/* rows size to their content. `1fr` was what made an empty card as tall
+   as a full one — four equal quarters whatever was in them. `.packed` is
+   the other case: when the cards want MORE room than the panel has, the
+   two rows share it equally again and their lists clip, which is what
+   the fade is for. */
+.mp-g{flex:none;min-height:0;display:grid;grid-template-columns:1fr 1fr;
+  grid-auto-rows:min-content;align-content:start;gap:9px;margin-top:11px;}
+.mp-g.packed{grid-auto-rows:1fr;}
 .mp-pan.grown .mp-g{flex:none;grid-auto-rows:auto;align-items:start;}
 .mp-sg{min-height:0;background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.9);
   border-radius:11px;padding:9px 11px 10px;display:flex;flex-direction:column;min-width:0;
@@ -27681,6 +27703,10 @@ window.prSegOpen=function(){ pbOpen("seg"); };
    last visible row fades instead, which is also true: there IS more, and
    opening the card is how you see it. Costs no row. */
 .mp-l{flex:1;min-height:0;overflow:hidden;margin-top:7px;}
+/* AN EMPTY SECTION IS ONE LINE. It used to be a title, a blank list and
+   a sentence saying there was nothing — three rows to say "none". The
+   word rides the title now and the card is 41px instead of 110. */
+.mp-none-inline{font-size:11.5px;font-weight:700;color:var(--subtle);white-space:nowrap;}
 /* ONLY WHEN THERE IS MORE. The fade was on every list, so a card with
    two rows and room for three had its second row dimmed for no reason —
    it read as cut when nothing was. CSS cannot ask whether a box
@@ -27771,9 +27797,17 @@ window.prSegOpen=function(){ pbOpen("seg"); };
   /* a 182px card cannot carry a date, a name and a 78px pill, so the
      pill gives up the width first and ellipsises. The whole word is on
      the row when the card is opened, which is where it is read anyway. */
-  .mp-l.c-prod  .mp-r{grid-template-columns:40px 1fr 62px;}
-  .mp-l.c-infl  .mp-r{grid-template-columns:1fr 16px 62px;}
-  .mp-l.c-boost .mp-r{grid-template-columns:52px 1fr 62px;}
+  /* 62px was eight pixels short of the longest word a pill can carry
+     — REQUESTED came out "REQUE…" at 1180, which the gate could not
+     see because it only ever asked whether a pill escaped its CARD. It
+     now asks whether the word is whole. The measurement says 77px for
+     COMPLETED and SCHEDULED, so this track is 78px at every width —
+     the same as the wide one, because a pill's word does not get
+     shorter on a smaller screen. The narrowing saved sixteen pixels
+     and cost the reader the word. */
+  .mp-l.c-prod  .mp-r{grid-template-columns:40px 1fr 78px;}
+  .mp-l.c-infl  .mp-r{grid-template-columns:1fr 16px 78px;}
+  .mp-l.c-boost .mp-r{grid-template-columns:52px 1fr 78px;}
   .mp-l.c-camp  .mp-r{grid-template-columns:7px 52px 1fr;}
 }
 </style>
@@ -27873,7 +27907,7 @@ function mpSegToggle(k){
 }
 function mpPanelRedraw(){
   const host=document.getElementById("content-plancard");
-  if(host){ host.innerHTML=monthPlanCardHtml(contentMonth); mpFadeLists(); }
+  if(host){ host.innerHTML=monthPlanCardHtml(contentMonth); mpFit(); }
 }
 /* the one thing the stylesheet cannot work out for itself */
 function mpFadeLists(){
@@ -27881,15 +27915,75 @@ function mpFadeLists(){
     l.classList.toggle("ov", l.scrollHeight > l.clientHeight + 1);
   });
 }
+/* ── mpFit ─ WHO GETS THE LEFTOVER ROOM ───────────────────────────
+   The panel is locked to the calendar's 359px, and inside it the
+   paragraph and the four cards are competing for the same column of
+   space. CSS cannot settle that: it has no way to ask how tall the
+   cards WANT to be before deciding how many lines the text may have.
+   So it is measured here, after the paint.
+
+   The cards are asked first — they are the plan, and a row that is
+   there deserves to be seen without a click. Whatever is left over
+   goes to the paragraph, down to a floor of two lines. On a month with
+   three empty sections that leftover is most of the panel, so the text
+   runs to its natural length and *read more* never appears; on a full
+   month the floor holds, the cards share the rest equally (`.packed`)
+   and their lists clip under the fade. Read more is set from one
+   question only — did the words actually not fit. */
+function mpFit(){
+  const pan=document.querySelector(".mp-pan"); if(!pan) return;
+  const g=pan.querySelector(".mp-g"); if(!g) return;
+  const p=pan.querySelector(".mp-p");
+
+  g.classList.remove("packed"); g.style.maxHeight="";
+  if(p){ p.style.maxHeight=""; p.classList.remove("more"); }
+
+  /* a panel the user has opened a card in is no longer height-locked,
+     and nothing needs rationing */
+  if(pan.classList.contains("grown")){ mpFadeLists(); return; }
+
+  const lh=p?(parseFloat(getComputedStyle(p).lineHeight)||20):20;
+  const room=pan.clientHeight
+            - parseFloat(getComputedStyle(pan).paddingTop||0)
+            - parseFloat(getComputedStyle(pan).paddingBottom||0);
+  const head=pan.querySelector(".mp-h");
+  let taken=head?head.offsetHeight:0;
+  if(p) taken+=parseFloat(getComputedStyle(p).marginTop||0);
+  taken+=parseFloat(getComputedStyle(g).marginTop||0);
+
+  const want=g.scrollHeight;              /* what the cards ask for */
+  const floor=p?Math.round(lh*2):0;       /* the text never gets less */
+  let forP=0;
+  if(p){
+    forP=Math.max(floor, Math.min(p.scrollHeight, room-taken-want));
+  }
+  const forG=Math.max(0, room-taken-forP);
+
+  if(p){
+    /* whole lines only, so a line is never sliced in half */
+    const lines=Math.max(2, Math.floor(forP/lh));
+    const cap=Math.round(lines*lh);
+    if(p.scrollHeight>cap+1){ p.style.maxHeight=cap+"px"; p.classList.add("more"); }
+  }
+  g.style.maxHeight=forG+"px";
+  if(want>forG+1) g.classList.add("packed");
+  mpFadeLists();
+}
 /* and the panel is also drawn by renderSocial, which is not ours —
    wrapped rather than rewritten, so the Posts page keeps every other
    thing that function does. */
 (function(){
   const base=renderSocial;
-  renderSocial=function(){ const r=base.apply(this,arguments); mpFadeLists(); return r; };
+  renderSocial=function(){ const r=base.apply(this,arguments); mpFit(); return r; };
 })();
 function mpReadMore(){
-  const el=document.querySelector(".mp-pan"); if(el) el.classList.add("grown");
+  const el=document.querySelector(".mp-pan"); if(el){
+    el.classList.add("grown");
+    const p=el.querySelector(".mp-p");
+    if(p){ p.style.maxHeight=""; p.classList.remove("more"); }
+    const g=el.querySelector(".mp-g");
+    if(g){ g.style.maxHeight=""; g.classList.remove("packed"); }
+  }
 }
 
 /* ── what each segment holds ──────────────────────────────────────── */
@@ -28072,14 +28166,23 @@ function mpSegCard(seg,m,canE){
     tail=got!==null?`<span class="mp-fig">${prFmt(got)} <s>delivered</s></span>`:"";
   }
 
-  const body=rows.length
-    ? rows.join("")
-    : `<div class="mp-none">${{camp:"No campaigns this month.",prod:"Nothing planned.",
-        infl:"None planned.",boost:canCap("view_promotions")?"No promotions this month.":""}[seg]}</div>`;
+  /* NOTHING PLANNED IS ONE LINE. A card with no rows used to draw a
+     title, a list and a sentence inside it — three rows high, and as
+     tall as a full card besides, which is what pushed the paragraph
+     into asking to be expanded. The word rides the title instead, the
+     list is not drawn at all, and there is no chevron because there is
+     nothing under it to open. `+ Add` and `+ Request` stay: an empty
+     month is exactly when you want them. */
+  if(!rows.length){
+    const w={camp:"none",prod:"none",infl:"none",boost:canCap("view_promotions")?"none":""}[seg];
+    return `<div class="mp-sg empty" data-seg="${seg}">
+      <div class="mp-sgt"><b>${T}</b>${w?`<span class="mp-none-inline">${w}</span>`:""}${tail}</div>
+    </div>`;
+  }
 
   return `<div class="mp-sg${open?" open":""}" data-seg="${seg}">
     <div class="mp-sgt" onclick="mpSegToggle('${seg}')"><b>${T}</b>${tail}${MP_CV}</div>
-    <div class="mp-l c-${seg}${seg==="boost"&&!mpSeeSpend()?" nospend":""}">${body}</div>
+    <div class="mp-l c-${seg}${seg==="boost"&&!mpSeeSpend()?" nospend":""}">${rows.join("")}</div>
   </div>`;
 }
 
