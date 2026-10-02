@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V112.2 Bologna"/>
+<meta name="cc-tool-version" content="V112.3 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -5863,7 +5863,7 @@ function statusChipSm(p){
   const st=SOCIAL_STATUS[p.status]||["","#888"]; const chip=SOCIAL_CHIP[p.status]||["#F1EFE8","#5F5E5A"];
   return `<span style="height:20px;padding:0 8px 0 6px;border-radius:999px;background:${chip[0]};display:flex;align-items:center;gap:4px;">
     <span id="stdot-${p.id}" style="width:5px;height:5px;border-radius:50%;background:${st[1]};flex-shrink:0;"></span>
-    <select onchange="socialStatusEdit('${p.id}',this.value)" style="border:none;background:transparent;font-size:11px;font-weight:700;color:${chip[1]};font-family:inherit;cursor:pointer;outline:none;padding:0;">${Object.entries(SOCIAL_STATUS).map(([k,v])=>`<option value="${k}" ${p.status===k?"selected":""}>${v[0]}</option>`).join("")}</select>
+    <select class="cc-stsel" onchange="socialStatusEdit('${p.id}',this.value)" style="border:none;background-color:transparent;font-size:11px;font-weight:700;color:${chip[1]};outline:none;padding:0 16px 0 0;background-position:right 2px center;background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${encodeURIComponent(chip[1])}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');">${Object.entries(SOCIAL_STATUS).map(([k,v])=>`<option value="${k}" ${p.status===k?"selected":""}>${v[0]}</option>`).join("")}</select>
   </span>`;
 }
 /* ══ v82.3 — THE BRIEF BLOCK, CLEANED ═══════════════════════════════
@@ -10842,7 +10842,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V112.2 Bologna";
+const TOOL_VERSION="V112.3 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -21472,7 +21472,7 @@ function mpvMonthsWithPlan(){
 function mpvStatusCtl(m,mp,canE){
   const st=mp.status==="approved";
   return canE
-    ?`<select class="mp-status" onchange="mpvSetStatus(this.value,${m})" style="appearance:none;-webkit-appearance:none;border:none;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border-radius:999px;padding:5px 24px 5px 10px;color:${st?"#791F1F":"#854F0B"};background-color:${st?"#FCEBEB":"#FAEEDA"};background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${st?"%23791F1F":"%23854F0B"}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 9px center;">
+    ?`<select class="mp-status cc-stsel" onchange="mpvSetStatus(this.value,${m})" style="appearance:none;-webkit-appearance:none;border:none;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border-radius:999px;padding:5px 24px 5px 10px;color:${st?"#791F1F":"#854F0B"};background-color:${st?"#FCEBEB":"#FAEEDA"};background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${st?"%23791F1F":"%23854F0B"}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 9px center;">
         <option value="drafted"${st?"":" selected"}>Drafted</option><option value="approved"${st?" selected":""}>Approved</option></select>`
     :`<span class="mp-status" style="font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px;color:${st?"#791F1F":"#854F0B"};background:${st?"#FCEBEB":"#FAEEDA"};">${st?"Approved":"Drafted"}</span>`;
 }
@@ -22644,7 +22644,7 @@ function monthPlanCardHtml(m){
      that anybody has planned the month. */
   const hasPlan=!!mp.id||monthPlanHasData(activeBrand,YEAR,m)||infl.length||targets.length||(mp.influencer_target>0);
   const statusCtl=!hasPlan?"":canE
-    ?`<select class="mp-status" onchange="mpCardSetStatus(this.value)" style="appearance:none;-webkit-appearance:none;border:none;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border-radius:999px;padding:5px 24px 5px 10px;color:${st?"#791F1F":"#854F0B"};background-color:${st?"#FCEBEB":"#FAEEDA"};background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${st?"%23791F1F":"%23854F0B"}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 9px center;">
+    ?`<select class="mp-status cc-stsel" onchange="mpCardSetStatus(this.value)" style="appearance:none;-webkit-appearance:none;border:none;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border-radius:999px;padding:5px 24px 5px 10px;color:${st?"#791F1F":"#854F0B"};background-color:${st?"#FCEBEB":"#FAEEDA"};background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${st?"%23791F1F":"%23854F0B"}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 9px center;">
         <option value="drafted"${st?"":" selected"}>Drafted</option><option value="approved"${st?" selected":""}>Approved</option></select>`
     :`<span class="mp-status" style="font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px;color:${st?"#791F1F":"#854F0B"};background:${st?"#FCEBEB":"#FAEEDA"};">${st?"Approved":"Drafted"}</span>`;
   const editBtn=canE?`<span class="mp-edit" onclick="mpvStart(${m})" title="Open the full month plan" style="width:26px;height:26px;border-radius:50%;border:1px solid var(--div);background:var(--surface);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;"><i class="ti ti-pencil" style="font-size:13px;"></i></span>`:"";
@@ -27667,11 +27667,23 @@ window.prSegOpen=function(){ pbOpen("seg"); };
   overflow:hidden;}
 .mp-pan.grown .mp-p{-webkit-line-clamp:unset;display:block;}
 .mp-p.none{color:var(--subtle);}
-.mp-p .rm{display:none;position:absolute;right:0;bottom:0;padding-left:34px;font-weight:800;color:#8A5A6A;
-  cursor:pointer;background:linear-gradient(to right,rgba(246,239,245,0),#F6EFF5 28px);}
-.mp-p.more .rm{display:inline;}
-.mp-p .rm:hover{color:var(--acc);}
-.mp-pan.grown .mp-p .rm{display:none;}
+/* the wrapper exists only so the chip has something to be positioned
+   against that is NOT the box being saved */
+.mp-pw{position:relative;flex:none;}
+.mp-pw .rm{display:none;position:absolute;right:0;bottom:0;padding-left:34px;font-size:12.5px;
+  line-height:1.6;font-weight:800;color:#8A5A6A;cursor:pointer;
+  background:linear-gradient(to right,rgba(246,239,245,0),#F6EFF5 28px);}
+.mp-p.more + .rm{display:inline;}
+.mp-pw .rm:hover{color:var(--acc);}
+.mp-pan.grown .mp-pw .rm{display:none;}
+/* ══ V112.3 — A CLAMPED PARAGRAPH FADES, IT IS NOT SLICED ════════
+   "the last line is getting half cropped". Whole-line rounding cannot
+   save a bulleted theme: a list item's height is its own, not a
+   multiple of the container's line height, so the cut lands wherever
+   it lands. The last visible line fades out instead — the same answer
+   the segment lists already use when they have more rows than fit. */
+.mp-p.more{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 13px),transparent 100%);
+  mask-image:linear-gradient(to bottom,#000 calc(100% - 13px),transparent 100%);}
 
 /* ── the four cards ───────────────────────────────────────────────── */
 /* ══ V112.0 · THE SAME BLOCK, WIDER ═══════════════════════════════
@@ -27794,7 +27806,11 @@ window.prSegOpen=function(){ pbOpen("seg"); };
    of the block keeps is kept here too — it is the last thing in the
    row that lines up, not the dropdown. */
 .mp-l.c-infl  .mp-r{grid-template-columns:minmax(76px,1fr) 16px 74px 20px;}
-.mp-l.c-boost .mp-r{grid-template-columns:42px 26px minmax(76px,1fr) 78px;}
+.mp-l.c-boost .mp-r{grid-template-columns:42px 26px minmax(76px,1fr) 72px 78px;}
+.mp-vs{font-size:11px;font-weight:700;color:var(--muted);text-align:right;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;}
+.mp-vs b{font-weight:800;color:var(--text);}
+.mp-vs s{text-decoration:none;color:var(--subtle);font-weight:600;}
 .mp-r .d{font-size:11px;font-weight:800;color:var(--text);text-align:right;}
 .mp-r .mo{font-size:11px;font-weight:800;color:var(--text);}
 .mp-r .d.soft,.mp-r .mo.soft{color:var(--subtle);font-weight:700;}
@@ -27895,13 +27911,45 @@ window.prSegOpen=function(){ pbOpen("seg"); };
   border-radius:6px;font:inherit;font-size:11px;font-weight:800;cursor:pointer;}
 .mp-go{font-size:11.5px;font-weight:800;color:#8A5A6A;cursor:pointer;}
 .mp-go:hover{color:var(--acc);}
+/* ══ V112.3 · THE RULE FOR EVERY STATUS DROPDOWN IN A CARD ═══════
+   Chirag, 2 Oct: "the status dropped down arrow is not properly
+   spaced… I'm not sure if you created a guideline for this, but there
+   should be one."
+
+   There was not one. The month card's status pill drew a tidy 10×6
+   chevron 9px from its right edge; the influencer dropdown and the
+   post cards' status drew the browser's native arrow, which sits
+   differently in every engine and ignores the control's padding.
+
+   THE RULE, and it is one line to apply: a status dropdown inside a
+   card wears `.cc-stsel`. That gives it no native arrow, a 10×6
+   chevron 8px from the right edge, and 22px of room kept clear for it.
+   The colour is passed in by the caller, because a status chip's
+   chevron has to match the status it is showing — same reason the
+   month card's pill inlines its own.
+
+   The chevron here is the muted one. A control whose text is coloured
+   by its status overrides `background-image` inline with the same SVG
+   in its own colour, which is what the month card's pill already does
+   — the geometry stays in this one rule either way. Nothing should
+   draw a dropdown arrow by hand again. */
+.cc-stsel{appearance:none;-webkit-appearance:none;font-family:inherit;cursor:pointer;
+  padding-right:22px;background-repeat:no-repeat;background-position:right 8px center;
+  background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22%236B6B6B%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');}
+.cc-stsel::-ms-expand{display:none;}
+/* background-COLOR, not the shorthand. `background:#fff` resets
+   background-image to none, and since this rule comes after .cc-stsel
+   it was quietly wiping the shared chevron off every influencer
+   dropdown — the control looked styled and drew no arrow at all. The
+   one-rule guideline is only as good as the rules that come after it. */
 .mp-sel{height:24px;font-size:11px;font-family:inherit;font-weight:700;border:1px solid var(--div);
-  border-radius:6px;background:#fff;color:var(--muted);cursor:pointer;padding:0 4px;}
+  border-radius:6px;background-color:#fff;color:var(--muted);cursor:pointer;padding:0 4px;}
 /* ON THE CLOSED ROW TOO. "The status chats in the influencer has to be
    changed by the account manager in the post page only so that option
    should be available right here." It fills its 78px track, so it is
    the same width in every row and lines up with the pills above it. */
-.mp-r .mp-sel{height:21px;width:100%;max-width:78px;font-size:10.5px;padding:0 3px;}
+.mp-r .mp-sel{height:21px;width:100%;max-width:78px;font-size:10.5px;padding:0 20px 0 5px;
+  background-position:right 6px center;}
 /* the influencer's profile is its OWN column, not the name wearing a link */
 .mp-prof{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;
   color:var(--muted);text-decoration:none;justify-self:start;}
@@ -27961,6 +28009,14 @@ window.prSegOpen=function(){ pbOpen("seg"); };
      name keeps a floor so it can never be squeezed to nothing. */
   .mp-l.c-prod  .mp-r{grid-template-columns:minmax(36px,62px) minmax(56px,1fr) 78px;}
   .mp-l.c-infl  .mp-r{grid-template-columns:minmax(56px,1fr) 16px 74px 20px;}
+  /* the target-against-achievement column is the first thing to go on a
+     narrow card: the name and the status have to survive, and the pair
+     of numbers is still on the opened row and on the Promotions page */
+  /* FOUR TRACKS, NOT FIVE WITH ONE AT ZERO. `display:none` takes the
+     element out of the grid's flow entirely, so a fifth track leaves a
+     spare 7px gap behind it — which is what pushed the status pill into
+     truncating at 1024 the moment this column was added. */
+  .mp-l.c-boost .mp-vs{display:none;}
   .mp-l.c-boost .mp-r{grid-template-columns:28px 24px minmax(56px,1fr) 78px;}
   .mp-l.c-camp  .mp-r{grid-template-columns:7px 28px 24px minmax(56px,1fr) 46px;}
 }
@@ -28462,7 +28518,7 @@ function mpRowsFor(seg,m,open){
     mpInfls(m).forEach(it=>{
       const st=mpInflState(it), pf=mpProfOf(it), nm=mpRender(it.label);
       const sel=canEdit()
-        ? `<select class="mp-sel" onchange="mpvSetItemStatus('${escAttr(it.id)}',${m},this.value)">${
+        ? `<select class="mp-sel cc-stsel" onchange="mpvSetItemStatus('${escAttr(it.id)}',${m},this.value)">${
             Object.keys(INFLUENCER_STAGES).map(k=>`<option value="${k}"${k===it.status?" selected":""}>${escHtml(INFLUENCER_STAGES[k][0])}</option>`).join("")
           }</select>`
         : mpPill(st);
@@ -28497,8 +28553,20 @@ function mpRowsFor(seg,m,open){
              <span class="mt">${tgt}</span>${mpPill(st)}
              <span class="mp-go" onclick="mpGoPromo('${escAttr(p.id)}')">Promotion &rsaquo;</span></div>`
         : (()=>{ const dp=mpPrDayPart(p);
-             return `<div class="mp-r"><span class="d">${escHtml(dp.d)}</span><span class="mo">${escHtml(dp.mo)}</span>
-             <span class="nm">${escHtml(p.name||"Promotion")}</span>${mpPill(st)}</div>`; })());
+             /* ══ V112.3 — TARGET AGAINST ACHIEVEMENT, ON THE ROW ════
+                Chirag: "we should make space and showcase the target
+                versus achievement against each promotion." The month's
+                own result over the month's own target — not the
+                promotion's lifetime figure, because this card is a
+                month. A dash where a number has not been entered yet,
+                so an empty cell never reads as a zero. */
+             const got=row&&prNumOr(row.result_value)!==null?prFmt(row.result_value):"—";
+             const vs=prNumOr(tv)!==null
+               ? `<span class="mp-vs"><b>${got}</b><s>/${prFmt(tv)}</s></span>`
+               : `<span class="mp-vs"><b>${got}</b></span>`;
+             return `<div class="mp-r" style="cursor:pointer;" title="Open ${escAttr(p.name||"this promotion")} in Promotions"
+               onclick="mpGoPromo('${escAttr(p.id)}')"><span class="d">${escHtml(dp.d)}</span><span class="mo">${escHtml(dp.mo)}</span>
+             <span class="nm">${escHtml(p.name||"Promotion")}</span>${vs}${mpPill(st)}</div>`; })());
     });
   }
   return R;
@@ -28578,7 +28646,7 @@ monthPlanCardHtml=function(m,opt){
   const hasPlan=!!mp.id||monthPlanHasData(activeBrand,YEAR,m)||infl.length||targets.length||(mp.influencer_target>0);
 
   const statusCtl=!hasPlan?"":canE
-    ?`<select class="mp-status" onchange="mpCardSetStatus(this.value)" style="appearance:none;-webkit-appearance:none;border:none;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border-radius:999px;padding:5px 24px 5px 10px;color:${st?"#791F1F":"#854F0B"};background-color:${st?"#FCEBEB":"#FAEEDA"};background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${st?"%23791F1F":"%23854F0B"}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 9px center;">
+    ?`<select class="mp-status cc-stsel" onchange="mpCardSetStatus(this.value)" style="appearance:none;-webkit-appearance:none;border:none;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border-radius:999px;padding:5px 24px 5px 10px;color:${st?"#791F1F":"#854F0B"};background-color:${st?"#FCEBEB":"#FAEEDA"};background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${st?"%23791F1F":"%23854F0B"}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 9px center;">
         <option value="drafted"${st?"":" selected"}>Drafted</option><option value="approved"${st?" selected":""}>Approved</option></select>`
     :`<span class="mp-status" style="font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px;color:${st?"#791F1F":"#854F0B"};background:${st?"#FCEBEB":"#FAEEDA"};">${st?"Approved":"Drafted"}</span>`;
   /* the pencil puts the caret in the objective, where it is standing.
@@ -28625,8 +28693,22 @@ monthPlanCardHtml=function(m,opt){
      field on this panel you could not start from here. */
   const ted=canE?` contenteditable="true" data-mpv-m="${m}" data-mpv-f="key_theme"
       onfocus="mpvFocus(this);mpUnfit(this)" onblur="mpvBlurSave(this)"`:"";
+  /* ══ V112.3 — "read moreread more" WAS NOT A RENDERING GLITCH ════
+     The chip lived INSIDE the paragraph. The paragraph became editable
+     in V112.0, and mpvBlurSave saves `el.innerHTML` — so the first time
+     anyone's caret left that box, the words "read more" were written
+     into key_theme. Next paint drew the saved words AND a fresh chip.
+
+     contenteditable="false" does not help: it stops you typing in the
+     span, not the parent's innerHTML from containing it. The only safe
+     place for a control is OUTSIDE the box whose contents get saved.
+     It is a sibling now, positioned over the paragraph's last line, so
+     what gets saved is only ever what was written. */
   const body=(para||canE)
-    ? `<div class="mp-p mpv-theme${para?"":" none"}" data-ph="${escAttr(canE?"Write the theme for "+MN[m]+"…":"")}"${ted}>${para?mpRender(mp.key_theme):""}<span class="rm" contenteditable="false" onclick="mpReadMore()">read more</span></div>`
+    ? `<div class="mp-pw">
+         <div class="mp-p mpv-theme${para?"":" none"}" data-ph="${escAttr(canE?"Write the theme for "+MN[m]+"…":"")}"${ted}>${para?mpRender(mp.key_theme):""}</div>
+         <span class="rm" onclick="mpReadMore()">read more</span>
+       </div>`
     : "";
 
   return `<div class="month-card mp-hero mp-pan${wide?" mp-wide":""}${grown&&!wide?" grown":""}" data-mp-month="${m}">
