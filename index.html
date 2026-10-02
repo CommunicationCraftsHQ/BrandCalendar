@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V111.7 Bologna"/>
+<meta name="cc-tool-version" content="V111.8 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3512,22 +3512,24 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
    Values lifted from `08 - Promotions rebuild - mockup.html` unchanged;
    only the class names are prefixed, because `.q` and `.ch` in a file
    this size are a collision waiting to happen. */
-/* ══ V111.7 · THE PROMOTIONS LIST ══════════════════════════════════
+/* ══ V111.7–8 · THE PROMOTIONS LIST ════════════════════════════════
    One line per promotion on one white card, and the promotion opens
-   underneath its own row. The head row and every row share ONE grid
-   template — written once in .prhd,.prrow so a column can never drift
-   between the heading and the line under it, which is how the target
-   groups panel went ragged a release ago. */
+   underneath its own row. The grid template is written by the page
+   from whichever columns are showing, and the SAME string is given to
+   the head row and to every line, so a column cannot drift between
+   the heading and the line under it. */
 .prlist{background:#fff;border-radius:13px;box-shadow:0 1px 3px rgba(0,0,0,.05);overflow:hidden;}
-.prhd,.prrow{display:grid;
-  grid-template-columns:minmax(150px,1.5fr) 96px minmax(90px,130px) 140px 86px minmax(160px,1fr) 104px 84px 20px;
-  gap:12px;align-items:center;padding:0 16px;}
-.prhd{height:34px;border-bottom:1px solid var(--div);font-size:10px;font-weight:700;
-  text-transform:uppercase;letter-spacing:.07em;color:var(--subtle);}
+.prhd,.prrow{display:grid;gap:8px;align-items:center;padding:0 16px;}
+.prhd{height:34px;border-bottom:1px solid var(--div);font-size:9.5px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.04em;color:var(--subtle);white-space:nowrap;}
 .prrow{min-height:46px;border-bottom:1px solid var(--div);cursor:pointer;}
 .prrow:last-child{border-bottom:0;}
 .prrow:hover{background:rgba(13,13,13,.014);}
-.prrow.open{background:#fafbfc;}
+/* THE OPEN ROW AND ITS PANEL ARE ONE BLOCK. Chirag, 2 October: there
+   has to be a clear line between the opened part and the rows around
+   it, or the eye cannot find where one promotion ends. Both wear the
+   same tint and the same red edge. */
+.prrow.open{background:#f6f4f2;box-shadow:inset 3px 0 0 var(--acc);border-bottom-color:#dcdfe3;}
 .prnm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .prrow .prdt{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .prrow .prmn{font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -3539,48 +3541,95 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .prcv{color:var(--subtle);font-size:13px;text-align:right;}
 .prtbs{color:var(--muted);}
 
-/* the promotion, opened under its row */
-.prpanel{border-bottom:1px solid var(--div);background:#fafbfc;padding:6px 16px 16px;}
+/* the toolbar's own two additions to the shared filter bar */
+.pgbar.prfb{flex-wrap:nowrap;gap:8px;}
+/* THE SEARCH BOX GIVES UP THE WIDTH FIRST — the same rule the
+   Portfolio's own bar follows, for the same reason: it is the one
+   control that still works at two thirds the size, and the row has to
+   stay on one line at 1180. */
+.prfb-q{width:200px;flex:none;min-width:0;}
+@media(max-width:1340px){.prfb-q{width:150px;}}
+@media(max-width:1180px){.prfb-q{width:112px;}}
+.pgbar.prfb .brfb-chip,.pgbar.prfb .brfb-add,.pgbar.prfb .btn{flex:none;}
+.prcols .n{font-weight:700;}
+.prcols .of{color:var(--subtle);font-weight:500;margin:0 2px 0 3px;}
+.prcols .lbl{margin-left:2px;}
+/* MEASURED AT 1180: the bar needed 1037px of a 977px band, and this
+   one chip was 156px of it. The word goes; the count stays, which is
+   the part that tells you something. */
+@media(max-width:1300px){.prcols .lbl{display:none;}}
+/* and the sort chip keeps its icon and its value — the two words
+   between them are what the icon already says. */
+@media(max-width:1200px){.prsortw .lbl,.prsortw .op{display:none;}}
+.brfb-top{display:flex;align-items:center;padding:6px 10px 8px;font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.06em;color:var(--subtle);}
+.prreset{color:var(--acc);font-weight:600;cursor:pointer;text-transform:none;letter-spacing:0;font-size:12px;}
+
+/* ══ THE PROMOTION, OPENED UNDER ITS ROW ═══════════════════════════ */
+.prpanel{background:#f6f4f2;box-shadow:inset 3px 0 0 var(--acc);border-bottom:1px solid var(--div);
+  padding:14px 16px 16px;}
 .prpanel:last-child{border-bottom:0;}
-.prfs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 18px;padding:12px 0 6px;}
-.prfs.chiprow{grid-template-columns:repeat(2,minmax(0,1fr));padding-top:4px;padding-bottom:12px;}
+.prcols3{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr) 206px;gap:14px;align-items:start;}
+.prbox{background:#fff;border:1px solid var(--div);border-radius:11px;overflow:hidden;}
+.prbh{padding:9px 13px;border-bottom:1px solid var(--div);font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.07em;color:var(--subtle);display:flex;align-items:center;gap:8px;}
+.prbx{margin-left:auto;color:var(--subtle);font-size:13px;cursor:pointer;}
+.prbx:hover{color:var(--acc);}
+.prbb{padding:12px 13px;}
+.prf{margin-bottom:11px;}
+.prf:last-child{margin-bottom:0;}
 .prf label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;
   letter-spacing:.07em;color:var(--subtle);margin-bottom:5px;}
-/* A FIELD ONLY LOOKS LIKE A BOX ONCE YOU ARE IN IT. Eight bordered
-   inputs under every opened row turned the list into a form. */
+/* A FIELD ONLY LOOKS LIKE A BOX ONCE YOU ARE IN IT. */
 .prfi{width:100%;height:32px;border:1px solid transparent;border-radius:7px;padding:0 8px;
   font:inherit;font-size:13px;background:transparent;color:var(--text);}
 .prfi:hover:not(:disabled){border-color:var(--div);background:#fff;}
 .prfi:focus{border-color:#cfd3da;background:#fff;outline:none;}
 .prfi:disabled{color:var(--subtle);}
+.prfi.prnumf{max-width:86px;}
 .prtwo{display:flex;gap:7px;align-items:center;min-width:0;}
 .prtwo .prfi{flex:1;min-width:0;}
-.prfs-sel,.prfs-cur{height:32px;border:1px solid var(--div);border-radius:7px;padding:0 6px;
-  font:inherit;font-size:12.5px;background:#fff;color:var(--muted);}
-.prfs-sel{width:104px;}
-.prfs-sel.wide{width:116px;}
-.prfs-cur{width:52px;}
+.prfsel{height:32px;border:1px solid var(--div);border-radius:7px;padding:0 6px;
+  font:inherit;font-size:12.5px;background:#fff;color:var(--muted);width:100px;}
+.prfsel.wide{width:112px;}
+.prfsel.cur{width:48px;padding:0 2px;}
 .prfseg{width:fit-content;}
-.prplat{border:1px solid var(--div);border-radius:10px;background:#fff;margin-top:8px;overflow:hidden;}
-.prplat h4{margin:0;padding:9px 13px;font-size:12.5px;font-weight:700;
-  border-bottom:1px solid var(--div);display:flex;align-items:center;gap:8px;}
-.prplat h4 .prsecx{margin-left:auto;}
-.prpin{padding:11px 13px;}
-.prpl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
-  color:var(--subtle);margin:0 0 7px;}
-.prpin .prchips+.prpl{margin-top:14px;}
-.prpfoot{display:flex;align-items:center;gap:9px;padding-top:14px;}
-.btn.prdel{color:var(--acc);}
-/* MEASURED, NOT GUESSED. At 1180 the band is 913px inside its 16px
-   gutters; the columns and gaps must add to less than that or the row
-   scrolls sideways, which the gate checks. */
+.prdates{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-bottom:11px;}
+.prdates .prf{margin-bottom:0;}
+/* ONE ROW PER PLATFORM. The card-per-platform it replaces drew a tall
+   dashed rectangle for a promotion with no creatives, which is what
+   made the opened row look empty and enormous at the same time. */
+.prprow{display:grid;grid-template-columns:84px minmax(0,1fr) auto;gap:12px;align-items:center;
+  padding:9px 13px;border-bottom:1px solid var(--div);}
+.prprow:last-child{border-bottom:0;}
+.prprow.empty{display:block;}
+.prpnm{font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:6px;}
+.prprow:hover .prsecx{opacity:.65;}
+/* An audience carries its description, which can be a sentence. Left
+   to run, three of them stacked and the platform row became a band.
+   Capped and trimmed here; the full text is on the chip's title. */
+.prprow .praud{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.prthumbs{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end;}
+.prtile{position:relative;width:40px;height:40px;border-radius:8px;overflow:hidden;cursor:pointer;
+  border:1px solid var(--div);background:#f2f3f5;display:inline-flex;flex:none;}
+.prtile:hover{border-color:rgba(13,13,13,.25);}
+.prtimg{flex:1;display:grid;place-items:center;font-size:10.5px;font-weight:700;color:var(--subtle);
+  background-size:cover;background-position:center;}
+/* hydrateMedia drops a real <img> inside the element it signs, so the
+   tile has to make room for one rather than sit behind it. */
+.prtimg img{width:100%;height:100%;object-fit:cover;display:block;}
+.prtdot{position:absolute;right:3px;bottom:3px;width:8px;height:8px;border-radius:50%;border:1.5px solid #fff;}
+.prmini{display:inline-flex;align-items:center;gap:5px;border:1px solid #d9dce1;border-radius:8px;
+  padding:6px 10px;font-size:12px;background:#fff;color:var(--muted);cursor:pointer;white-space:nowrap;}
+.prmini:hover{border-color:rgba(13,13,13,.2);color:var(--text);}
+.prmini.acc{color:var(--acc);border-color:#f0cccc;}
+.prbig{font-size:13px;}
+.prbig b{font-size:21px;letter-spacing:-.02em;}
+.prbtns{display:flex;flex-direction:column;gap:7px;margin-top:12px;align-items:stretch;}
+.prbtns .prmini{justify-content:center;}
 @media(max-width:1300px){
-  /* the target group column keeps 88px even when squeezed, or its own
-     heading wraps onto two lines */
-  .prhd,.prrow{grid-template-columns:minmax(94px,1.4fr) 82px minmax(88px,112px) 134px 76px minmax(150px,1fr) 96px 74px 18px;gap:8px;}
-  .prhd{font-size:9.5px;letter-spacing:.03em;white-space:nowrap;}
-  .prfs{grid-template-columns:repeat(2,minmax(0,1fr));}
-  .prfs.chiprow{grid-template-columns:minmax(0,1fr);}
+  .prcols3{grid-template-columns:minmax(0,1fr) 190px;}
+  .prcols3 > *:nth-child(2){grid-column:1 / -1;order:3;}
 }
 .prlhead{display:grid;grid-template-columns:1fr 300px;gap:24px;padding:0 16px 8px;}
 .prlhead .h{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle);}
@@ -10793,7 +10842,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V111.7 Bologna";
+const TOOL_VERSION="V111.8 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -23827,7 +23876,7 @@ renderBnTabs=function(){
 
 const PR={key:null,loading:false,err:null,list:[],objs:[],bobjs:[],segs:[],bsegs:[],
   streams:{},auds:{},months:{},cr:[],crc:{},
-  open:null,seg:"running",obj:"",sg:"",sort:"updated",edit:null,prog:null,aud:null,
+  open:null,seg:"running",obj:"",sg:"",sort:"updated",q:"",cols:null,edit:null,prog:null,aud:null,
   creative:null,th:{id:null,msgs:[],acts:[],loading:false,err:""},staged:[],draft:""};
 
 const PR_CST={drafting:["Drafting","#EF9F27"],review:["Review","#378ADD"],approved:["Approved","#639922"],
@@ -24107,6 +24156,123 @@ function renderPromotions(){
   mc.innerHTML=pageHead()+(c?prCreativeHtml(p,c):prListHtml());
   hydrateMedia(mc);
 }
+/* ══ V111.8 · THE TOOLBAR THE REST OF THE SUITE WEARS ══════════════
+   Chirag, 2 October: "The filter options, et cetera have to align with
+   rest of the tools, listing pages." Promotions had three bare selects;
+   every other listing has search, filters as chips with a popover and
+   a value in red, + Filter, the Columns button, and Sort by last.
+
+   NOTHING NEW IS INVENTED HERE. The chip, the popover, the kill ✕ and
+   the amber dot are the Tasks listing's own .brfb-* parts, reused as
+   they stand — the suite rule is that this treatment is identical
+   across tools, so a second set of classes would be the bug. */
+let PR_FPOP=null;
+function prFPop(e,k){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  const was=PR_FPOP; closeAllPops(); PR_FPOP=(was===k?null:k); render();
+}
+function prSetQ(v){
+  PR.q=v;
+  /* redraw the rows, leave the box and its caret alone */
+  const box=document.querySelector(".prfb-q"), at=box?box.selectionStart:null;
+  render();
+  const b2=document.querySelector(".prfb-q");
+  if(b2){ b2.focus(); try{ b2.setSelectionRange(at,at); }catch(err){} }
+}
+const PR_FIELD={seg:"Status",obj:"Objective",sg:"Target group"};
+const PR_SEGS={running:"Running",ended:"Ended",all:"All promotions"};
+function prFieldOpts(k){
+  if(k==="seg") return Object.keys(PR_SEGS).map(v=>({v,label:PR_SEGS[v],
+    n:PR.list.filter(p=>v==="all"?true:v==="ended"?prStatus(p)==="ended":prStatus(p)!=="ended").length}));
+  if(k==="obj") return PR.objs.filter(o=>PR.bobjs.indexOf(o.key)>-1)
+    .map(o=>({v:o.key,label:prObjLabel(o.key),n:PR.list.filter(p=>p.objective_key===o.key).length}));
+  return (PR.bsegs||[]).map(o=>({v:o.id,label:prSegLabel(o),
+    n:PR.list.filter(p=>p.brand_segment_id===o.id).length}));
+}
+function prFilterOn(k){ return k==="seg" ? PR.seg!=="running" : !!PR[k]; }
+function prClearFilter(e,k){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  if(k==="seg") PR.seg="running"; else PR[k]="";
+  PR_FPOP=null; render();
+}
+function prPickValue(e,k,v){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  PR[k]=(k==="seg") ? v : (PR[k]===v?"":v);
+  PR_FPOP=null; render();
+}
+function prPickSort(e,k){ if(e){ e.preventDefault(); e.stopPropagation(); } PR_FPOP=null; PR.sort=k; render(); }
+function prChipHtml(k){
+  const on=prFilterOn(k), opts=prFieldOpts(k), open=(PR_FPOP===k);
+  const cur=on?((opts.find(o=>String(o.v)===String(k==="seg"?PR.seg:PR[k]))||{}).label||""):"";
+  return `<span class="brfb-w"><span class="brfb-chip${open?" open":""}" onclick="prFPop(event,'${k}')">${escHtml(PR_FIELD[k])}
+      <span class="op">is</span>${on?`<span class="val">${escHtml(cur)}</span>
+      <span class="kill" onclick="prClearFilter(event,'${k}')">×</span><span class="dot"></span>`
+      :`<span class="val">${k==="seg"?escHtml(PR_SEGS[PR.seg]):"any"}</span>`}</span>${
+    open?`<div class="brfb-pop">${opts.map(o=>
+      `<div class="brfb-opt${String(k==="seg"?PR.seg:PR[k])===String(o.v)?" on":""}" onclick="prPickValue(event,'${k}','${escAttr(o.v)}')">
+         <span class="bx">${String(k==="seg"?PR.seg:PR[k])===String(o.v)?"✓":""}</span>
+         <span class="nm">${escHtml(o.label)}</span><span class="ct">${o.n}</span></div>`).join("")||
+      `<div class="brfb-none">Nothing to filter on yet.</div>`}</div>`:""}</span>`;
+}
+function prChipsHtml(){
+  /* Status is always on the bar — a listing that does not say which
+     promotions it is showing is a listing you cannot trust. The other
+     two appear once they are in use, or while their popover is open. */
+  const out=[prChipHtml("seg")];
+  ["obj","sg"].forEach(k=>{ if(prFilterOn(k)||PR_FPOP===k) out.push(prChipHtml(k)); });
+  return out.join("");
+}
+function prAddPopHtml(){
+  const rows=["obj","sg"].filter(k=>!prFilterOn(k))
+    .map(k=>`<div class="brfb-opt" onclick="prFPop(event,'${k}')"><span class="bx"></span><span class="nm">${escHtml(PR_FIELD[k])}</span></div>`);
+  return `<div class="brfb-pop">${rows.join("")||`<div class="brfb-none">Every filter is already on.</div>`}</div>`;
+}
+
+/* ══ THE COLUMNS, AND WHICH OF THEM ARE SHOWN ══════════════════════
+   The suite's Columns button, in the Portfolio's wording: icon, "7 of
+   11 columns", chevron. The widths are a pair — a floor that must
+   survive 1180, and a ceiling so nothing sprawls at 1440. The floors
+   of the seven shown by default add up to less than the band at 1180,
+   which is the sum the gate re-measures. */
+const PR_COLS=[
+  {k:"name",   label:null,            w:"minmax(94px,1.5fr)", lock:true},
+  {k:"obj",    label:"Objective",     w:"minmax(82px,100px)"},
+  {k:"seg",    label:"Target group",  w:"minmax(88px,134px)"},
+  {k:"runs",   label:"Runs",          w:"134px"},
+  {k:"status", label:"Status",        w:"78px"},
+  {k:"prog",   label:"Progress",      w:"minmax(150px,1fr)"},
+  {k:"budget", label:"Budget",        w:"minmax(96px,112px)"},
+  {k:"spent",  label:"Spent",         w:"minmax(74px,92px)"},
+  {k:"plats",  label:"Platforms",     w:"minmax(96px,120px)"},
+  {k:"crs",    label:"Creatives",     w:"80px"},
+  {k:"by",     label:"Hit it by",     w:"100px"},
+  {k:"touched",label:"Last touched",  w:"104px"}
+];
+const PR_COLS_DEF=["obj","seg","runs","status","prog","budget","spent"];
+function prShown(){ return PR.cols ? PR.cols : (PR.cols=PR_COLS_DEF.slice()); }
+function prVisibleCols(){ const on=prShown(); return PR_COLS.filter(c=>c.lock||on.indexOf(c.k)>-1); }
+function prGridTpl(){ return prVisibleCols().map(c=>c.w).join(" ")+" 18px"; }
+function prColToggle(e,k){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  const on=prShown(), i=on.indexOf(k);
+  if(i>-1) on.splice(i,1); else on.push(k);
+  render();
+}
+function prColReset(e){ if(e){ e.preventDefault(); e.stopPropagation(); } PR.cols=PR_COLS_DEF.slice(); render(); }
+function prColsHtml(){
+  const offer=PR_COLS.filter(c=>c.label), on=prShown();
+  return `<span class="brfb-w prcols"><span class="brfb-chip${PR_FPOP==="cols"?" open":""}" onclick="prFPop(event,'cols')">
+      <i class="ti ti-columns-3"></i><span class="n">${on.length+1}</span><span class="of">of ${offer.length+1}</span><span class="lbl">columns</span>
+      <i class="ti ti-chevron-down"></i></span>${
+    PR_FPOP==="cols"?`<div class="brfb-pop">
+      <div class="brfb-top"><span class="nm">Columns</span><span style="flex:1"></span>
+        <span class="prreset" onclick="prColReset(event)">Reset</span></div>
+      ${offer.map(c=>{ const is=on.indexOf(c.k)>-1;
+        return `<div class="brfb-opt${is?" on":""}" onclick="prColToggle(event,'${c.k}')">
+          <span class="bx">${is?"✓":""}</span><span class="nm">${escHtml(c.label)}</span></div>`; }).join("")}
+      </div>`:""}</span>`;
+}
+
 function prSetSeg(s){ PR.seg=s; render(); }
 function prSetSort(v){ PR.sort=v; render(); }
 function prSetObj(v){ PR.obj=v; render(); }
@@ -24119,8 +24285,10 @@ function prBack(){ PR.creative=null; render(); }
 
 /* ── the list ─────────────────────────────────────────────────────── */
 function prVisible(){
+  const q=String(PR.q||"").trim().toLowerCase();
   return PR.list.filter(p=>{
     const st=prStatus(p);
+    if(q && String(p.name||"").toLowerCase().indexOf(q)<0) return false;
     if(PR.seg==="running" && st==="ended") return false;
     if(PR.seg==="ended" && st!=="ended") return false;
     if(PR.obj && p.objective_key!==PR.obj) return false;
@@ -24165,44 +24333,32 @@ function prListHtml(){
      for a real reason: at 1180 the combined row needed 1,096px of a
      977px band and wrapped. Three pills becoming one select is what
      buys the room back, so the switch can come up beside it. */
-  const seg=`<select class="prsel" onchange="prSetSeg(this.value)">
-      ${[["running","Running"],["ended","Ended"],["all","All promotions"]].map(([k,l])=>
-        `<option value="${k}"${PR.seg===k?" selected":""}>${l}</option>`).join("")}</select>`;
-  const used=PR.objs.filter(o=>PR.bobjs.indexOf(o.key)>-1);
-  const objSel=`<select class="prsel" onchange="prSetObj(this.value)">
-      <option value="">All objectives</option>
-      ${used.map(o=>`<option value="${escAttr(o.key)}"${PR.obj===o.key?" selected":""}>${escHtml(o.label)}</option>`).join("")}</select>`;
-  /* V110.6 — SEGMENT GETS THE SAME TREATMENT AS OBJECTIVE, everywhere the
-     two appear. Chirag, 30 September: "the treatment for objectives and
-     segments should be the same." They were level in the dialogs and on
-     the promotion form and nowhere else: the listing had an objective
-     chip and an objective filter, and segment had neither. */
-  const mySegs=PR.bsegs;
-  const sgSel=mySegs.length?`<select class="prsel" onchange="prSetSg(this.value)">
-      <option value="">All target groups</option>
-      ${mySegs.map(o=>`<option value="${escAttr(o.id)}"${PR.sg===o.id?" selected":""}>${escHtml(prSegLabel(o))}</option>`).join("")}</select>`:"";
   const nsw=(typeof prNumSwitchHtml==="function")?prNumSwitchHtml("promotions"):"";
-  /* THE SORT. Five ways, and the one people asked for first is last
-     updated: the question this page answers on a Monday is which
-     promotion nobody has touched. */
-  const sortSel=`<select class="prsel prsort" onchange="prSetSort(this.value)">
-      ${/* SHORT WORDS ON PURPOSE. The control is capped at 116px below
-            1300 so the row stays on one line — widening it for "Last
-            updated" put the row onto two, which the gate caught. One
-            word each survives the truncation. */""}
-      ${[["updated","updated"],["name","name"],["result","result"],
-         ["spend","spend"],["start","start"]].map(([k,l])=>
-        `<option value="${k}"${PR.sort===k?" selected":""}>Sort by ${l}</option>`).join("")}</select>`;
-  const bar=`<div class="pgbar">
-      ${nsw}${seg}${objSel}${sgSel}
+  const PR_SORT={updated:"updated",name:"name",result:"result",spend:"spend",start:"start"};
+  const sortChip=`<span class="brfb-w prsortw"><span class="brfb-chip${PR_FPOP==="sort"?" open":""}" onclick="prFPop(event,'sort')">
+      <i class="ti ti-arrows-sort"></i><span class="lbl">Sort</span><span class="op">by</span>
+      <span class="val">${escHtml(PR_SORT[PR.sort]||"updated")}</span></span>${
+    PR_FPOP==="sort"?`<div class="brfb-pop">${Object.keys(PR_SORT).map(k=>
+      `<div class="brfb-opt${PR.sort===k?" on":""}" onclick="prPickSort(event,'${k}')">
+         <span class="bx">${PR.sort===k?"✓":""}</span><span class="nm">${escHtml(PR_SORT[k])}</span></div>`).join("")}</div>`:""}</span>`;
+  /* THE ORDER IS THE SUITE'S ORDER: the switch, search, the filter
+     chips, + Filter — then the one action this page owns, the Columns
+     button, and Sort by at the very end with nothing after it. */
+  /* THE CHIPS ARE .brfb-*, THE BAR IS NOT .brfb. That class carries
+     its own `padding:0 0 16px`, which would both drop the page gutter
+     this bar shares with the list under it and add 16px of height.
+     The chip classes stand on their own, so only they are borrowed. */
+  const bar=`<div class="pgbar prfb">
+      ${nsw}
+      <input class="fi brfb-q prfb-q" placeholder="Search promotions…" value="${escAttr(PR.q||"")}"
+        oninput="prSetQ(this.value)" onclick="event.stopPropagation()">
+      ${prChipsHtml()}
+      <span class="brfb-w"><button class="brfb-add" onclick="prFPop(event,'add')"><i class="ti ti-plus"></i> Filter</button>${
+        PR_FPOP==="add"?prAddPopHtml():""}</span>
       <span style="flex:1"></span>
-      ${/* V110.9 — THE TWO LIST BUTTONS ARE GONE. Objectives and segments
-            are allocated on the Vision page and defined in the Portfolio;
-            a third door onto the same lists is how a suite ends up with
-            three of them. What is left here is the one action this page
-            owns. */""}
       ${canEditP?`<button class="btn btn-p" onclick="prEditOpen(null)"><i class="ti ti-plus"></i> New promotion</button>`:""}
-      ${sortSel}
+      ${prColsHtml()}
+      ${sortChip}
     </div>`;
 
   if(!PR.list.length){
@@ -24219,42 +24375,58 @@ function prListHtml(){
      pills. The cards this replaces stacked Platforms, Budget and
      Audience inside every row, so one promotion took the room eight
      should. Mockup 18. */
-  const body=rows.map(p=>prRowHtml(p)+(PR.open===p.id?prPanelHtml(p):"")).join("");
+  const tpl=prGridTpl(), cols=prVisibleCols();
+  const body=rows.map(p=>prRowHtml(p,tpl,cols)+(PR.open===p.id?prPanelHtml(p):"")).join("");
   return bar+`<div class="nswrap" style="padding-top:0"><div class="prlist">
-    <div class="prhd">
-      <div>Promotion</div><div>Objective</div><div>Target group</div><div>Runs</div>
-      <div>Status</div><div>Progress</div><div>Budget</div><div>Spent</div><div></div>
+    <div class="prhd" style="grid-template-columns:${tpl}">
+      ${cols.map(c=>`<div>${c.lock?"Promotion":escHtml(c.label)}</div>`).join("")}<div></div>
     </div>${body}</div></div>`;
 }
 
 /* ── one promotion, one line ──────────────────────────────────────── */
-function prRowHtml(p){
-  const g=prProgress(p), unit=prUnit(p), cur=prCur(p), open=PR.open===p.id;
-  const tgt=prNumOr(g.target), val=g.value;
-  const pc=(tgt&&val!==null)?Math.max(2,Math.min(100,Math.round(val/tgt*100))):0;
-  const seg=prSegOf(p);
-  return `<div class="prrow${open?" open":""}" onclick="prOpen('${escAttr(p.id)}')">
-    <div class="prnm">${escHtml(p.name)}</div>
-    <div><span class="probj ${prObjClass(p.objective_key)}">${escHtml(prObjLabel(p.objective_key))}</span></div>
-    <div>${seg?`<span class="prsg">${escHtml(prSegLabel(seg))}</span>`:'<span class="nsdim">—</span>'}</div>
-    <div class="prdt">${prRunsRow(p)}</div>
-    <div>${prStatusHtml(p)}</div>
-    <div class="prpg">
-      ${/* NO TARGET IS NOT A TARGET OF NOUGHT. A promotion nobody set a
-            number on says so, rather than reading "— of —". */""}
-      ${/* THE UNIT IS NOT REPEATED HERE. The objective column, one
-            across, already says Leads or Centre visits; carrying the
-            same word again cost the cell the room it needed and clipped
-            to "leads…" at 1180. What the column does owe is WHICH
-            PERIOD the figures belong to, because 312 of 450 means a
-            different thing for a month than for a whole run. */""}
-      <div class="t">${tgt===null
-        ? '<span class="nsdim">No target</span>'
-        : `${val!==null?`<b>${prFmt(val)}</b>`:'<span class="nsdim">—</span>'} of ${prFmt(tgt)}${
-            prBasis(p)==="per_month"?' <span class="nsdim">this month</span>':""}`}</div>
-      <div class="prpgb"><i style="width:${pc}%"></i></div></div>
-    <div class="prmn">${prBudgetCell(p)}</div>
-    <div class="prmn">${g.spend!==null&&g.spend!==undefined?prMoney(g.spend,cur):'<span class="nsdim">—</span>'}</div>
+/* V111.8 — THE LINE IS BUILT FROM WHICHEVER COLUMNS ARE SHOWING, and
+   the head row is built from the same list with the same template, so
+   the two can never fall out of step. */
+function prCellHtml(p,k){
+  const g=prProgress(p), unit=prUnit(p), cur=prCur(p);
+  const tgt=prNumOr(g.target), val=g.value, seg=prSegOf(p);
+  switch(k){
+    case "name":   return `<div class="prnm">${escHtml(p.name)}</div>`;
+    case "obj":    return `<div><span class="probj ${prObjClass(p.objective_key)}">${escHtml(prObjLabel(p.objective_key))}</span></div>`;
+    case "seg":    return `<div>${seg?`<span class="prsg">${escHtml(prSegLabel(seg))}</span>`:'<span class="nsdim">—</span>'}</div>`;
+    case "runs":   return `<div class="prdt">${prRunsRow(p)}</div>`;
+    case "status": return `<div>${prStatusHtml(p)}</div>`;
+    case "prog": {
+      const pc=(tgt&&val!==null)?Math.max(2,Math.min(100,Math.round(val/tgt*100))):0;
+      return `<div class="prpg">
+        ${/* NO TARGET IS NOT A TARGET OF NOUGHT, and the unit is not
+              repeated here — the objective column one across already
+              names it, and carrying it twice clipped the cell. */""}
+        <div class="t">${tgt===null
+          ? '<span class="nsdim">No target</span>'
+          : `${val!==null?`<b>${prFmt(val)}</b>`:'<span class="nsdim">—</span>'} of ${prFmt(tgt)}${
+              prBasis(p)==="per_month"?' <span class="nsdim">this month</span>':""}`}</div>
+        <div class="prpgb"><i style="width:${pc}%"></i></div></div>`;
+    }
+    case "budget": return `<div class="prmn">${prBudgetCell(p)}</div>`;
+    case "spent":  return `<div class="prmn">${g.spend!==null&&g.spend!==undefined?prMoney(g.spend,cur):'<span class="nsdim">—</span>'}</div>`;
+    case "plats": {
+      const st=prStreams(p.id);
+      return `<div class="prdt">${st.length?st.map(x=>escHtml((PR_PLAT[x.platform]||PR_PLAT.other).label)).join(", "):'<span class="nsdim">—</span>'}</div>`;
+    }
+    case "crs": {
+      const n=prCrFor(p.id).length;
+      return `<div class="prmn">${n?n:'<span class="nsdim">—</span>'}</div>`;
+    }
+    case "by":     return `<div class="prdt">${p.target_on?escHtml(prShort(p.target_on)):'<span class="nsdim">—</span>'}</div>`;
+    case "touched":return `<div class="prdt">${p.updated_at?escHtml(prShort(String(p.updated_at).slice(0,10))):'<span class="nsdim">—</span>'}</div>`;
+  }
+  return "<div></div>";
+}
+function prRowHtml(p,tpl,cols){
+  const open=PR.open===p.id;
+  return `<div class="prrow${open?" open":""}" style="grid-template-columns:${tpl}" onclick="prOpen('${escAttr(p.id)}')">
+    ${cols.map(c=>prCellHtml(p,c.k)).join("")}
     <div class="prcv"><i class="ti ti-chevron-${open?"up":"down"}"></i></div>
   </div>`;
 }
@@ -24277,65 +24449,67 @@ function prPanelHtml(p){
   const g=prProgress(p), cur=prCur(p), st=prStreams(p.id), ong=prIsOngoing(p);
   const id=escAttr(p.id), ro=canEditP?"":" disabled";
   const curs=PR_CUR.indexOf(cur)<0?PR_CUR.concat([cur]):PR_CUR;
-  const bb=p.budget_basis||"total", open=prBudgetOpen(p);
+  const bb=p.budget_basis||"total", bopen=prBudgetOpen(p);
   const f=(lbl,inner)=>`<div class="prf"><label>${lbl}</label>${inner}</div>`;
+  const dt=(lbl,col,val)=>f(lbl,`<input class="prfi" type="date" value="${escAttr(val||"")}"${ro}
+      onchange="prSet('${id}',{${col}:this.value||null})">`);
 
-  const dates=ong
-    ? f("Starts",`<input class="prfi" type="date" value="${escAttr(p.starts_on||"")}"${ro}
-         onchange="prSet('${id}',{starts_on:this.value||null})">`)
-    : f("Starts",`<input class="prfi" type="date" value="${escAttr(p.starts_on||"")}"${ro}
-         onchange="prSet('${id}',{starts_on:this.value||null})">`)
-      +f("Ends",`<input class="prfi" type="date" value="${escAttr(p.ends_on||"")}"${ro}
-         onchange="prSet('${id}',{ends_on:this.value||null})">`)
-      +f("Hit it by",`<input class="prfi" type="date" value="${escAttr(p.target_on||"")}"${ro}
-         onchange="prSet('${id}',{target_on:this.value||null})">`);
-
-  const fields=`<div class="prfs">
+  /* ══ V111.8 · THE PROMOTION, IN THE ORDER THE NEW PROMOTION BOX ASKS
+     Chirag, 2 October: the opened row was "too spread out and
+     unstructured... doesn't align properly with the new promotion
+     pop-up page. Which is well organised and structure and cohesive."
+     It was eight fields stretched across the full page width with
+     tall dashed boxes under them. Mockup 21, option A: one bounded
+     column carrying the dialog's own order — name, objective, target,
+     target group, runs, dates, budget — with platforms beside it and
+     the figures on the right. */
+  const detail=`<div class="prbox"><div class="prbh">The promotion</div><div class="prbb">
     ${f("Promotion name",`<input class="prfi" value="${escAttr(p.name||"")}" maxlength="120"${ro}
         onblur="prSetName('${id}',this)" onkeydown="if(event.key==='Enter')this.blur()">`)}
+    ${f("Objective",`<div class="prchips">${prRowObjChips(p)}</div>`)}
     ${f("Target",`<div class="prtwo">
-        <input class="prfi" inputmode="numeric" value="${prNumOr(p.target_value)!==null?Number(p.target_value):""}"${ro}
+        <input class="prfi prnumf" inputmode="numeric" value="${prNumOr(p.target_value)!==null?Number(p.target_value):""}"${ro}
           onblur="prSetNum('${id}','target_value',this)" onkeydown="if(event.key==='Enter')this.blur()">
         <span class="prunitbox">${escHtml(prUnit(p))}</span>
-        <select class="prfs-sel" ${ro} onchange="prSet('${id}',{target_basis:this.value})">${
+        <select class="prfsel" ${ro} onchange="prSet('${id}',{target_basis:this.value})">${
           Object.keys(PR_TB).map(k=>`<option value="${k}"${k===prBasis(p)?" selected":""}>${PR_TB[k][1]}</option>`).join("")}</select>
       </div>`)}
+    ${f("Target group",`<div class="prchips">${prRowSegChips(p)}</div>`)}
     ${f("Runs",`<div class="prseg prfseg">
         <button class="prseg-b${!ong?" on":""}"${ro} onclick="prSet('${id}',{kind:'one_off'})">One-off</button>
         <button class="prseg-b${ong?" on":""}"${ro} onclick="prSet('${id}',{kind:'ongoing',ends_on:null,target_on:null})">Ongoing</button>
       </div>`)}
+    <div class="prdates">${ong ? dt("Starts","starts_on",p.starts_on)
+      : dt("Starts","starts_on",p.starts_on)+dt("Ends","ends_on",p.ends_on)+dt("Hit it by","target_on",p.target_on)}</div>
     ${f("Budget",`<div class="prtwo">
-        <select class="prfs-cur" ${ro} onchange="prSet('${id}',{budget_currency:this.value})">${
+        <select class="prfsel cur" ${ro} onchange="prSet('${id}',{budget_currency:this.value})">${
           curs.map(c=>`<option value="${c}"${c===cur?" selected":""}>${escHtml(PR_CUR_SYM[c]||c)}</option>`).join("")}</select>
-        <input class="prfi" inputmode="decimal" value="${(!open&&prNumOr(p.planned_spend)!==null)?Number(p.planned_spend):""}"
-          ${open?"disabled":ro} onblur="prSetNum('${id}','planned_spend',this)" onkeydown="if(event.key==='Enter')this.blur()">
-        <select class="prfs-sel wide" ${ro} onchange="prSetBB('${id}',this.value)">${
+        <input class="prfi" inputmode="decimal" value="${(!bopen&&prNumOr(p.planned_spend)!==null)?Number(p.planned_spend):""}"
+          ${bopen?"disabled":ro} onblur="prSetNum('${id}','planned_spend',this)" onkeydown="if(event.key==='Enter')this.blur()">
+        <select class="prfsel wide" ${ro} onchange="prSetBB('${id}',this.value)">${
           Object.keys(PR_BASIS).map(k=>`<option value="${k}"${k===bb?" selected":""}>${PR_BASIS[k][0]}</option>`).join("")}</select>
       </div>`)}
-    ${dates}
-  </div>
-  <div class="prfs chiprow">
-    ${f("Objective",`<div class="prchips">${prRowObjChips(p)}</div>`)}
-    ${f("Target group",`<div class="prchips">${prRowSegChips(p)}</div>`)}
-  </div>`;
+  </div></div>`;
 
-  const blocks=st.map(x=>{
-    const auds=prAuds(x.id), crs=prCrFor(p.id,x.id);
-    return `<div class="prplat">
-      <h4>${escHtml((PR_PLAT[x.platform]||PR_PLAT.other).label)}${
-        canEditP?`<i class="ti ti-x prsecx" title="Take this platform off the promotion"
-          onclick="prStreamDel('${escAttr(x.id)}')"></i>`:""}</h4>
-      <div class="prpin">
-        <div class="prpl">Audiences</div>
+  /* ONE ROW PER PLATFORM, not a card each. An empty platform used to
+     draw a 200px dashed rectangle, which is why a promotion with no
+     creatives filled the screen with nothing. */
+  const plats=`<div class="prbox"><div class="prbh">Platforms${
+      canEditP?`<i class="ti ti-plus prbx" title="Add a platform" onclick="prStreamAdd('${id}')"></i>`:""}</div>
+    ${st.length?st.map(x=>{
+      const auds=prAuds(x.id), crs=prCrFor(p.id,x.id);
+      return `<div class="prprow">
+        <div class="prpnm">${escHtml((PR_PLAT[x.platform]||PR_PLAT.other).label)}${
+          canEditP?`<i class="ti ti-x prsecx" title="Take this platform off the promotion"
+            onclick="prStreamDel('${escAttr(x.id)}')"></i>`:""}</div>
         <div class="prchips">${auds.map(a=>`<span class="praud a-${a.kind}">${escHtml(PR_AUD[a.kind]||a.kind)}${a.description?" — "+escHtml(a.description):""}
             ${canEditP?`<i class="ti ti-x rm" title="Remove" onclick="prAudDel('${a.id}')"></i>`:""}</span>`).join("")}
-          ${canEditP?`<span class="praddchip" onclick="prAudOpen('${x.id}')"><i class="ti ti-plus"></i>Add</span>`:""}</div>
-        <div class="prpl">Creatives · ${crs.length}</div>
-        <div class="prcgrid">${crs.map(c=>prCrCard(c)).join("")}
-          ${canCap("edit_ad_creatives")?`<div class="prcr add" onclick="prCrNew('${p.id}','${x.id}')"><i class="ti ti-plus"></i>Add creative</div>`:""}</div>
-      </div></div>`;
-  }).join("");
-  const addPlat=canEditP?`<div class="praddbig" onclick="prStreamAdd('${p.id}')"><i class="ti ti-plus"></i> Add a platform</div>`:"";
+          ${canEditP?`<span class="praddchip" onclick="prAudOpen('${x.id}')"><i class="ti ti-plus"></i>Audience</span>`:""}</div>
+        <div class="prthumbs">${crs.map(c=>prCrTile(c)).join("")}
+          ${canCap("edit_ad_creatives")?`<span class="prmini" onclick="prCrNew('${p.id}','${x.id}')"><i class="ti ti-plus"></i>${crs.length?"":" Add creative"}</span>`:""}</div>
+      </div>`;
+    }).join(""):`<div class="prprow empty"><span class="nsdim">No platform on this promotion yet</span></div>`}
+  </div>`;
 
   let months="";
   if(ong){
@@ -24346,21 +24520,29 @@ function prPanelHtml(p){
         <td style="text-align:left" class="nsdim">${escHtml(m.note||"—")}</td>
         <td>${canOut?`<a class="prlink" href="javascript:void 0" onclick="prProgOpen('${p.id}','${m.month_start}')">Update</a>`:""}</td></tr>`).join("")
       :`<tr><td colspan="6" class="nsdim">Nothing recorded yet</td></tr>`;
-    months=`<div class="prpl" style="margin-top:14px">Month by month</div>
+    months=`<div class="prbox" style="margin-top:12px"><div class="prbh">Month by month</div>
       <div class="nsscroll"><table class="nstbl"><thead><tr><th style="text-align:left">Month</th>
         <th style="text-align:left">Target</th><th>${escHtml(prUnit(p).replace(/^./,c=>c.toUpperCase()))}</th>
         <th>Spend</th><th style="text-align:left">Note</th><th style="width:80px"></th></tr></thead>
-        <tbody>${body}</tbody></table></div>`;
+        <tbody>${body}</tbody></table></div></div>`;
   }
 
-  const foot=`<div class="prpfoot">
-    ${canOut?`<button class="btn btn-s" onclick="prProgOpen('${p.id}')">Update progress</button>`:""}
-    ${canEditP?`<button class="btn btn-s prdel" onclick="prTrash('${p.id}')"><i class="ti ti-trash"></i> Move to Trash</button>`:""}
-    <span style="flex:1"></span>
-    <span class="nsdim">${g.at?"Last recorded "+escHtml(prShort(String(g.at).slice(0,10))):"Nothing recorded yet"}</span>
-  </div>`;
+  const tgt=prNumOr(g.target), val=g.value;
+  const pc=(tgt&&val!==null)?Math.max(2,Math.min(100,Math.round(val/tgt*100))):0;
+  const sofar=`<div class="prbox"><div class="prbh">So far</div><div class="prbb">
+    <div class="prbig">${val!==null?`<b>${prFmt(val)}</b>`:'<b class="nsdim">—</b>'}
+      <span class="nsdim">${tgt===null?"no target":"of "+prFmt(tgt)+" "+escHtml(prUnit(p))+prBasisTail(p)}</span></div>
+    <div class="prpgb" style="margin:9px 0 11px"><i style="width:${pc}%"></i></div>
+    <div class="nsdim" style="font-size:12.5px">${g.spend!==null&&g.spend!==undefined
+      ? prMoney(g.spend,cur)+" spent" : "Nothing spent yet"}${
+      g.at?" · "+escHtml(prShort(String(g.at).slice(0,10))):""}</div>
+    <div class="prbtns">
+      ${canOut?`<button class="prmini" onclick="prProgOpen('${p.id}')">Update progress</button>`:""}
+      ${canEditP?`<button class="prmini acc" onclick="prTrash('${p.id}')"><i class="ti ti-trash"></i> Move to Trash</button>`:""}
+    </div>
+  </div></div>`;
 
-  return `<div class="prpanel">${fields}${blocks}${addPlat}${months}${foot}</div>`;
+  return `<div class="prpanel"><div class="prcols3">${detail}<div>${plats}${months}</div>${sofar}</div></div>`;
 }
 
 /* The chips inside an opened row write straight away — there is no
@@ -24853,6 +25035,18 @@ function prCrThumb(c){
   return "";
 }
 function prCrChip(st){ const s=PR_CST[st]||PR_CST.drafting; return `<span class="prcst"><i style="background:${s[1]}"></i>${s[0]}</span>`; }
+/* V111.8 — A CREATIVE, SMALL ENOUGH TO SIT ON A PLATFORM'S ROW. The
+   small card (.prcr.sm) is 130px wide and keeps a full-height thumb,
+   which turned a platform row into a 200px band. This is a tile: the
+   artwork, its status as a dot, and its name on hover. The full card
+   stays where there is room for it. */
+function prCrTile(c){
+  const src=prCrThumb(c), st=PR_CST[c.status]||PR_CST.drafting;
+  return `<span class="prtile" title="${escAttr((c.title||"Untitled")+" · "+st[0])}"
+      onclick="event.stopPropagation();prCrOpen('${c.promotion_id}','${c.id}')">
+    <span class="prtimg"${src?` data-sign="${escAttr(src)}"`:""}>${src?"":escHtml((c.format||"?").slice(0,2))}</span>
+    <i class="prtdot" style="background:${st[1]}"></i></span>`;
+}
 function prCrCard(c,small){
   const src=prCrThumb(c), n=(PR.crc[c.id]||[]).length;
   return `<div class="prcr${small?" sm":""}" onclick="event.stopPropagation();prCrOpen('${c.promotion_id}','${c.id}')">
@@ -27723,6 +27917,44 @@ function mpProfOf(it){
   for(const [k,ic,nm] of MP_PROF){ const u=(it[k]||"").trim(); if(u) return {u,ic,nm}; }
   return null;
 }
+/* ══ V111.8 — THE OUTPUT FOLDER WAS ALREADY THERE ══════════════════
+   V111.5 added `productions.output_folder_url` for this, and that was
+   a column too many. The Production Planner has captured output links
+   on a completed shoot since Dhaka: `production_reports.links`, a
+   labelled list whose first row is seeded "Raw footage". That IS the
+   link somebody pastes on a production, and the Planner's report is
+   where they already paste it.
+
+   So nothing is added to the Planner and nothing new is typed. The
+   Calendar reads the report it never read, and the folder on a
+   production row opens the link that is in it. One source, one place
+   to fill it in, and the new column goes unused — it can be dropped
+   whenever the next migration passes that way.
+
+   Read once per brand, lazily, the same shape as the promotions:
+   the panel asks, the answer repaints it. */
+let MPREPLINKS=null, MPREPBUSY=false;
+function mpLinksEnsure(){
+  if(MPREPLINKS!==null||MPREPBUSY) return;
+  MPREPBUSY=true;
+  sb.from("production_reports").select("production_id,links").is("deleted_at",null)
+    .then(r=>{
+      const m={};
+      if(r&&!r.error) (r.data||[]).forEach(x=>{
+        const L=Array.isArray(x.links)?x.links.filter(l=>l&&String(l.url||"").trim()):[];
+        if(L.length) m[x.production_id]=L;
+      });
+      MPREPLINKS=m; MPREPBUSY=false;
+      if(view==="content") mpPanelRedraw();
+    })
+    .catch(()=>{ MPREPLINKS={}; MPREPBUSY=false; });
+}
+/* the first link the report carries, with the name it was given */
+function mpFolderOf(p){
+  const L=(MPREPLINKS||{})[p.id];
+  return L&&L.length?{url:String(L[0].url||"").trim(),label:String(L[0].label||"").trim()||"Output"}:null;
+}
+
 function mpMood(p){
   const cids=(typeof PRODCOMMENTS!=="undefined"?(PRODCOMMENTS[p.id]||[]):[]).map(c=>c.id);
   return prodFilesFor(p,cids).length>0;
@@ -27764,13 +27996,13 @@ function mpRowsFor(seg,m,open){
     mpProds(m).forEach(p=>{
       const st=mpProdState(p), dated=prodDated(p);
       const when=dated?mpDay(p.date_month,p.date_day):"—";
-      const mood=mpMood(p), fold=String(p.output_folder_url||"").trim();
+      const mood=mpMood(p), fold=mpFolderOf(p);
       R.push(open
         ? `<div class="mp-rw"><span class="when${dated?"":" soft"}">${escHtml(when)}</span>
              <span class="nm">${escHtml(prodWhat(p))}</span>${mpPill(st)}
              <span class="mp-ic${mood?" on":""}" title="${mood?"Mood board attached":"No mood board yet — add it in the Planner"}"
                onclick="openProdInPlanner('${escAttr(p.id)}')">${MP_MB}</span>
-             ${fold?`<span class="mp-ic" title="Output folder" onclick="mpOpenFolder('${escAttr(fold)}')">${MP_FD}</span>`:`<span></span>`}
+             ${fold?`<span class="mp-ic" title="${escAttr(fold.label)}" onclick="mpOpenFolder('${escAttr(fold.url)}')">${MP_FD}</span>`:`<span></span>`}
              <span class="mp-go" onclick="openProdInPlanner('${escAttr(p.id)}')">Planner &rsaquo;</span></div>`
         : `<div class="mp-r"><span class="when${dated?"":" soft"}">${escHtml(when)}</span>
              <span class="nm">${escHtml(prodWhat(p))}</span>${mpPill(st)}</div>`);
@@ -27856,7 +28088,7 @@ monthPlanCardHtml=function(m){
   const mp=monthPlanFor(activeBrand,YEAR,m);
   const canE=canEdit();
   const st=mp.status==="approved";
-  mpPromoEnsure();
+  mpPromoEnsure(); mpLinksEnsure();
 
   /* BEETLE's rule still holds: a shoot is not a plan. The card draws
      its segments either way, but the status control and the objective
