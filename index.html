@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V112.1 Bologna"/>
+<meta name="cc-tool-version" content="V112.2 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -10842,7 +10842,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V112.1 Bologna";
+const TOOL_VERSION="V112.2 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -27787,7 +27787,13 @@ window.prSegOpen=function(){ pbOpen("seg"); };
    name is the thing you are reading the row for. */
 .mp-l.c-camp  .mp-r{grid-template-columns:7px 42px 26px minmax(76px,1fr) 78px;}
 .mp-l.c-prod  .mp-r{grid-template-columns:minmax(40px,100px) minmax(76px,1fr) 78px;}
-.mp-l.c-infl  .mp-r{grid-template-columns:minmax(76px,1fr) 16px 78px;}
+/* ══ V112.2 — AN INFLUENCER CAN BE TAKEN OFF AGAIN ═══════════════
+   Chirag, 2 Oct: "there is no way to remove the influencers, which are
+   once added." The trailing zone grows by the width of one × and the
+   × becomes the row's LAST element, so the flush right edge the rest
+   of the block keeps is kept here too — it is the last thing in the
+   row that lines up, not the dropdown. */
+.mp-l.c-infl  .mp-r{grid-template-columns:minmax(76px,1fr) 16px 74px 20px;}
 .mp-l.c-boost .mp-r{grid-template-columns:42px 26px minmax(76px,1fr) 78px;}
 .mp-r .d{font-size:11px;font-weight:800;color:var(--text);text-align:right;}
 .mp-r .mo{font-size:11px;font-weight:800;color:var(--text);}
@@ -27800,6 +27806,12 @@ window.prSegOpen=function(){ pbOpen("seg"); };
   color:var(--subtle);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none;}
 .mp-rwic:hover{border-color:var(--div);background:#fff;color:var(--acc);}
 .mp-rwic.on{color:#8A5A6A;}
+/* quiet until you go looking for it, and it holds its place either way
+   so no row shifts when the pointer crosses it */
+.mp-del{width:20px;height:20px;border-radius:5px;display:inline-flex;align-items:center;
+  justify-content:center;cursor:pointer;color:var(--div);justify-self:end;flex:none;}
+.mp-r:hover .mp-del,.mp-rw:hover .mp-del{color:var(--subtle);}
+.mp-del:hover{color:var(--acc)!important;background:#FCEBEB;}
 .mp-r .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;}
 .mp-r .when{font-size:11px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;}
 .mp-r .when.soft{color:var(--subtle);}
@@ -27826,7 +27838,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
 .c-camp  .mp-rw{grid-template-columns:7px 92px 1fr 78px;}
 .c-camp  .mp-rw .mp-ends{justify-content:flex-end;}
 .c-prod  .mp-rw{grid-template-columns:52px 1fr 100px 24px 24px 70px;}
-.c-infl  .mp-rw{grid-template-columns:1fr 92px 118px;}
+.c-infl  .mp-rw{grid-template-columns:1fr 92px 114px 20px;}
 .c-boost .mp-rw{grid-template-columns:92px 1fr 104px 92px 78px 86px;}
 .c-boost.nospend .mp-rw{grid-template-columns:92px 1fr 0 92px 78px 86px;}
 .mp-rw .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;}
@@ -27948,7 +27960,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
      else gives way instead: the date goes to its short form, and the
      name keeps a floor so it can never be squeezed to nothing. */
   .mp-l.c-prod  .mp-r{grid-template-columns:minmax(36px,62px) minmax(56px,1fr) 78px;}
-  .mp-l.c-infl  .mp-r{grid-template-columns:minmax(56px,1fr) 16px 78px;}
+  .mp-l.c-infl  .mp-r{grid-template-columns:minmax(56px,1fr) 16px 74px 20px;}
   .mp-l.c-boost .mp-r{grid-template-columns:28px 24px minmax(56px,1fr) 78px;}
   .mp-l.c-camp  .mp-r{grid-template-columns:7px 28px 24px minmax(56px,1fr) 46px;}
 }
@@ -28077,6 +28089,19 @@ function mpSegShut(k){ return mpvIsShut("mpseg-"+k); }
 function mpSegToggle(k){
   const f=mpvFolds(); const shut=!mpSegShut(k); f["mpseg-"+k]=shut;
   try{ localStorage.setItem(mpvFoldKey(),JSON.stringify(f)); }catch(e){}
+  /* ══ V112.2 — A CARD TAKES ITS OWN STATE DOWN WITH IT ════════════
+     Chirag, 2 Oct: "The campaign plan should never remain open when the
+     campaign card is contracted."
+
+     Opening a plan opens the card around it, so closing the card has to
+     close the plan — otherwise reopening the card shows a plan nobody
+     asked for. The influencer add row had the same fault in the other
+     direction: collapsed, it stayed in the markup and was sliced off
+     4px past the card's edge, which is the second screenshot. */
+  if(shut){
+    if(k==="camp") MP_CP=null;
+    if(k==="infl") MP_IADD=false;
+  }
   mpPanelRedraw();
 }
 function mpPanelRedraw(){
@@ -28139,17 +28164,28 @@ function mpFit(pan){
 
   const want=g.scrollHeight;              /* what the cards ask for */
   const floor=p?Math.round(lh*2):0;       /* the text never gets less */
+  const spare=room-taken-want;            /* what is left for the text */
   let forP=0;
-  if(p){
-    forP=Math.max(floor, Math.min(p.scrollHeight, room-taken-want));
-  }
+  if(p) forP=Math.max(floor, Math.min(p.scrollHeight, spare));
   const forG=Math.max(0, room-taken-forP);
 
   if(p){
-    /* whole lines only, so a line is never sliced in half */
-    const lines=Math.max(2, Math.floor(forP/lh));
-    const cap=Math.round(lines*lh);
-    if(p.scrollHeight>cap+1){ p.style.maxHeight=cap+"px"; p.classList.add("more"); }
+    /* ══ V112.2 — READ MORE ONLY WHEN THERE IS NOTHING ELSE TO DO ═══
+       Chirag, 2 Oct: "It doesn't make any sense to have a read more
+       button when you already have a space to expand the text."
+
+       He was looking at a paragraph that FIT. The clamp rounded down to
+       whole lines before asking whether it was needed, so a four-line
+       bulleted theme 136px tall was capped at 120 — six lines of 20 —
+       and declared too long while 70px of the panel sat empty under it.
+       The rounding is right; asking it first was not. Nothing is
+       clamped unless the words actually overflow the room they have. */
+    if(p.scrollHeight<=spare+1){ /* it fits — leave it alone */ }
+    else{
+      const lines=Math.max(2, Math.floor(forP/lh));
+      const cap=Math.round(lines*lh);
+      if(p.scrollHeight>cap+1){ p.style.maxHeight=cap+"px"; p.classList.add("more"); }
+    }
   }
   g.style.maxHeight=forG+"px";
   if(want>forG+1) g.classList.add("packed");
@@ -28280,6 +28316,7 @@ const MP_FD=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke=
    calendar's own event box */
 const MP_PL=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 10h16M4 15h10"/></svg>`;
 const MP_PN=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/></svg>`;
+const MP_X=`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg>`;
 
 /* ══ V112.1 · THE CAMPAIGN PLAN, AND THE INFLUENCER YOU ADD ══════ */
 /* which campaign is open, and whether the add row is showing. Both are
@@ -28342,6 +28379,19 @@ function mpHandleUrl(h){
   const t=String(h||"").trim(); if(!t) return "";
   if(/^https?:\/\//i.test(t)) return t;
   return "https://instagram.com/"+t.replace(/^@/,"");
+}
+/* TAKING AN INFLUENCER OFF. It asks first, because this is the only
+   control on the panel that destroys something, and the name is in the
+   question so you can see what you are about to lose. */
+async function mpInflRemove(id,m){
+  if(!canEdit()){ toast("View-only account","err"); return; }
+  const mp=monthPlanFor(activeBrand,YEAR,m);
+  const it=(mp.items||[]).find(x=>x.id===id); if(!it) return;
+  if(!confirm("Take "+(it.label||"this influencer")+" off "+MN[m]+"?")) return;
+  mp.items=(mp.items||[]).filter(x=>x.id!==id);
+  await dbDeleteMonthItem(id);
+  mpPanelRedraw();
+  toast("Removed");
 }
 async function mpIaddSave(m){
   if(!canEdit()){ toast("View-only account","err"); return; }
@@ -28416,14 +28466,18 @@ function mpRowsFor(seg,m,open){
             Object.keys(INFLUENCER_STAGES).map(k=>`<option value="${k}"${k===it.status?" selected":""}>${escHtml(INFLUENCER_STAGES[k][0])}</option>`).join("")
           }</select>`
         : mpPill(st);
+      const del=canEdit()
+        ? `<span class="mp-del" title="Take ${escAttr(it.label||"this influencer")} off the month"
+             onclick="event.stopPropagation();mpInflRemove('${escAttr(it.id)}',${m})">${MP_X}</span>`
+        : `<span></span>`;
       R.push(open
         ? `<div class="mp-rw"><span class="nm">${nm}</span>
              ${pf?`<a class="mp-prof" href="${escAttr(pf.u)}" target="_blank" rel="noreferrer" title="${escAttr(pf.nm)}"><i class="ti ${pf.ic}"></i> Profile</a>`
                  :`<span class="mp-prof off">No profile</span>`}
-             ${sel}</div>`
+             ${sel}${del}</div>`
         : `<div class="mp-r"><span class="nm">${nm}</span>
              ${pf?`<a class="mp-prof" href="${escAttr(pf.u)}" target="_blank" rel="noreferrer" title="${escAttr(pf.nm)}" onclick="event.stopPropagation();"><i class="ti ${pf.ic}" style="font-size:13px;"></i></a>`:`<span></span>`}
-             ${sel}</div>`);
+             ${sel}${del}</div>`);
     });
   }
   if(seg==="boost"){
