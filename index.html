@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V112.3 Bologna"/>
+<meta name="cc-tool-version" content="V112.4 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -10842,7 +10842,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V112.3 Bologna";
+const TOOL_VERSION="V112.4 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -27670,20 +27670,26 @@ window.prSegOpen=function(){ pbOpen("seg"); };
 /* the wrapper exists only so the chip has something to be positioned
    against that is NOT the box being saved */
 .mp-pw{position:relative;flex:none;}
-.mp-pw .rm{display:none;position:absolute;right:0;bottom:0;padding-left:34px;font-size:12.5px;
-  line-height:1.6;font-weight:800;color:#8A5A6A;cursor:pointer;
-  background:linear-gradient(to right,rgba(246,239,245,0),#F6EFF5 28px);}
-.mp-p.more + .rm{display:inline;}
+/* ══ V112.4 — READ MORE TAKES A LINE OF ITS OWN ══════════════════
+   Chirag, 2 Oct: "The read more button… should probably move to the
+   left hand side in the last line… This will also save us from half
+   cropped lines appearing."
+
+   That is the fix at the root. The chip used to float over the
+   paragraph's last line, which meant the paragraph had to be cut
+   wherever the arithmetic landed — and V112.3 could only soften that
+   with a fade. Now the cut is made on a WHOLE line and the line below
+   is ours, so nothing of the text is ever half-shown, no fade is
+   needed, and no words sit under a chip.
+
+   It costs one line and buys back three problems. */
+.mp-pw .rm{display:none;font-size:12.5px;line-height:1.6;font-weight:800;color:#8A5A6A;
+  cursor:pointer;padding-top:1px;}
+.mp-p.more + .rm{display:inline-block;}  /* inline-block, so the words are
+   the target. As a full-width block the whole line opened the theme,
+   including the empty space to its right. */
 .mp-pw .rm:hover{color:var(--acc);}
 .mp-pan.grown .mp-pw .rm{display:none;}
-/* ══ V112.3 — A CLAMPED PARAGRAPH FADES, IT IS NOT SLICED ════════
-   "the last line is getting half cropped". Whole-line rounding cannot
-   save a bulleted theme: a list item's height is its own, not a
-   multiple of the container's line height, so the cut lands wherever
-   it lands. The last visible line fades out instead — the same answer
-   the segment lists already use when they have more rows than fit. */
-.mp-p.more{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 13px),transparent 100%);
-  mask-image:linear-gradient(to bottom,#000 calc(100% - 13px),transparent 100%);}
 
 /* ── the four cards ───────────────────────────────────────────────── */
 /* ══ V112.0 · THE SAME BLOCK, WIDER ═══════════════════════════════
@@ -27805,7 +27811,13 @@ window.prSegOpen=function(){ pbOpen("seg"); };
    × becomes the row's LAST element, so the flush right edge the rest
    of the block keeps is kept here too — it is the last thing in the
    row that lines up, not the dropdown. */
-.mp-l.c-infl  .mp-r{grid-template-columns:minmax(76px,1fr) 16px 74px 20px;}
+/* 95px FOR THE STATUS, NOT 74. Measured: the longest stage a creator
+   can be at is "Content OK" — 68px of text — and `.cc-stsel` keeps 22px
+   clear for the chevron, so a 74px control was showing "Content O" and
+   had been since the dropdown arrived. A pill's word does not get
+   shorter on a smaller screen and neither does a dropdown's; the name
+   has 233px to give at this width and loses none of it. */
+.mp-l.c-infl  .mp-r{grid-template-columns:minmax(76px,1fr) 16px 95px 20px;}
 .mp-l.c-boost .mp-r{grid-template-columns:42px 26px minmax(76px,1fr) 72px 78px;}
 .mp-vs{font-size:11px;font-weight:700;color:var(--muted);text-align:right;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis;}
@@ -27822,6 +27834,16 @@ window.prSegOpen=function(){ pbOpen("seg"); };
   color:var(--subtle);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none;}
 .mp-rwic:hover{border-color:var(--div);background:#fff;color:var(--acc);}
 .mp-rwic.on{color:#8A5A6A;}
+/* The count of what is not on screen. NOT `.mp-more` — that was the
+   Expand button Chirag had removed in V111.4; the gate still watches
+   for anything wearing that class and it caught this the first time it
+   ran. Reusing a retired class name is how a removed control comes
+   back without anyone deciding it should.
+   Empty when nothing is hidden, and `:empty` keeps it out of the flex
+   flow so a card that fits has exactly the title row it had before. */
+.mp-hid{font-size:10px;font-weight:800;color:#8A5A6A;background:#F6EFF5;border-radius:999px;
+  padding:1px 6px;white-space:nowrap;flex:none;}
+.mp-hid:empty{display:none;}
 /* quiet until you go looking for it, and it holds its place either way
    so no row shifts when the pointer crosses it */
 .mp-del{width:20px;height:20px;border-radius:5px;display:inline-flex;align-items:center;
@@ -27948,8 +27970,27 @@ window.prSegOpen=function(){ pbOpen("seg"); };
    changed by the account manager in the post page only so that option
    should be available right here." It fills its 78px track, so it is
    the same width in every row and lines up with the pills above it. */
-.mp-r .mp-sel{height:21px;width:100%;max-width:78px;font-size:10.5px;padding:0 20px 0 5px;
+.mp-r .mp-sel{height:21px;width:100%;max-width:95px;font-size:10.5px;padding:0 20px 0 5px;
   background-position:right 6px center;}
+/* 95, measured, not 78 copied off the pill. The pill's track is 78
+   because COMPLETED is 77px of uppercase 9.5px; this control carries
+   sentence-case 10.5px and its longest stage, "Content OK", is 68px —
+   plus the 5px of lead-in and the 22px `.cc-stsel` keeps clear for the
+   chevron. A 78px cap had been showing "Content O". Below 1140 the row
+   cannot spare 95 and the track holds it to 74; the whole stage is on
+   the opened row, where the control has 114px. */
+@media(max-width:1140px){
+  .mp-r .mp-sel{max-width:74px;}
+  /* THE CORNER BUTTON KEEPS ITS JOB AND LOSES ITS WORD. "+ Request" is
+     68px of a 190px card that is also carrying "Production", the arrow
+     and the count — the photograph came back reading "+ Reque" with
+     the button's own border cut off past the card's edge. V112.1
+     settled that the button never disappears at a narrow width; it
+     does not have to be a word to be a button. The word is on its
+     tooltip, and on every screen wider than this. */
+  .mp-sgb{font-size:0;padding:0 6px;gap:0;}
+  .mp-sgb::before{content:"+";font-size:12px;font-weight:800;line-height:1;}
+}
 /* the influencer's profile is its OWN column, not the name wearing a link */
 .mp-prof{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;
   color:var(--muted);text-decoration:none;justify-self:start;}
@@ -27986,9 +28027,12 @@ window.prSegOpen=function(){ pbOpen("seg"); };
   /* THE BUTTON STAYS, THE FIGURE GOES. This hid `.mp-sgb` — which was
      fine while + Add was a text link, and became "you cannot add a
      campaign or an influencer below 1200px" the moment V112.1 made
-     both of them buttons. The figure is the thing a narrow card can do
-     without: it is a count you can also get by looking. */
-  .mp-sgr .mp-fig{display:none;}
+     both of them buttons. The figure was the thing a narrow card could
+     do without: a count you can also get by looking.
+     V112.4 took the figure out of EVERY width — "2 running, 2 of 2
+     targeted, 9 planned, 386 delivered… repetitive content and clutter"
+     — so `.mp-fig` is no longer drawn and the rule that hid it is gone
+     with it. The corner carries the action and nothing else. */
   /* a 182px card cannot carry a date, a name and a 78px pill, so the
      pill gives up the width first and ellipsises. The whole word is on
      the row when the card is opened, which is where it is read anyway. */
@@ -28008,7 +28052,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
      else gives way instead: the date goes to its short form, and the
      name keeps a floor so it can never be squeezed to nothing. */
   .mp-l.c-prod  .mp-r{grid-template-columns:minmax(36px,62px) minmax(56px,1fr) 78px;}
-  .mp-l.c-infl  .mp-r{grid-template-columns:minmax(56px,1fr) 16px 74px 20px;}
+  .mp-l.c-infl  .mp-r{grid-template-columns:minmax(56px,1fr) 16px 95px 20px;}
   /* the target-against-achievement column is the first thing to go on a
      narrow card: the name and the status have to survive, and the pair
      of numbers is still on the opened row and on the Promotions page */
@@ -28019,6 +28063,40 @@ window.prSegOpen=function(){ pbOpen("seg"); };
   .mp-l.c-boost .mp-vs{display:none;}
   .mp-l.c-boost .mp-r{grid-template-columns:28px 24px minmax(56px,1fr) 78px;}
   .mp-l.c-camp  .mp-r{grid-template-columns:7px 28px 24px minmax(56px,1fr) 46px;}
+}
+/* ══ THE NARROWEST CARD CANNOT HOLD A DATE AS WELL ══════════════════
+   Found by a new assertion in gate 23, and it was live: at a 1024
+   window the card is 190px and the row inside it 166px, and every one
+   of the grids above asks for more than that — prod 184, boost 207,
+   camp 189, infl 187. `.mp-l` is `overflow:hidden`, so the surplus was
+   not pushing anything about: it was being CUT OFF the right-hand edge,
+   and the thing on that edge is the status pill. The word came out
+   sliced with no ellipsis to say so — the same fault as "REQUE…", by a
+   different route, and invisible to a gate that only ever asked
+   whether a pill escaped its card.
+
+   The order of what survives is already written down two rules up: the
+   name and the status, then the numbers. The DATE is what goes next.
+   It is still on the opened row, and the campaign is painted on the
+   calendar beside this panel, which is where a date is read anyway.
+
+   1140px, not 1200: at 1180 the row is 234px and every grid above fits
+   whole. Measured, both sides of the line. */
+@media(max-width:1140px){
+  .mp-l.c-prod  .mp-r{grid-template-columns:minmax(56px,1fr) 78px;}
+  .mp-l.c-prod  .mp-r > .when{display:none;}
+  .mp-l.c-boost .mp-r{grid-template-columns:minmax(56px,1fr) 78px;}
+  .mp-l.c-boost .mp-r > .d,.mp-l.c-boost .mp-r > .mo{display:none;}
+  .mp-l.c-camp  .mp-r{grid-template-columns:7px minmax(56px,1fr) 46px;}
+  .mp-l.c-camp  .mp-r > .d,.mp-l.c-camp  .mp-r > .mo{display:none;}
+  /* The one row that cannot keep the 56px name floor. A 166px row
+     carrying a name, a profile link, a status and a remove has 47px
+     left for the name once the other three are whole — and of the
+     four, the name is the only one that still says something at 47px,
+     because it ellipsises and the other three do not. The full name is
+     on the row's tooltip and on the opened row, where the status also
+     gets its full 114px. */
+  .mp-l.c-infl  .mp-r{grid-template-columns:minmax(40px,1fr) 16px 74px 18px;gap:5px;}
 }
 </style>
 <script>
@@ -28176,6 +28254,31 @@ function mpFadeLists(){
   document.querySelectorAll(".mp-pan .mp-l").forEach(l=>{
     l.classList.toggle("ov", l.scrollHeight > l.clientHeight + 1);
   });
+  mpHiddenCounts();
+}
+/* ══ V112.4 — HOW MANY ROWS ARE NOT ON SCREEN ════════════════════
+   Chirag, 2 Oct: "there should be some visual science, so we know
+   that there is more data in that card."
+
+   The fade says THERE IS MORE and never says how much — and on a card
+   with one row cut it is easy to miss altogether. This counts the rows
+   whose bottom falls below the list's visible edge and puts the number
+   beside the arrow. Measured, not derived from the data: a row can be
+   hidden because the card is short, and the data cannot know that.
+
+   An opened card has nothing hidden, so the slot empties itself. */
+function mpHiddenCounts(){
+  document.querySelectorAll(".mp-pan .mp-sg").forEach(card=>{
+    const slot=card.querySelector(".mp-sgt .mp-hid"); if(!slot) return;
+    const list=card.querySelector(".mp-l");
+    if(!list||card.classList.contains("open")){ slot.textContent=""; return; }
+    const edge=list.getBoundingClientRect().bottom;
+    let n=0;
+    list.querySelectorAll(":scope > .mp-r").forEach(r=>{
+      if(r.getBoundingClientRect().bottom > edge+1) n++;
+    });
+    slot.textContent = n ? "+"+n : "";
+  });
 }
 /* ── mpFit ─ WHO GETS THE LEFTOVER ROOM ───────────────────────────
    The panel is locked to the calendar's 359px, and inside it the
@@ -28221,10 +28324,13 @@ function mpFit(pan){
   const want=g.scrollHeight;              /* what the cards ask for */
   const floor=p?Math.round(lh*2):0;       /* the text never gets less */
   const spare=room-taken-want;            /* what is left for the text */
-  let forP=0;
-  if(p) forP=Math.max(floor, Math.min(p.scrollHeight, spare));
-  const forG=Math.max(0, room-taken-forP);
-
+  /* V112.4 — THE WHOLE WRAPPER, NOT JUST THE TEXT. The read more line
+     is a block in the flow now, so the paragraph's area is the text
+     PLUS that line whenever it is showing. Budgeting for the text
+     alone handed the cards room that was already spoken for, and the
+     bottom card fell out of the panel at every width. Decided first,
+     measured second: `used` is what the wrapper will actually take. */
+  let used=0;
   if(p){
     /* ══ V112.2 — READ MORE ONLY WHEN THERE IS NOTHING ELSE TO DO ═══
        Chirag, 2 Oct: "It doesn't make any sense to have a read more
@@ -28236,13 +28342,22 @@ function mpFit(pan){
        and declared too long while 70px of the panel sat empty under it.
        The rounding is right; asking it first was not. Nothing is
        clamped unless the words actually overflow the room they have. */
-    if(p.scrollHeight<=spare+1){ /* it fits — leave it alone */ }
+    /* V112.4 — the read more LINE is part of the paragraph's budget now,
+       so the room the text may use is one line less than the room it
+       has. And the cut is rounded DOWN to a whole line, which is what
+       makes a half-shown line impossible rather than merely faded. */
+    if(p.scrollHeight<=spare+1){ used=p.scrollHeight; }   /* it fits */
     else{
-      const lines=Math.max(2, Math.floor(forP/lh));
+      const lines=Math.max(2, Math.floor((spare-lh)/lh));
       const cap=Math.round(lines*lh);
-      if(p.scrollHeight>cap+1){ p.style.maxHeight=cap+"px"; p.classList.add("more"); }
+      if(p.scrollHeight>cap+1){
+        p.style.maxHeight=cap+"px"; p.classList.add("more");
+        used=cap+lh;                 /* the text, and the line under it */
+      } else used=p.scrollHeight;
     }
+    if(used<floor) used=floor;
   }
+  const forG=Math.max(0, room-taken-used);
   g.style.maxHeight=forG+"px";
   if(want>forG+1) g.classList.add("packed");
   mpFadeLists();
@@ -28531,7 +28646,7 @@ function mpRowsFor(seg,m,open){
              ${pf?`<a class="mp-prof" href="${escAttr(pf.u)}" target="_blank" rel="noreferrer" title="${escAttr(pf.nm)}"><i class="ti ${pf.ic}"></i> Profile</a>`
                  :`<span class="mp-prof off">No profile</span>`}
              ${sel}${del}</div>`
-        : `<div class="mp-r"><span class="nm">${nm}</span>
+        : `<div class="mp-r"><span class="nm" title="${escAttr(String(it.label||"").replace(/<[^>]*>/g,""))}">${nm}</span>
              ${pf?`<a class="mp-prof" href="${escAttr(pf.u)}" target="_blank" rel="noreferrer" title="${escAttr(pf.nm)}" onclick="event.stopPropagation();"><i class="ti ${pf.ic}" style="font-size:13px;"></i></a>`:`<span></span>`}
              ${sel}${del}</div>`);
     });
@@ -28561,8 +28676,17 @@ function mpRowsFor(seg,m,open){
                 month. A dash where a number has not been entered yet,
                 so an empty cell never reads as a zero. */
              const got=row&&prNumOr(row.result_value)!==null?prFmt(row.result_value):"—";
+             /* ══ V112.4 — WHAT THE TARGET IS MEASURED AGAINST ══════
+                Chirag: "the basis for the target are not visible, so
+                you don't know if it is 20 per day per month… we can
+                simply use /d or /m or total."
+
+                Every basis is marked, so nothing rests on a convention
+                anyone has to learn. The promotion already carries it;
+                the card simply was not reading it. */
+             const bs={per_day:"/d",per_month:"/m",total:" total"}[prBasis(p)]||"";
              const vs=prNumOr(tv)!==null
-               ? `<span class="mp-vs"><b>${got}</b><s>/${prFmt(tv)}</s></span>`
+               ? `<span class="mp-vs"><b>${got}</b><s>/${prFmt(tv)}${escHtml(bs)}</s></span>`
                : `<span class="mp-vs"><b>${got}</b></span>`;
              return `<div class="mp-r" style="cursor:pointer;" title="Open ${escAttr(p.name||"this promotion")} in Promotions"
                onclick="mpGoPromo('${escAttr(p.id)}')"><span class="d">${escHtml(dp.d)}</span><span class="mo">${escHtml(dp.mo)}</span>
@@ -28575,7 +28699,13 @@ function mpRowsFor(seg,m,open){
 /* ── one card ─────────────────────────────────────────────────────── */
 function mpSegCard(seg,m,canE){
   const open=!mpSegShut(seg);
-  const T={camp:"Campaigns",prod:"Production",infl:"Influencers",boost:"Boosting"}[seg];
+  /* ══ V112.4 — BOOSTING IS CALLED PROMOTIONS ═════════════════════
+     Chirag, 2 Oct: "Boosting should be renamed as promotions to align
+     with our overall nomenclature." Wording only — the card draws the
+     same promotions from the same place, its rows already lead to the
+     Promotions page, and the segment's key stays `boost` so every fold
+     anyone has saved, and every selector in the gates, still matches. */
+  const T={camp:"Campaigns",prod:"Production",infl:"Influencers",boost:"Promotions"}[seg];
   const rows=mpRowsFor(seg,m,open);
   const mp=monthPlanFor(activeBrand,YEAR,m);
 
@@ -28588,26 +28718,23 @@ function mpSegCard(seg,m,canE){
      Production had a bordered button, for the same kind of job — they
      are both `.mp-sgb` now. A card with no figure or no action simply
      leaves that half out; nothing moves. */
-  let fig="", act="";
-  if(seg==="camp"){
-    const n=mpCamps(m).length;
-    if(n) fig=`<span class="mp-fig">${n} <s>running</s></span>`;
-    act=canE?`<button class="mp-sgb" onclick="event.stopPropagation();mpAddCampaign(${m})">+ Add</button>`:"";
-  } else if(seg==="prod"){
-    const n=mpProds(m).length;
-    if(n) fig=`<span class="mp-fig">${n} <s>planned</s></span>`;
-    act=canE?`<button class="mp-sgb" onclick="event.stopPropagation();openProdRequest()">+ Request</button>`:"";
-  } else if(seg==="infl"){
-    const t=mp.influencer_target||0;
-    if(t) fig=`<span class="mp-fig">${mpInfls(m).length} of ${t} <s>targeted</s></span>`;
-    act=canE?`<button class="mp-sgb" onclick="event.stopPropagation();mpIaddToggle()">+ Add</button>`:"";
-  } else if(seg==="boost"){
-    let got=null;
-    mpBoosts(m).forEach(p=>{ const r=prMonthRow(p.id,plMonthRange(m)[0]);
-      const v=r?prNumOr(r.result_value):null; if(v!==null) got=(got===null?0:got)+v; });
-    if(got!==null) fig=`<span class="mp-fig">${prFmt(got)} <s>delivered</s></span>`;
-  }
-  const tail=(fig||act)?`<span class="mp-sgr">${fig}${act}</span>`:"";
+  /* ══ V112.4 — THE CORNER HOLDS THE ACTION AND NOTHING ELSE ══════
+     Chirag, 2 Oct: "2 running, 2 of 2 targeted, 9 planned, 386
+     delivered… all of this is repetitive content and clutter."
+
+     He is right about three of the four: a count of rows you can see,
+     and a sum of figures already printed on each row. The fourth —
+     the influencer "of 2" — was the month's TARGET, which is a number
+     someone set and not a sum of anything listed, so it does not
+     survive anywhere else on this card. Removed on his say-so, noted
+     here because it is the one that is actually lost. */
+  let act="";
+  /* the title is not decoration: below 1140 the button is the plus
+     alone, and this is where its word goes */
+  if(seg==="camp")      act=canE?`<button class="mp-sgb" title="Add a campaign" onclick="event.stopPropagation();mpAddCampaign(${m})">+ Add</button>`:"";
+  else if(seg==="prod") act=canE?`<button class="mp-sgb" title="Request a shoot" onclick="event.stopPropagation();openProdRequest()">+ Request</button>`:"";
+  else if(seg==="infl") act=canE?`<button class="mp-sgb" title="Add an influencer" onclick="event.stopPropagation();mpIaddToggle()">+ Add</button>`:"";
+  const tail=act?`<span class="mp-sgr">${act}</span>`:"";
 
   /* NOTHING PLANNED IS ONE LINE. A card with no rows used to draw a
      title, a list and a sentence inside it — three rows high, and as
@@ -28625,7 +28752,7 @@ function mpSegCard(seg,m,canE){
   }
 
   return `<div class="mp-sg${open?" open":""}" data-seg="${seg}">
-    <div class="mp-sgt" onclick="mpSegToggle('${seg}')"><b>${T}</b>${MP_CV}${tail}</div>
+    <div class="mp-sgt" onclick="mpSegToggle('${seg}')"><b>${T}</b>${MP_CV}<span class="mp-hid"></span>${tail}</div>
     <div class="mp-l c-${seg}${seg==="boost"&&!mpSeeSpend()?" nospend":""}">${rows.join("")}${
       seg==="infl"&&MP_IADD&&canE?mpIaddHtml(m):""}</div>
   </div>`;
