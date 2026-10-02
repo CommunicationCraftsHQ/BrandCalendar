@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V111.5 Bologna"/>
+<meta name="cc-tool-version" content="V111.6 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3606,14 +3606,27 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 /* V111.4 — the chip that opens the brand's own list, and that list. */
 .propt.add{border-style:dashed;color:var(--muted);}
 .pbwrap{border:1px solid var(--div);border-radius:12px;overflow:hidden;background:#fff;}
-.pbrow{display:grid;grid-template-columns:minmax(0,1fr) auto 24px;gap:12px;align-items:center;
-  padding:6px 12px;border-bottom:1px solid var(--div);}
+/* V111.6 — ONE GRID FOR EVERY ROW, THE BLANK ONE INCLUDED. The middle
+   two are fixed widths so the master word on a made row sits directly
+   above the kind picker on the blank row. EVERY COLUMN IS FIXED OR 1fr
+   FOR A REASON: each row is its own grid container, so an `auto`
+   column measures that row's own contents — the row carrying a lock
+   came out narrower than its neighbours and the name boxes stepped in
+   and out down the list. 46px holds the lock and a count. */
+.pbrow{display:grid;grid-template-columns:minmax(0,1fr) 150px 46px;gap:12px;
+  align-items:center;padding:7px 12px;border-bottom:1px solid var(--div);}
 .pbrow:last-child{border-bottom:0;}
 .pbrow .pbnm{height:34px;}
-.pbmaster{font-size:11.5px;color:var(--subtle);white-space:nowrap;}
-.pbx{color:var(--subtle);font-size:13px;cursor:pointer;opacity:0;transition:opacity .12s;text-align:center;}
-.pbrow:hover .pbx{opacity:.65;}
+.pbmaster{font-size:11.5px;color:var(--subtle);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* the ✕ no longer waits for a hover — this panel is an editor, and a
+   row with no visible way off reads as fixed. */
+.pbx{color:var(--subtle);font-size:13px;cursor:pointer;opacity:.6;transition:opacity .12s,color .12s;text-align:right;}
+.pbrow .lock{justify-self:end;}
 .pbx:hover{opacity:1;color:var(--acc);}
+.pbrow.new{background:#fafbfc;}
+.pbrow .pbkind{height:34px;padding:0 8px;font-size:12.5px;color:var(--muted);}
+.pbadd{color:var(--acc);font-size:14px;cursor:pointer;text-align:right;opacity:.85;}
+.pbadd:hover{opacity:1;}
 .pbspare{margin-top:14px;}
 .pblbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
   color:var(--subtle);margin-bottom:7px;}
@@ -10710,7 +10723,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V111.5 Bologna";
+const TOOL_VERSION="V111.6 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -23954,6 +23967,13 @@ async function prLoad(k){
   else if(view==="content" && typeof mpPanelRedraw==="function") mpPanelRedraw();
 }
 function prReload(){ PR.key=null; render(); }
+/* V111.6 — THE SAME RELOAD, BUT AWAITABLE. prReload() is not async: it
+   clears the key and lets render() fetch in its own time, so a panel
+   that redrew straight after it drew the OLD list and the row you had
+   just made did not appear until you closed and reopened. Chirag hit
+   this on 2 October and added Internal Team twice. The brand's own
+   list waits for this one instead. */
+async function prReloadNow(){ PR.key=null; await prLoad(prKey()); }
 function prStreams(pid){ return (PR.streams[pid]||[]).slice().sort((a,b)=>(a.sort||0)-(b.sort||0)); }
 function prAuds(sid){ return (PR.auds[sid]||[]).slice().sort((a,b)=>(a.sort||0)-(b.sort||0)); }
 function prCrFor(pid,sid){ return PR.cr.filter(c=>c.promotion_id===pid&&(sid===undefined||c.stream_id===sid)); }
@@ -26552,11 +26572,8 @@ function pbOpen(kind){
      carry a sub-segment: Investors and Home Buyers both answer to the
      master term Customers. Each is its own row with its own id, which
      is what the brand's word, the ✕ and the promotion all point at.
-     An objective stays one to a brand — the chip leaves the row once
-     it is taken. */
-  const spare=kind==="obj"
-    ? (L.master||[]).filter(o=>taken.indexOf(o.key)<0)
-    : (L.master||[]);
+     An objective stays one to a brand. */
+  const spare=(L.master||[]).filter(o=>taken.indexOf(o.key)<0);
   prBox(`<div class="modal-top"><div><div class="modal-title">${L.title}</div>
       <div class="modal-sub">${escHtml(brands[activeBrand]?.name||"")}</div></div>
       <button class="modal-x" onclick="closeM('promo')">✕</button></div>
@@ -26572,10 +26589,17 @@ function pbOpen(kind){
              :`<i class="ti ti-x pbx" title="Take it off this brand"
                   onclick="pbDrop('${kind}','${escAttr(kind==="obj"?m.key:m.id)}')"></i>`}
         </div>`;
-      }).join(""):`<div class="pbrow"><span class="nsdim">None on this brand yet</span></div>`}</div>
-      ${spare.length?`<div class="pbspare"><div class="pblbl">On the master list</div>
-        <div class="prchips">${spare.map(o=>`<span class="propt" onclick="pbTake('${kind}','${escAttr(o.key)}')">${escHtml(o.label)}</span>`).join("")}</div></div>`
-       :`<div class="pbspare"><span class="nsdim">Every term on the master list is already here</span></div>`}
+      }).join(""):""}
+      ${kind==="seg"?`<div class="pbrow new">
+        <input class="fi pbnm" id="pb-newnm" placeholder="New target group"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();pbNew();}">
+        <select class="fi pbkind" id="pb-newkind">${(L.master||[]).map(o=>
+          `<option value="${escAttr(o.key)}">${escHtml(o.label)}</option>`).join("")}</select>
+        <i class="ti ti-plus pbadd" title="Add it to this brand" onclick="pbNew()"></i>
+      </div>`:""}</div>
+      ${kind==="obj"?(spare.length?`<div class="pbspare"><div class="pblbl">Add</div>
+        <div class="prchips">${spare.map(o=>`<span class="propt" onclick="pbTake('${kind}','${escAttr(o.key)}')"><i class="ti ti-plus"></i> ${escHtml(o.label)}</span>`).join("")}</div></div>`
+       :`<div class="pbspare"><span class="nsdim">Every term on the master list is already here</span></div>`):""}
     </div>
     <div class="modal-foot"><span style="flex:1"></span>
       <button class="btn btn-p" onclick="pbDone()">Done</button></div>`);
@@ -26606,6 +26630,24 @@ async function pbRename(kind,id,el){
   pbOpen(kind);
 }
 
+/* V111.6 — A TARGET GROUP IS MADE IN ONE MOTION. The name and the kind
+   are the row's own two fields, so Investors with Customers behind it
+   never has to be made and then renamed. The master list is untouched
+   — this writes a row on the brand and nothing else. */
+async function pbNew(){
+  const nm=document.getElementById("pb-newnm"), kd=document.getElementById("pb-newkind");
+  if(!nm||!kd) return;
+  const label=String(nm.value||"").trim();
+  if(!label){ nm.focus(); return; }
+  const key=kd.value;
+  const r=await sb.from("brand_segments").insert([{brand_id:activeBrand,segment_key:key,
+    label, sort:((PR.bsegs||[]).length+1)*10}]).select("id");
+  if(r.error||!r.data||!r.data.length) return toast("Not added — "+(r.error?r.error.message:"not allowed"),"err");
+  toast(label+" added");
+  await prReloadNow(); pbOpen("seg");
+  const next=document.getElementById("pb-newnm"); if(next) next.focus();
+}
+
 async function pbTake(kind,key){
   if(kind==="obj"){
     const r=await sb.from("brand_objectives").insert([{brand_id:activeBrand,objective_key:key}]);
@@ -26616,7 +26658,7 @@ async function pbTake(kind,key){
       label:master.label||key, sort:((PR.bsegs||[]).length+1)*10}]);
     if(r.error) return toast("Not added — "+r.error.message,"err");
   }
-  await prReload(); pbOpen(kind);
+  await prReloadNow(); pbOpen(kind);
 }
 
 async function pbDrop(kind,id){
@@ -26631,10 +26673,10 @@ async function pbDrop(kind,id){
     const r=await sb.from("brand_segments").update({deleted_at:new Date().toISOString()}).eq("id",id).select("id");
     if(r.error||!r.data||!r.data.length) return toast("Not removed — "+(r.error?r.error.message:"not allowed"),"err");
   }
-  toast(row.label+" taken off"); await prReload(); pbOpen(kind);
+  toast(row.label+" taken off"); await prReloadNow(); pbOpen(kind);
 }
 
-window.pbOpen=pbOpen; window.pbTake=pbTake; window.pbDrop=pbDrop; window.pbRename=pbRename; window.pbDone=pbDone;
+window.pbNew=pbNew; window.pbOpen=pbOpen; window.pbTake=pbTake; window.pbDrop=pbDrop; window.pbRename=pbRename; window.pbDone=pbDone;
 /* the old names keep working — two gates and the page's own button
    call prObjOpen by name */
 prObjOpen=function(){ pbOpen("obj"); };
