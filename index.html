@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V112.0 Bologna"/>
+<meta name="cc-tool-version" content="V112.1 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -10842,7 +10842,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V112.0 Bologna";
+const TOOL_VERSION="V112.1 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -27690,8 +27690,16 @@ window.prSegOpen=function(){ pbOpen("seg"); };
    the other case: when the cards want MORE room than the panel has, the
    two rows share it equally again and their lists clip, which is what
    the fade is for. */
+/* ══ V112.1 — THE SLACK BELONGS ABOVE THE CARDS ══════════════════
+   Chirag, 2 Oct: "there is a lot of margin at the bottom of the card.
+   Ideally, the four cards should be aligned to the bottom, and if there
+   is extra space that should be left between the four cards inside of
+   the month card and the top paragraph."
+   `margin-top:auto` in a column flex is what pushes a block to the
+   floor and gives the leftover to the gap above it. */
 .mp-g{flex:none;min-height:0;display:grid;grid-template-columns:1fr 1fr;
-  grid-auto-rows:min-content;align-content:start;gap:9px;margin-top:11px;}
+  grid-auto-rows:min-content;align-content:start;gap:9px;
+  margin-top:auto;padding-top:11px;}
 .mp-g.packed{grid-auto-rows:1fr;}
 .mp-pan.grown .mp-g{flex:none;grid-auto-rows:auto;align-items:start;}
 .mp-sg{min-height:0;background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.9);
@@ -27703,19 +27711,29 @@ window.prSegOpen=function(){ pbOpen("seg"); };
 .mp-sg.open{grid-column:1 / -1;background:#fff;}
 .mp-sgt{display:flex;align-items:center;gap:7px;flex:none;min-height:20px;cursor:pointer;}
 .mp-sgt b{font-size:12.5px;font-weight:800;letter-spacing:-.01em;}
-.mp-sgt .cv{margin-left:7px;color:var(--subtle);flex:none;transition:transform .15s;}
+/* ══ V112.1 — THE ARROW SITS WITH THE NAME IT OPENS ══════════════
+   It used to sit at the far end of the title row, sharing that corner
+   with + Add and the figure — three controls in one place, and the
+   smallest of them was the one that opened the card. After the name it
+   is where the thing it opens is, the corner keeps one job, and
+   nothing is pushed in from the left. Chirag's own fourth option. */
+.mp-sgt .cv{margin:0 0 0 -1px;color:var(--subtle);flex:none;transition:transform .15s;}
+/* ONE SLOT IN THE CORNER, SAME ORDER IN EVERY CARD: figure, then
+   action. Two different kinds of control in one place is what made the
+   four cards read as four different designs. */
+.mp-sgr{margin-left:auto;display:flex;align-items:center;gap:7px;flex:none;}
 .mp-sg.open .mp-sgt .cv{transform:rotate(90deg);}
 .mp-sg:hover .mp-sgt .cv{color:var(--muted);}
 /* the figure the segment is judged on rides in the TITLE row. Pushing it
    to the foot of a stretched card left a hole in every card — the same
    wasted space in a smaller box. */
-.mp-fig{font-size:11.5px;font-weight:700;color:var(--muted);white-space:nowrap;margin-left:auto;}
+.mp-fig{font-size:11.5px;font-weight:700;color:var(--muted);white-space:nowrap;}
 .mp-fig s{text-decoration:none;color:var(--subtle);font-weight:600;}
-.mp-add{font-size:11px;font-weight:800;color:#8A5A6A;cursor:pointer;white-space:nowrap;margin-left:auto;}
+.mp-add{font-size:11px;font-weight:800;color:#8A5A6A;cursor:pointer;white-space:nowrap;}
 .mp-add:hover{color:var(--acc);}
 .mp-sgb{height:20px;border:1px solid var(--div);background:var(--surface);border-radius:6px;
   font:inherit;font-size:11px;font-weight:700;color:var(--text);padding:0 7px;cursor:pointer;
-  display:inline-flex;align-items:center;gap:3px;flex:none;margin-left:auto;}
+  display:inline-flex;align-items:center;gap:3px;flex:none;}
 .mp-sgb:hover{border-color:var(--acc);color:var(--acc);}
 /* A HALF ROW READS AS BROKEN. The list is clipped to whatever height the
    card has left, which lands mid-row as often as not — the built page
@@ -27748,20 +27766,54 @@ window.prSegOpen=function(){ pbOpen("seg"); };
    its left edge. Numbers keep their right edge, which is how numbers
    line up. */
 .mp-r{display:grid;align-items:center;gap:7px;font-size:12px;padding:1px 0;line-height:1.4;white-space:nowrap;}
-.mp-l.c-camp  .mp-r{grid-template-columns:7px 60px 1fr;}
-.mp-l.c-prod  .mp-r{grid-template-columns:44px 1fr 78px;}
-.mp-l.c-infl  .mp-r{grid-template-columns:1fr 16px 78px;}
-.mp-l.c-boost .mp-r{grid-template-columns:60px 1fr 78px;}
+/* ══ V112.1 — THE MONTH LINES UP, AND SO DOES THE RIGHT EDGE ═════
+   Two changes in one place.
+
+   THE DATE is two tracks, not one string: the day right-aligned in its
+   own track and the month in its own, so 5, 10 and 11–12 all end at
+   the same pixel and every "Oct" starts at the same pixel. "the month
+   column should internally also align… everything should always remain
+   aligned."
+
+   THE TRAILING TRACK is 78px in every segment and everything in it is
+   flush right, so the pills, the dropdowns and the campaign's two
+   glyphs make ONE line down the card rather than three ragged ones.
+   Measured on the mockup: 12px from each card's edge, all four. */
+/* THE NAME HAS A FLOOR. A rigid 100px date column plus a 78px pill left
+   the shoot's own name 42px at 1180 and NOTHING at 1024 — "Hoar…",
+   "Prod…", and then nothing at all. The photograph caught it; no
+   assertion was looking, and there is one now. minmax lets the date
+   give way to the name rather than the other way round, because the
+   name is the thing you are reading the row for. */
+.mp-l.c-camp  .mp-r{grid-template-columns:7px 42px 26px minmax(76px,1fr) 78px;}
+.mp-l.c-prod  .mp-r{grid-template-columns:minmax(40px,100px) minmax(76px,1fr) 78px;}
+.mp-l.c-infl  .mp-r{grid-template-columns:minmax(76px,1fr) 16px 78px;}
+.mp-l.c-boost .mp-r{grid-template-columns:42px 26px minmax(76px,1fr) 78px;}
+.mp-r .d{font-size:11px;font-weight:800;color:var(--text);text-align:right;}
+.mp-r .mo{font-size:11px;font-weight:800;color:var(--text);}
+.mp-r .d.soft,.mp-r .mo.soft{color:var(--subtle);font-weight:700;}
+.mp-ends{display:flex;align-items:center;gap:2px;justify-content:flex-end;width:100%;}
+.mp-r .mp-sel{justify-self:end;}
+/* the two glyphs a campaign row carries: its plan, and the way in to
+   the calendar's own box */
+.mp-rwic{width:22px;height:20px;border-radius:6px;border:1px solid transparent;background:transparent;
+  color:var(--subtle);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none;}
+.mp-rwic:hover{border-color:var(--div);background:#fff;color:var(--acc);}
+.mp-rwic.on{color:#8A5A6A;}
 .mp-r .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;}
 .mp-r .when{font-size:11px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;}
 .mp-r .when.soft{color:var(--subtle);}
+.mp-r .when .w-mini{display:none;}
 /* THE PILL HAD TO BE TOLD IT LIVES IN A TRACK. justify-self:start sizes
    a grid item to its CONTENT, so "COMPLETED" simply grew past the 68px
    column, through the card's padding, and up to 3px from its edge —
    where the photograph caught it. max-width is the whole fix: it
    resolves against the grid area, so the pill can never leave it. */
+/* justify-self:END now, not start — "in the boosting card, the running
+   chips should be right aligned". max-width still resolves against the
+   grid area, which is what stops a long pill leaving its track. */
 .mp-r .st{font-size:9.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
-  border-radius:5px;padding:2px 5px;justify-self:start;max-width:100%;
+  border-radius:5px;padding:2px 5px;justify-self:end;max-width:100%;
   overflow:hidden;text-overflow:ellipsis;}
 .mp-r .dot{width:6px;height:6px;border-radius:50%;}
 
@@ -27772,6 +27824,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
 /* an empty cell still holds its column, which is the point: one shoot
    has an output folder and the next has not, and Planner stays put */
 .c-camp  .mp-rw{grid-template-columns:7px 92px 1fr 78px;}
+.c-camp  .mp-rw .mp-ends{justify-content:flex-end;}
 .c-prod  .mp-rw{grid-template-columns:52px 1fr 100px 24px 24px 70px;}
 .c-infl  .mp-rw{grid-template-columns:1fr 92px 118px;}
 .c-boost .mp-rw{grid-template-columns:92px 1fr 104px 92px 78px 86px;}
@@ -27792,10 +27845,51 @@ window.prSegOpen=function(){ pbOpen("seg"); };
   color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
 .mp-ic:hover{border-color:var(--acc);color:var(--acc);}
 .mp-ic.on{border-color:#C3D9A8;background:#F2F8EA;color:#3B6D11;}
+/* ══ V112.1 — THE CAMPAIGN PLAN OPENS WHERE IT IS ════════════════
+   "the space is limited, and you have to scroll if the campaign plan
+   is a little long… clicking on the campaign inside the campaign card
+   will expand that particular campaign and you can see the entire plan
+   for that campaign expanding in line."
+
+   So it is not a box inside the row. It is a block UNDER the row, the
+   full width of the opened card, with the writing bar the theme
+   already uses. The field is the campaign's own notes — the same
+   column, renamed in the interface to Campaign plan and nowhere else,
+   so nothing already written is touched. */
+.mp-cp{grid-column:1 / -1;margin:4px 0 8px;padding:10px 12px 11px;background:#FFF8FC;
+  border:1px solid #F3E2EC;border-radius:9px;white-space:normal;}
+.mp-cp .cph{display:flex;align-items:center;gap:6px;margin-bottom:7px;}
+.mp-cp .cpl{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#8A5A6A;}
+.mp-cp .cpgo{margin-left:auto;font-size:11px;font-weight:800;color:#8A5A6A;cursor:pointer;}
+.mp-cp .cpgo:hover{color:var(--acc);}
+.mp-cp .tx{font-size:12px;line-height:1.62;color:var(--text);min-height:34px;}
+.mp-cp .tx:empty::before{content:attr(data-ph);color:var(--subtle);}
+.mp-cp .tx p{margin:0 0 7px;}
+.mp-cp .tx ul,.mp-cp .tx ol{margin:0 0 7px 17px;padding:0;}
+.mp-cp .tx li{margin:2px 0;}
+.mp-cp .tx a{color:var(--acc);}
+.mp-cp .tx[contenteditable="true"]:hover{outline:1px dashed #E8CCDA;outline-offset:4px;border-radius:6px;}
+/* ══ V112.1 — ADDING AN INFLUENCER ═══════════════════════════════
+   "we need to add a mechanism to add influencers where we can add the
+   name. The social media handle follower count". The handle becomes
+   the Instagram link the profile glyph already reads; the count goes
+   in the row's own spare field, so there is no new column. */
+.mp-iadd{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr 90px 54px;gap:6px;
+  margin-top:6px;padding-top:8px;border-top:1px solid rgba(13,13,13,.06);}
+.mp-iadd input{height:26px;border:1px solid var(--div);border-radius:6px;background:#fff;
+  font:inherit;font-size:11.5px;padding:0 7px;color:var(--text);min-width:0;}
+.mp-iadd input::placeholder{color:var(--subtle);}
+.mp-iadd button{height:26px;border:1px solid var(--acc);background:var(--acc);color:#fff;
+  border-radius:6px;font:inherit;font-size:11px;font-weight:800;cursor:pointer;}
 .mp-go{font-size:11.5px;font-weight:800;color:#8A5A6A;cursor:pointer;}
 .mp-go:hover{color:var(--acc);}
 .mp-sel{height:24px;font-size:11px;font-family:inherit;font-weight:700;border:1px solid var(--div);
   border-radius:6px;background:#fff;color:var(--muted);cursor:pointer;padding:0 4px;}
+/* ON THE CLOSED ROW TOO. "The status chats in the influencer has to be
+   changed by the account manager in the post page only so that option
+   should be available right here." It fills its 78px track, so it is
+   the same width in every row and lines up with the pills above it. */
+.mp-r .mp-sel{height:21px;width:100%;max-width:78px;font-size:10.5px;padding:0 3px;}
 /* the influencer's profile is its OWN column, not the name wearing a link */
 .mp-prof{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;
   color:var(--muted);text-decoration:none;justify-self:start;}
@@ -27829,7 +27923,12 @@ window.prSegOpen=function(){ pbOpen("seg"); };
    is opened), then the preview list gives up a row — that order, because
    that is the order of what the card is for. */
 @media(max-width:1200px){
-  .mp-sgb{display:none;}
+  /* THE BUTTON STAYS, THE FIGURE GOES. This hid `.mp-sgb` — which was
+     fine while + Add was a text link, and became "you cannot add a
+     campaign or an influencer below 1200px" the moment V112.1 made
+     both of them buttons. The figure is the thing a narrow card can do
+     without: it is a count you can also get by looking. */
+  .mp-sgr .mp-fig{display:none;}
   /* a 182px card cannot carry a date, a name and a 78px pill, so the
      pill gives up the width first and ellipsises. The whole word is on
      the row when the card is opened, which is where it is read anyway. */
@@ -27841,10 +27940,17 @@ window.prSegOpen=function(){ pbOpen("seg"); };
      the same as the wide one, because a pill's word does not get
      shorter on a smaller screen. The narrowing saved sixteen pixels
      and cost the reader the word. */
-  .mp-l.c-prod  .mp-r{grid-template-columns:40px 1fr 78px;}
-  .mp-l.c-infl  .mp-r{grid-template-columns:1fr 16px 78px;}
-  .mp-l.c-boost .mp-r{grid-template-columns:52px 1fr 78px;}
-  .mp-l.c-camp  .mp-r{grid-template-columns:7px 52px 1fr;}
+  .mp-r .when .w-full{display:none;}
+  .mp-r .when .w-mini{display:inline;}
+  /* THE PILL TRACK STAYS 78. V111.9 narrowed it to 62 and the
+     photograph came back reading "REQUE…" — a pill's word does not get
+     shorter on a smaller screen, and that is written down. Everything
+     else gives way instead: the date goes to its short form, and the
+     name keeps a floor so it can never be squeezed to nothing. */
+  .mp-l.c-prod  .mp-r{grid-template-columns:minmax(36px,62px) minmax(56px,1fr) 78px;}
+  .mp-l.c-infl  .mp-r{grid-template-columns:minmax(56px,1fr) 16px 78px;}
+  .mp-l.c-boost .mp-r{grid-template-columns:28px 24px minmax(56px,1fr) 78px;}
+  .mp-l.c-camp  .mp-r{grid-template-columns:7px 28px 24px minmax(56px,1fr) 46px;}
 }
 </style>
 <script>
@@ -27899,6 +28005,38 @@ function mpSpan(sM,sD,eM,eD,wide){
      carries the whole span. */
   if(!wide) return mpDay(sM,sD);
   return mpDay(sM,sD)+" – "+mpDay(eM,eD);
+}
+/* ══ V112.1 — A DATE IS A DAY AND A MONTH, IN TWO TRACKS ═════════
+   The closed row used to print one string, so "10 Oct" and "11–12 Oct"
+   put their month in different places down the same card. These split
+   it: the day goes in a right-aligned track and the month in its own,
+   and every month lines up whatever the day is. Cross-month spans keep
+   mpSpan's rule — the closed row carries the day it STARTS. */
+function mpDayPart(sM,sD,eM,eD){
+  if(sM===eM&&sD===eD) return {d:String(sD),mo:MN[sM].slice(0,3)};
+  if(sM===eM) return {d:sD+"–"+eD,mo:MN[sM].slice(0,3)};
+  return {d:String(sD),mo:MN[sM].slice(0,3)};
+}
+function mpPrDayPart(p){
+  const a=mpYMD(p.starts_on), b=mpYMD(p.ends_on);
+  if(a&&b) return mpDayPart(a.m,a.d,b.m,b.d);
+  if(a) return {d:String(a.d),mo:MN[a.m].slice(0,3)};
+  if(b) return {d:String(b.d),mo:MN[b.m].slice(0,3)};
+  return {d:"—",mo:""};
+}
+/* THE SHORT FORM, FOR A NARROW CARD. "asked for 4 Sep" is 97px and a
+   1024 window leaves the date 34 — the photograph showed "Hoar…" where
+   a shoot's name should be, because the date was taking the name's
+   room. Both forms are in the markup and the stylesheet picks one, so
+   there is no resize handler to forget and nothing to recompute. The
+   full phrase stays on the row's title either way. */
+function mpWhenMini(p){
+  if(prodDated(p)) return mpDay(p.date_month,p.date_day);
+  const d=String(p.pref_date||"").split("-");
+  if(p.pref_kind==="day"&&d.length===3) return mpDay(+d[1],+d[2]);
+  if(p.pref_kind==="week"&&d.length===3) return "wk "+mpDay(+d[1],+d[2]);
+  if(p.rough_year) return MN[p.rough_month].slice(0,3);
+  return "—";
 }
 function mpYMD(s){ const t=String(s||"").split("-"); return t.length===3?{m:+t[1],d:+t[2]}:null; }
 function mpPrSpan(p,wide){
@@ -27991,8 +28129,13 @@ function mpFit(pan){
             - parseFloat(getComputedStyle(pan).paddingBottom||0);
   const head=pan.querySelector(".mp-h");
   let taken=head?head.offsetHeight:0;
-  if(p) taken+=parseFloat(getComputedStyle(p).marginTop||0);
-  taken+=parseFloat(getComputedStyle(g).marginTop||0);
+  if(p) taken+=parseFloat(getComputedStyle(p).marginTop)||0;
+  /* NOT the grid's margin-top. V112.1 made it `auto` so the cards fall
+     to the floor of the block — and getComputedStyle resolves an auto
+     margin to the SLACK ITSELF, so adding it here counted the leftover
+     room twice and squeezed the paragraph back to its floor on a month
+     with almost nothing in it. The grid's own padding-top is already
+     inside its scrollHeight below, so nothing is missing. */
 
   const want=g.scrollHeight;              /* what the cards ask for */
   const floor=p?Math.round(lh*2):0;       /* the text never gets less */
@@ -28133,6 +28276,90 @@ function mpOpenFolder(u){
 const MP_CV=`<svg class="cv" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg>`;
 const MP_MB=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l5-4 4 3 3-2 6 4"/></svg>`;
 const MP_FD=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`;
+/* the campaign row's two glyphs: its plan, and the pencil into the
+   calendar's own event box */
+const MP_PL=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 10h16M4 15h10"/></svg>`;
+const MP_PN=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/></svg>`;
+
+/* ══ V112.1 · THE CAMPAIGN PLAN, AND THE INFLUENCER YOU ADD ══════ */
+/* which campaign is open, and whether the add row is showing. Both are
+   screen state, not data: a reload starts them closed. */
+let MP_CP=null, MP_IADD=false;
+
+function mpCpToggle(id){
+  MP_CP = (MP_CP===id) ? null : id;
+  /* the card has to be OPEN for the plan to have the width to be read
+     in — a plan squeezed into half a panel is the box Chirag asked to
+     get rid of */
+  if(MP_CP) { const f=mpvFolds(); f["mpseg-camp"]=false;
+    try{ localStorage.setItem(mpvFoldKey(),JSON.stringify(f)); }catch(e){} }
+  mpPanelRedraw();
+}
+function mpCpEventOf(id){
+  for(let m=1;m<=12;m++){ const e=(evs[m]||[]).find(x=>x.id===id); if(e) return {m,e}; }
+  return null;
+}
+function mpCpHtml(m,ev){
+  const canE=canEdit();
+  const ed=canE?` contenteditable="true" data-mpcp="${escAttr(ev.id)}"
+      onfocus="rtFocus(this)" onblur="mpCpBlur(this)"`:"";
+  return `<div class="mp-cp" onclick="event.stopPropagation();">
+    <div class="cph"><span class="cpl">Campaign plan</span>
+      <span class="cpgo" onclick="mpCpToggle('${escAttr(ev.id)}')">Close</span></div>
+    <div class="tx"${ed} data-ph="${escAttr(canE?"Write the plan for "+(ev.name||"this campaign")+"…":"No plan written yet")}">${mpRender(ev.notes||"")}</div>
+  </div>`;
+}
+async function mpCpBlur(el){
+  if(!canEdit()) return;
+  const id=el.dataset.mpcp; const hit=mpCpEventOf(id); if(!hit) return;
+  const clean=mpClean(el.innerHTML).trim();
+  if(clean===String(hit.e.notes||"").trim()) return;
+  hit.e.notes=clean;
+  saveEvsLS(); dbSyncBrandData(); toast("Saved");
+}
+/* a shoot opens in the Planner IN THE FRAME, the same frame + Request
+   already uses — the Calendar still never writes a production */
+function mpProdOpen(id){
+  prodFrameOpen(PLANNER_BASE+"?v="+encodeURIComponent(TOOL_VERSION)+"#shoot?id="+encodeURIComponent(id));
+}
+function mpIaddToggle(){ MP_IADD=!MP_IADD;
+  if(MP_IADD){ const f=mpvFolds(); f["mpseg-infl"]=false;
+    try{ localStorage.setItem(mpvFoldKey(),JSON.stringify(f)); }catch(e){} }
+  mpPanelRedraw();
+  if(MP_IADD){ const i=document.querySelector(".mp-iadd input"); if(i) i.focus(); }
+}
+function mpIaddHtml(m){
+  return `<div class="mp-iadd" onclick="event.stopPropagation();">
+    <input id="mp-ia-n" placeholder="Name" onkeydown="if(event.key==='Enter')mpIaddSave(${m})"/>
+    <input id="mp-ia-h" placeholder="@handle" onkeydown="if(event.key==='Enter')mpIaddSave(${m})"/>
+    <input id="mp-ia-f" placeholder="Followers" onkeydown="if(event.key==='Enter')mpIaddSave(${m})"/>
+    <button onclick="mpIaddSave(${m})">Add</button>
+  </div>`;
+}
+/* a handle is not a link. "@garba.fit" and "garba.fit" and the whole
+   URL all arrive from people, and the profile glyph needs a URL. */
+function mpHandleUrl(h){
+  const t=String(h||"").trim(); if(!t) return "";
+  if(/^https?:\/\//i.test(t)) return t;
+  return "https://instagram.com/"+t.replace(/^@/,"");
+}
+async function mpIaddSave(m){
+  if(!canEdit()){ toast("View-only account","err"); return; }
+  const g=id=>(document.getElementById(id)||{}).value||"";
+  const nm=g("mp-ia-n").trim();
+  if(!nm){ toast("A name, at least","err"); return; }
+  const mp=monthPlanFor(activeBrand,YEAR,m);
+  const it={id:newMonthItemId(),category:"influencer",label:nm,status:"pending",
+    sort_order:(mp.items||[]).filter(i=>i.category==="influencer").length,
+    discipline:"social",link_instagram:mpHandleUrl(g("mp-ia-h")),link_facebook:"",link_youtube:"",
+    value:g("mp-ia-f").trim()};
+  mp.items=mp.items||[]; mp.items.push(it);
+  if(!mp.id){ mp.id=newMonthPlanId(); await dbSaveMonthPlan(activeBrand,YEAR,m); }
+  await dbSaveMonthItem(it,activeBrand,YEAR,m);
+  mpPanelRedraw();
+  const i=document.querySelector(".mp-iadd input"); if(i) i.focus();
+  toast("Added");
+}
 
 function mpRowsFor(seg,m,open){
   const R=[];
@@ -28140,12 +28367,27 @@ function mpRowsFor(seg,m,open){
     mpCamps(m).forEach(c=>{
       const nm=escHtml(c.e.name||"Campaign");
       const dot=`<span class="dot" style="background:${c.sM===c.eM?CAMP_PINK_DEEP:CAMP_PINK}"></span>`;
-      R.push(open
+      const plan=String(c.e.notes||"").trim()!=="";
+      const cid=escAttr(c.e.id);
+      /* THE TWO GLYPHS RIDE BOTH ROWS. Opening a campaign's plan opens
+         the card around it — so if the plan only existed on the closed
+         row, clicking the name made it appear and vanish in the same
+         frame. Caught by the gate the first time it ran. */
+      const ends=`<span class="mp-ends">
+               <span class="mp-rwic${plan?" on":""}" title="${plan?"Campaign plan":"No campaign plan yet"}"
+                 onclick="event.stopPropagation();mpCpToggle('${cid}')">${MP_PL}</span>
+               <span class="mp-rwic" title="Edit the campaign"
+                 onclick="event.stopPropagation();mpGoCampaign(${c.m},'${cid}')">${MP_PN}</span>
+             </span>`;
+      const dp=mpDayPart(c.sM,c.sD,c.eM,c.eD);
+      R.push((open
         ? `<div class="mp-rw">${dot}<span class="when">${escHtml(mpSpan(c.sM,c.sD,c.eM,c.eD,true))}</span>
-             <span class="nm">${nm}</span>
-             <span class="mp-go" onclick="mpGoCampaign(${c.m},'${escAttr(c.e.id)}')">Calendar &rsaquo;</span></div>`
-        : `<div class="mp-r">${dot}<span class="when">${escHtml(mpSpan(c.sM,c.sD,c.eM,c.eD,false))}</span>
-             <span class="nm">${nm}</span></div>`);
+             <span class="nm mp-cpn" title="Open the campaign plan" onclick="mpCpToggle('${cid}')"
+               style="cursor:pointer;">${nm}</span>${ends}</div>`
+        : `<div class="mp-r">${dot}<span class="d">${escHtml(dp.d)}</span><span class="mo">${escHtml(dp.mo)}</span>
+             <span class="nm mp-cpn" title="Open the campaign plan" onclick="mpCpToggle('${cid}')"
+               style="cursor:pointer;">${nm}</span>${ends}</div>`)
+        + (MP_CP===c.e.id?mpCpHtml(c.m,c.e):""));
     });
   }
   if(seg==="prod"){
@@ -28160,7 +28402,9 @@ function mpRowsFor(seg,m,open){
                onclick="openProdInPlanner('${escAttr(p.id)}')">${MP_MB}</span>
              ${fold?`<span class="mp-ic" title="${escAttr(fold.label)}" onclick="mpOpenFolder('${escAttr(fold.url)}')">${MP_FD}</span>`:`<span></span>`}
              <span class="mp-go" onclick="openProdInPlanner('${escAttr(p.id)}')">Planner &rsaquo;</span></div>`
-        : `<div class="mp-r"><span class="when${dated?"":" soft"}">${escHtml(when)}</span>
+        : `<div class="mp-r" style="cursor:pointer;" title="${escAttr(prodWhen(p))} — open in the Planner"
+             onclick="mpProdOpen('${escAttr(p.id)}')"><span class="when${dated?"":" soft"}"
+             ><span class="w-full">${escHtml(prodWhen(p))}</span><span class="w-mini">${escHtml(mpWhenMini(p))}</span></span>
              <span class="nm">${escHtml(prodWhat(p))}</span>${mpPill(st)}</div>`);
     });
   }
@@ -28179,7 +28423,7 @@ function mpRowsFor(seg,m,open){
              ${sel}</div>`
         : `<div class="mp-r"><span class="nm">${nm}</span>
              ${pf?`<a class="mp-prof" href="${escAttr(pf.u)}" target="_blank" rel="noreferrer" title="${escAttr(pf.nm)}" onclick="event.stopPropagation();"><i class="ti ${pf.ic}" style="font-size:13px;"></i></a>`:`<span></span>`}
-             ${mpPill(st)}</div>`);
+             ${sel}</div>`);
     });
   }
   if(seg==="boost"){
@@ -28198,8 +28442,9 @@ function mpRowsFor(seg,m,open){
              ${spend?`<span class="mp-money">${bud}</span>`:`<span></span>`}
              <span class="mt">${tgt}</span>${mpPill(st)}
              <span class="mp-go" onclick="mpGoPromo('${escAttr(p.id)}')">Promotion &rsaquo;</span></div>`
-        : `<div class="mp-r"><span class="when">${escHtml(mpPrSpan(p,false))}</span>
-             <span class="nm">${escHtml(p.name||"Promotion")}</span>${mpPill(st)}</div>`);
+        : (()=>{ const dp=mpPrDayPart(p);
+             return `<div class="mp-r"><span class="d">${escHtml(dp.d)}</span><span class="mo">${escHtml(dp.mo)}</span>
+             <span class="nm">${escHtml(p.name||"Promotion")}</span>${mpPill(st)}</div>`; })());
     });
   }
   return R;
@@ -28212,21 +28457,35 @@ function mpSegCard(seg,m,canE){
   const rows=mpRowsFor(seg,m,open);
   const mp=monthPlanFor(activeBrand,YEAR,m);
 
-  /* the figure the segment is judged on, in the title row */
-  let tail="";
+  /* ══ V112.1 · ONE CORNER, ONE ORDER ═════════════════════════════
+     "The placement of add button request button and other such top
+     right corner. Information should also be in harmony."
+
+     So every card's corner is the same shape: the FIGURE, then the
+     ACTION, inside one `.mp-sgr`. Campaigns had a text link where
+     Production had a bordered button, for the same kind of job — they
+     are both `.mp-sgb` now. A card with no figure or no action simply
+     leaves that half out; nothing moves. */
+  let fig="", act="";
   if(seg==="camp"){
-    tail=canE?`<span class="mp-add" onclick="event.stopPropagation();mpAddCampaign(${m})">+ Add</span>`:"";
+    const n=mpCamps(m).length;
+    if(n) fig=`<span class="mp-fig">${n} <s>running</s></span>`;
+    act=canE?`<button class="mp-sgb" onclick="event.stopPropagation();mpAddCampaign(${m})">+ Add</button>`:"";
   } else if(seg==="prod"){
-    tail=canE?`<button class="mp-sgb" onclick="event.stopPropagation();openProdRequest()">+ Request</button>`:"";
+    const n=mpProds(m).length;
+    if(n) fig=`<span class="mp-fig">${n} <s>planned</s></span>`;
+    act=canE?`<button class="mp-sgb" onclick="event.stopPropagation();openProdRequest()">+ Request</button>`:"";
   } else if(seg==="infl"){
     const t=mp.influencer_target||0;
-    tail=t?`<span class="mp-fig">${mpInfls(m).length} of ${t} <s>targeted</s></span>`:"";
+    if(t) fig=`<span class="mp-fig">${mpInfls(m).length} of ${t} <s>targeted</s></span>`;
+    act=canE?`<button class="mp-sgb" onclick="event.stopPropagation();mpIaddToggle()">+ Add</button>`:"";
   } else if(seg==="boost"){
     let got=null;
     mpBoosts(m).forEach(p=>{ const r=prMonthRow(p.id,plMonthRange(m)[0]);
       const v=r?prNumOr(r.result_value):null; if(v!==null) got=(got===null?0:got)+v; });
-    tail=got!==null?`<span class="mp-fig">${prFmt(got)} <s>delivered</s></span>`:"";
+    if(got!==null) fig=`<span class="mp-fig">${prFmt(got)} <s>delivered</s></span>`;
   }
+  const tail=(fig||act)?`<span class="mp-sgr">${fig}${act}</span>`:"";
 
   /* NOTHING PLANNED IS ONE LINE. A card with no rows used to draw a
      title, a list and a sentence inside it — three rows high, and as
@@ -28239,12 +28498,14 @@ function mpSegCard(seg,m,canE){
     const w={camp:"none",prod:"none",infl:"none",boost:canCap("view_promotions")?"none":""}[seg];
     return `<div class="mp-sg empty" data-seg="${seg}">
       <div class="mp-sgt"><b>${T}</b>${w?`<span class="mp-none-inline">${w}</span>`:""}${tail}</div>
+      ${seg==="infl"&&MP_IADD&&canE?`<div class="mp-l c-infl" style="flex:none;overflow:visible;">${mpIaddHtml(m)}</div>`:""}
     </div>`;
   }
 
   return `<div class="mp-sg${open?" open":""}" data-seg="${seg}">
-    <div class="mp-sgt" onclick="mpSegToggle('${seg}')"><b>${T}</b>${tail}${MP_CV}</div>
-    <div class="mp-l c-${seg}${seg==="boost"&&!mpSeeSpend()?" nospend":""}">${rows.join("")}</div>
+    <div class="mp-sgt" onclick="mpSegToggle('${seg}')"><b>${T}</b>${MP_CV}${tail}</div>
+    <div class="mp-l c-${seg}${seg==="boost"&&!mpSeeSpend()?" nospend":""}">${rows.join("")}${
+      seg==="infl"&&MP_IADD&&canE?mpIaddHtml(m):""}</div>
   </div>`;
 }
 
