@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V112.6 Bologna"/>
+<meta name="cc-tool-version" content="V112.7 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3288,6 +3288,53 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
    earlier gate and function looks for — but it no longer scrolls on its own. */
 .mpv-scroll.pl-sheets{padding:0 var(--pg-x,32px);overflow:visible;flex:none;min-height:0;}
 .pl-sheets .mpv-sheet{margin-bottom:14px;max-width:none;scroll-margin-top:12px;}
+/* ══ V112.7 · A MONTH OPEN, AND ELEVEN MONTHS AS LINES ════════════
+   "When a month is collapsed, you can see multiple months and then
+   one month at a time." A closed month is one row carrying its name,
+   its objective, what is in it and where it stands. */
+.pl-sheets .mpv-sheet.pl-fold{margin-bottom:7px;}
+/* 134px, because "September 2026" is 126px and a month name that runs
+   into the objective beside it reads as one sentence: "September
+   2026No objective yet". Measured, not guessed. */
+.pl-mline{display:grid;grid-template-columns:134px minmax(0,1fr) auto auto;gap:16px;
+  align-items:center;background:#fff;border:1px solid var(--div);border-radius:12px;
+  padding:11px 15px;cursor:pointer;transition:border-color .14s, box-shadow .14s;}
+.pl-mline:hover{border-color:#D8D2CA;box-shadow:0 2px 10px rgba(120,90,110,.08);}
+.pl-mline.now{border-color:rgba(214,40,40,.3);}
+.pl-mline .mvn,.pl-mhd .mvn{display:flex;align-items:baseline;gap:7px;min-width:0;
+  overflow:hidden;white-space:nowrap;}
+.pl-mline .mvn b{font-size:15px;letter-spacing:-.01em;}
+.pl-mline .mvn span{font-size:11px;color:var(--subtle);font-weight:700;}
+.pl-mline .mvo{font-size:12.5px;color:var(--muted);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.pl-mline .mvo.none{color:var(--subtle);font-style:italic;}
+.pl-mline .mvr{display:flex;align-items:center;gap:9px;}
+.pl-mst{font-size:10px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
+  border-radius:5px;padding:2px 7px;background:#FCF0E3;color:#854F0B;white-space:nowrap;}
+.pl-mst.ok{background:#EAF3DE;color:#3B6D11;}
+.pl-mst.none{background:#EFEDF6;color:#5C5077;}
+/* the counts, on the line and on the open month's heading */
+.pl-mcts{display:flex;align-items:center;gap:11px;flex-wrap:nowrap;min-width:0;}
+.pl-mcts .ct{font-size:11.5px;color:var(--muted);white-space:nowrap;display:inline-flex;
+  align-items:center;gap:4px;}
+.pl-mcts .ct b{font-weight:800;color:var(--text);}
+.pl-mcts .ct.meet b{color:var(--acc);}
+.pl-mcts .ct.meet{color:var(--acc);}
+/* a zero is drawn pale rather than hidden, so an empty month looks
+   empty instead of looking unloaded */
+.pl-mcts .ct.zero,.pl-mcts .ct.zero b{color:#C9C4BD;}
+.pl-mcts .ct.zero b{font-weight:700;}
+.pl-mline .cvr{color:var(--subtle);font-size:15px;transition:transform .15s;}
+/* the open month's own heading, which closes it */
+.pl-mhd{display:grid;grid-template-columns:134px minmax(0,1fr) auto;gap:16px;
+  align-items:center;cursor:pointer;margin-bottom:10px;}
+.pl-mhd .mpv-mo{margin:0;}
+.pl-mhd .cvr{color:var(--subtle);font-size:15px;transform:rotate(90deg);}
+.pl-mhd:hover .cvr{color:var(--acc);}
+@media(max-width:1140px){
+  .pl-mline,.pl-mhd{grid-template-columns:104px minmax(0,1fr) auto;gap:11px;}
+  .pl-mline .pl-mcts,.pl-mhd .pl-mcts{display:none;}
+}
 .pl-meets{margin-top:16px;}
 .pl-blocks{margin-top:14px;}
 .pl-blocks .mpv-band + .mpv-band{margin-top:10px;}
@@ -10875,7 +10922,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V112.6 Bologna";
+const TOOL_VERSION="V112.7 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -25598,6 +25645,17 @@ function plEnsure(){
   if(PLD.key!==k && !PLD.loading) plLoad(k);
   if(canCap("view_promotions") && PR.key!==String(activeBrand) && !PR.loading)
     prLoad(String(activeBrand)).then(()=>{ if(plOn()) render(); });
+  /* ══ V112.7 — AND THE BRAND'S TASKS ════════════════════════════
+     The Tasks card reads BR, which until now only the Tasks page
+     filled. Same loader, same rows, no second copy: a status changed
+     on that page is the status here on the next paint. The page draws
+     without them and fills in when they land, exactly as it already
+     does for promotions.
+     brSync() is the Tasks page's own loader and it already handles the
+     two things a hand-rolled call gets wrong: it clears the loading
+     flag, and it throws away an answer for a brand you have since
+     switched away from. */
+  if(typeof brSync==="function") brSync();
 }
 async function plLoad(k){
   PLD.loading=true;
@@ -25861,78 +25919,134 @@ function plMeetingsHtml(m,canE){
 }
 
 /* ── the sheet ────────────────────────────────────────────────────── */
+/* ══ V112.7 · THE MONTH IS THE BLOCK, AND IT FOLDS ════════════════
+   Chirag, 3 Oct, twice over. First on the bands: "social media is
+   pretty much already covered above and same is for branding design
+   which is already covered in tasks. Also, meetings are buried at the
+   bottom." Then on the year: "we should have the month itself into
+   formats, open and collapsed. So when a month is collapsed, you can
+   see multiple months and then one month at a time."
+
+   WHAT A SERVICE BAND HELD, AND WHERE IT WENT. Four things: the
+   written plan, the delivered work, the influencer list, the outcome
+   figures. The delivered work is the Tasks and Posts cards now, the
+   influencers have been a card since V112.0, and the shoots since
+   then too — three of the four were duplication the moment those
+   cards existed. The remaining two, the plan sentence and the
+   figures, are out of the layout for this stage on Chirag's word:
+   "the 'What we said, and what came of it' section is not required at
+   this stage."
+
+   NOTHING IS DELETED. plan_service_months and plan_outcomes keep
+   every row they have; plPlanRow, plOutRows, plOutTable and
+   plBlockHtml are all still here and still work. What is gone is the
+   call that drew them, so the day those numbers get their own pass
+   they are brought back by putting one line in, not by rebuilding a
+   feature. */
 function plSheetHtml(m,canE){
-  const mp=monthPlanFor(activeBrand,YEAR,m);
-  const goalsAll=canE?mpvRows(mp,"goal"):mpvItems(mp,"goal");
-  const themeSet=String(mp.key_theme||"").trim()!=="";
-  const ed=canE?` contenteditable="true" data-mpv-m="${m}" data-mpv-f="key_theme"
-        onfocus="mpvFocus(this)" onblur="mpvBlurSave(this)"`:"";
-  /* ══ V111.5 — THE MONTH'S OBJECTIVE, IN ONE LINE ═════════════════
-     The Posts panel shows it; the pencil is how it is set, and the
-     pencil comes here. Its own blur handler rather than mpvBlurSave's:
-     one field, one line of plain text, and no formatting bar summoned
-     over it. Enter means done. */
-  const objSet=String(mp.objective_line||"").trim()!=="";
-  const oed=canE?` contenteditable="true" data-mpo-m="${m}"
-        onblur="mpObjBlur(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"`:"";
-  const svcs=plServicesFor(m);
-  const socialAt=svcs.findIndex(s=>s.kind==="social");
-  /* ══ V110.4 · ONE BLOCK MUST NOT BE ABLE TO TAKE THE PAGE DOWN ══════
-     plAdsAuto threw for a week and the symptom nobody could read was
-     "the Plan page will not open" — because a throw here happens while
-     the sheet's HTML is still being built, so main.innerHTML is never
-     assigned and whatever was on screen stays there, including a
-     meeting that has already been deleted.
-
-     A service block that cannot be drawn is now a block that says so,
-     in its own row, while the other eleven months draw normally. The
-     console keeps the real error for whoever is looking.
-
-     This is a net, not a fix: it does not make a broken block work, it
-     stops one broken block from hiding every working one and from
-     making the tool look like it has frozen. */
-  const blocks=svcs.map((s,i)=>{
-    try{ return plBlockHtml(s,m,canE,i===socialAt); }
-    catch(e){
-      console.error("[plan] "+(s&&s.title?s.title:"a service")+" could not be drawn for month "+m,e);
-      return `<div class="mpv-band pl-svcband"><div class="mpv-bh">
-        <i class="ti ti-alert-triangle" style="font-size:14px;color:var(--acc)"></i>
-        <b>${escHtml((s&&s.title)||"Service")}</b><span class="sum">could not be drawn</span>
-      </div></div>`;
-    }
-  }).join("");
-  const mpInfl=mpvItems(mp,"influencer").length;
-  /* Influencers belonged to the social layer before and still do. With
-     no social service this month they get a block of their own rather
-     than vanishing. */
-  const loneInfl=(socialAt<0&&(mpInfl||canE))
-    ? `<div class="mpv-band pl-svcband${plIsShut("pl-infl")?" shut":""}" data-band="pl-infl"><div class="mpv-bh" onclick="plToggle('pl-infl')"><i class="ti ti-chevron-down cv"></i><i class="ti ti-users" style="font-size:14px;color:var(--muted)"></i><b>Influencers</b><span class="sum">${mpInfl?mpInfl+" influencer"+(mpInfl===1?"":"s"):""}</span></div><div class="mpv-bb">${plInfluencersHtml(m,canE)}</div></div>`
-    : "";
-  /* ══ V112.0 · THE SAME BLOCK AS THE POSTS PAGE ═══════════════════
-     The objective, the theme, the status pill, the pencil and the four
-     segment cards used to be written out twice — once here and once in
-     monthPlanCardHtml — and the two drifted until they looked like
-     different features. They are one call now, and the month's own
-     heading stays outside it, because this page stacks twelve of them
-     and the Posts page does not need naming twice.
-
-     Production has left this page's body with it: the block carries a
-     Production card, and the same shoots listed twice on one screen is
-     what this merge was meant to stop. */
-  return `<div class="mpv-sheet pl-sheet" data-month="${m}" id="mpv-m${m}">
-    <div class="mpv-top pl-top">
-      <div class="mpv-mo"><h2>${MN[m]}</h2><span class="yr">${YEAR}</span></div>
+  const open=plMonthOpen()===m;
+  return `<div class="mpv-sheet pl-sheet${open?" pl-open":" pl-fold"}" data-month="${m}" id="mpv-m${m}">
+    ${open?`<div class="mpv-top pl-top">
+      <div class="pl-mhd" onclick="plMonthToggle(${m})" title="Close ${MN[m]}">
+        <div class="mpv-mo"><h2>${MN[m]}</h2><span class="yr">${YEAR}</span></div>
+        <div class="pl-mcts">${plMonthCounts(m,true)}</div>
+        <i class="ti ti-chevron-right cvr"></i>
+      </div>
       ${monthPlanCardHtml(m,{wide:true})}
       <div class="mpchips"></div>
-    </div>
-    <div class="mpv-body">
-      ${mpvLbl("Goals",canE?`mpvAdd('goal',${m})`:"")}
-      ${goalsAll.length?`<div class="mpv-goals">${goalsAll.map(g=>mpvGoalPill(g,m,canE)).join("")}</div>`:`<div class="mpv-empty">No goals yet.</div>`}
-      ${PLD.ok.meet?`<div class="pl-meets">${plMeetingsHtml(m,canE)}</div>`:""}
-      <div class="pl-blocks">${blocks}${loneInfl}</div>
-    </div>
+    </div>`:plMonthLineHtml(m)}
   </div>`;
 }
+/* ── a closed month ──────────────────────────────────────────────
+   One line that still says what the month was about and how much is
+   in it. The counts come back here having just been taken off the
+   cards in V112.4, and that is not a contradiction: inside an open
+   month a count sits beside the rows it counts and repeats them, and
+   on a closed line it is the only thing standing in for a month you
+   cannot see. */
+function plMonthCounts(m,terse){
+  const mp=monthPlanFor(activeBrand,YEAR,m);
+  const meets=(typeof plMeetingsIn==="function"&&PLD&&PLD.ok&&PLD.ok.meet)?plMeetingsIn(m).length:0;
+  const bits=[
+    ["posts",mpPosts(m).length],
+    ["tasks",mpTasksReady()?mpTasks(m).length:null],
+    ["shoots",mpProds(m).length],
+    ["campaigns",mpCamps(m).length]];
+  /* the word, not an icon. A glyph the icon set does not carry draws a
+     blank square, and a lone red number beside "3 posts" reads as part
+     of it. */
+  const out=[`<span class="ct meet${meets?"":" zero"}"><b>${meets}</b> meeting${meets===1?"":"s"}</span>`];
+  bits.forEach(([w,n])=>{
+    /* a count nobody has yet is not a zero. Tasks before they land
+       show nothing rather than claiming the month has none. */
+    if(n===null) return;
+    out.push(`<span class="ct${n?"":" zero"}"><b>${n}</b> ${w}</span>`);
+  });
+  return out.join("");
+}
+function plMonthLineHtml(m){
+  const mp=monthPlanFor(activeBrand,YEAR,m);
+  const one=String(mp.objective_line||"").trim();
+  const st=mp.status==="approved";
+  const infl=mpInfls(m), targets=mpvItems(mp,"target");
+  const hasPlan=!!mp.id||monthPlanHasData(activeBrand,YEAR,m)||infl.length||targets.length||(mp.influencer_target>0);
+  const pill=!hasPlan
+    ? `<span class="pl-mst none">Not started</span>`
+    : `<span class="pl-mst${st?" ok":""}">${st?"Approved":"Drafted"}</span>`;
+  return `<div class="pl-mline${mpIsNowMonth(m)?" now":""}" onclick="plMonthToggle(${m})"
+      title="Open ${MN[m]} ${YEAR}">
+    <div class="mvn"><b>${MN[m]}</b><span>${YEAR}</span></div>
+    <div class="mvo${one?"":" none"}">${one?escHtml(one):"No objective yet"}</div>
+    <div class="pl-mcts">${plMonthCounts(m)}</div>
+    <div class="mvr">${pill}<i class="ti ti-chevron-right cvr"></i></div>
+  </div>`;
+}
+/* ── which month is open ─────────────────────────────────────────
+   One at a time, and remembered per brand in this browser — the same
+   place and the same shape as the card folds the panel already keeps,
+   so there is one idea about remembering a fold, not two. */
+/* NOTHING OPEN IS A STATE, NOT AN ABSENCE. The first version used null
+   for both "we have not worked it out yet" and "the user shut the open
+   month", so shutting the last one fell straight back to the default
+   and it sprang open again. 0 is the shut year; null is unknown. */
+let PL_OPENM=null;
+function plOpenKey(){ return "plOpenMonth:"+(activeBrand||"-"); }
+function plMonthOpen(){
+  if(PL_OPENM!==null) return PL_OPENM;
+  let raw=null;
+  try{ raw=localStorage.getItem(plOpenKey()); }catch(e){}
+  if(raw==="0"){ PL_OPENM=0; return 0; }
+  let v=Number(raw||0)||0;
+  const months=mpvMonthsWithPlan();
+  if(v&&months.indexOf(v)<0) v=0;
+  if(!v){
+    const now=(new Date()).getMonth()+1;
+    v=(YEAR===(new Date()).getFullYear()&&months.indexOf(now)>=0)?now
+      :(months.length?months[0]:0);
+  }
+  PL_OPENM=v; return v;
+}
+function plMonthSet(m){
+  PL_OPENM=m||0;
+  try{ localStorage.setItem(plOpenKey(),String(PL_OPENM)); }catch(e){}
+}
+function plMonthToggle(m){
+  /* clicking the open month's heading closes it, and the year is
+     twelve lines. Clicking a closed one opens it and shuts whichever
+     was open — that is what "one month at a time" means. */
+  plMonthSet(plMonthOpen()===m?0:m);
+  mpvMonth=m; render();
+  requestAnimationFrame(()=>{ const el=document.getElementById("mpv-m"+m);
+    const main=document.getElementById("main");
+    if(el&&main){ const d=el.getBoundingClientRect().top-main.getBoundingClientRect().top;
+      main.scrollTop=Math.max(0,main.scrollTop+d-12); } });
+}
+/* switching brand forgets this one's open month rather than carrying
+   it across — a month number means nothing on another brand's year. */
+(function(){
+  const base=pickBrand;
+  pickBrand=function(){ PL_OPENM=null; return base.apply(this,arguments); };
+})();
 
 /* ── the page ─────────────────────────────────────────────────────── */
 (function(){
@@ -27800,6 +27914,69 @@ window.prSegOpen=function(){ pbOpen("seg"); };
 .mp-pan.mp-wide .mp-p{max-height:none!important;}
 .mp-pan.mp-wide .mp-p .rm{display:none!important;}
 .mp-pan.mp-wide .mp-g{max-height:none!important;}
+/* ══ V112.7 · GOALS, MEETINGS AND TWO MORE CARDS ═══════════════════
+   All of this is inside the wide block only. The narrow panel beside
+   the calendar is untouched: it keeps four cards in its 359px, and the
+   rules below never match there. */
+.mp-sub-lbl{display:flex;align-items:center;gap:8px;font-size:10px;font-weight:800;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);margin:13px 0 6px;}
+.mp-sub-add{margin-left:auto;color:var(--acc);font-size:10.5px;letter-spacing:.04em;cursor:pointer;}
+.mp-sub-add:hover{text-decoration:underline;}
+.mp-sub-none{font-size:12.5px;color:var(--subtle);}
+.mp-goals{display:flex;gap:6px;flex-wrap:wrap;}
+/* the meeting tiles */
+.mp-ms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;}
+.mp-ms:not(.all) > .mp-mc:not(.mp-mcadd):nth-child(n+4){display:none;}
+.mp-mc{background:#fff;border:1px solid rgba(214,40,40,.14);border-radius:11px;padding:9px 11px;
+  min-width:0;cursor:pointer;transition:border-color .14s, box-shadow .14s;}
+.mp-mc:hover{border-color:rgba(214,40,40,.4);box-shadow:0 3px 12px rgba(214,40,40,.08);}
+.mp-sub-lbl .mom-count{background:#F1ECE7;color:#7A6A5C;border-radius:999px;padding:0 6px;
+  font-size:10px;font-weight:800;letter-spacing:0;}
+.mp-mc .dt{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;
+  letter-spacing:.03em;color:var(--acc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mp-mc .dt .pen{margin-left:auto;color:var(--subtle);cursor:pointer;flex:none;}
+.mp-mc .dt .pen:hover{color:var(--acc);}
+.mp-mc .tp{font-size:12.5px;font-weight:700;margin:2px 0 3px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;}
+/* two lines, then it stops — the whole note is in the meeting box */
+.mp-mc .sn{font-size:11.5px;line-height:1.45;color:var(--muted);display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.mp-mc .wh{display:flex;align-items:center;gap:4px;margin-top:7px;min-width:0;}
+.mp-mc .cl{font-size:10.5px;color:var(--subtle);margin-left:3px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;}
+.mp-mc .fl{margin-left:auto;color:var(--subtle);flex:none;}
+.mp-mcadd{border-style:dashed;border-color:var(--div);display:flex;align-items:center;
+  justify-content:center;color:var(--subtle);font-size:12px;font-weight:700;cursor:pointer;min-height:66px;}
+.mp-mcadd:hover{border-color:var(--acc);color:var(--acc);}
+.mp-mmore{font-size:11.5px;font-weight:800;color:#8A5A6A;cursor:pointer;padding:7px 2px 0;}
+.mp-mmore:hover{text-decoration:underline;}
+/* the two new cards' rows. Tasks and Posts are dated like a campaign,
+   so they take the campaign's two date tracks and the same 78px pill
+   track every other row ends on. */
+/* 96px, not 78. A promotion's pill says RUNNING and a shoot's says
+   SCHEDULED; a task's says IN PROGRESS, which is 92px of uppercase
+   9.5px — the 78px track every other row uses came back "IN PROGR…".
+   The pill track is as wide as the longest word it has to carry, and
+   the name gives the width, which is V111.9's rule applied to a new
+   row rather than rediscovered on it. */
+.mp-l.c-task .mp-r{grid-template-columns:30px 26px minmax(76px,1fr) 96px;}
+.mp-l.c-post .mp-r{grid-template-columns:30px 26px minmax(76px,1fr) 78px;}
+.mp-l.c-task .mp-rw{grid-template-columns:62px minmax(0,1fr) 110px 78px 24px;}
+.mp-l.c-post .mp-rw{grid-template-columns:62px minmax(0,1fr) 70px 78px 24px;}
+.mp-r.mp-late .d,.mp-r.mp-late .mo{color:#A32020;}
+.mp-rw .when.late{color:#A32020;}
+.mp-plat{color:var(--subtle);font-size:10.5px;}
+.mp-sub{color:var(--subtle);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+@media(max-width:1140px){
+  .mp-ms{grid-template-columns:1fr;}
+  .mp-l.c-task .mp-r{grid-template-columns:minmax(56px,1fr) 96px;}
+  .mp-l.c-post .mp-r{grid-template-columns:minmax(56px,1fr) 78px;}
+  .mp-l.c-task .mp-r > .d,.mp-l.c-task .mp-r > .mo,
+  .mp-l.c-post .mp-r > .d,.mp-l.c-post .mp-r > .mo{display:none;}
+}
+@media(min-width:1141px) and (max-width:1340px){
+  .mp-ms{grid-template-columns:1fr 1fr;}
+}
 /* rows size to their content. `1fr` was what made an empty card as tall
    as a full one — four equal quarters whatever was in them. `.packed` is
    the other case: when the cards want MORE room than the panel has, the
@@ -28510,6 +28687,84 @@ function mpBoosts(m){
   if(!canCap("view_promotions")) return [];
   return plPromosIn(m);
 }
+/* ══ V112.7 · THE WORK AND THE POSTS JOIN THE MONTH ════════════════
+   Chirag, 3 Oct: "add to it the relevant information from the tasks
+   page and the card will be complete."
+
+   Both come from rows the suite already holds. Tasks are the Tasks
+   page's own `branding_tasks`, read through BR — never a second copy,
+   so a status changed there is the status here on the next paint.
+   Posts are the brand's own social rows, which this page has had in
+   hand since the Calendar loaded them. */
+function mpTasksReady(){ return !!(BR&&BR.ok&&BR.brand===activeBrand); }
+function mpIsNowMonth(m){
+  const n=new Date();
+  return YEAR===n.getFullYear() && m===(n.getMonth()+1);
+}
+function mpTasks(m){
+  if(!mpTasksReady()) return [];
+  const lo=YEAR*10000+m*100, hi=lo+31, now=mpIsNowMonth(m);
+  /* WHERE A LATE JOB BELONGS. A task dated in July that is still open
+     in September is September's problem, not July's — so it is drawn
+     in the month we are standing in, with its own date in red. It is
+     NOT repeated into every month in between: one late task appearing
+     eight times would say eight things are late. */
+  return BR.tasks.filter(t=>{
+    if(t.archived_at) return false;
+    const d=brNum(t.delivery_date);
+    if(d>=lo&&d<=hi) return true;
+    return now && !!d && d<lo && brStatusOf(t)!=="closed";
+  }).sort((a,b)=>(brNum(a.delivery_date)||99999999)-(brNum(b.delivery_date)||99999999));
+}
+function mpTaskLate(t,m){
+  const lo=YEAR*10000+m*100, d=brNum(t.delivery_date);
+  return !!d && d<lo;
+}
+function mpPosts(m){
+  return socialForBrandYear(activeBrand,YEAR).filter(p=>p.month===m)
+    .sort((a,b)=>(Number(a.date)||99)-(Number(b.date)||99));
+}
+/* what a post is about: the concept if somebody wrote one, otherwise
+   the caption it actually carries — the same order the day window and
+   the export already use, so one post reads the same everywhere. */
+function mpPostIdea(p){
+  const c=p&&p.content||{};
+  return String((c.concept||"").trim()
+    || ((c.instagram&&c.instagram.caption)||"").trim()
+    || ((c.facebook&&c.facebook.caption)||"").trim()
+    || "Post").replace(/\s+/g," ").slice(0,90);
+}
+function mpPostWhere(p){
+  const c=p&&p.content||{}, out=[];
+  if(c.instagram&&(c.instagram.caption||c.instagram.enabled!==false)) out.push("IG");
+  if(c.facebook&&(c.facebook.caption||c.facebook.enabled!==false)) out.push("FB");
+  return out.join(", ");
+}
+function mpTaskState(t){
+  const k=brStatusOf(t);
+  return {not_started:["Not started","#EFEDF6","#5C5077"],
+          drafting:["In progress","#FCF0E3","#8A5413"],
+          with_client:["With client","#F1ECFA","#5A4796"],
+          closed:["Done","#EAF3DE","#3B6D11"]}[k]||["Not started","#EFEDF6","#5C5077"];
+}
+function mpPostState(p){
+  return {drafting:["Drafting","#FCF0E3","#8A5413"],
+          review:["Review","#E8F0FE","#1D4ED8"],
+          approved:["Approved","#EAF3DE","#3B6D11"]}[p.status]||["Drafting","#FCF0E3","#8A5413"];
+}
+/* + Add on the Tasks card opens the Tasks page's own box, with the
+   month's last day already in the delivery field. It does not leave
+   the Plan page: the editor is a dialog, and the list behind it is not
+   the point of the click. */
+function mpAddTask(m){
+  if(typeof brNewTask!=="function"||!can("task_create")) return;
+  brNewTask();
+  try{
+    const last=new Date(YEAR,m,0).getDate();
+    BT.delivery_date=YEAR+"-"+String(m).padStart(2,"0")+"-"+String(last).padStart(2,"0");
+    brRenderEditor();
+  }catch(e){}
+}
 /* the one profile link an influencer row has: whichever of the three it
    carries. The Calendar does not read the Roster, so this is the link
    that is actually on the row. */
@@ -28790,6 +29045,44 @@ function mpRowsFor(seg,m,open){
              <span class="nm">${escHtml(p.name||"Promotion")}</span>${vs}${mpPill(st)}</div>`; })());
     });
   }
+  /* ══ V112.7 · TASKS ═══════════════════════════════════════════
+     Delivery date, name, status — the three things the Tasks page's
+     own row leads with. The row opens that task where it lives. */
+  if(seg==="task"){
+    mpTasks(m).forEach(t=>{
+      const st=mpTaskState(t), late=mpTaskLate(t,m);
+      const d=String(t.delivery_date||"").slice(0,10).split("-");
+      const dp=d.length===3?{d:String(+d[2]),mo:MN[+d[1]].slice(0,3)}:{d:"—",mo:""};
+      const nm=escHtml(t.title||"Task");
+      const pj=(typeof brProject==="function"&&brProject(t.project_id))||null;
+      R.push(open
+        ? `<div class="mp-rw"><span class="when${late?" late":""}">${escHtml(dp.d+" "+dp.mo)}</span>
+             <span class="nm">${nm}</span>${pj?`<span class="mp-sub">${escHtml(pj.name||"")}</span>`:`<span></span>`}
+             ${mpPill(st)}
+             <span class="mp-go" onclick="openTaskScreen('${escAttr(t.id)}')">Task &rsaquo;</span></div>`
+        : `<div class="mp-r${late?" mp-late":""}" style="cursor:pointer;"
+             title="${escAttr((t.title||"Task")+(late?" — was due "+dp.d+" "+dp.mo:""))}"
+             onclick="openTaskScreen('${escAttr(t.id)}')"><span class="d">${escHtml(dp.d)}</span
+             ><span class="mo">${escHtml(dp.mo)}</span><span class="nm">${nm}</span>${mpPill(st)}</div>`);
+    });
+  }
+  /* ══ V112.7 · POSTS ═══════════════════════════════════════════
+     The one activity the card never named. The row opens the post in
+     the editor the Posts page uses, from wherever you clicked it. */
+  if(seg==="post"){
+    mpPosts(m).forEach(p=>{
+      const st=mpPostState(p), where=mpPostWhere(p);
+      R.push(open
+        ? `<div class="mp-rw"><span class="when">${escHtml(String(p.date||"—")+" "+MN[m].slice(0,3))}</span>
+             <span class="nm">${escHtml(mpPostIdea(p))}</span>
+             <span class="mp-sub">${escHtml(where)}</span>${mpPill(st)}
+             <span class="mp-go" onclick="openSocialEditorById('${escAttr(p.id)}')">Post &rsaquo;</span></div>`
+        : `<div class="mp-r" style="cursor:pointer;" title="${escAttr(mpPostIdea(p))}"
+             onclick="openSocialEditorById('${escAttr(p.id)}')"><span class="d">${escHtml(String(p.date||"—"))}</span
+             ><span class="mo">${escHtml(MN[m].slice(0,3))}</span><span class="nm">${escHtml(mpPostIdea(p))}${
+             where?`<span class="mp-plat"> \u00b7 ${escHtml(where)}</span>`:""}</span>${mpPill(st)}</div>`);
+    });
+  }
   return R;
 }
 
@@ -28802,7 +29095,8 @@ function mpSegCard(seg,m,canE){
      same promotions from the same place, its rows already lead to the
      Promotions page, and the segment's key stays `boost` so every fold
      anyone has saved, and every selector in the gates, still matches. */
-  const T={camp:"Campaigns",prod:"Production",infl:"Influencers",boost:"Promotions"}[seg];
+  const T={camp:"Campaigns",prod:"Production",infl:"Influencers",boost:"Promotions",
+           task:"Tasks",post:"Posts"}[seg];
   const rows=mpRowsFor(seg,m,open);
   const mp=monthPlanFor(activeBrand,YEAR,m);
 
@@ -28831,6 +29125,11 @@ function mpSegCard(seg,m,canE){
   if(seg==="camp")      act=canE?`<button class="mp-sgb" title="Add a campaign" onclick="event.stopPropagation();mpAddCampaign(${m})">+ Add</button>`:"";
   else if(seg==="prod") act=canE?`<button class="mp-sgb" title="Request a shoot" onclick="event.stopPropagation();openProdRequest()">+ Request</button>`:"";
   else if(seg==="infl") act=canE?`<button class="mp-sgb" title="Add an influencer" onclick="event.stopPropagation();mpIaddToggle()">+ Add</button>`:"";
+  /* Posts has no + Add on purpose: a post is made on the Posts page
+     against a day, and a second door into that is a second thing to
+     keep in step with the first. */
+  else if(seg==="task") act=(canE&&typeof can==="function"&&can("task_create"))
+    ?`<button class="mp-sgb" title="Add a task" onclick="event.stopPropagation();mpAddTask(${m})">+ Add</button>`:"";
   const tail=act?`<span class="mp-sgr">${act}</span>`:"";
 
   /* NOTHING PLANNED IS ONE LINE. A card with no rows used to draw a
@@ -28856,6 +29155,73 @@ function mpSegCard(seg,m,canE){
 }
 
 /* ── THE PANEL ────────────────────────────────────────────────────── */
+/* ══ V112.7 · GOALS AND MEETINGS, INSIDE THE MONTH ════════════════
+   Both were in the Plan page's body — goals under the block, meetings
+   at the very bottom under every service band. "Meetings are buried at
+   the bottom. We need to look at a fresh approach on how we can bring
+   out the meetings, MOM upfront."
+
+   They are not rebuilt here. The goals are the same rows drawn by the
+   same mpvGoalPill and added by the same mpvAdd; the meetings are the
+   same brand_meetings rows, opened by the same plMeetOpen box. What
+   changed is where they stand. */
+function mpGoalsHtml(m,canE){
+  const mp=monthPlanFor(activeBrand,YEAR,m);
+  const gs=canE?mpvRows(mp,"goal"):mpvItems(mp,"goal");
+  if(!gs.length&&!canE) return "";
+  return `<div class="mp-sub-lbl">Goals${canE?`<span class="mp-sub-add" onclick="mpvAdd('goal',${m})">+ ADD</span>`:""}</div>
+    ${gs.length?`<div class="mpv-goals mp-goals">${gs.map(g=>mpvGoalPill(g,m,canE)).join("")}</div>`
+               :`<div class="mp-sub-none">No goals yet.</div>`}`;
+}
+/* THREE ACROSS, THEN A LINE THAT SAYS HOW MANY MORE. A month with eight
+   meetings would otherwise push every card off the screen — and the
+   three that matter are the newest, which are the ones still being
+   acted on. The rest are in the markup and hidden, so opening them
+   costs no fetch and no redraw. */
+const MP_MEET_SHOW=3;
+function mpMeetText(h){
+  return String(h||"").replace(/<br\s*\/?>/gi," ").replace(/<[^>]*>/g,"")
+    .replace(/&nbsp;/g," ").replace(/\s+/g," ").trim();
+}
+function mpMeetsHtml(m,canE){
+  if(typeof plMeetingsIn!=="function"||!PLD||!PLD.ok||!PLD.ok.meet) return "";
+  const ms=plMeetingsIn(m).slice().sort((a,b)=>String(b.held_on||"").localeCompare(String(a.held_on||"")));
+  if(!ms.length&&!canE) return "";
+  const cards=ms.map(x=>{
+    const d=Number(String(x.held_on).slice(8,10));
+    const where=[PL_LOC[x.location_kind]||"",x.location_name||""].filter(Boolean).join(" · ");
+    const cl=plClientNames(x), note=mpMeetText(x.notes);
+    /* THE WHOLE TILE IS THE DOOR. The row this replaces expanded in
+       place and carried a link through to the full minutes; a tile
+       that only expanded would be a step backwards, so the tile IS
+       the link — the same plMeetOpen the old row's "Open the full
+       minutes ›" called. */
+    return `<div class="mp-mc" data-meet="${escAttr(x.id)}" onclick="plMeetOpen('${escAttr(x.id)}')"
+        title="${escAttr((canE?"Open":"Read")+" the full minutes")}">
+      <div class="dt">${d} ${MN[m].slice(0,3).toUpperCase()}${where?" · "+escHtml(where.toUpperCase()):""}
+        <span class="pen"><i class="ti ti-chevron-right"></i></span></div>
+      <div class="tp">${escHtml(x.topic||"Meeting")}</div>
+      ${note?`<div class="sn">${escHtml(note)}</div>`:""}
+      <div class="wh">${(x.cc_people||[]).map(plPersonFace).join("")}
+        ${cl.length?`<span class="cl">${escHtml(cl.join(", "))}</span>`:""}
+        ${x.file_url?`<a class="fl" href="${escAttr(x.file_url)}" target="_blank" rel="noopener"
+           onclick="event.stopPropagation();" title="Attached file"><i class="ti ti-paperclip"></i></a>`:""}</div>
+    </div>`;
+  }).join("");
+  /* the dashed tile only when there is nothing to show — with meetings
+     on screen the label above already carries + LOG A MEETING, and two
+     invitations to the same box is one too many */
+  const add=(canE&&!ms.length)
+    ?`<div class="mp-mc mp-mcadd" onclick="plMeetOpen(null,${m})">+ Log the first meeting</div>`:"";
+  const n=ms.length-MP_MEET_SHOW;
+  const more=n>0
+    ? `<div class="mp-mmore" onclick="this.previousElementSibling.classList.add('all');this.remove();"
+        >+${n} more meeting${n===1?"":"s"}</div>`
+    : "";
+  return `<div class="mp-sub-lbl">Meetings${ms.length?`<span class="mom-count">${ms.length}</span>`:""
+    }${canE?`<span class="mp-sub-add" onclick="plMeetOpen(null,${m})">+ LOG A MEETING</span>`:""}</div>
+    <div class="mp-ms">${cards}${add}</div>${more}`;
+}
 monthPlanCardHtml=function(m,opt){
   const wide=!!(opt&&opt.wide);
   const mp=monthPlanFor(activeBrand,YEAR,m);
@@ -28880,7 +29246,8 @@ monthPlanCardHtml=function(m,opt){
 
   const one=String(mp.objective_line||"").trim();
   const para=String(mp.key_theme||"").trim();
-  const grown=!mpSegShut("camp")||!mpSegShut("prod")||!mpSegShut("infl")||!mpSegShut("boost");
+  const grown=!mpSegShut("camp")||!mpSegShut("prod")||!mpSegShut("infl")||!mpSegShut("boost")
+           ||(wide&&(!mpSegShut("task")||!mpSegShut("post")));
 
   /* THE OBJECTIVE IS THE HEADER. No eyebrow over it — the month is
      already named by the page bar and by the calendar beside it. */
@@ -28935,13 +29302,30 @@ monthPlanCardHtml=function(m,opt){
        </div>`
     : "";
 
+  /* ══ V112.7 · THE WIDE BLOCK IS THE WHOLE MONTH ══════════════════
+     Chirag, 3 Oct, on the Plan page: "keep the post page month card as
+     it is and add to it the relevant information from the tasks page."
+     And on the bands underneath it: "social media is pretty much
+     already covered above and same is for branding design which is
+     already covered in tasks. Also, meetings are buried at the bottom."
+
+     So the goals and the meetings come UP into the block, and two more
+     cards join the grid. Only on the wide one: the Posts page panel is
+     locked to the calendar's 359px and four cards already fill it, so
+     six there would give each card two rows. Same block, same card,
+     the wide one simply shows more of them. */
+  const extra=wide?`
+      ${mpSegCard("task",m,canE)}
+      ${mpSegCard("post",m,canE)}`:"";
+
   return `<div class="month-card mp-hero mp-pan${wide?" mp-wide":""}${grown&&!wide?" grown":""}" data-mp-month="${m}">
     ${head}${nop}${body}
+    ${wide?mpGoalsHtml(m,canE)+mpMeetsHtml(m,canE):""}
     <div class="mp-g">
       ${mpSegCard("camp",m,canE)}
       ${mpSegCard("prod",m,canE)}
       ${mpSegCard("infl",m,canE)}
-      ${mpSegCard("boost",m,canE)}
+      ${mpSegCard("boost",m,canE)}${extra}
     </div>
   </div>`;
 };
