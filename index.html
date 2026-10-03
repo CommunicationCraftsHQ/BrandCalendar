@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V112.5 Bologna"/>
+<meta name="cc-tool-version" content="V112.6 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3599,16 +3599,42 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 /* ONE ROW PER PLATFORM. The card-per-platform it replaces drew a tall
    dashed rectangle for a promotion with no creatives, which is what
    made the opened row look empty and enormous at the same time. */
-.prprow{display:grid;grid-template-columns:84px minmax(0,1fr) auto;gap:12px;align-items:center;
+.prprow{display:grid;grid-template-columns:84px minmax(0,1fr);gap:12px;align-items:start;
   padding:9px 13px;border-bottom:1px solid var(--div);}
 .prprow:last-child{border-bottom:0;}
 .prprow.empty{display:block;}
-.prpnm{font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:6px;}
+.prpnm{font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:6px;padding-top:5px;}
 .prprow:hover .prsecx{opacity:.65;}
-/* An audience carries its description, which can be a sentence. Left
-   to run, three of them stacked and the platform row became a band.
-   Capped and trimmed here; the full text is on the chip's title. */
-.prprow .praud{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* ══ V112.6 · ONE AUDIENCE, ONE LINE ═══════════════════════════════
+   V111.8 capped the chip at 170px with an ellipsis, because three
+   audiences stacked turned the platform row into a band. It fixed the
+   height and destroyed the reading: "Customer list — Use the li…" is
+   not a sentence anybody can act on, and the only control was a ✕
+   that deleted it. The description now gets a line of its own and is
+   typed in place; the kind is a chip you can click; the ✕ no longer
+   hides until hover, because a touch screen has no hover. */
+.praudst{min-width:0;}
+.audline{display:grid;grid-template-columns:116px minmax(0,1fr) 20px;gap:12px;
+  align-items:center;padding:3px 0;position:relative;}
+.audk{font-size:12px;font-weight:600;border-radius:999px;padding:4px 10px;text-align:center;
+  white-space:nowrap;border:1px solid transparent;cursor:default;}
+.audk.on{cursor:pointer;}
+.audk.on:hover{border-color:rgba(13,13,13,.18);}
+.audd{font-size:13px;min-width:0;border:1px solid transparent;border-radius:7px;
+  padding:4px 7px;margin-left:-7px;width:100%;background:transparent;font-family:inherit;color:inherit;}
+.audd:hover{border-color:var(--div);background:#FBFAF9;}
+.audd:focus{outline:0;border-color:#0D0D0D;background:#fff;}
+.audd::placeholder{color:var(--subtle);}
+.audsrc{color:#8E3A66;font-weight:600;}
+.audx{color:#D2CFC9;font-size:14px;cursor:pointer;text-align:center;line-height:1;}
+.audx:hover{color:var(--muted);}
+.audnone{color:var(--subtle);font-size:12.5px;padding:4px 0;}
+.kpop{position:absolute;top:30px;left:0;z-index:40;background:#fff;border:1px solid var(--div);
+  border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.10);padding:6px;display:flex;
+  flex-direction:column;gap:4px;min-width:150px;}
+.kopt{font-size:12.5px;font-weight:600;border-radius:999px;padding:4px 10px;cursor:pointer;text-align:center;}
+.kopt.sel{outline:1.5px solid #0D0D0D;outline-offset:1px;}
+.praudst .prthumbs{justify-content:flex-start;margin-top:9px;}
 .prthumbs{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end;}
 .prtile{position:relative;width:40px;height:40px;border-radius:8px;overflow:hidden;cursor:pointer;
   border:1px solid var(--div);background:#f2f3f5;display:inline-flex;flex:none;}
@@ -3716,6 +3742,13 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .praud.a-inner_circle{background:#F1ECFA;color:#5A4796;} .praud.a-customer_list{background:#E8F1FA;color:#245C8F;}
 .praud.a-target_group{background:#EAF3EC;color:#2E6B3F;} .praud.a-retargeting{background:#FBEFE3;color:#9A5413;}
 .praud.a-lookalike{background:#F7EAF1;color:#8E3A66;}
+/* V112.6 — the same five colours on the line's own chip and on the
+   picker it opens, so a kind looks the same wherever it appears. */
+.audk.a-inner_circle,.kopt.a-inner_circle{background:#F1ECFA;color:#5A4796;}
+.audk.a-customer_list,.kopt.a-customer_list{background:#E8F1FA;color:#245C8F;}
+.audk.a-target_group,.kopt.a-target_group{background:#EAF3EC;color:#2E6B3F;}
+.audk.a-retargeting,.kopt.a-retargeting{background:#FBEFE3;color:#9A5413;}
+.audk.a-lookalike,.kopt.a-lookalike{background:#F7EAF1;color:#8E3A66;}
 .praud .rm{font-size:12px;cursor:pointer;opacity:0;transition:opacity .12s;}
 .praud:hover .rm{opacity:.7;}
 .praud .rm:hover{opacity:1;}
@@ -10842,7 +10875,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V112.5 Bologna";
+const TOOL_VERSION="V112.6 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -24504,11 +24537,13 @@ function prPanelHtml(p){
         <div class="prpnm">${escHtml((PR_PLAT[x.platform]||PR_PLAT.other).label)}${
           canEditP?`<i class="ti ti-x prsecx" title="Take this platform off the promotion"
             onclick="prStreamDel('${escAttr(x.id)}')"></i>`:""}</div>
-        <div class="prchips">${auds.map(a=>`<span class="praud a-${a.kind}">${escHtml(PR_AUD[a.kind]||a.kind)}${a.source?" of "+escHtml(a.source):""}${a.description?" — "+escHtml(a.description):""}
-            ${canEditP?`<i class="ti ti-x rm" title="Remove" onclick="prAudDel('${a.id}')"></i>`:""}</span>`).join("")}
-          ${canEditP?`<span class="praddchip" onclick="prAudOpen('${x.id}')"><i class="ti ti-plus"></i>Audience</span>`:""}</div>
-        <div class="prthumbs">${crs.map(c=>prCrTile(c)).join("")}
-          ${canCap("edit_ad_creatives")?`<span class="prmini" onclick="prCrNew('${p.id}','${x.id}')"><i class="ti ti-plus"></i>${crs.length?"":" Add creative"}</span>`:""}</div>
+        <div class="praudst">
+          ${auds.length?auds.map(a=>prAudLine(a,canEditP)).join("")
+            :`<div class="audnone">No audience yet</div>`}
+          ${canEditP?`<span class="praddchip" onclick="prAudAdd('${escAttr(x.id)}')"><i class="ti ti-plus"></i>Audience</span>`:""}
+          <div class="prthumbs">${crs.map(c=>prCrTile(c)).join("")}
+            ${canCap("edit_ad_creatives")?`<span class="prmini" onclick="prCrNew('${p.id}','${x.id}')"><i class="ti ti-plus"></i>${crs.length?"":" Add creative"}</span>`:""}</div>
+        </div>
       </div>`;
     }).join(""):`<div class="prprow empty"><span class="nsdim">No platform on this promotion yet</span></div>`}
   </div>`;
@@ -24931,48 +24966,97 @@ async function prStreamSave(pid,platform){
   if(r.error){ toast("Could not add it — "+r.error.message,"err"); return; }
   closeM("promo"); toast(PR_PLAT[platform].label+" added"); prReload();
 }
-function prAudOpen(sid){
-  if(!canCap("edit_promotions")){ capDenied("Adding audiences"); return; }
-  PR.aud={sid,kind:"target_group"};
-  prBox(`<div class="modal-top"><div class="modal-title">Add audience</div>
-      <span style="flex:1"></span><button class="modal-x" onclick="closeM('promo')">✕</button></div>
-    <div class="modal-body">
-      <div class="field"><label class="fl">Type</label>
-        <div class="prchips" id="pr-audk">${Object.keys(PR_AUD).map(k=>
-          `<span class="propt${PR.aud.kind===k?" on":""}" onclick="prPickAud('${k}')">${PR_AUD[k]}</span>`).join("")}</div></div>
-      <div class="field" id="pr-audsrcf" style="display:none;"><label class="fl">Modelled on</label>
-        <input class="fi" id="pr-audsrc" maxlength="200"/></div>
-      <div class="field"><label class="fl">Describe it</label>
-        <textarea class="fi" id="pr-audd" rows="2" maxlength="300" style="height:auto;padding:10px 12px;"></textarea></div>
-    </div>
-    <div class="modal-foot"><span style="flex:1"></span>
-      <button class="btn btn-s" onclick="closeM('promo')">Cancel</button>
-      <button class="btn btn-p" id="pr-audsave" onclick="prAudSave()">Add</button></div>`);
-  setTimeout(()=>{ const n=document.getElementById("pr-audd"); if(n) n.focus(); },30);
+/* V112.6 — THE ADD AUDIENCE BOX IS GONE. prAudOpen, prPickAud,
+   prAudSrcOn and the no-argument prAudSave lived here. Adding an
+   audience now drops a line in with the cursor already in it, so the
+   box had nothing left to ask. Its name also collided with the line's
+   own prAudSave(id,field,el) below, which is the kind of quiet
+   breakage a dead function leaves behind. */
+/* ══ V112.6 · AN AUDIENCE IS A LINE YOU CAN WRITE ON ═══════════════
+   Chirag, 3 October, looking at a live promotion: "There's no way to
+   read properly or edit." The chip clipped the description and the
+   only control on it deleted the row, so a typo in the kind cost the
+   sentence as well. Three things follow from that: the description
+   is typed where it sits, the kind chip opens its five options in
+   place, and the ✕ stays visible rather than waiting for a hover a
+   touch screen never sends. */
+function prAudFind(id){
+  for(const sid in PR.auds){ const r=(PR.auds[sid]||[]).find(a=>a.id===id); if(r) return r; }
+  return null;
 }
-/* ══ V112.5 — A LOOKALIKE SAYS WHAT IT IS MODELLED ON ═════════════
-   Every other audience describes itself. A lookalike cannot: it is
-   built FROM something, and without naming that something the row
-   reads "Lookalike" and tells you nothing. The field only appears
-   for that one kind, so the box stays as short as it was. */
-function prAudSrcOn(){ return PR.aud.kind==="lookalike"; }
-function prPickAud(k){
-  PR.aud.kind=k;
-  document.getElementById("pr-audk").innerHTML=Object.keys(PR_AUD).map(x=>
-    `<span class="propt${k===x?" on":""}" onclick="prPickAud('${x}')">${PR_AUD[x]}</span>`).join("");
-  const f=document.getElementById("pr-audsrcf");
-  if(f) f.style.display=prAudSrcOn()?"":"none";
+function prAudLine(a,edit){
+  const src=(a.kind==="lookalike")
+    ? `<input class="audd" style="max-width:190px" placeholder="Modelled on"
+         value="${escAttr(a.source||"")}" ${edit?"":"disabled"}
+         onblur="prAudSave('${escAttr(a.id)}','source',this)"
+         onkeydown="if(event.key==='Enter')this.blur()">` : "";
+  return `<div class="audline">
+    <span class="audk a-${escAttr(a.kind)}${edit?" on":""}"
+      ${edit?`onclick="prAudKind('${escAttr(a.id)}',event)"`:""}>${escHtml(PR_AUD[a.kind]||a.kind)}</span>
+    <span style="display:flex;gap:8px;min-width:0;align-items:center">${src}
+      <input class="audd" placeholder="Describe it" value="${escAttr(a.description||"")}" ${edit?"":"disabled"}
+        onblur="prAudSave('${escAttr(a.id)}','description',this)"
+        onkeydown="if(event.key==='Enter')this.blur()"></span>
+    ${edit?`<span class="audx" title="Take this audience off" onclick="prAudDel('${escAttr(a.id)}')">✕</span>`:`<span></span>`}
+  </div>`;
 }
-async function prAudSave(){
-  const d=document.getElementById("pr-audd").value.trim();
-  const btn=document.getElementById("pr-audsave"); btn.disabled=true;
-  const n=prAuds(PR.aud.sid).length;
-  const srcEl=document.getElementById("pr-audsrc");
-  const src=(prAudSrcOn()&&srcEl)?srcEl.value.trim():"";
-  const r=await sb.from("promotion_audiences").insert([{stream_id:PR.aud.sid,kind:PR.aud.kind,
-    description:d,source:src,sort:n}]);
-  if(r.error){ toast("Could not add it — "+r.error.message,"err"); btn.disabled=false; return; }
-  closeM("promo"); toast("Audience added"); prReload();
+/* Optimistic, and it puts the old words back if the write is refused
+   — the same contract as every other field on this panel. */
+async function prAudSave(id,field,el){
+  if(!canCap("edit_promotions")) return capDenied("Editing audiences");
+  const row=prAudFind(id); if(!row) return;
+  const v=String(el.value||"").trim();
+  if(v===(row[field]||"")) return;
+  const was=row[field]||"";
+  row[field]=v;
+  const r=await sb.from("promotion_audiences").update({[field]:v}).eq("id",id).select("id");
+  if(r.error||!r.data||!r.data.length){
+    row[field]=was; if(el) el.value=was;
+    toast("Not saved — "+(r.error?r.error.message:"not allowed"),"err");
+  }
+}
+function prAudKind(id,ev){
+  if(ev) ev.stopPropagation();
+  const row=prAudFind(id); if(!row) return;
+  document.querySelectorAll(".kpop").forEach(n=>n.remove());
+  const host=ev&&ev.currentTarget?ev.currentTarget.parentNode:null; if(!host) return;
+  const pop=document.createElement("div"); pop.className="kpop";
+  pop.innerHTML=Object.keys(PR_AUD).map(k=>
+    `<span class="kopt a-${k}${k===row.kind?" sel":""}" onclick="prAudSetKind('${escAttr(id)}','${k}')">${PR_AUD[k]}</span>`).join("");
+  host.appendChild(pop);
+  setTimeout(()=>document.addEventListener("click",prAudKindShut,{once:true}),0);
+}
+function prAudKindShut(){ document.querySelectorAll(".kpop").forEach(n=>n.remove()); }
+async function prAudSetKind(id,kind){
+  prAudKindShut();
+  if(!canCap("edit_promotions")) return capDenied("Editing audiences");
+  const row=prAudFind(id); if(!row||row.kind===kind) return;
+  const was=row.kind; row.kind=kind;
+  /* A kind that is no longer a lookalike has nothing to be modelled
+     on, so the source goes with it rather than hiding in the row. */
+  const patch=(kind==="lookalike")?{kind}:{kind,source:""};
+  const wasSrc=row.source||""; if(kind!=="lookalike") row.source="";
+  render();
+  const r=await sb.from("promotion_audiences").update(patch).eq("id",id).select("id");
+  if(r.error||!r.data||!r.data.length){
+    row.kind=was; row.source=wasSrc; render();
+    toast("Not saved — "+(r.error?r.error.message:"not allowed"),"err");
+  }
+}
+/* V112.6 — adding one no longer opens a box. The line arrives with
+   Target group on it and the cursor in the description, which is the
+   only thing the box was ever asking for. */
+async function prAudAdd(sid){
+  if(!canCap("edit_promotions")) return capDenied("Adding audiences");
+  const n=prAuds(sid).length;
+  const r=await sb.from("promotion_audiences")
+    .insert([{stream_id:sid,kind:"target_group",description:"",source:"",sort:n}]).select("id");
+  if(r.error){ toast("Could not add it — "+r.error.message,"err"); return; }
+  await prReloadNow();
+  const id=(r.data&&r.data[0])?r.data[0].id:null;
+  if(!id) return;
+  const el=document.querySelector(`.audd[onblur*="${id}"]`);
+  if(el) el.focus();
 }
 async function prAudDel(id){
   if(!canCap("edit_promotions")){ capDenied("Removing audiences"); return; }
