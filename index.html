@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V112.7 Bologna"/>
+<meta name="cc-tool-version" content="V112.8 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2047,7 +2047,13 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
    Re-measured after: cut -1.2px (clear), .pctxt overflow still 0. */
 .pc46 .pccap{font-size:14px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
   padding-bottom:4px;margin-bottom:-4px}
-.pc46 .pccap.can{outline:none;border-radius:6px}
+.pc46 .pccap.can{outline:none;border-radius:6px;min-height:21px;cursor:text;}
+/* AN EMPTY BOX NEEDS A TARGET AND A PROMPT. A contenteditable with no
+   words in it is 0px of nothing to click, and a caret that lands in
+   silence does not tell you it is yours to type in. */
+.pc46 .pccap.can.none:before{content:attr(data-ph);color:var(--subtle);}
+.pc46 .pccap.can.none:focus:before{content:"";}
+.pc46 .pccap.can:hover{background:#FBFAF9;box-shadow:0 0 0 4px #FBFAF9;}
 .pc46 .pccap.can:focus{-webkit-line-clamp:unset;display:block;background:#fff;box-shadow:0 0 0 2px rgba(214,40,40,.25);padding:4px 6px;margin:-4px -6px}
 /* v82.3 — opening the conversation lifts the caption's three-line clamp */
 .pc46.thopen .pcbody{height:auto;min-height:132px;}
@@ -2059,6 +2065,12 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .pc46 .pcbrief{font-size:11px;color:#C6C4BF;margin-top:8px;opacity:0;transition:opacity 140ms;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pc46:hover .pcbrief{opacity:1}
+/* V112.8 — ON A CARD WITH NO CAPTION THE ONE-LINER STAYS VISIBLE. The
+   brief hides until you reach for the card because a written caption
+   is the thing to read. With nothing written, the one-liner is the
+   only thing the card knows about the post, and hiding it to show an
+   empty box would be a worse card than the one we started with. */
+.pc46:has(.pccap.none) .pcbrief{opacity:1;color:var(--muted);}
 
 /* the thread ------------------------------------------------------ */
 .th46{border-top:1px solid var(--div);background:var(--surface2)}
@@ -5870,6 +5882,11 @@ function fbCaptionInput(postId){
   if(!canEditCaption()) return;
   const box=document.getElementById("pcap-"+postId); if(!box) return;
   box.classList.remove("flash");
+  /* V112.8 — the prompt is drawn by CSS from the `none` class, and the
+     card is not redrawn while somebody is typing in it (rtUserTyping).
+     Without this the prompt would come back on blur and sit in front
+     of the words just written. */
+  box.classList.toggle("none",capRead(box)==="");
   socialFieldEdit(postId,"caption",capRead(box));
 }
 /* D14 — a suggestion is STAGED, never saved silently. The old text is one
@@ -5902,6 +5919,7 @@ function fbCaptionKeep(postId){
 function fbCaptionUndo(postId){
   const box=document.getElementById("pcap-"+postId); if(!box) return;
   if(CAP_PREV[postId]!==undefined) capWrite(box,CAP_PREV[postId]);
+  box.classList.toggle("none",capRead(box)==="");
   box.classList.remove("flash");
   const bar=document.getElementById("capbar-"+postId); if(bar) bar.style.display="none";
   delete CAP_PREV[postId];
@@ -10922,7 +10940,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V112.7 Bologna";
+const TOOL_VERSION="V112.8 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -17512,8 +17530,27 @@ function socialViewCard(p){
      takes its place — vertically centred, still on the left edge every
      other card lines up on. */
   const canCap=canEditCaption();
-  const capHtml=cap
-    ? `<div id="pcap-${p.id}" class="pccap${canCap?" can":""}" ${canCap?'contenteditable="true" spellcheck="true" oninput="fbCaptionInput(\''+p.id+'\')"':""}>${escAttr(cap)}</div>`
+  /* ══ V112.8 · THE EMPTY CAPTION IS A BOX YOU CAN WRITE IN ════════
+     Chirag, 3 Oct: "there is already a one liner plan added to
+     multiple posts. However, I cannot click and start writing a
+     caption on it. Once I added the post and write the caption in the
+     editing view, only then I can come back and edit it further."
+
+     The box was drawn editable only when there was already something
+     to edit. With nothing written, the card drew the one-liner as
+     plain text in the caption's place — so the first caption could
+     only be written somewhere else, and the one-liner was standing in
+     for the thing it is supposed to brief.
+
+     The box is drawn either way now, and it is the same box: same id,
+     same handler, same Keep and Undo. Empty, it carries a prompt, the
+     way the month card's theme does since V112.0 — an empty box is
+     where the first version gets written. The one-liner moves to the
+     line underneath, where it already goes once a caption exists. */
+  const capHtml=(cap||canCap)
+    ? `<div id="pcap-${p.id}" class="pccap${canCap?" can":""}${cap?"":" none"}"
+         data-ph="${escAttr(canCap?"Write the caption…":"")}"
+         ${canCap?'contenteditable="true" spellcheck="true" oninput="fbCaptionInput(\''+p.id+'\')"':""}>${cap?escAttr(cap):""}</div>`
     : `<div class="pccap" style="color:var(--muted);">${idea?escAttr(idea):`<span style="color:var(--subtle);">Nothing written yet</span>`}</div>`;
 
   return `<div class="pc pc46${isOpen?" thopen":""}">
@@ -17540,7 +17577,7 @@ function socialViewCard(p){
           <button class="btn btn-g btn-sm" onclick="fbCaptionUndo('${p.id}')">Undo</button>
           <span style="font-size:11px;color:var(--subtle);">Nothing is saved until you keep it.</span>
         </div>
-        ${(idea&&cap)?`<div class="pcbrief" title="${escAttr(idea)}">${escAttr(idea)}</div>`:""}
+        ${idea?`<div class="pcbrief" title="${escAttr(idea)}">${escAttr(idea)}</div>`:""}
       </div>
     </div>
     ${isOpen?fbPanelHtml(p):""}
