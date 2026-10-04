@@ -35,7 +35,7 @@
    Bump this with every batch that changes this file, the way every tool's
    TOOL_VERSION carries its batch name.
 
-   name="cc-tool-version" content="V70.0 Salzburg"
+   name="cc-tool-version" content="V70.1 Salzburg"
 
    Source : webapp/site/index.html (v57.5 — Oslo: the sidebar counts formats, not the total twice)
             — where these rules were extracted from, the last time this
@@ -439,6 +439,12 @@ body .em2-page{height:calc(100vh - 60px - var(--cc-alarm-h,0px));}
     z-index:400;box-shadow:4px 0 20px rgba(0,0,0,.18);
     overflow-y:auto;padding:16px 14px;}
   .nav-btn.hide-mobile{display:none;}
+  /* V70.1 — THE PHONE FRAME. Popups were bottom sheets only from 480px
+     down; a phone held sideways, or a large one, got a centred box with
+     40px of padding round it. The same two lines now start at 768. The
+     480 block below keeps its own copy, untouched. */
+  .modal{max-width:100%;border-radius:16px 16px 0 0;margin:auto 0 0;}
+  .overlay{align-items:flex-end;padding:0;}
 }
 
 @media(max-width:480px){
@@ -631,3 +637,127 @@ body .em2-page{height:calc(100vh - 60px - var(--cc-alarm-h,0px));}
 .ccw-at .row .who{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ccw-at .row .kind{font-size:11px;color:var(--subtle);}
 .ccw-at .none{padding:8px 10px;font-size:11.5px;color:var(--subtle);line-height:1.45;}
+
+/* ══ THE PHONE FRAME — V70.1 Salzburg, 4 October 2026 ════════════════
+   Approved by Chirag on 4 Oct from "01 - CC Suite Mobile Mockup.html".
+   Below 768px EVERY tool wears the same frame:
+
+     ┌ top bar ── tool name ▾ (opens the tool switcher) ··· bell · you ┐
+     ├ the line under it — the brand in the Calendar, the tool's own     ┤
+     │   doors and actions everywhere else                               │
+     │                                                                   │
+     │   the page                                                        │
+     │                                                                   │
+     └ bottom tabs — at most four, then More (the sidebar drawer) ───────┘
+
+   Popups are sheets that rise from the bottom.
+
+   NOTHING HERE REACHES A DESKTOP. Every rule that draws is inside the
+   768 query; the only rules outside it HIDE the frame's own pieces, so
+   above 768 they are display:none and take no room. The gate compares
+   the desktop pixel for pixel, before and after.
+
+   The Calendar draws its own markup (plain HTML); every other tool gets
+   it from <Shell> in cc-ui.jsx. Both use these classes, so a change here
+   reaches both. */
+.mf-only,.mf-tabs,.mf-sheet,.mf-scrim,.mf-more{display:none;}
+
+@media(max-width:768px){
+  :root{--mf-bar:48px;--mf-line:44px;--mf-top:calc(var(--mf-bar) + var(--mf-line) + var(--cc-alarm-h,0px));
+        --mf-tabs:58px;--mf-safe:env(safe-area-inset-bottom,0px);}
+
+  /* ── the top bar and the line under it are ONE sticky block ──────
+     The nav wraps: the first row is the bar, and the line takes a full
+     row of its own (flex-basis 100%) underneath. One element, so the two
+     can never scroll apart. */
+  /* a tool with nothing for the line (a refusal, a loading screen) is
+     the bar alone, and everything measured from the bar follows it */
+  /* …and so is a line whose every element is empty (the Proposal Bank
+     hands over an empty door group on screens that have no doors) */
+  :root:has(.nav.mf.mf-noline),:root:has(.nav.mf .mf-line:not(:has(*:not(:empty)))){--mf-top:calc(var(--mf-bar) + var(--cc-alarm-h,0px));}
+  .nav.mf .mf-line:not(:has(*:not(:empty))){display:none;}
+  .nav.mf{height:auto;min-height:var(--mf-bar);flex-wrap:wrap;align-content:flex-start;
+          padding:0 6px 0 14px;gap:0;overflow:visible;}
+  .nav.mf .mf-tool{display:flex;align-items:center;gap:6px;height:var(--mf-bar);min-width:0;
+          flex:0 1 auto;padding:0;border:0;background:none;cursor:pointer;font-family:inherit;
+          color:#fff;font-size:16px;font-weight:700;letter-spacing:-.02em;white-space:nowrap;}
+  .nav.mf .mf-tool .t{overflow:hidden;text-overflow:ellipsis;}
+  .nav.mf .mf-tool .dot{color:var(--acc);}
+  .nav.mf .mf-tool .ti{font-size:14px;opacity:.55;flex:none;}
+  .nav.mf .mf-end{display:flex;align-items:center;gap:2px;height:var(--mf-bar);margin-left:auto;flex:none;}
+  .nav.mf .mf-icon{position:relative;width:40px;height:40px;border-radius:10px;border:0;
+          background:transparent;color:rgba(255,255,255,.88);font-size:21px;cursor:pointer;
+          display:flex;align-items:center;justify-content:center;font-family:inherit;padding:0;}
+  .nav.mf .mf-icon:active{background:rgba(255,255,255,.12);}
+  .nav.mf .mf-icon .acav{width:28px;height:28px;font-size:11px;box-shadow:0 0 0 2px rgba(255,255,255,.22);}
+  .nav.mf .mf-icon .acav.emoji{font-size:20px;box-shadow:none;}
+  .nav.mf .mf-line{flex:0 0 calc(100% + 20px);height:var(--mf-line);display:flex;align-items:center;gap:8px;
+          margin:0 -6px 0 -14px;padding:0 14px;overflow-x:auto;overflow-y:hidden;
+          scrollbar-width:none;border-top:1px solid rgba(255,255,255,.08);}
+  .nav.mf .mf-line::-webkit-scrollbar{display:none;}
+  .nav.mf .mf-line > *{flex:none;}
+  /* the kit's account block, moved into the bar: only the face shows */
+  .nav.mf .mf-acct .acct{padding:0;border:0;margin:0;}
+  .nav.mf .mf-acct .acctrig{width:40px;height:40px;padding:0;justify-content:center;border-radius:10px;background:transparent;}
+  .nav.mf .mf-acct .actxt,.nav.mf .mf-acct .acctrig > .ti{display:none;}
+  .nav.mf .mf-acct .acav{width:28px;height:28px;box-shadow:0 0 0 2px rgba(255,255,255,.22);}
+  .nav.mf .mf-acct .acav.emoji{box-shadow:none;font-size:20px;}
+  /* a tool's own controls, carried into the line, sit on black */
+  .nav.mf .mf-line .nav-right{margin-left:0;}
+
+  /* the page scrolls between the bars, and its last line clears the tabs */
+  .mf-framed .main{max-height:calc(100vh - var(--mf-top));max-height:calc(100dvh - var(--mf-top));
+          padding-bottom:calc(var(--mf-tabs) + var(--mf-safe) + 12px);}
+
+  /* ── the bottom tabs ──────────────────────────────────────────── */
+  .mf-tabs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;position:fixed;left:0;right:0;bottom:0;
+          z-index:90;height:calc(var(--mf-tabs) + var(--mf-safe));padding-bottom:var(--mf-safe);
+          background:rgba(255,255,255,.97);border-top:1px solid var(--div);}
+  .mf-tab{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+          border:0;background:none;padding:0;cursor:pointer;font-family:inherit;
+          font-size:10.5px;font-weight:600;letter-spacing:.01em;color:var(--muted);}
+  .mf-tab .ti{font-size:22px;line-height:1;}
+  .mf-tab.on{color:var(--text);font-weight:700;}
+  .mf-tab.on .ti{color:var(--acc);}
+  .mf-tab .mf-n{position:absolute;top:6px;left:calc(50% + 5px);min-width:17px;height:17px;padding:0 4px;
+          border-radius:999px;background:var(--acc);color:#fff;font-size:10px;font-weight:800;
+          display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-sizing:content-box;}
+  .mf-tab .mf-n:empty{display:none;}
+
+  /* ── sheets ──────────────────────────────────────────────────────
+     One look for every panel that rises from the bottom: the tool
+     switcher, the account menu, the brand list, a modal. The grabber is
+     the only decoration. */
+  .mf-scrim.on{display:block;position:fixed;inset:0;z-index:95;background:rgba(13,13,13,.38);}
+  .mf-sheet.open{display:block;position:fixed;left:0;right:0;bottom:0;z-index:700;
+          max-height:82vh;max-height:82dvh;overflow-y:auto;background:#fff;
+          border-radius:16px 16px 0 0;box-shadow:0 -14px 44px rgba(13,13,13,.22);
+          padding:6px 8px calc(12px + var(--mf-safe));}
+  .mf-sheet.open::before,
+  .acmenu.open::before{content:"";display:block;width:36px;height:4px;border-radius:2px;
+          background:var(--div);margin:4px auto 8px;}
+  .mf-sheet .bphead{padding:4px 12px 8px;}
+  .mf-sheet .brow,.acmenu.open .brow{padding:12px 12px;font-size:15px;gap:12px;border-radius:10px;}
+  .mf-sheet .brow .bdot{width:10px;height:10px;}
+
+  /* the account menu is a sheet. Its left/top are written inline from the
+     trigger's rectangle, which on a phone is in the bar — so they are
+     overruled here rather than recomputed in four places. */
+  .acmenu.open{position:fixed;left:0!important;right:0!important;top:auto!important;bottom:0!important;
+          width:auto!important;max-width:none;max-height:82vh;max-height:82dvh;overflow-y:auto;
+          border-radius:16px 16px 0 0;padding:6px 8px calc(12px + var(--mf-safe));
+          background:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+          box-shadow:0 -14px 44px rgba(13,13,13,.22)!important;z-index:700;}
+  .acmenu.open .acmail{padding:4px 12px 10px;font-size:12.5px;}
+
+  /* the drawer (More) opens BETWEEN the bars, so More stays visible and
+     a second tap on it closes what it opened */
+  .mf-framed .sidebar.drawer-open{top:var(--mf-top)!important;bottom:calc(var(--mf-tabs) + var(--mf-safe))!important;
+          height:auto!important;width:min(300px,86vw)!important;z-index:80!important;
+          box-shadow:8px 0 24px rgba(0,0,0,.14)!important;}
+  .mf-framed .cc-scrim,.mf-framed .sidebar-overlay.open{top:var(--mf-top)!important;
+          bottom:calc(var(--mf-tabs) + var(--mf-safe))!important;z-index:79!important;}
+  .mf-framed .sidebar.drawer-open{background:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;}
+  .mf-more{display:block;margin:0 0 14px;padding-bottom:12px;border-bottom:1px solid var(--div);}
+  .mf-more .brow{padding:11px 10px;font-size:14.5px;gap:11px;}
+}
