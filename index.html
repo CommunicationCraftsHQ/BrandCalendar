@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V112.8 Bologna"/>
+<meta name="cc-tool-version" content="V112.9 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3999,14 +3999,130 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .cl-basis{font-family:inherit;font-size:12px;font-weight:600;padding:0 6px;
   border:1px solid var(--div);border-left:none;border-radius:0 8px 8px 0;
   background:var(--surface2);color:var(--muted);cursor:pointer;flex:none;}
+
+/* ══ V112.9 BOLOGNA — THE PHONE FRAME, THE CALENDAR'S HALF ═════════════
+   The frame itself (bar, line, tabs, sheets) is in cc-suite.css. What is
+   here is what only the Calendar has: its own nav children to fold away,
+   the brand switcher that BECOMES the line, the bell page, and the phone
+   versions of Posts and Tasks. Every rule is inside the 768 query, so a
+   desktop is untouched — tests/mobile-frame/run.mjs compares it pixel
+   for pixel against V112.8. */
+@media(max-width:768px){
+  /* every page's first row and content start 12px in, the frame's gutter */
+  :root{--pg-top:14px;--pg-x:12px;}
+  #main .brl-lens span,#main .bh-seg button{white-space:nowrap;}
+  /* ── the bar: tool name ▾ on the left, bell and you on the right ── */
+  .nav.mf > .hamburger-btn,.nav.mf > .nav-brand,.nav.mf > .nav-sep,.nav.mf > #bn-tabs,
+  .nav.mf > #view-pill,.nav.mf > #lay-sep,.nav.mf > #lay-grp,
+  .nav.mf .mf-hide{display:none!important;}
+  .nav.mf > .nav-right{order:1;margin-left:auto;gap:2px;height:var(--mf-bar);}
+  .nav.mf .bell{width:40px;height:40px;border:0;background:transparent;font-size:21px;border-radius:10px;}
+  .nav.mf .bell .badge{top:2px;right:2px;}
+
+  /* ── the line: the brand switcher, stretched to the width ─────── */
+  .nav.mf > #brand-sw{order:5;flex:0 0 calc(100% + 20px);height:var(--mf-line);margin:0 -6px 0 -14px;padding:0 14px;
+        display:flex;align-items:center;border-top:1px solid rgba(255,255,255,.08);position:static;}
+  .nav.mf .bstrig{width:100%;max-width:none;height:32px;padding:0 10px 0 2px;border:0;background:none;
+        font-size:14.5px;gap:9px;justify-content:flex-start;}
+  .nav.mf .bstrig .bnm{flex:0 1 auto;}
+  .nav.mf .bstrig .bdot{width:9px;height:9px;}
+
+  /* the brand list is a sheet */
+  .nav.mf #brand-panel.open{position:fixed;left:0;right:0;bottom:0;top:auto;min-width:0;max-height:78vh;max-height:78dvh;
+        background:#fff;-webkit-backdrop-filter:none;backdrop-filter:none;border:0;border-radius:16px 16px 0 0;
+        box-shadow:0 -14px 44px rgba(13,13,13,.22);padding:6px 8px calc(12px + var(--mf-safe));}
+  .nav.mf #brand-panel.open::before{content:"";display:block;width:36px;height:4px;border-radius:2px;
+        background:var(--div);margin:4px auto 8px;}
+  .nav.mf #brand-panel .brow{padding:11px 12px;font-size:15px;}
+  #acct-scrim.on{background:rgba(13,13,13,.38);}
+  /* the Calendar's two other dialog boxes rise from the bottom too —
+     the kit's .modal is handled in cc-suite.css */
+  .overlay > .day-popup,.overlay > .dp-modal{max-width:100%!important;width:100%;margin:auto 0 0;border-radius:16px 16px 0 0;}
+
+  /* ── the bell page — the panel becomes the page between the bars ─ */
+  .nav.mf #notif-panel.open{position:fixed;top:var(--mf-top);bottom:calc(var(--mf-tabs) + var(--mf-safe));
+        left:0;right:0;width:auto;max-height:none;border:0;border-radius:0;box-shadow:none;
+        background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none;padding:0 12px 16px;}
+  .nav.mf #notif-panel .nphead{padding:18px 4px 12px;border:0;}
+  .nav.mf #notif-panel .nphead b{font-size:20px;letter-spacing:-.02em;}
+  .nav.mf #notif-panel .nphead .mark{font-size:12.5px;}
+  .nav.mf #notif-panel .ntabs{margin:0 0 10px;}
+  .nav.mf #notif-panel .ngh{background:none;border:0;padding:14px 4px 8px;font-size:12.5px;}
+  .nav.mf #notif-panel .nsec{padding:14px 4px 8px;background:none;}
+  /* one card per row */
+  .nav.mf #notif-panel .nrow{background:#fff;border:1px solid var(--div);border-radius:12px;margin:0 0 8px;padding:12px 14px;}
+  .nav.mf #notif-panel .npempty{background:#fff;border:1px solid var(--div);border-radius:12px;padding:26px 16px;}
+
+  /* ── Posts ───────────────────────────────────────────────────────
+     This month first, as the hero; then the posts, one card a row; the
+     month's plan last. Import is a desk job and stays on the desk. */
+  #main > .pgbar:has(+ div > div > #content-monthcard){padding:0 12px;margin:14px 0 12px;flex-wrap:wrap!important;row-gap:10px;}
+  #main > .pgbar:has(+ div > div > #content-monthcard) > div:last-child{width:100%;}
+  #main > .pgbar:has(+ div > div > #content-monthcard) button[onclick="sdOpen()"]{display:none;}
+  #main > .pgbar:has(+ div > div > #content-monthcard) .btn-p{margin-left:auto;}
+  #main > div:has(> div > #content-monthcard){padding:0 12px 20px!important;display:flex;flex-direction:column;}
+  #main > div > div:has(> #content-monthcard){display:contents!important;}
+  #content-monthcard{order:0;}
+  #content-list{order:1;margin-top:16px!important;}
+  #content-plancard{order:2;margin-top:16px;min-width:0;}
+  #content-list > div{grid-template-columns:minmax(0,1fr)!important;}
+  #content-list .pc46 .pchead{flex-wrap:wrap;row-gap:8px;padding:10px 12px;}
+  #content-list .pc46 .pchead > span:last-child{margin-left:0!important;width:100%;flex-wrap:wrap;row-gap:6px;}
+  #content-list .pc46 .pchead > span:last-child > :last-child{margin-left:auto;}
+  #content-monthcard > .month-card:has(.mc-day.today){
+        background:linear-gradient(140deg,rgba(255,240,235,.85),rgba(240,238,252,.85));
+        border-color:rgba(255,255,255,.95);box-shadow:0 16px 44px rgba(120,90,110,.16), inset 0 1px 0 #fff;}
+  #content-monthcard > .month-card:has(.mc-day.today) .mc-head{border-bottom-color:rgba(255,255,255,.8);}
+  /* ONE hero a screen. On a desk the month's plan wears it; on a phone
+     this month does, so the plan below the posts goes plain. */
+  #content-plancard .mp-hero{background:var(--surface)!important;border-color:var(--div)!important;box-shadow:none!important;}
+  #content-plancard .mp-pan{height:auto;}
+  #content-plancard .mp-g{grid-template-columns:minmax(0,1fr);}
+
+  /* ── Tasks — one card a row, Today first ─────────────────────── */
+  #main .brfb{flex-wrap:wrap;row-gap:8px;}
+  #main .brfb .brfb-q{flex:1 1 100%;min-width:0;}
+  #main div:has(> .brfb){padding:0 12px 20px!important;}
+  #main .brfb .brfb-end{flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-left:0;}
+  #main .brfb .brfb-end .brfb-w{min-width:0;max-width:100%;}
+  #main .brfb .brfb-end .brfb-chip{max-width:100%;overflow:hidden;}
+  #main .brfb .brfb-end .brfb-chip .val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  #main .brfb .brfb-end button[onclick="tkOpen()"]{display:none;}
+  #main .brfb .brfb-end .btn-p{flex:1 0 auto;justify-content:center;}
+  #main .brl{display:flex;flex-direction:column;gap:8px;background:none;border:0;border-radius:0;overflow:visible;}
+  #main .brl > .brl-hd{display:none;}
+  #main .brl > .brl-ph{order:2;background:none;border:0;padding:8px 2px 0;}
+  #main .brl > .brl-tr{order:2;grid-template-columns:4px minmax(0,1fr) auto 30px;grid-template-rows:auto auto auto;
+        column-gap:10px;row-gap:9px;padding:12px 8px 12px 0;background:#fff;border:1px solid var(--div);
+        border-radius:12px;overflow:visible;align-items:center;}
+  #main .brl > .brl-tr.tdy,#main .brl > .br-open.tdy{order:1;}
+  #main .brl > .br-open{order:2;border-radius:12px;}
+  #main .brl > .mf-tdh{order:0;display:flex;align-items:baseline;gap:8px;padding:6px 2px 0;
+        font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+  #main .brl > .mf-tdh.later{order:2;padding-top:12px;}
+  #main .brl > .mf-tdh .n{color:var(--acc);}
+  #main .brl > .mf-tdnone{order:1;display:block;font-size:13px;color:var(--subtle);padding:2px 2px 4px;}
+  #main .brl > .brl-tr > .brl-sp{grid-column:1;grid-row:1 / 4;height:auto;align-self:stretch;border-radius:0 3px 3px 0;}
+  #main .brl > .brl-tr > .brl-car{display:none;}
+  #main .brl > .brl-tr > .brl-nm{grid-column:2 / 4;grid-row:1;flex-wrap:wrap;row-gap:4px;}
+  #main .brl > .brl-tr > .brl-nm .nmt{white-space:normal;line-height:1.3;}
+  #main .brl > .brl-tr > :last-child{grid-column:4;grid-row:1;align-self:start;}
+  #main .brl > .brl-tr > .brl-stw{grid-column:2;grid-row:2;justify-self:start;}
+  #main .brl > .brl-tr > span.c{display:none;}
+  #main .brl > .brl-tr > span.c:nth-of-type(3){display:block;grid-column:3 / 5;grid-row:2;padding-right:4px;}
+  #main .brl > .brl-tr > .brl-sg{grid-column:2 / 5;grid-row:3;padding-right:4px;}
+  #main .brl > .brl-tr .brl-tip{display:none!important;}
+}
 </style>
 
 </head>
-<body>
+<body class="mf-framed">
 
 <!-- NAV -->
-<nav class="nav">
+<nav class="nav mf">
   <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menu">☰</button>
+  <!-- V112.9 — the phone bar's tool name. Hidden above 768px. -->
+  <button class="mf-tool mf-only" onclick="mfTools(event)" aria-label="Switch tool"><span class="t">Marketing Calendar<span class="dot">.</span></span><i class="ti ti-chevron-down"></i></button>
   <div class="nav-brand" id="nav-brand-txt" onclick="goHome()" title="Back to the calendar">Marketing Calendar<span class="dot">.</span></div>
   <span class="nav-sep"></span>
 
@@ -4061,7 +4177,7 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
     <button class="qtog" id="past-tog" onclick="setFromNow(!fromNow)" title="Show months before this one">
       <i class="sw"></i> Past months
     </button>
-    <div class="bsw">
+    <div class="bsw mf-hide">
       <!-- MOTH — the export's own progress, anchored to the export
            button so it is where you last clicked, not floating. -->
       <div class="ep" id="export-prog"></div>
@@ -4076,6 +4192,7 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
       </button>
       <div class="npanel" id="notif-panel"></div>
     </div>
+    <button class="mf-icon mf-only" id="mf-me" onclick="mfMe(event)" aria-label="You"><span class="acav" id="mf-av">·</span></button>
   </div>
 
   <!-- kept as the model for brand selection so every existing code path
@@ -4098,6 +4215,7 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
          bottom can escape it. The sidebar itself must NOT scroll, or it
          clips the popover exactly as the nav used to. -->
     <div class="side-scroll">
+      <div class="mf-more" id="mf-more"></div>
       <div id="sb-stats" style="margin-bottom:4px;"></div>
       <div id="sb-months"></div>
     </div>
@@ -4194,6 +4312,15 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
   </aside>
   <main class="main" id="main"></main>
 </div>
+<!-- V112.9 BOLOGNA — the phone frame's tabs. Hidden above 768px. -->
+<nav class="mf-tabs" id="mf-tabs" aria-label="Sections">
+  <button class="mf-tab" data-mf="content" onclick="mfGo('content',event)"><i class="ti ti-photo"></i><span>Posts</span></button>
+  <button class="mf-tab" data-mf="branding" onclick="mfGo('branding',event)"><i class="ti ti-clipboard-text"></i><span>Tasks</span></button>
+  <button class="mf-tab" data-mf="alerts" onclick="mfGo('alerts',event)"><i class="ti ti-bell"></i><span>Alerts</span><b class="mf-n" id="mf-alerts-n"></b></button>
+  <button class="mf-tab" data-mf="more" onclick="mfGo('more',event)"><i class="ti ti-dots"></i><span>More</span></button>
+</nav>
+<div class="mf-scrim" id="mf-scrim" onclick="MF_PENDING=null;closeAllPops()"></div>
+<div class="mf-sheet" id="mf-tools" role="dialog" aria-label="CC Suite"></div>
 
 <!-- ═══ MODALS ═══════════════════════════════════════════ -->
 
@@ -10940,7 +11067,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V112.8 Bologna";
+const TOOL_VERSION="V112.9 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -29400,6 +29527,189 @@ async function mpObjBlur(el){
   if(!now){ el.classList.add("none"); el.textContent=""; }
   else el.classList.remove("none");
 }
+</script>
+
+<script>
+/* ══ V112.9 BOLOGNA — THE PHONE FRAME, THE CALENDAR'S HALF ═════════════
+   Approved by Chirag on 4 October from "01 - CC Suite Mobile Mockup.html".
+   Below 768px: a thin bar (tool name ▾ opens the tool switcher, then the
+   bell and you), the brand on the line under it, and four tabs at the
+   bottom — Posts, Tasks, Alerts, More. More is the sidebar drawer that
+   was already here; nothing new was built for it.
+
+   EVERY FUNCTION BELOW IS A WRAPPER OR A NEW NAME. Nothing that already
+   existed was edited, so the desktop runs the same code it ran in V112.8
+   plus one call that sets classes on elements a desktop never shows.
+
+   THE TWO THINGS A WRAPPER HERE MUST NOT FORGET:
+   · popOpen and closeAllPops are each declared TWICE in this file and the
+     LATER one is live. These wrappers are assigned after both, so they
+     wrap the live one. Re-declaring either below this script would undo
+     them silently.
+   · render() rewrites #main. Anything this script adds to the task list
+     is added AFTER the base render, every time, or it is gone. */
+const MF_Q=window.matchMedia("(max-width: 768px)");
+function mfNarrow(){ return MF_Q.matches; }
+let MF_PENDING=null;      /* Posts / Tasks asked for before a brand was picked */
+
+function mfScrim(on){ const s=document.getElementById("mf-scrim"); if(s) s.classList.toggle("on",!!on); }
+function mfDrawerOpen(){ const sb=document.querySelector(".sidebar"); return !!(sb&&sb.classList.contains("drawer-open")); }
+function mfDrawerClose(){ if(mfDrawerOpen()) toggleSidebar(); }
+
+/* ── the tool switcher sheet — the same list as the account menu's
+   CC Suite flyout, read from the same register by the same rule ───── */
+async function mfTools(e){
+  if(e) e.stopPropagation();
+  const el=document.getElementById("mf-tools"); if(!el) return;
+  const was=el.classList.contains("open");
+  closeAllPops(); mfDrawerClose();
+  if(was) return;
+  let list=[];
+  try{ list=suiteToolsForMe(await loadSuiteTools()); }catch(err){ list=[]; }
+  if(!list.some(t=>t.key==="calendar")) list.unshift({key:"calendar",label:"Marketing Calendar",colour:null});
+  el.innerHTML=list.map(t=>{
+    const cur=(t.key==="calendar");
+    const dot=t.colour?`<span class="bdot" style="background:${escAttr(t.colour)};"></span>`:`<span class="bdot" style="background:var(--div);"></span>`;
+    return cur
+      ? `<a class="brow act" style="text-decoration:none;" onclick="closeAllPops()">${dot}<span class="bnm">${escHtml(t.label||t.key)}</span><i class="ti ti-check" style="margin-left:auto;"></i></a>`
+      : `<a class="brow" href="${escAttr(t.url||"#")}" style="text-decoration:none;">${dot}<span class="bnm">${escHtml(t.label||t.key)}</span></a>`;
+  }).join("");
+  el.classList.add("open");
+  const sc=document.getElementById("acct-scrim"); if(sc) sc.classList.add("on");
+  mfSync();
+}
+function mfMe(e){ mfDrawerClose(); popOpen("acct-menu",e); }
+
+/* ── the four tabs ─────────────────────────────────────────────── */
+function mfGo(k,e){
+  if(e) e.stopPropagation();
+  if(k==="more"){ closeAllPops(); toggleSidebar(); mfSync(); return; }
+  if(k==="alerts"){ mfDrawerClose(); toggleBell(e); mfSync(); return; }
+  closeAllPops(); mfDrawerClose();
+  if(!activeBrand){
+    /* Posts and Tasks are per brand. Rather than refuse, open the brand
+       list and go where you asked once a brand is picked. */
+    MF_PENDING=k; toggleBrandSw(e); return;
+  }
+  if(k==="content") navPosts(); else if(k==="branding") navTasks();
+}
+function mfPage(go){ mfDrawerClose(); closeAllPops(); try{ (new Function(go))(); }catch(err){ console.warn(err); } }
+
+/* ── keep the frame's pieces in step with the page ─────────────────── */
+function mfSync(){
+  const tabs=document.getElementById("mf-tabs"); if(!tabs) return;
+  const np=document.getElementById("notif-panel");
+  const alerts=!!(np&&np.classList.contains("open"));
+  const more=mfDrawerOpen();
+  const on=more?"more":alerts?"alerts":(view==="content"||view==="branding")?view:null;
+  tabs.querySelectorAll(".mf-tab").forEach(b=>{
+    const lit=(b.dataset.mf===on);
+    b.classList.toggle("on",lit); b.setAttribute("aria-current",lit?"page":"false");
+  });
+  const bb=document.getElementById("bell-badge"), n=document.getElementById("mf-alerts-n");
+  if(bb&&n) n.textContent=bb.classList.contains("zero")?"":bb.textContent;
+  const av=document.getElementById("acct-av"), me=document.getElementById("mf-av");
+  if(av&&me){ me.className=av.className; me.setAttribute("style",av.getAttribute("style")||""); me.innerHTML=av.innerHTML; }
+  /* More holds the brand's other pages — the ones the tabs do not. */
+  const mm=document.getElementById("mf-more");
+  if(mm){
+    const brandOn=!!(activeBrand&&brands[activeBrand]&&canEdit());
+    const pages=brandOn&&typeof BN_TABS!=="undefined"
+      ? BN_TABS.filter(t=>(typeof bnTabAllowed!=="function"||bnTabAllowed(t))&&t.k!=="content"&&t.k!=="branding")
+      : [];
+    const html=pages.map(t=>{
+      const lit=t.on.indexOf(view)>-1;
+      return `<div class="brow${lit?" act":""}" onclick="mfPage(${escAttr(JSON.stringify(t.go))})"><i class="ti ${t.icon}"></i><span class="bnm">${escHtml(t.label)}</span></div>`;
+    }).join("");
+    if(mm.innerHTML!==html) mm.innerHTML=html;
+    mm.style.display=html?"":"none";
+  }
+}
+
+/* ── Tasks: Today first ──────────────────────────────────────────────
+   "Today" is a task that owes something now: a step not yet approved
+   whose date is today or gone, or a delivery date that has arrived. A
+   task that is Done owes nothing. */
+function mfTaskToday(t){
+  if(!t||brStatusOf(t)==="closed") return false;
+  const today=brToday();
+  const m=brMsFor(t.id).find(x=>x.status!=="approved"&&x.due_date);
+  if(m&&brNum(m.due_date)<=today) return true;
+  return !!(t.delivery_date&&brNum(t.delivery_date)<=today);
+}
+(function(){
+  const baseRow=brRowHtml;
+  brRowHtml=function(t){
+    const h=baseRow.apply(this,arguments);
+    return (mfNarrow()&&mfTaskToday(t)) ? h.replace('<div class="brl-tr','<div class="brl-tr tdy') : h;
+  };
+  const baseOpen=brOpenPanelHtml;
+  brOpenPanelHtml=function(t){
+    const h=baseOpen.apply(this,arguments);
+    return (mfNarrow()&&mfTaskToday(t)) ? h.replace('class="br-open','class="br-open tdy') : h;
+  };
+  const baseBr=renderBranding;
+  renderBranding=function(){
+    const out=baseBr.apply(this,arguments);
+    if(!mfNarrow()) return out;
+    const list=document.querySelector("#main .brl");
+    if(!list||!list.querySelector(".brl-tr")) return out;
+    const n=list.querySelectorAll(":scope > .brl-tr.tdy").length;
+    const rest=list.querySelectorAll(":scope > .brl-tr:not(.tdy)").length;
+    list.insertAdjacentHTML("afterbegin",
+      `<div class="mf-tdh">Today <span class="n">${n||""}</span></div>`+
+      (n?"":`<div class="mf-tdnone">Nothing due today</div>`)+
+      (rest?`<div class="mf-tdh later">Later</div>`:""));
+    return out;
+  };
+})();
+
+/* ── the wrappers ─────────────────────────────────────────────────── */
+(function(){
+  const baseRender=render;
+  render=function(){ const out=baseRender.apply(this,arguments); mfSync(); return out; };
+  const basePop=popOpen;
+  popOpen=function(id,e){
+    const out=basePop.apply(this,arguments);
+    const el=document.getElementById(id);
+    if(mfNarrow()&&id==="brand-panel"&&el&&el.classList.contains("open")) mfScrim(true);
+    mfSync();
+    return out;
+  };
+  const baseClose=closeAllPops;
+  closeAllPops=function(){
+    const out=baseClose.apply(this,arguments);
+    const t=document.getElementById("mf-tools"); if(t) t.classList.remove("open");
+    mfScrim(false);
+    mfSync();
+    return out;
+  };
+  const baseSide=toggleSidebar;
+  toggleSidebar=function(){ const out=baseSide.apply(this,arguments); mfSync(); return out; };
+  const baseBell=syncBell;
+  syncBell=function(){ const out=baseBell.apply(this,arguments); mfSync(); return out; };
+  const basePick=pickBrand;
+  pickBrand=function(k){
+    const out=basePick.apply(this,arguments);
+    const go=MF_PENDING; MF_PENDING=null;
+    if(go&&activeBrand){ if(go==="content") navPosts(); else if(go==="branding") navTasks(); }
+    return out;
+  };
+  /* Crossing 768 redraws ONLY the task list, which is the one screen
+     whose markup differs by width (Today first). Nothing else is closed or
+     redrawn: the first version closed every panel and redrew the page on
+     any crossing, and the desktop comparison caught it — a screenshot
+     tool's momentary resize shut an open bell panel on a 800px window. */
+  MF_Q.addEventListener("change",()=>{
+    const t=document.getElementById("mf-tools"); if(t) t.classList.remove("open");
+    mfScrim(false);
+    if(view==="branding") render(); else mfSync();
+  });
+  /* the avatar is filled in after sign-in; follow it rather than guess when */
+  const av=document.getElementById("acct-av");
+  if(av&&window.MutationObserver) new MutationObserver(()=>mfSync()).observe(av,{childList:true,characterData:true,subtree:true,attributes:true});
+  mfSync();
+})();
 </script>
 </body>
 </html>
