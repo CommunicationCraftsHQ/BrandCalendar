@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V113.9 Bologna"/>
+<meta name="cc-tool-version" content="V113.10 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3272,6 +3272,8 @@ select.mom-in{padding-right:26px;}
 .ml-wait{font-size:13.5px;color:var(--subtle);padding:4px 0 20px;}
 /* the door on the month sheet's Meetings label */
 .mp-sub-door{display:inline-flex;align-items:center;gap:2px;cursor:pointer;}
+.mom-all{height:30px;gap:4px;white-space:nowrap;}
+.mom-all i{font-size:13px;}
 .mp-sub-door:hover{color:var(--acc);}
 .mp-sub-door i{font-size:13px;}
 /* the decisions on the month tile — option B */
@@ -11176,7 +11178,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V113.9 Bologna";
+const TOOL_VERSION="V113.10 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -27209,11 +27211,20 @@ function plMeetOpen(id,m){
   setView("mom");
   setTimeout(()=>{ const i=document.getElementById("mom-topic"); if(i&&!MOM.id) i.focus(); },40);
 }
+/* ONE ANSWER, READ TWICE. The label on the back link and the place it
+   actually goes were two separate expressions, which is how a link
+   that says one thing and does another gets shipped. */
+function momBackTo(){
+  if(MOM.from==="meets") return "meets";
+  if(!MOM.id) return "mplan";          /* a meeting not written yet has no siblings to go back to */
+  const n=(ML.brand===activeBrand&&ML.meets.length) ? ML.meets.length : (PLD.meet||[]).length;
+  return n>1 ? "meets" : "mplan";
+}
 function momBack(){
   const d=MOM.draft;
   if(d&&/^\d{4}-\d{2}-\d{2}$/.test(String(d.held_on||""))) mpvMonth=Number(String(d.held_on).slice(5,7));
   if(MOM.from==="events") PLMODE="events";
-  const back=MOM.from==="meets"?"meets":"mplan";
+  const back=momBackTo();
   MOM.id=null; MOM.draft=null; MOM.timer=null;
   setView(back);
 }
@@ -27259,6 +27270,7 @@ async function momSave(){
       const r=await sb.from("brand_meetings").insert([row]).select("id");
       if(r.error){ momState("err"); toast("Not saved — "+r.error.message,"err"); return; }
       MOM.id=row.id; MOM.draft.id=row.id; PLD.meet.push(row);
+      mlStale();                       /* the brand page holds its own list */
     }
     momState("saved");
   });
@@ -27270,6 +27282,7 @@ async function momTrash(){
   const r=await sb.from("brand_meetings").update({deleted_at:new Date().toISOString()}).eq("id",MOM.id).select("id");
   if(r.error||!r.data||!r.data.length){ toast("Could not move it — "+(r.error?r.error.message:"not allowed"),"err"); return; }
   PLD.meet=PLD.meet.filter(x=>x.id!==MOM.id);
+  mlStale();
   toast("Moved to Trash"); momBack();
 }
 /* the people pickers, on the page */
@@ -27727,7 +27740,7 @@ function renderMomPage(){
   try{
   main.innerHTML=`<div class="mompage">
     <div class="pgbar">
-      <span class="mom-back" onclick="momBack()"><i class="ti ti-chevron-left"></i> ${MOM.from==="meets"?"Meetings":"Plan"}</span>
+      <span class="mom-back" onclick="momBack()"><i class="ti ti-chevron-left"></i> ${momBackTo()==="meets"?"Meetings":"Plan"}</span>
       <span style="flex:1"></span>
       <span class="mom-state${MOM.state==="err"||MOM.state==="notopic"?" warn":""}" id="mom-state">${escHtml(state)}</span>
       ${MOM.id?`<button class="btn btn-g btn-sm" id="mom-link" onclick="momCopyLink('${escAttr(MOM.id)}',event)"
@@ -27803,6 +27816,12 @@ async function mlLoad(bid){
   ML.open={}; ML.npd={}; ML.live=null; ML.loading=false;
   if(view==="meets") renderMeetsPage();
 }
+/* The brand page reads every year in one go and keeps the answer, so a
+   meeting logged or trashed somewhere else leaves it describing a list
+   that no longer exists. Caught by a gate, not by reading: the spine
+   had been opened before the November meeting was written and went on
+   showing six. Marked stale here; the next render reloads. */
+function mlStale(){ ML.brand=null; }
 function mlPassOf(id){ return (MOM.id===id?MOM.pass:(ML.pass[id]||[])); }
 function mlDefaultOpen(x,i){
   if(i<ML_FULL) return true;
@@ -27832,7 +27851,12 @@ function mlLive(id,quiet){
     ML.npd[MOM.id]=MOM.npd||"";
     if(MOM.timer){ clearTimeout(MOM.timer); MOM.timer=null; momSave(); }
   }
-  wDraftClear("mom-minutes");
+  /* THE SHARED DRAFT SLOT IS NOT TOUCHED HERE. It was cleared on every
+     card switch, to stop one card's words bleeding into the next — and
+     a gate caught what that really did: opening the brand page threw
+     away a half-typed line that was being kept for a meeting's OWN
+     page. The spine's box carries data-nodraft and never restores from
+     that slot anyway, so the clear protected nothing and cost that. */
   MOM.state=""; MOM.id=id; MOM.from="meets";
   MOM.pass=ML.pass[id]||[]; MOM.passOk=true;
   MOM.ed=null; MOM.fc=""; MOM.npd=ML.npd[id]||"";
@@ -28172,9 +28196,28 @@ plStripExtras=function(on){
      calendar and the events list — a meeting is not a way of looking at
      the calendar. Red, because it is the page's primary action and that
      is what the suite paints those. */
+  /* ══ V113.10 — THE DOOR IS WHERE YOU ARE STANDING ══════════════════
+     Chirag, 9 Oct, having opened the live page: "The spine not built??"
+     It was built and live. The only way in was the word Meetings inside
+     a month sheet, so it did not exist until you had opened a month —
+     and he had gone straight from a tile into a meeting, where nothing
+     pointed at the brand's other meetings at all.
+
+     A door nobody can find is a door nobody has. This one is in the
+     page's own control row, next to Add MOM, visible the moment you
+     land on Plan and in the events list too. The one in the month
+     label stays for when you are already in a month. */
+  if(PLD.ok.meet&&!strip.querySelector(".mom-all")){
+    const hm=`<button class="btn btn-g btn-sm mom-all" onclick="mlOpen()"
+        title="Every meeting with this brand, on one page">Meetings <i class="ti ti-chevron-right"></i></button>`;
+    if(ys&&ys.parentElement===strip) ys.insertAdjacentHTML("beforebegin",`<span style="flex:1"></span>`+hm);
+    else strip.insertAdjacentHTML("beforeend",hm);
+  }
   if(PLD.ok.meet&&canEdit()&&!strip.querySelector(".mom-add")){
     const h=`<button class="mom-add" onclick="plMeetOpen(null)"><i class="ti ti-plus"></i> Add MOM</button>`;
-    if(ys&&ys.parentElement===strip) ys.insertAdjacentHTML("beforebegin",`<span style="flex:1"></span>`+h);
+    const all=strip.querySelector(".mom-all");
+    if(all) all.insertAdjacentHTML("afterend",h);
+    else if(ys&&ys.parentElement===strip) ys.insertAdjacentHTML("beforebegin",`<span style="flex:1"></span>`+h);
     else strip.insertAdjacentHTML("beforeend",h);
   }
   plRange();
