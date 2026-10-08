@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V113.6 Bologna"/>
+<meta name="cc-tool-version" content="V113.7 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -11105,7 +11105,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V113.6 Bologna";
+const TOOL_VERSION="V113.7 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -13783,6 +13783,25 @@ function taskCopyLink(taskId){
     navigator.clipboard.writeText(url).then(()=>toast("Link copied"),()=>toast(url));
   } else toast(url);
 }
+/* ══ V113.7 · A LINK TO ONE MEETING ══════════════════════════════════
+   Chirag, 8 Oct: "I'll need a link option like we have in tasks in each
+   MOM card that can directly share with team."
+
+   Exactly the shape a task's link already has — ?meeting=<id> on this
+   page's own address, copied to the clipboard, resolved on arrival by
+   openDeepLink. No new table, no share token, and no page a signed-out
+   person can read: the link lands on the tool, and the tool decides
+   what that person may see. The minutes are staff-only in the row
+   policy, so a client login following this link is told it is not
+   available to them rather than being shown it. */
+function momCopyLink(id,ev){
+  if(ev){ try{ ev.stopPropagation(); }catch(e){} }
+  if(!id) return;
+  const url=location.origin+location.pathname+"?meeting="+encodeURIComponent(id);
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(()=>toast("Link copied"),()=>toast(url));
+  } else toast(url);
+}
 function fbCopyLink(postId,commentId){
   const url=location.origin+location.pathname+"?post="+encodeURIComponent(postId)+"&c="+encodeURIComponent(commentId);
   if(navigator.clipboard&&navigator.clipboard.writeText){
@@ -14140,7 +14159,17 @@ function fbHighlightMentions(h){
      emoji does the identifying now, which frees the colour to say the
      one thing worth saying on a busy thread: this one is about you. */
   const mine=String(ME.email||"").toLowerCase().split("@")[0];
-  return h.replace(/(^|\s)@([A-Za-z0-9._-]+)/g,(m,pre,name)=>{
+  /* ══ V113.7 — A MENTION AT THE START OF A LINE ══════════════════════
+     Chirag, 8 Oct: "sometimes it appears as a mention and sometimes it
+     appear as text. Dont know why."
+
+     The boundary was \s alone. A rich box stores paragraphs, so a
+     mention that opens one sits directly after ">" with no whitespace
+     in front of it — and silently stayed plain text, in EVERY thread in
+     the tool, however it had been picked from the menu. An @ inside a
+     word (an email address) still must not match, which is why this is
+     a list of boundaries rather than a lookbehind for "not a letter". */
+  return h.replace(/(^|[\s>\u00a0(\[])@([A-Za-z0-9._-]+)/g,(m,pre,name)=>{
     const e=emojiFor(name);
     const isMe=mine&&String(name).toLowerCase()===mine;
     return pre+'<span style="color:'+(isMe?"var(--acc)":"var(--text)")+';font-weight:700;white-space:nowrap;">'+
@@ -14674,9 +14703,19 @@ async function notifOpen(brandId,kind,postId){
     const mid=postId;                          // same slot, a meeting
     pickBrand(brandId);
     /* WAIT FOR THE PLAN LOAD. plMeetOpen looks the meeting up in
-       PLD.meet and bounces when it is not there yet, so a bell row
-       for a brand you were not on would land nowhere. */
-    if(typeof plLoad==="function"&&PLD.brand!==brandId) await plLoad(brandId);
+       PLD.meet and bounces when it is not there yet, so a bell row for
+       a brand you were not on would land nowhere.
+
+       V113.7 — AND THIS WAS WRONG WHEN I WROTE IT. plLoad takes the
+       key "<brand>|<year>", not a brand id: splitting a bare id on "|"
+       gave year NaN, the query asked for rows between NaN-01-01 and
+       NaN-01-01, and nothing came back — so every bell row for a brand
+       you were not already on quietly landed nowhere. Found by reading
+       plLoad while building the share link, not by the gate, which
+       only ever opened meetings on the brand it was already standing
+       on. The gate asks the harder question now. */
+    const k=brandId+"|"+YEAR;
+    if(typeof plLoad==="function"&&PLD.key!==k) await plLoad(k);
     await meetMarkSeen(mid,brandId);
     plMeetOpen(mid);
     return;
@@ -14849,7 +14888,7 @@ async function fbAddCommentInner(postId,parentId){
     resolved:false,resolved_by:"",resolved_at:null,created_at:new Date().toISOString()};
   (POSTFB.comments[postId]=POSTFB.comments[postId]||[]).push(row);
   dbErr(await sb.from("post_comments").insert([row]));
-  rtClear(el);
+  wDraftClear(el); rtClear(el);
   renderSocial();                      // the comment appears at once…
   if(staged.length){                   // …then the files fill in behind it
     FB_STAGED[postId]=[];
@@ -17985,9 +18024,10 @@ const DEEP_LS="cc_deep_link";
 (function stashDeepLink(){
   try{
     const q=new URLSearchParams(location.search);
-    if(q.get("post")||q.get("task")){
+    if(q.get("post")||q.get("task")||q.get("meeting")){
       sessionStorage.setItem(DEEP_LS,JSON.stringify({
-        post:q.get("post")||"", c:q.get("c")||"", task:q.get("task")||""}));
+        post:q.get("post")||"", c:q.get("c")||"", task:q.get("task")||"",
+        meeting:q.get("meeting")||""}));
     }
   }catch(e){}
 })();
@@ -18008,6 +18048,25 @@ function takeDeepLink(){
 }
 async function openDeepLink(){
   const d=takeDeepLink(); if(!d) return;
+
+  if(d.meeting){
+    const r=await sb.from("brand_meetings").select("id,brand_id,held_on")
+              .eq("id",d.meeting).is("deleted_at",null).maybeSingle();
+    const row=r&&r.data;
+    if(!row||!brands[row.brand_id]){ toast("That meeting is not available to you","err"); return; }
+    pickBrand(row.brand_id);
+    /* THE YEAR DECIDES WHAT IS LOADED. The plan page holds one brand
+       and one year at a time, so a link to last December's meeting has
+       to move the year before the load — otherwise plEnsure refetches
+       the current year on the next render and the meeting we just
+       opened is not in the list any more. */
+    const y=Number(String(row.held_on||"").slice(0,4))||YEAR;
+    if(y!==YEAR) setYear(y);
+    const k=row.brand_id+"|"+y;
+    if(PLD.key!==k) await plLoad(k);
+    plMeetOpen(row.id);
+    return;
+  }
 
   if(d.task){
     const r=await sb.from("branding_tasks").select("id,brand_id")
@@ -22876,10 +22935,119 @@ function wBarShow(el){
   if(clip) clip.style.display=(el.dataset.mpvF==="key_theme"||el.dataset.mpvAtt||el.dataset.att)?"":"none";
 }
 function wBarHide(){ const b=document.getElementById("mp-bar"); if(b) b.classList.remove("open"); WBAR_FOR=null; }
+/* ══ V113.7 — THE BAR GOES WHEN THE CARET GOES ═══════════════════════
+   Chirag, 8 Oct: "even after you stop writing and are off the text
+   area, the black box refuse to go from the screen."
+
+   Hiding it was OPT-IN: seven boxes in this file call mpBarHide on
+   blur, and there are twenty-three rich boxes. Any box whose author
+   did not remember left the bar parked on the screen for good, and a
+   box REMOVED by a redraw took its blur with it, so even the seven
+   could strand it.
+
+   One rule instead, at the document: whenever focus settles anywhere
+   that is not the bar's own box and not the bar itself, the bar goes.
+   Nothing to remember, and it covers every box written after today. */
+function wBarCheck(){
+  if(!WBAR_FOR) return;
+  if(!document.body.contains(WBAR_FOR)){ wBarHide(); return; }   /* redrawn away */
+  const a=document.activeElement;
+  if(a===WBAR_FOR||(WBAR_FOR.contains&&WBAR_FOR.contains(a))) return;
+  if(a&&a.closest&&a.closest("#mp-bar")) return;                 /* pressing B or I */
+  wBarHide();
+}
+document.addEventListener("focusin",wBarCheck,true);
+/* The open fact chip closes on Escape or on a click outside it — the
+   two ways a person actually means "done" without pressing Done. */
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&typeof MOM!=="undefined"&&MOM&&MOM.fc){ momFc(""); }
+},true);
+document.addEventListener("mousedown",e=>{
+  if(typeof MOM==="undefined"||!MOM||!MOM.fc) return;
+  const t=e.target;
+  if(t&&t.closest&&(t.closest(".mom-fed")||t.closest("#mom-pp")||t.closest("#mp-bar"))) return;
+  momFc("");
+},true);
+document.addEventListener("focusout",()=>setTimeout(wBarCheck,0),true);
+/* A redraw does not move focus, so focus alone cannot catch a box that
+   was torn out mid-edit. This does, and costs nothing when the bar is
+   shut because WBAR_FOR is null. */
+setInterval(()=>{ if(WBAR_FOR&&!document.body.contains(WBAR_FOR)) wBarHide(); },700);
 
 /* Any box that declares itself rich gets the identical bar, the
    identical sanitising and the identical rendering. */
 function wFocus(el){ el.dataset.was=el.innerHTML; wBarShow(el); }
+
+/* ══ V113.7 · A HALF-TYPED MESSAGE SURVIVES THE PAGE ═════════════════
+   Chirag, 8 Oct: "The minutes field doesn't remember half completed
+   message so for whatever reason the page is lost or not saved, whole
+   data has to be re-typed. This a problem across all such
+   writing/comment fields."
+
+   Right, and nothing in this tool kept a draft of anything. Rather
+   than add a save to each of the twenty-three boxes — which is how the
+   formatting bar ended up hiding in only seven of them — every rich
+   box that carries an id gets this for free: the words are kept as you
+   type, under that id, and offered back when the same box is next
+   drawn empty.
+
+   IN THIS BROWSER ONLY, AND FOR SEVEN DAYS. A half-written thought is
+   not a record: it costs no migration, no table, and nothing another
+   person's query can read. Seven days because a box you abandoned in
+   March offering its text in October is a surprise, not a help.
+
+   RESTORED ONLY INTO AN EMPTY BOX, so it can never sit on top of what
+   is actually saved, and dropped the moment the words are posted. */
+const W_DRAFT_NS="ccdraft:", W_DRAFT_DAYS=7;
+function wDraftKey(el){
+  const k=(el&&(el.dataset&&el.dataset.draft))||(el&&el.id)||"";
+  return k?(W_DRAFT_NS+k):"";
+}
+function wDraftSave(el){
+  const k=wDraftKey(el); if(!k) return;
+  try{
+    const v=wValue(el);
+    if(!v){ localStorage.removeItem(k); return; }
+    localStorage.setItem(k,JSON.stringify({v,at:Date.now()}));
+  }catch(e){}
+}
+function wDraftClear(el){
+  const k=(typeof el==="string")?(W_DRAFT_NS+el):wDraftKey(el);
+  if(!k) return; try{ localStorage.removeItem(k); }catch(e){}
+}
+function wDraftRead(el){
+  const k=wDraftKey(el); if(!k) return "";
+  try{
+    const raw=localStorage.getItem(k); if(!raw) return "";
+    const d=JSON.parse(raw);
+    if(!d||!d.v){ localStorage.removeItem(k); return ""; }
+    if(Date.now()-(d.at||0) > W_DRAFT_DAYS*864e5){ localStorage.removeItem(k); return ""; }
+    return String(d.v);
+  }catch(e){ return ""; }
+}
+/* Offer it back the moment the box appears, drawn empty. The page is
+   rewritten wholesale on every render, so a MutationObserver is the
+   only hook that sees every box without touching a single call site. */
+function wDraftRestore(el){
+  if(!el||el.dataset.dr==="1") return;
+  el.dataset.dr="1";
+  if(String(el.innerHTML||"").trim()!=="") return;
+  const v=wDraftRead(el); if(!v) return;
+  el.innerHTML=wRender(v);
+  try{ el.dispatchEvent(new Event("input",{bubbles:true})); }catch(e){}
+}
+function wDraftSweep(root){
+  (root||document).querySelectorAll('[contenteditable="true"]:not([data-nodraft])')
+    .forEach(wDraftRestore);
+}
+document.addEventListener("input",e=>{
+  const t=e.target;
+  if(t&&t.isContentEditable&&!t.dataset.nodraft) wDraftSave(t);
+},true);
+try{
+  new MutationObserver(()=>{ wDraftSweep(document); })
+    .observe(document.documentElement,{childList:true,subtree:true});
+}catch(e){}
 
 /* THE BAR FOLLOWS THE CARET. mpBarShow already measured against it;
    nothing re-ran it after focus. One listener, every keystroke, every
@@ -26555,7 +26723,7 @@ function plBlockHtml(sv,m,canE,withInfl){
 }
 
 /* ── meetings, in the sheet ──────────────────────────────────────── */
-const PL_LOC={office:"Our office",client_office:"Client office",online:"Online"};
+const PL_LOC={office:"Our office",client_office:"Client office",online:"Online",phone:"Over phone"};
 function plPersonFace(id){
   const pp=(PEOPLE||[]).find(x=>x.id===id); if(!pp) return "";
   return `<span class="nav-av" title="${escAttr(pp.name)}" style="width:22px;height:22px;font-size:10px;${avatarSkin(pp.email||pp.name,false)}">${avatarInner(pp.email||pp.name,escAttr((pp.name||"?").slice(0,2).toUpperCase()))}</span>`;
@@ -27087,7 +27255,7 @@ async function momPassAdd(){
       resolved:false,resolved_by:"",resolved_at:null,created_at:new Date().toISOString()};
     const r=await sb.from("post_comments").insert([row]);
     if(r.error){ momState("err"); toast("Not added — "+r.error.message,"err"); return; }
-    MOM.npd=""; MOM.pass=[...MOM.pass,row]; momState("saved");
+    MOM.npd=""; wDraftClear("mom-minutes"); MOM.pass=[...MOM.pass,row]; momState("saved");
     meetMarkSeen(MOM.id,activeBrand);
     renderMomPage();
   }finally{ MOM_POSTING=false; }
@@ -27153,14 +27321,16 @@ function momFactsHtml(d){
 
   if(MOM.fc==="held_on") out.push(`<div class="mom-fed"><label>Date</label>
     <input class="mom-in" type="date" id="mom-fci" value="${escAttr(d.held_on)}"
-      onchange="momSet('held_on',this.value)" onblur="momFc('')"></div>`);
+      onchange="momSet('held_on',this.value)">
+    <span class="mom-fc" onclick="momFc('')">Done</span></div>`);
   else out.push(fc("held_on",!!d.held_on,d.held_on?escHtml(momDayLabel(d.held_on)):"+ Date"));
 
   if(MOM.fc==="where") out.push(`<div class="mom-fed"><label>Where</label>
     <select class="mom-in" onchange="momSet('location_kind',this.value)">${
       Object.keys(PL_LOC).map(k=>`<option value="${k}"${d.location_kind===k?" selected":""}>${PL_LOC[k]}</option>`).join("")}</select>
     <input class="mom-in" id="mom-fci" value="${escAttr(d.location_name)}" placeholder="Ahmedabad, Teams…"
-      oninput="momSet('location_name',this.value)" onblur="momFc('')"></div>`);
+      oninput="momSet('location_name',this.value)">
+    <span class="mom-fc" onclick="momFc('')">Done</span></div>`);
   else out.push(fc("where",!!(d.location_kind||d.location_name),
     (d.location_kind||d.location_name)
       ? `${escHtml(PL_LOC[d.location_kind]||"Somewhere")}${d.location_name?`<span class="sub">· ${escHtml(d.location_name)}</span>`:""}`
@@ -27274,6 +27444,17 @@ function momPpPick(id){
    returns TRUE only while the menu is open, so the field's own Enter —
    which invents a client name the contact list does not carry — still
    works when there is nothing highlighted to take instead. */
+function momFcKeep(){
+  const i=document.getElementById("mom-pp-in");
+  const t=i?String(i.value||"").trim():"";
+  if(!t) return;
+  if(MOM.fc==="cl"){ momNewName(t); return; }
+  /* for the CC field a typed word is only a person if it names exactly
+     one — anything else is half a search, and inventing a colleague
+     from it would be worse than losing it */
+  const hits=momPpPool("cc").filter(p=>String(p.name||"").toLowerCase().indexOf(t.toLowerCase())>=0);
+  if(hits.length===1) momCc(hits[0].id,true);
+}
 function momPpNav(e){
   if(!MOMPP||!MOMPP_HITS.length) return false;
   const paint=()=>{ [...MOMPP.querySelectorAll(".brow")].forEach((r,i)=>r.classList.toggle("on",i===MOMPP_SEL)); };
@@ -27283,10 +27464,24 @@ function momPpNav(e){
   if(e.key==="Escape"){ e.preventDefault(); momPpClose(); return true; }
   return false;
 }
+/* ══ V113.7 — CLOSING A CHIP KEEPS WHAT WAS TYPED IN IT ══════════════
+   Chirag, 8 Oct: "Not able to save clients name after writing in the
+   box." Typed text only counted if you pressed Enter; closing the chip
+   — or clicking anything else — threw it away without a word.
+
+   AND THE EDITORS NO LONGER CLOSE ON BLUR. The date and the place each
+   closed the whole chip when their field lost focus, and reaching for
+   the location dropdown BESIDE that field is exactly such a blur: the
+   editor was torn out before the click landed, so the list could not
+   be used at all. Measured, not guessed. They close on Done, on
+   Escape, or on a click outside — never on the way to a control that
+   belongs to the same chip. */
 function momFc(k){
   momKeepNotes();
   const next=(MOM.fc===k)?"":k;
   if(next===MOM.fc) return;
+  if(MOM.fc==="cl"||MOM.fc==="cc") momFcKeep();
+  momPpClose();
   MOM.fc=next;
   if(MOM_FCT) clearTimeout(MOM_FCT);
   MOM_FCT=setTimeout(()=>{ MOM_FCT=null; renderMomPage();
@@ -27354,6 +27549,8 @@ function renderMomPage(){
       <span class="mom-back" onclick="momBack()"><i class="ti ti-chevron-left"></i> Plan</span>
       <span style="flex:1"></span>
       <span class="mom-state${MOM.state==="err"||MOM.state==="notopic"?" warn":""}" id="mom-state">${escHtml(state)}</span>
+      ${MOM.id?`<button class="btn btn-g btn-sm" id="mom-link" onclick="momCopyLink('${escAttr(MOM.id)}',event)"
+        title="Copy a link that opens these minutes"><i class="ti ti-link"></i> Copy link</button>`:""}
       <button class="btn btn-g btn-sm" onclick="momTrash()"><i class="ti ti-trash"></i> ${MOM.id?"Move to Trash":"Discard"}</button>
     </div>
     <div class="mom-wrap">
@@ -29001,6 +29198,8 @@ window.prSegOpen=function(){ pbOpen("seg"); };
   letter-spacing:.03em;color:var(--acc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .mp-mc .dt .pen{margin-left:auto;color:var(--subtle);cursor:pointer;flex:none;}
 .mp-mc .dt .pen:hover{color:var(--acc);}
+.mp-mc .dt .pen.lk{margin-left:auto;}
+.mp-mc .dt .pen.lk + .pen{margin-left:6px;}
 .mp-mc .tp{font-size:12.5px;font-weight:700;margin:2px 0 3px;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap;}
 /* two lines, then it stops — the whole note is in the meeting box */
@@ -30264,6 +30463,8 @@ function mpMeetsHtml(m,canE){
     return `<div class="mp-mc" data-meet="${escAttr(x.id)}" onclick="plMeetOpen('${escAttr(x.id)}')"
         title="${escAttr((canE?"Open":"Read")+" the full minutes")}">
       <div class="dt">${d} ${MN[m].slice(0,3).toUpperCase()}${where?" · "+escHtml(where.toUpperCase()):""}
+        <span class="pen lk" onclick="momCopyLink('${escAttr(x.id)}',event)"
+          title="Copy a link that opens these minutes"><i class="ti ti-link"></i></span>
         <span class="pen"><i class="ti ti-chevron-right"></i></span></div>
       <div class="tp">${escHtml(x.topic||"Meeting")}</div>
       ${note?`<div class="sn">${escHtml(note)}</div>`:""}
