@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V113.4 Bologna"/>
+<meta name="cc-tool-version" content="V113.6 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -11105,7 +11105,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V113.4 Bologna";
+const TOOL_VERSION="V113.6 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -26909,6 +26909,13 @@ function plMeetOpen(id,m){
   if(!plMerged()||!PLD.ok.meet) return;
   const x=id?momRow(id):null;
   if(id&&!x) return;
+  /* ══ V113.6 — THE DOOR SHUTS BEHIND YOU ═══════════════════════════
+     Chirag, 8 Oct: "the page has changed to that MOM page, but the
+     dialogue is still open." A day window is a window ONTO the day; the
+     moment it sends you somewhere else it is in front of the thing you
+     asked for. Closed here rather than at each of the five places that
+     call this, so a door added later cannot forget. */
+  closeM("day-pop"); closeAllPops();
   MOM.from=(view==="mplan")?PLMODE:null;
   MOM.state=""; MOM.id=id||null;
   MOM.pass=[]; MOM.passOk=false; MOM.ed=null; MOM.fc=""; MOM.npd="";
@@ -27162,8 +27169,9 @@ function momFactsHtml(d){
   if(MOM.fc==="cc") out.push(`<div class="mom-fed"><label>CC team</label>
     <div class="mom-chips">${d.cc_people.map(id=>{ const pp=team.find(p=>p.id===id);
       return chip(pp?pp.name:"Someone",`momCc('${escAttr(id)}',false)`); }).join("")}
-      <select class="mom-pick" onchange="if(this.value)momCc(this.value,true)"><option value="">Add…</option>${
-        team.filter(pp=>d.cc_people.indexOf(pp.id)<0).map(pp=>`<option value="${escAttr(pp.id)}">${escHtml(pp.name)}</option>`).join("")}</select></div>
+      <input class="mom-pick" id="mom-pp-in" placeholder="Type a name" autocomplete="off"
+        oninput="momPpKey('cc')" onfocus="momPpKey('cc')" onblur="setTimeout(momPpClose,60)"
+        onkeydown="if(momPpNav(event))return;"></div>
     <span class="mom-fc" onclick="momFc('')">Done</span></div>`);
   else out.push(fc("cc",!!ccNames.length, ccNames.length
     ? `${ccNames.slice(0,3).map(nm=>momFace(nm,"team")).join("")}${escHtml(momNameList(ccNames))}`
@@ -27172,12 +27180,10 @@ function momFactsHtml(d){
   if(MOM.fc==="cl") out.push(`<div class="mom-fed"><label>Client team</label>
     <div class="mom-chips">${d.client_contact_ids.map(id=>chip(byId[id]?byId[id].name:"Contact",`momCl('${escAttr(id)}',false)`)).join("")
       }${d.client_names.map((nm,i)=>chip(nm,`momName(${i})`)).join("")}
-      ${PLD.contacts.filter(c=>d.client_contact_ids.indexOf(c.id)<0).length
-        ? `<select class="mom-pick" onchange="if(this.value)momCl(this.value,true)"><option value="">Add a contact…</option>${
-            PLD.contacts.filter(c=>d.client_contact_ids.indexOf(c.id)<0)
-              .map(c=>`<option value="${escAttr(c.id)}">${escHtml(c.name||c.email||"Contact")}</option>`).join("")}</select>` : ""}
-      <input class="mom-pick" id="mom-newname" placeholder="Add a name"
-        onkeydown="if(event.key==='Enter'){event.preventDefault();momNewName(this.value);this.value='';}"></div>
+      <input class="mom-pick" id="mom-pp-in" placeholder="Type a name" autocomplete="off"
+        oninput="momPpKey('cl')" onfocus="momPpKey('cl')" onblur="setTimeout(momPpClose,60)"
+        onkeydown="if(momPpNav(event))return;
+          if(event.key==='Enter'){event.preventDefault();momNewName(this.value);this.value='';}"></div>
     <span class="mom-fc" onclick="momFc('')">Done</span></div>`);
   else out.push(fc("cl",!!clNames.length, clNames.length
     ? `${escHtml(momNameList(clNames))}<span class="sub">· client</span>` : "+ Client team"));
@@ -27214,6 +27220,69 @@ function momNameList(a){
    where it is when nothing changes stops the same two handlers calling
    each other in a circle. */
 let MOM_FCT=null;
+/* ══ V113.6 · FIND A PERSON BY TYPING ════════════════════════════════
+   Chirag, 8 Oct: "all the names are jumbled up and there is no way to
+   type and find the person like we do while writing a comment, so we
+   have to search through the entire list to find the person."
+
+   A native <select> cannot be typed into, cannot be filtered, and
+   listed people in whatever order the directory returned them. The @
+   menu in every composer in this tool already solves exactly this, so
+   this is that menu — the same .ms-drop and .brow markup, the same
+   face, the same arrow-and-Enter keys — rather than a second behaviour
+   to learn. Matching is anywhere in the name, not just the start,
+   because the directory's names are handles: typing "labdhi" has to
+   find labdhi.m. */
+let MOMPP=null, MOMPP_HITS=[], MOMPP_SEL=0, MOMPP_WHICH="";
+function momPpPool(which){
+  const d=MOM.draft||{};
+  const by=(a,b)=>String(a.name||"").localeCompare(String(b.name||""));
+  if(which==="cc") return (PEOPLE||[]).filter(pp=>pp.role!=="client"&&d.cc_people.indexOf(pp.id)<0).slice().sort(by);
+  return (PLD.contacts||[]).filter(c=>d.client_contact_ids.indexOf(c.id)<0)
+    .map(c=>({id:c.id,name:c.name||c.email||"Contact",role:"client",email:c.email})).sort(by);
+}
+function momPpClose(){ if(MOMPP){ MOMPP.remove(); MOMPP=null; } MOMPP_HITS=[]; MOMPP_SEL=0; }
+function momPpKey(which){
+  const el=document.getElementById("mom-pp-in"); if(!el) return;
+  const q=String(el.value||"").trim().toLowerCase();
+  momPpClose();
+  MOMPP_WHICH=which;
+  const pool=momPpPool(which);
+  const hits=(q?pool.filter(p=>String(p.name||"").toLowerCase().indexOf(q)>=0):pool).slice(0,8);
+  MOMPP_HITS=hits; MOMPP_SEL=0;
+  if(!hits.length) return;
+  const box=document.createElement("div");
+  box.className="ms-drop open"; box.id="mom-pp";
+  box.style.cssText="position:fixed;z-index:9000;min-width:210px;padding:4px;max-height:280px;overflow:auto;";
+  box.innerHTML=hits.map((pp,i)=>`<div class="brow${i===0?" on":""}" data-mi="${i}"
+      onmousedown="event.preventDefault();momPpPick('${escAttr(pp.id)}')">
+      <span class="nav-av${pp.role==="client"?" client":""}" style="width:20px;height:20px;font-size:11px;${
+        avatarSkin(pp.email||pp.name,pp.role==="client")}">${
+        avatarInner(pp.email||pp.name,escAttr(String(pp.name||"?").slice(0,2).toUpperCase()))}</span>
+      <span class="bnm">${escHtml(pp.name)}</span></div>`).join("");
+  const r=el.getBoundingClientRect();
+  box.style.left=r.left+"px"; box.style.top=(r.bottom+4)+"px";
+  document.body.appendChild(box); MOMPP=box;
+}
+function momPpPick(id){
+  const which=MOMPP_WHICH;
+  momPpClose();
+  if(which==="cc") momCc(id,true); else momCl(id,true);
+  setTimeout(()=>{ const i=document.getElementById("mom-pp-in"); if(i){ i.value=""; i.focus(); } },40);
+}
+/* Arrow and Enter walk the menu, exactly as they do in a composer. It
+   returns TRUE only while the menu is open, so the field's own Enter —
+   which invents a client name the contact list does not carry — still
+   works when there is nothing highlighted to take instead. */
+function momPpNav(e){
+  if(!MOMPP||!MOMPP_HITS.length) return false;
+  const paint=()=>{ [...MOMPP.querySelectorAll(".brow")].forEach((r,i)=>r.classList.toggle("on",i===MOMPP_SEL)); };
+  if(e.key==="ArrowDown"){ e.preventDefault(); MOMPP_SEL=(MOMPP_SEL+1)%MOMPP_HITS.length; paint(); return true; }
+  if(e.key==="ArrowUp"){ e.preventDefault(); MOMPP_SEL=(MOMPP_SEL-1+MOMPP_HITS.length)%MOMPP_HITS.length; paint(); return true; }
+  if(e.key==="Enter"||e.key==="Tab"){ e.preventDefault(); momPpPick(MOMPP_HITS[MOMPP_SEL].id); return true; }
+  if(e.key==="Escape"){ e.preventDefault(); momPpClose(); return true; }
+  return false;
+}
 function momFc(k){
   momKeepNotes();
   const next=(MOM.fc===k)?"":k;
@@ -28111,7 +28180,15 @@ function pbOpen(kind){
     <div class="modal-foot"><span style="flex:1"></span>
       <button class="btn btn-p" onclick="pbDone()">Done</button></div>`);
 }
-function pbDone(){ if(PR.draft){ prEditOpen(PR.draft.id); return; } closeM("promo"); }
+/* A refused write keeps the box open with the words still in it,
+   rather than closing over the top of an error nobody read. */
+async function pbDone(){
+  const out=await pbWriteNew();
+  if(out==="failed") return;
+  if(out==="written") await prReloadNow();
+  if(PR.draft){ prEditOpen(PR.draft.id); return; }
+  closeM("promo");
+}
 
 /* ══ V113.1 · THE CATEGORY OFFERS ITS OWN LIST ═════════════════════
    Chirag, 8 October: "whenever I select a target group category, I
@@ -28208,16 +28285,31 @@ async function pbRename(kind,id,el){
    are the row's own two fields, so Investors with Customers behind it
    never has to be made and then renamed. The master list is untouched
    — this writes a row on the brand and nothing else. */
-async function pbNew(){
+/* ══ V113.5 · DONE KEEPS WHAT IS TYPED IN THE BLANK ROW ════════════
+   Chirag, 8 October: he typed "Management & Sales Team", picked
+   Internal Team, pressed Done, and the group never appeared on the
+   promotion. Nothing was broken about the display — the row was
+   never written. Done only closed the box, so the typed name and
+   the picked category went in the bin without a word.
+
+   The blank row is a form. Done is its save. pbNew and pbDone now
+   go through the same write, and only the reopening differs. */
+async function pbWriteNew(){
   const nm=document.getElementById("pb-newnm"), kd=document.getElementById("pb-newkind");
-  if(!nm||!kd) return;
+  if(!nm||!kd) return "none";
   const label=String(nm.value||"").trim();
-  if(!label){ nm.focus(); return; }
+  if(!label) return "none";
   const key=kd.value;
   const r=await sb.from("brand_segments").insert([{brand_id:activeBrand,segment_key:key,
     label, sort:((PR.bsegs||[]).length+1)*10}]).select("id");
-  if(r.error||!r.data||!r.data.length) return toast("Not added — "+(r.error?r.error.message:"not allowed"),"err");
+  if(r.error||!r.data||!r.data.length){
+    toast("Not added — "+(r.error?r.error.message:"not allowed"),"err"); return "failed"; }
   toast(label+" added");
+  return "written";
+}
+async function pbNew(){
+  const out=await pbWriteNew();
+  if(out!=="written") return;
   await prReloadNow(); pbOpen("seg");
   const next=document.getElementById("pb-newnm"); if(next) next.focus();
 }
@@ -28250,7 +28342,7 @@ async function pbDrop(kind,id){
   toast(row.label+" taken off"); await prReloadNow(); pbOpen(kind);
 }
 
-window.pbNew=pbNew; window.pbOpen=pbOpen; window.pbTake=pbTake; window.pbDrop=pbDrop; window.pbRename=pbRename; window.pbDone=pbDone;
+window.pbWriteNew=pbWriteNew; window.pbNew=pbNew; window.pbOpen=pbOpen; window.pbTake=pbTake; window.pbDrop=pbDrop; window.pbRename=pbRename; window.pbDone=pbDone;
 window.pbKindPicked=pbKindPicked; window.pbTakeDetail=pbTakeDetail; window.pbSegSpareHtml=pbSegSpareHtml;
 /* the old names keep working — two gates and the page's own button
    call prObjOpen by name */
