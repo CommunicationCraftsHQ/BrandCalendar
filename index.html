@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V113.3 Bologna"/>
+<meta name="cc-tool-version" content="V113.4 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -11105,7 +11105,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V113.3 Bologna";
+const TOOL_VERSION="V113.4 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -15409,30 +15409,40 @@ async function exportExcel(rows){ dlBlob(await exportExcelBlob(rows),exportFileB
 async function exportPpt(rows,opt){ dlBlob(await exportPptBlob(rows,opt),exportFileBase()+"-content.pptx"); }
 
 /* ══ V113.0 BOLOGNA — YOU PICK WHAT GOES IN THE DECK ═════════════════
-   Chirag, 8 Oct: "when you are creating a PowerPoint deck, can we create
-   an in between dialogue where one can select what has to be featured
-   in the deck?"
+   Chirag, 8 Oct: "when you click the PowerPoint deck button, a map of
+   what all will be built comes up and you can simply check or uncheck
+   the items that you want or don't want."
 
-   Export › PowerPoint deck used to start building at once. It now opens
-   this box first: one tick per part of the deck, and under Posts one
-   tick per post, so a deck for a client review can leave out the post
-   still being drafted without anyone editing the file afterwards.
+   So Export › PowerPoint deck opens THE DECK'S MAP before anything is
+   built: every part in the order it will appear, and under each part
+   the things inside it — the objective, the theme and the goals; each
+   campaign; each shoot; each influencer; each post. Untick a part and
+   it is gone; untick one campaign and only that campaign is gone. The
+   foot of the box says how many slides the ticks will make, counted by
+   running the real layout without drawing anything.
 
-   PROMOTIONS ARE NOT OFFERED, on purpose. Chirag: the month plan slides
-   "should not include anything about the promotions". Ad spend and
-   targets are internal, and a client deck is the wrong place for them.
+   THE IDEAS TABLE (V113.3) — "a table of all the one line ideas with
+   dates of the posts". It reads the same post ticks as the post slides,
+   so the table and the slides always describe the same posts. Off until
+   somebody turns it on; remembered after that.
 
-   The part ticks are remembered per viewer in this browser. The post
-   ticks are not — they belong to one month, and a remembered post id
-   from September means nothing in October. */
+   A PART WITH NOTHING IN IT IS NOT ON THE MAP, and is not in the deck.
+
+   PROMOTIONS ARE NOT OFFERED. Chirag: the month plan slides "should not
+   include anything about the promotions".
+
+   The part ticks are remembered per viewer in this browser. The item
+   ticks are not — they belong to one month. */
 const EX_PICK_KEY="cc-deck-parts";
 const EX_PARTS=[
   ["title","Title slide"],
-  ["plan","Objective, theme and goals"],
+  ["plan","Month plan"],
   ["camp","Campaigns"],
   ["prod","Production plan"],
   ["infl","Influencers"],
-  ["posts","Posts"]];
+  ["ideas","Post ideas table"],
+  ["posts","Post slides"]];
+const EX_DEFAULT_OFF={ideas:true};
 let EX_PICK=null;
 function exPickSaved(){
   try{ const v=JSON.parse(localStorage.getItem(EX_PICK_KEY)||"null"); if(v&&typeof v==="object") return v; }catch(e){}
@@ -15443,32 +15453,55 @@ function exPlanHas(m){
   return String(mp.objective_line||"").trim()!==""||mpPlain(mp.key_theme||"").trim()!==""
     ||mpvItems(mp,"goal").length>0;
 }
-function exPickCounts(m){
-  return {title:1, plan:exPlanHas(m)?1:0, camp:mpCamps(m).length, prod:mpProds(m).length,
-          infl:mpInfls(m).length, posts:exportRows(activeBrand,YEAR,m).length};
+/* what each part holds this month, as [id, label, extra] — the map's rows */
+function exPickItems(m){
+  const mp=monthPlanFor(activeBrand,YEAR,m), b=brands[activeBrand];
+  const one=String(mp.objective_line||"").trim(), theme=mpPlain(mp.key_theme||"").trim();
+  const goals=mpvItems(mp,"goal");
+  const short=t=>{ t=String(t||"").replace(/\s+/g," ").trim(); return t.length>70?t.slice(0,68)+"…":t; };
+  const plan=[];
+  if(one) plan.push(["obj","Objective",short(one)]);
+  if(theme) plan.push(["theme","Theme",short(theme)]);
+  if(goals.length) plan.push(["goals","Goals",goals.length+" goal"+(goals.length===1?"":"s")]);
+  const posts=exportRows(activeBrand,YEAR,m).map(r=>{
+    const p=(b.social||[]).find(x=>x.id===r.id)||{};
+    return [r.id, r.day+" "+MN[m].slice(0,3), mpPostIdea(p), mpPostState(p), p.status];
+  });
+  return {
+    title:[],
+    plan,
+    camp:mpCamps(m).map(c=>[c.e.id, String(c.e.name||"Campaign"), mpSpan(c.sM,c.sD,c.eM,c.eD,true)]),
+    prod:mpProds(m).map(p=>[p.id, prodWhat(p), prodWhen(p)]),
+    infl:mpInfls(m).map(it=>[it.id, mpPlain(it.label).trim()||"Influencer", ""]),
+    ideas:posts.length?[]:null,
+    posts};
 }
 function exPickOpen(){
   if(exportBusy){ toast("An export is already running — one at a time"); return; }
-  const m=contentMonth, saved=exPickSaved(), n=exPickCounts(m);
-  const rows=exportRows(activeBrand,YEAR,m);
-  EX_PICK={m, parts:{}, posts:{}};
-  EX_PARTS.forEach(([k])=>{ EX_PICK.parts[k]= n[k]>0 && saved[k]!==false; });
-  rows.forEach(r=>{ EX_PICK.posts[r.id]=true; });
+  const m=contentMonth, saved=exPickSaved(), I=exPickItems(m);
+  EX_PICK={m, parts:{}, sub:{}};
+  EX_PARTS.forEach(([k])=>{
+    EX_PICK.parts[k]= saved[k]!==undefined ? saved[k]!==false : !EX_DEFAULT_OFF[k];
+    EX_PICK.sub[k]={}; (I[k]||[]).forEach(r=>{ EX_PICK.sub[k][r[0]]=true; });
+  });
   if(!document.getElementById("ex-pick-css")){
     const st=document.createElement("style"); st.id="ex-pick-css";
-    st.textContent=`.ex-pick .modal-body{padding:10px 26px 18px;}
-.exk{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--div);font-size:13.5px;cursor:pointer;}
-.exk input,.exp-r input{width:15px;height:15px;accent-color:var(--acc);margin:0;flex:none;cursor:pointer;}
-.exk-l{flex:1;font-weight:600;color:var(--text);}
+    st.textContent=`.ex-pick .modal-body{padding:8px 26px 14px;max-height:62vh;overflow-y:auto;}
+.exk{display:flex;align-items:center;gap:10px;padding:11px 0 9px;border-top:1px solid var(--div);font-size:13.5px;cursor:pointer;}
+.exk:first-child{border-top:none;}
+.exk input,.exc input{width:15px;height:15px;accent-color:var(--acc);margin:0;flex:none;cursor:pointer;}
+.exk-l{flex:1;font-weight:700;color:var(--text);}
 .exk-n{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums;}
-.exk.off{opacity:.45;cursor:default;}
-.exp-tools{display:flex;gap:16px;font-size:11.5px;font-weight:700;color:var(--acc);padding:10px 0 4px 25px;}
+.exc-list{padding:0 0 8px 25px;}
+.exc-list.scroll{max-height:220px;overflow-y:auto;}
+.exc{display:grid;grid-template-columns:15px minmax(0,auto) minmax(0,1fr) auto;gap:10px;align-items:center;padding:4px 0;font-size:12.5px;cursor:pointer;}
+.exc .a{color:var(--text);white-space:nowrap;}
+.exc .b{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.exc.off .a,.exc.off .b{opacity:.45;}
+.exc .st{font-size:10.5px;font-weight:700;border-radius:999px;padding:3px 9px;white-space:nowrap;}
+.exp-tools{display:flex;gap:16px;font-size:11.5px;font-weight:700;color:var(--acc);padding:0 0 6px 25px;}
 .exp-tools span{cursor:pointer;}
-.exp-list{max-height:260px;overflow-y:auto;padding-left:25px;}
-.exp-r{display:grid;grid-template-columns:15px 46px minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 0;font-size:12.5px;cursor:pointer;}
-.exp-d{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;}
-.exp-nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);}
-.exp-r .st{font-size:10.5px;font-weight:700;border-radius:999px;padding:3px 9px;white-space:nowrap;}`;
+.ex-sum{margin-right:auto;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;}`;
     document.head.appendChild(st);
   }
   let ov=document.getElementById("ov-ex-pick");
@@ -15480,49 +15513,80 @@ function exPickOpen(){
   exPickDraw();
   openM("ex-pick");
 }
+function exOnCount(k){ const s=EX_PICK.sub[k]||{}; return Object.keys(s).filter(id=>s[id]).length; }
 function exPickDraw(){
   const ov=document.getElementById("ov-ex-pick"); if(!ov||!EX_PICK) return;
-  const m=EX_PICK.m, n=exPickCounts(m), b=brands[activeBrand];
-  const rows=exportRows(activeBrand,YEAR,m);
-  const posts=rows.filter(r=>EX_PICK.posts[r.id]).length;
-  const line=([k,label])=>{
-    const none=n[k]===0, on=!!EX_PICK.parts[k]&&!none;
-    const cnt=k==="title"?"":k==="posts"?(none?"none":`${posts} of ${n[k]}`)
-      :k==="plan"?(none?"none":""):(none?"none":String(n[k]));
-    return `<label class="exk${none?" off":""}" data-part="${k}">
-      <input type="checkbox"${on?" checked":""}${none?" disabled":""} onchange="exPickPart('${k}',this.checked)">
-      <span class="exk-l">${escHtml(label)}</span><span class="exk-n">${escHtml(cnt)}</span></label>`;
+  const m=EX_PICK.m, b=brands[activeBrand], I=exPickItems(m);
+  const keep=ov.querySelector(".modal-body"), top=keep?keep.scrollTop:0;
+  const nPosts=I.posts.length, onPosts=exOnCount("posts");
+  const child=(k,r)=>{
+    const on=!!EX_PICK.sub[k][r[0]];
+    if(k==="posts") return `<label class="exc${on?"":" off"}" data-post="${escAttr(r[0])}">
+        <input type="checkbox"${on?" checked":""} onchange="exPickSub('posts','${escAttr(r[0])}',this.checked)">
+        <span class="a">${escHtml(r[1])}</span><span class="b">${escHtml(r[2])}</span>${mpPill(r[3])}</label>`;
+    return `<label class="exc${on?"":" off"}" data-item="${escAttr(k+":"+r[0])}">
+        <input type="checkbox"${on?" checked":""} onchange="exPickSub('${k}','${escAttr(r[0])}',this.checked)">
+        <span class="a">${escHtml(r[1])}</span><span class="b">${escHtml(r[2]||"")}</span><span></span></label>`;
   };
-  const postList=(EX_PICK.parts.posts&&rows.length)?`<div class="exp-tools">
-        <span onclick="exPickPosts('all')">All</span><span onclick="exPickPosts('none')">None</span>
-        <span onclick="exPickPosts('approved')">Approved only</span></div>
-      <div class="exp-list">${rows.map(r=>{
-        const p=(b.social||[]).find(x=>x.id===r.id)||{};
-        const st=mpPostState(p);
-        return `<label class="exp-r" data-post="${escAttr(r.id)}">
-          <input type="checkbox"${EX_PICK.posts[r.id]?" checked":""} onchange="exPickPost('${escAttr(r.id)}',this.checked)">
-          <span class="exp-d">${r.day} ${escHtml(MN[m].slice(0,3))}</span>
-          <span class="exp-nm">${escHtml(mpPostIdea(p))}</span>${mpPill(st)}</label>`;
-      }).join("")}</div>`:"";
-  const any=exPickAny();
-  ov.innerHTML=`<div class="modal ex-pick" style="max-width:520px;">
+  const part=([k,label])=>{
+    const items=I[k];
+    if(items===null||(k!=="title"&&k!=="ideas"&&!items.length)) return "";
+    if(k==="ideas"&&!nPosts) return "";
+    const on=!!EX_PICK.parts[k];
+    const cnt=k==="title"?"1 slide":k==="ideas"?(on?`${onPosts} post${onPosts===1?"":"s"}`:"")
+      :k==="posts"?`${onPosts} of ${nPosts}`:`${exOnCount(k)} of ${items.length}`;
+    let kids="";
+    /* the post list sits once, under whichever of the two post parts
+       comes last and is on — both read the same ticks */
+    if(k==="posts"&&(on||EX_PICK.parts.ideas)){
+      kids=`<div class="exp-tools"><span onclick="exPickPosts('all')">All</span><span onclick="exPickPosts('none')">None</span>
+          <span onclick="exPickPosts('approved')">Approved only</span></div>
+        <div class="exc-list${nPosts>6?" scroll":""}">${I.posts.map(r=>child("posts",r)).join("")}</div>`;
+    } else if(on&&k!=="posts"&&k!=="ideas"&&items.length){
+      kids=`<div class="exc-list${items.length>6?" scroll":""}">${items.map(r=>child(k,r)).join("")}</div>`;
+    }
+    return `<label class="exk" data-part="${k}">
+        <input type="checkbox"${on?" checked":""} onchange="exPickPart('${k}',this.checked)">
+        <span class="exk-l">${escHtml(label)}</span><span class="exk-n">${escHtml(cnt)}</span></label>${kids}`;
+  };
+  const n=exPickAny()?exDeckSlides(exPickOpt()):0;
+  ov.innerHTML=`<div class="modal ex-pick" style="max-width:560px;">
     <div class="modal-top">
       <div><div class="modal-title">PowerPoint deck</div>
         <div class="modal-sub">${escHtml((b&&b.name)||"")} · ${escHtml(MN[m])} ${YEAR}</div></div>
       <button class="modal-x" onclick="closeM('ex-pick')">✕</button>
     </div>
-    <div class="modal-body">${EX_PARTS.map(line).join("")}${postList}</div>
+    <div class="modal-body">${EX_PARTS.map(part).join("")}</div>
     <div class="modal-foot">
-      <button class="btn btn-g" style="margin-left:auto;" onclick="closeM('ex-pick')">Cancel</button>
-      <button class="btn btn-p" id="ex-pick-go"${any?"":" disabled"} onclick="exPickGo()">Build the deck</button>
+      <span class="ex-sum" id="ex-pick-sum">${n?`${n} slide${n===1?"":"s"}`:"Nothing ticked"}</span>
+      <button class="btn btn-g" onclick="closeM('ex-pick')">Cancel</button>
+      <button class="btn btn-p" id="ex-pick-go"${n?"":" disabled"} onclick="exPickGo()">Build the deck</button>
     </div>
   </div>`;
+  const nb=ov.querySelector(".modal-body"); if(nb) nb.scrollTop=top;
+}
+/* the options the deck is built from — one object, from the ticks */
+function exPickOpt(){
+  const P=EX_PICK.parts, ids=k=>Object.keys(EX_PICK.sub[k]||{}).filter(id=>EX_PICK.sub[k][id]);
+  const pl=EX_PICK.sub.plan||{};
+  return {title:!!P.title, plan:!!P.plan, planParts:{obj:!!pl.obj,theme:!!pl.theme,goals:!!pl.goals},
+    camp:!!P.camp, campIds:ids("camp"), prod:!!P.prod, prodIds:ids("prod"),
+    infl:!!P.infl, inflIds:ids("infl"), ideas:!!P.ideas, posts:!!P.posts, postIds:ids("posts")};
+}
+/* HOW MANY SLIDES — the real layout, run against a deck that only counts */
+function exDeckSlides(opt){
+  let n=0;
+  const stub={addText(){},addShape(){},addImage(){},addMedia(){},addTable(){}};
+  const fake={addSlide(){ n++; return stub; }};
+  try{ exPlanSlides(fake,brands[activeBrand],EX_PICK.m,opt); }catch(e){ return 0; }
+  return n+(opt.title?1:0)+(opt.posts?opt.postIds.length:0);
 }
 function exPickAny(){
   if(!EX_PICK) return false;
-  const p=EX_PICK.parts;
-  const posts=Object.keys(EX_PICK.posts).some(id=>EX_PICK.posts[id]);
-  return !!(p.plan||p.camp||p.prod||p.infl||(p.posts&&posts));
+  const o=exPickOpt(), I=exPickItems(EX_PICK.m);
+  return !!((o.plan&&I.plan.some(r=>o.planParts[r[0]]))||(o.camp&&o.campIds.length)
+    ||(o.prod&&o.prodIds.length)||(o.infl&&o.inflIds.length)
+    ||((o.ideas||o.posts)&&o.postIds.length));
 }
 function exPickPart(k,on){
   if(!EX_PICK) return;
@@ -15531,21 +15595,19 @@ function exPickPart(k,on){
   try{ localStorage.setItem(EX_PICK_KEY,JSON.stringify(s)); }catch(e){}
   exPickDraw();
 }
-function exPickPost(id,on){ if(!EX_PICK) return; EX_PICK.posts[id]=!!on; exPickDraw(); }
+function exPickSub(k,id,on){ if(!EX_PICK) return; EX_PICK.sub[k][id]=!!on; exPickDraw(); }
 function exPickPosts(which){
   if(!EX_PICK) return;
   const b=brands[activeBrand];
-  Object.keys(EX_PICK.posts).forEach(id=>{
+  Object.keys(EX_PICK.sub.posts).forEach(id=>{
     const p=(b.social||[]).find(x=>x.id===id)||{};
-    EX_PICK.posts[id]= which==="all" ? true : which==="none" ? false : p.status==="approved";
+    EX_PICK.sub.posts[id]= which==="all" ? true : which==="none" ? false : p.status==="approved";
   });
   exPickDraw();
 }
 function exPickGo(){
   if(!exPickAny()) return;
-  const P=EX_PICK.parts;
-  const opt={title:!!P.title, plan:!!P.plan, camp:!!P.camp, prod:!!P.prod, infl:!!P.infl,
-             posts:!!P.posts, postIds:Object.keys(EX_PICK.posts).filter(id=>EX_PICK.posts[id])};
+  const opt=exPickOpt();
   closeM("ex-pick");
   doExport("ppt",opt);
 }
@@ -15673,10 +15735,14 @@ function exPlanSlides(pptx,b,m,opt){
   const F=exFlow(pptx,b,m);
 
   /* ── 1 · OBJECTIVE, THEME, GOALS ─────────────────────────────────── */
-  if(opt.plan&&exPlanHas(m)){
-    const one=String(mp.objective_line||"").trim();
-    const theme=mpPlain(mp.key_theme||"").trim();
-    const goals=mpvItems(mp,"goal");
+  const pp0=opt.planParts||{obj:true,theme:true,goals:true}, mp0=monthPlanFor(activeBrand,YEAR,m);
+  if(opt.plan&&((pp0.obj&&String(mp0.objective_line||"").trim())||(pp0.theme&&mpPlain(mp0.key_theme||"").trim())
+      ||(pp0.goals&&mpvItems(mp0,"goal").length))){
+    /* V113.3 — the map can drop any of the three */
+    const pp=opt.planParts||{obj:true,theme:true,goals:true};
+    const one=pp.obj?String(mp.objective_line||"").trim():"";
+    const theme=pp.theme?mpPlain(mp.key_theme||"").trim():"";
+    const goals=pp.goals?mpvItems(mp,"goal"):[];
     F.start("Month plan");
     if(one){
       const lines=exWrap(one,26,F.W,true);
@@ -15707,7 +15773,9 @@ function exPlanSlides(pptx,b,m,opt){
   }
 
   /* ── 2 · CAMPAIGNS, EACH WITH ITS WRITTEN PLAN ───────────────────── */
-  const camps=opt.camp?mpCamps(m):[];
+  /* V113.3 — only the campaigns ticked on the map; no list means all */
+  const pick=(ids,id)=>!ids||ids.indexOf(id)>-1;
+  const camps=opt.camp?mpCamps(m).filter(c=>pick(opt.campIds,c.e.id)):[];
   if(camps.length){
     F.start("Campaigns");
     camps.forEach((c,i)=>{
@@ -15739,11 +15807,30 @@ function exPlanSlides(pptx,b,m,opt){
     });
   }
 
-  /* ── 3 · PRODUCTION, 4 · INFLUENCERS — one line a row ───────────── */
-  const table=(title,cols,rows)=>{
-    if(!rows.length) return;
-    F.start(title);
+  /* ── 3 · PRODUCTION, 4 · INFLUENCERS — one line a row ─────────────
+     V113.2 — Chirag, 8 Oct: "Production plan and influencers should be
+     clubbed in one page if they fit nicely." So both tables are MEASURED
+     first. If together they fit one slide, they share it, each under its
+     own small heading. If not, each gets its own slide as before. A
+     table with no rows draws nothing at all — no heading, no slide. */
+  const PCOLS=[{h:"When",x:0,w:2.6,color:"6B6B6B"},{h:"Shoot",x:2.6,w:7.0,bold:true},{h:"Status",x:9.6,w:2.2}];
+  const ICOLS=[{h:"Influencer",x:0,w:5.4,bold:true},{h:"Profile",x:5.4,w:4.2,color:"185FA5",size:12},{h:"Status",x:9.6,w:2.2}];
+  const prodRows=opt.prod?mpProds(m).filter(p=>pick(opt.prodIds,p.id)).map(p=>[{t:prodWhen(p)},{t:prodWhat(p)},{pill:mpProdState(p)}]):[];
+  const inflRows=opt.infl?mpInfls(m).filter(it=>pick(opt.inflIds,it.id)).map(it=>{ const pf=mpProfOf(it);
+      return [{t:mpPlain(it.label).trim()||"Influencer"},
+              pf?{t:pf.nm+" · "+pf.u.replace(/^https?:\/\/(www\.)?/,"").replace(/\/$/,""),url:pf.u}:{t:"—"},
+              {pill:mpInflState(it)}]; }):[];
+  const HEADH=0.4, SUBH=0.46, GAPH=0.45;
+  const prep=(cols,rows)=>rows.map(r=>{
+    const cells=cols.map((c,i)=>{ const v=r[i]; if(!v||v.pill) return {v,lines:[""]};
+      return {v,lines:exWrap(v.t,c.size||13,c.w-0.15,!!c.bold)}; });
+    return {cells,RH:Math.max(0.26,...cells.map((cl,i)=>exTextH(cl.lines.length,cols[i].size||13)))+0.2};
+  });
+  const tableH=rows=>HEADH+rows.reduce((t,r)=>t+r.RH,0);
+  const table=(cols,rows,sub)=>{
     const head=()=>{
+      if(sub){ F.s.addText(sub,{x:F.X,y:F.y,w:F.W,h:0.3,margin:0,fontSize:14,bold:true,color:"0D0D0D",fontFace:"Arial",valign:"top"});
+               F.y+=SUBH; }
       cols.forEach(c=>F.s.addText(c.h.toUpperCase(),{x:F.X+c.x,y:F.y,w:c.w,h:0.22,margin:0,fontSize:9,
         color:"8A8A8A",bold:true,charSpacing:2,fontFace:"Arial"}));
       F.y+=0.3;
@@ -15752,29 +15839,42 @@ function exPlanSlides(pptx,b,m,opt){
     };
     head();
     rows.forEach(r=>{
-      const cells=cols.map((c,i)=>{ const v=r[i]; if(!v||v.pill) return {v,lines:[""]};
-        return {v,lines:exWrap(v.t,c.size||13,c.w-0.15,!!c.bold)}; });
-      const RH=Math.max(0.26,...cells.map((cl,i)=>exTextH(cl.lines.length,cols[i].size||13)))+0.2;
-      if(F.room(RH)) head();
-      cells.forEach((cl,i)=>{ const c=cols[i], x=F.X+c.x;
+      if(F.room(r.RH)) head();
+      r.cells.forEach((cl,i)=>{ const c=cols[i], x=F.X+c.x;
         if(!cl.v) return;
         if(cl.v.pill) exPill(F.s,cl.v.pill,x,F.y+0.02);
         else exPut(F.s,cl.v.t,{x,y:F.y,w:c.w-0.15,size:c.size||13,bold:c.bold,color:c.color,
                                lines:cl.lines,hyperlink:cl.v.url?{url:cl.v.url}:undefined});
       });
-      F.y+=RH;
+      F.y+=r.RH;
       F.s.addShape("line",{x:F.X,y:F.y-0.1,w:F.W,h:0,line:{color:"EFEEEA",width:0.5}});
     });
   };
-  if(opt.prod) table("Production plan",
-    [{h:"When",x:0,w:2.6,color:"6B6B6B"},{h:"Shoot",x:2.6,w:7.0,bold:true},{h:"Status",x:9.6,w:2.2}],
-    mpProds(m).map(p=>[{t:prodWhen(p)},{t:prodWhat(p)},{pill:mpProdState(p)}]));
-  if(opt.infl) table("Influencers",
-    [{h:"Influencer",x:0,w:5.4,bold:true},{h:"Profile",x:5.4,w:4.2,color:"185FA5",size:12},{h:"Status",x:9.6,w:2.2}],
-    mpInfls(m).map(it=>{ const pf=mpProfOf(it);
-      return [{t:mpPlain(it.label).trim()||"Influencer"},
-              pf?{t:pf.nm+" · "+pf.u.replace(/^https?:\/\/(www\.)?/,"").replace(/\/$/,""),url:pf.u}:{t:"—"},
-              {pill:mpInflState(it)}]; }));
+  const PR=prep(PCOLS,prodRows), IR=prep(ICOLS,inflRows);
+  const together=PR.length&&IR.length
+    && (SUBH+tableH(PR)+GAPH+SUBH+tableH(IR)) <= (F.BOT-F.TOP);
+  if(together){
+    F.start("Production and influencers");
+    table(PCOLS,PR,"Production plan");
+    F.y+=GAPH;
+    table(ICOLS,IR,"Influencers");
+  } else {
+    if(PR.length){ F.start("Production plan"); table(PCOLS,PR); }
+    if(IR.length){ F.start("Influencers"); table(ICOLS,IR); }
+  }
+  /* ── 5 · THE POST IDEAS TABLE (V113.3) ──────────────────────────────
+     "a table of all the one line ideas with dates of the posts". The
+     same posts the map has ticked, one line each: the date, the idea
+     the panel already shows for a post, and where it stands. */
+  if(opt.ideas){
+    const bb=brands[activeBrand];
+    const ICOL=[{h:"Date",x:0,w:1.9,color:"6B6B6B"},{h:"Idea",x:1.9,w:7.7,bold:true},{h:"Status",x:9.6,w:2.2}];
+    const rs=exportRows(activeBrand,YEAR,m).filter(r=>pick(opt.postIds,r.id)).map(r=>{
+      const p=(bb.social||[]).find(x=>x.id===r.id)||{};
+      return [{t:r.day+" "+MN[m].slice(0,3)+" · "+String(r.dayName||"").slice(0,3)},{t:mpPostIdea(p)},{pill:mpPostState(p)}];
+    });
+    if(rs.length){ F.start("Post ideas"); table(ICOL,prep(ICOL,rs)); }
+  }
   return F.n;
 }
 
