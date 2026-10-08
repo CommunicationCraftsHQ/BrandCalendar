@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V112.9 Bologna"/>
+<meta name="cc-tool-version" content="V113.3 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3142,20 +3142,32 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .mom-state{font-size:11.5px;color:var(--subtle);white-space:nowrap;}
 .mom-state.warn{color:var(--acc);font-weight:600;}
 .mom-hd{padding:2px var(--pg-x,32px) 12px;}
-.mom-ttl{font-size:26px;font-weight:700;letter-spacing:-.02em;border:0;background:transparent;font-family:inherit;
+.mom-ttl{font-size:23px;font-weight:700;letter-spacing:-.02em;border:0;background:transparent;font-family:inherit;
   width:100%;padding:2px 0;color:var(--text);}
 .mom-ttl:focus{outline:none;box-shadow:0 1px 0 0 var(--div);}
 .mom-ttl::placeholder{color:var(--subtle);font-weight:400;}
-.mom-facts{display:flex;flex-wrap:wrap;gap:10px 12px;padding:0 var(--pg-x,32px) 14px;}
-.mom-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
-.mom-f.grow{flex:1;min-width:240px;}
-.mom-f label{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--subtle);}
-.mom-in{height:34px;border:1px solid var(--div);border-radius:8px;padding:0 10px;font:inherit;font-size:13px;
+/* ══ BOLOGNA V113.3 · THE FACTS ARE CHIPS ════════════════════════════
+   Six labelled inputs across the width made a page of minutes look
+   like a form to be filled in. A meeting has four or five short facts
+   and they belong on one line, read at a glance. Clicking one turns
+   that chip — and only that chip — into its control; blur turns it
+   back. The controls are the same .mom-in and .mom-chips the form
+   used, so nothing about saving, picking or typing changed. */
+.mom-facts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:11px 0 0;}
+.mom-fc{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--text);
+  background:#F6F3F0;border:1px solid transparent;border-radius:999px;padding:4px 11px;cursor:pointer;max-width:100%;}
+.mom-fc:hover{border-color:var(--div);}
+.mom-fc .sub{color:var(--subtle);font-weight:500;}
+.mom-fc.empty{background:transparent;border:1px dashed var(--div);color:var(--subtle);font-weight:500;}
+.mom-fc .nav-av{width:19px;height:19px;font-size:9px;margin-right:-3px;}
+.mom-fed{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;margin:10px 0 2px;}
+.mom-fed>label{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--subtle);}
+.mom-in{height:32px;border:1px solid var(--div);border-radius:8px;padding:0 10px;font:inherit;font-size:13px;
   background:#fff;min-width:150px;color:var(--text);box-sizing:border-box;}
 .mom-in.wide{min-width:220px;}
 .mom-in:focus{outline:none;border-color:var(--text);}
 .mom-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;border:1px solid var(--div);border-radius:8px;
-  padding:5px 6px;min-height:34px;background:#fff;box-sizing:border-box;}
+  padding:5px 6px;min-height:32px;background:#fff;box-sizing:border-box;}
 .mom-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 8px;
   border-radius:999px;background:#F1EFE8;}
 .mom-chip i{font-size:11px;color:var(--subtle);cursor:pointer;}
@@ -3163,12 +3175,38 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .mom-pick{border:0;background:transparent;font:inherit;font-size:12.5px;color:var(--muted);min-width:110px;height:24px;}
 .mom-pick:focus{outline:none;color:var(--text);}
 .mom-wrap{padding:0 var(--pg-x,32px);}
-.mom-sheet{background:#fff;border:1px solid var(--div);border-radius:14px;padding:24px 28px;max-width:900px;}
-.mom-slbl{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);margin-bottom:10px;}
-.mom-min-edit{font-size:14px;line-height:1.75;min-height:420px;outline:none;}
-.mom-min-edit p{margin:0 0 12px;}
-.mom-min-edit ul,.mom-min-edit ol{margin:0 0 12px 20px;padding:0;}
-.mom-min-edit:empty::before{content:"Write the minutes…";color:var(--subtle);}
+.mom-sheet{background:#fff;border:1px solid var(--div);border-radius:14px;padding:22px 26px;max-width:900px;}
+.mom-rule{height:1px;background:var(--div);margin:18px 0 16px;}
+.mom-slbl{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);margin-bottom:12px;}
+/* ══ A PASSAGE ═══════════════════════════════════════════════════════
+   One block of minutes with the name of whoever wrote it. You edit
+   your own; anybody else adds theirs underneath. The face is the
+   suite's own .nav-av so a person looks the same here as in the bell. */
+.mom-pass{display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;padding:0 0 16px;}
+.mom-pass+.mom-pass{border-top:1px solid #F2EFEB;padding-top:16px;}
+.mom-pass.mom-unsigned{grid-template-columns:0 minmax(0,1fr);gap:0;}
+.mom-pass .nav-av{width:24px;height:24px;font-size:10px;}
+.mom-by{display:flex;align-items:baseline;gap:7px;margin-bottom:5px;flex-wrap:wrap;}
+.mom-by b{font-size:12.5px;font-weight:700;}
+.mom-by .wh{font-size:11.5px;color:var(--subtle);}
+.mom-by .ed{font-size:11.5px;color:var(--subtle);font-style:italic;}
+.mom-by .act{margin-left:auto;display:flex;gap:9px;font-size:11.5px;color:var(--subtle);}
+.mom-by .act span{cursor:pointer;}
+.mom-by .act span:hover{color:var(--acc);}
+.mom-bod{font-size:14px;line-height:1.75;}
+.mom-bod p{margin:0 0 10px;}
+.mom-bod ul,.mom-bod ol{margin:0 0 10px 19px;padding:0;}
+.mom-bod>*:last-child{margin-bottom:0;}
+.mom-newp{display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;border-top:1px solid #F2EFEB;padding-top:16px;}
+.mom-newp.first{border-top:0;padding-top:0;}
+.mom-min-edit{font-size:14px;line-height:1.75;min-height:76px;outline:none;border:1px dashed var(--div);
+  border-radius:10px;padding:9px 12px;}
+.mom-min-edit:focus{border-style:solid;border-color:var(--text);}
+.mom-min-edit p{margin:0 0 10px;}
+.mom-min-edit ul,.mom-min-edit ol{margin:0 0 10px 19px;padding:0;}
+.mom-min-edit:empty::before{content:attr(data-ph);color:var(--subtle);}
+.mom-ed-box{border:1px solid var(--text);border-radius:10px;padding:9px 12px;font-size:14px;line-height:1.75;outline:none;}
+.mom-none{font-size:13.5px;color:var(--subtle);}
 
 /* ══ BOLOGNA V108.4 · THE PLAN PAGE ══════════════════════════════════
    Row 1 (the month cards), the scope, the sheets. The page scrolls as
@@ -10396,7 +10434,7 @@ function buildExportPanel(){
     + (isContent
       ? `<div class="brow act" onclick="closeAllPops();doExport('word')"><i class="ti ti-file-text"></i><span class="bnm">Word document</span></div>
          <div class="brow act" onclick="closeAllPops();doExport('excel')"><i class="ti ti-table"></i><span class="bnm">Excel sheet</span></div>
-         <div class="brow act" onclick="closeAllPops();doExport('ppt')"><i class="ti ti-presentation"></i><span class="bnm">PowerPoint deck</span></div>`
+         <div class="brow act" onclick="closeAllPops();exPickOpen()"><i class="ti ti-presentation"></i><span class="bnm">PowerPoint deck</span></div>`
       : isBrief
       ? `<div class="brow act" onclick="closeAllPops();bdExportXLSX()"><i class="ti ti-table"></i><span class="bnm">Export this brand's data</span></div>`
       : `<div class="brow act" onclick="closeAllPops();exportXLSX()"><i class="ti ti-table"></i><span class="bnm">Excel sheet</span></div>`);
@@ -11067,7 +11105,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V112.9 Bologna";
+const TOOL_VERSION="V113.3 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -12193,6 +12231,7 @@ async function loadPostFeedback(){
       loadShareLinks(),
       loadTaskSeen(),
       loadCreativeSeen(),
+      loadMeetingSeen(),
       loadPrefs(),
       loadNotifyPref(),
       loadAssignments(),
@@ -14356,7 +14395,8 @@ function notifItems(){
        for the day somebody wants "muted, but still counted". */
     .filter(r=>!brandMuted(r.brand_id))
     .filter(r=>{
-      const seen=r.creative_id?CR_SEEN[r.creative_id]:r.task_id?TASK_SEEN[r.task_id]:POSTFB.seen[r.post_id];
+      const seen=r.meeting_id?MEET_SEEN[r.meeting_id]
+        :r.creative_id?CR_SEEN[r.creative_id]:r.task_id?TASK_SEEN[r.task_id]:POSTFB.seen[r.post_id];
       return !seen || new Date(r.created_at)>new Date(seen);
     })
     .map(r=>({
@@ -14364,7 +14404,8 @@ function notifItems(){
          "mark all read" reach for it.post.id, and a row shaped
          differently depending on its kind is how one of those quietly
          starts throwing on a Tuesday. One shape, one extra field. */
-      kind:r.creative_id?"creative":r.task_id?"task":"post",
+      kind:r.meeting_id?"meeting":r.creative_id?"creative":r.task_id?"task":"post",
+      meetingId:r.meeting_id||null, meetingTitle:r.meeting_title||"",
       taskId:r.task_id||null, taskTitle:r.task_title||"",
       creativeId:r.creative_id||null, creativeTitle:r.creative_title||"", promotionId:r.promotion_id||null,
       brandId:r.brand_id, brandName:r.brand_name,
@@ -14512,14 +14553,20 @@ function notifRowHtml(it,bid){
         <div class="attr"><span class="nwhat">Production</span>${escHtml(it.line||"")}<span class="when">${fbTimeLabel(it.c.created_at)}</span></div>
       </div></div>`;
   }
-  const verb=it.mention?"mentioned you":"commented";
+  /* A PASSAGE OF MINUTES IS NOT A COMMENT EITHER. Nobody "commented
+     on" a meeting — they wrote it up, and the thing worth naming on
+     the row is which meeting. */
+  const isMeet=it.kind==="meeting";
+  const verb=it.mention?"mentioned you":isMeet?"wrote up":"commented";
   const isTask=it.kind==="task", isCr=it.kind==="creative";
-  const where=isCr
+  const where=isMeet
+    ? `<span class="ntask">${escAttr(it.meetingTitle||"a meeting")}</span>`
+    : isCr
     ? `<span class="ntask">${escAttr(it.creativeTitle||"an ad creative")}</span>`
     : isTask
     ? `<span class="ntask">${escAttr(it.taskTitle||"a branding task")}</span>`
     : notifDate(it.post.month,it.post.date);
-  const target=isCr?(it.promotionId+"|"+it.creativeId):isTask?it.taskId:it.post.id;
+  const target=isMeet?it.meetingId:isCr?(it.promotionId+"|"+it.creativeId):isTask?it.taskId:it.post.id;
   /* MOTH — `men` is the whole visual difference. Before this the markup
      for a mention and for an ordinary comment was byte-identical, and the
      only thing that changed was one word in `.attr`, which is the
@@ -14623,6 +14670,17 @@ function buildNotifPanel(){
 async function notifOpen(brandId,kind,postId){
   closeAllPops();
   if(kind==="shoot"){ openProdInPlanner(postId); return; }
+  if(kind==="meeting"){
+    const mid=postId;                          // same slot, a meeting
+    pickBrand(brandId);
+    /* WAIT FOR THE PLAN LOAD. plMeetOpen looks the meeting up in
+       PLD.meet and bounces when it is not there yet, so a bell row
+       for a brand you were not on would land nowhere. */
+    if(typeof plLoad==="function"&&PLD.brand!==brandId) await plLoad(brandId);
+    await meetMarkSeen(mid,brandId);
+    plMeetOpen(mid);
+    return;
+  }
   if(kind==="creative"){
     const [pid,cid]=String(postId).split("|");   /* same slot, two ids */
     pickBrand(brandId);
@@ -14666,9 +14724,11 @@ async function notifMarkAll(){
   const posts=[...new Set(items.filter(i=>i.kind==="post").map(i=>i.post.id).filter(Boolean))];
   const tasks=[...new Set(items.filter(i=>i.kind==="task").map(i=>i.taskId).filter(Boolean))];
   const crs=items.filter(i=>i.kind==="creative"&&i.creativeId);
+  const meets=items.filter(i=>i.kind==="meeting"&&i.meetingId);
   for(const pid of posts) await fbMarkSeen(pid);
   for(const tid of tasks) await taskMarkSeen(tid);
   for(const c of crs) await crMarkSeen(c.creativeId,c.brandId);
+  for(const m of meets) await meetMarkSeen(m.meetingId,m.brandId);
   closeAllPops(); syncBell(); renderSocial();
 }
 
@@ -15294,7 +15354,7 @@ function exportProgress(done,total,label){
 function exportProgressDone(){ EXPORT_PROG=null;
   const el=document.getElementById("export-prog"); if(el){ el.classList.remove("open"); el.innerHTML=""; } }
 
-async function doExport(kind){
+async function doExport(kind,opt){
   if(exportBusy){ toast("An export is already running — one at a time"); return; }
   exportBusy=true;
   const btn=document.getElementById("export-btn");
@@ -15302,12 +15362,16 @@ async function doExport(kind){
   const m=document.getElementById("export-menu"); if(m) m.style.display="none";
   const name={word:"Word document",excel:"Excel sheet",ppt:"PowerPoint deck"}[kind];
   try{
-    const rows=exportRows(activeBrand,YEAR,contentMonth);
-    if(!rows.length){ toast("No posts to export for "+MN[contentMonth],"err"); return; }
+    let rows=exportRows(activeBrand,YEAR,contentMonth);
+    /* V113.0 — the deck takes only the posts ticked in the picker, and
+       may hold no posts at all: a plan-only deck is a real ask */
+    const picked=kind==="ppt"&&!!opt;
+    if(picked) rows=opt.posts?rows.filter(r=>opt.postIds.indexOf(r.id)>-1):[];
+    if(!rows.length&&!picked){ toast("No posts to export for "+MN[contentMonth],"err"); return; }
     exportProgress(0,rows.length,"Building the "+name+"…");
     if(kind==="word") await exportWord(rows);
     else if(kind==="excel") await exportExcel(rows);
-    else await exportPpt(rows);
+    else await exportPpt(rows,opt);
     toast(name+" downloaded");
   }catch(e){ toast("Export failed: "+e.message,"err"); }
   finally{
@@ -15342,7 +15406,378 @@ async function exportExcel(rows){ dlBlob(await exportExcelBlob(rows),exportFileB
    Removed 28 August 2026 — Moth. Seven duplicates remain and are listed
    in the batch checklist: dead, but not in this batch's path, and
    removing code nobody is about to touch is risk without reward. */
-async function exportPpt(rows){ dlBlob(await exportPptBlob(rows),exportFileBase()+"-content.pptx"); }
+async function exportPpt(rows,opt){ dlBlob(await exportPptBlob(rows,opt),exportFileBase()+"-content.pptx"); }
+
+/* ══ V113.0 BOLOGNA — YOU PICK WHAT GOES IN THE DECK ═════════════════
+   Chirag, 8 Oct: "when you are creating a PowerPoint deck, can we create
+   an in between dialogue where one can select what has to be featured
+   in the deck?"
+
+   Export › PowerPoint deck used to start building at once. It now opens
+   this box first: one tick per part of the deck, and under Posts one
+   tick per post, so a deck for a client review can leave out the post
+   still being drafted without anyone editing the file afterwards.
+
+   PROMOTIONS ARE NOT OFFERED, on purpose. Chirag: the month plan slides
+   "should not include anything about the promotions". Ad spend and
+   targets are internal, and a client deck is the wrong place for them.
+
+   The part ticks are remembered per viewer in this browser. The post
+   ticks are not — they belong to one month, and a remembered post id
+   from September means nothing in October. */
+const EX_PICK_KEY="cc-deck-parts";
+const EX_PARTS=[
+  ["title","Title slide"],
+  ["plan","Objective, theme and goals"],
+  ["camp","Campaigns"],
+  ["prod","Production plan"],
+  ["infl","Influencers"],
+  ["posts","Posts"]];
+let EX_PICK=null;
+function exPickSaved(){
+  try{ const v=JSON.parse(localStorage.getItem(EX_PICK_KEY)||"null"); if(v&&typeof v==="object") return v; }catch(e){}
+  return {};
+}
+function exPlanHas(m){
+  const mp=monthPlanFor(activeBrand,YEAR,m);
+  return String(mp.objective_line||"").trim()!==""||mpPlain(mp.key_theme||"").trim()!==""
+    ||mpvItems(mp,"goal").length>0;
+}
+function exPickCounts(m){
+  return {title:1, plan:exPlanHas(m)?1:0, camp:mpCamps(m).length, prod:mpProds(m).length,
+          infl:mpInfls(m).length, posts:exportRows(activeBrand,YEAR,m).length};
+}
+function exPickOpen(){
+  if(exportBusy){ toast("An export is already running — one at a time"); return; }
+  const m=contentMonth, saved=exPickSaved(), n=exPickCounts(m);
+  const rows=exportRows(activeBrand,YEAR,m);
+  EX_PICK={m, parts:{}, posts:{}};
+  EX_PARTS.forEach(([k])=>{ EX_PICK.parts[k]= n[k]>0 && saved[k]!==false; });
+  rows.forEach(r=>{ EX_PICK.posts[r.id]=true; });
+  if(!document.getElementById("ex-pick-css")){
+    const st=document.createElement("style"); st.id="ex-pick-css";
+    st.textContent=`.ex-pick .modal-body{padding:10px 26px 18px;}
+.exk{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--div);font-size:13.5px;cursor:pointer;}
+.exk input,.exp-r input{width:15px;height:15px;accent-color:var(--acc);margin:0;flex:none;cursor:pointer;}
+.exk-l{flex:1;font-weight:600;color:var(--text);}
+.exk-n{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums;}
+.exk.off{opacity:.45;cursor:default;}
+.exp-tools{display:flex;gap:16px;font-size:11.5px;font-weight:700;color:var(--acc);padding:10px 0 4px 25px;}
+.exp-tools span{cursor:pointer;}
+.exp-list{max-height:260px;overflow-y:auto;padding-left:25px;}
+.exp-r{display:grid;grid-template-columns:15px 46px minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 0;font-size:12.5px;cursor:pointer;}
+.exp-d{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.exp-nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);}
+.exp-r .st{font-size:10.5px;font-weight:700;border-radius:999px;padding:3px 9px;white-space:nowrap;}`;
+    document.head.appendChild(st);
+  }
+  let ov=document.getElementById("ov-ex-pick");
+  if(!ov){
+    ov=document.createElement("div"); ov.className="overlay"; ov.id="ov-ex-pick";
+    ov.onclick=e=>{ if(e.target===ov) closeM("ex-pick"); };
+    document.body.appendChild(ov);
+  }
+  exPickDraw();
+  openM("ex-pick");
+}
+function exPickDraw(){
+  const ov=document.getElementById("ov-ex-pick"); if(!ov||!EX_PICK) return;
+  const m=EX_PICK.m, n=exPickCounts(m), b=brands[activeBrand];
+  const rows=exportRows(activeBrand,YEAR,m);
+  const posts=rows.filter(r=>EX_PICK.posts[r.id]).length;
+  const line=([k,label])=>{
+    const none=n[k]===0, on=!!EX_PICK.parts[k]&&!none;
+    const cnt=k==="title"?"":k==="posts"?(none?"none":`${posts} of ${n[k]}`)
+      :k==="plan"?(none?"none":""):(none?"none":String(n[k]));
+    return `<label class="exk${none?" off":""}" data-part="${k}">
+      <input type="checkbox"${on?" checked":""}${none?" disabled":""} onchange="exPickPart('${k}',this.checked)">
+      <span class="exk-l">${escHtml(label)}</span><span class="exk-n">${escHtml(cnt)}</span></label>`;
+  };
+  const postList=(EX_PICK.parts.posts&&rows.length)?`<div class="exp-tools">
+        <span onclick="exPickPosts('all')">All</span><span onclick="exPickPosts('none')">None</span>
+        <span onclick="exPickPosts('approved')">Approved only</span></div>
+      <div class="exp-list">${rows.map(r=>{
+        const p=(b.social||[]).find(x=>x.id===r.id)||{};
+        const st=mpPostState(p);
+        return `<label class="exp-r" data-post="${escAttr(r.id)}">
+          <input type="checkbox"${EX_PICK.posts[r.id]?" checked":""} onchange="exPickPost('${escAttr(r.id)}',this.checked)">
+          <span class="exp-d">${r.day} ${escHtml(MN[m].slice(0,3))}</span>
+          <span class="exp-nm">${escHtml(mpPostIdea(p))}</span>${mpPill(st)}</label>`;
+      }).join("")}</div>`:"";
+  const any=exPickAny();
+  ov.innerHTML=`<div class="modal ex-pick" style="max-width:520px;">
+    <div class="modal-top">
+      <div><div class="modal-title">PowerPoint deck</div>
+        <div class="modal-sub">${escHtml((b&&b.name)||"")} · ${escHtml(MN[m])} ${YEAR}</div></div>
+      <button class="modal-x" onclick="closeM('ex-pick')">✕</button>
+    </div>
+    <div class="modal-body">${EX_PARTS.map(line).join("")}${postList}</div>
+    <div class="modal-foot">
+      <button class="btn btn-g" style="margin-left:auto;" onclick="closeM('ex-pick')">Cancel</button>
+      <button class="btn btn-p" id="ex-pick-go"${any?"":" disabled"} onclick="exPickGo()">Build the deck</button>
+    </div>
+  </div>`;
+}
+function exPickAny(){
+  if(!EX_PICK) return false;
+  const p=EX_PICK.parts;
+  const posts=Object.keys(EX_PICK.posts).some(id=>EX_PICK.posts[id]);
+  return !!(p.plan||p.camp||p.prod||p.infl||(p.posts&&posts));
+}
+function exPickPart(k,on){
+  if(!EX_PICK) return;
+  EX_PICK.parts[k]=!!on;
+  const s=exPickSaved(); s[k]=!!on;
+  try{ localStorage.setItem(EX_PICK_KEY,JSON.stringify(s)); }catch(e){}
+  exPickDraw();
+}
+function exPickPost(id,on){ if(!EX_PICK) return; EX_PICK.posts[id]=!!on; exPickDraw(); }
+function exPickPosts(which){
+  if(!EX_PICK) return;
+  const b=brands[activeBrand];
+  Object.keys(EX_PICK.posts).forEach(id=>{
+    const p=(b.social||[]).find(x=>x.id===id)||{};
+    EX_PICK.posts[id]= which==="all" ? true : which==="none" ? false : p.status==="approved";
+  });
+  exPickDraw();
+}
+function exPickGo(){
+  if(!exPickAny()) return;
+  const P=EX_PICK.parts;
+  const opt={title:!!P.title, plan:!!P.plan, camp:!!P.camp, prod:!!P.prod, infl:!!P.infl,
+             posts:!!P.posts, postIds:Object.keys(EX_PICK.posts).filter(id=>EX_PICK.posts[id])};
+  closeM("ex-pick");
+  doExport("ppt",opt);
+}
+
+/* ══ V113.0 — THE MONTH PLAN, ACROSS AS MANY SLIDES AS IT NEEDS ══════
+   The month plan became a whole block in V111–V112 — a one-line
+   objective, a theme, goals, and cards for campaigns (each with its own
+   written plan), production and influencers. The deck still drew the
+   OLD shape: the first line of the theme as a headline in a box 0.8in
+   tall, a body box of fixed height, and goal cards that asked
+   PowerPoint to shrink their text. PowerPoint does not clip and does not
+   shrink until somebody edits the box, so a real October printed its
+   headline straight through the eyebrow and its goal out of its card.
+   That is Chirag's screenshot of 8 Oct.
+
+   So nothing here has a fixed height any more. Every piece of text is
+   MEASURED before it is placed — with a canvas, in Arial, at the size
+   it will be drawn — and when the next piece does not fit, a new slide
+   is started with the section's name and "continued". A long month
+   becomes three slides instead of one slide with words on top of words.
+
+   What is in it is exactly the panel's own cards, read through the
+   panel's own functions (mpCamps, mpProds, mpInfls), so the deck and
+   the screen cannot disagree about what October holds. Promotions are
+   left out — see the note above the picker. */
+let EX_MEASURE=null;
+function exTextW(s,pt,bold){
+  try{ if(!EX_MEASURE) EX_MEASURE=document.createElement("canvas").getContext("2d"); }catch(e){ EX_MEASURE=null; }
+  if(EX_MEASURE&&EX_MEASURE.measureText){
+    EX_MEASURE.font=(bold?"bold ":"")+pt+"px Arial";
+    const w=EX_MEASURE.measureText(String(s)).width;
+    if(w>0||!String(s)) return w/72;
+  }
+  return String(s).length*pt*(bold?0.58:0.53)/72;
+}
+/* the lines a paragraph will take at this size and width. Wrapping is
+   done at 94% of the box so PowerPoint, whose metrics are not quite the
+   canvas's, never finds a word that has to drop a line we did not count. */
+function exWrap(text,pt,w,bold){
+  const out=[], room=w*0.94;
+  String(text==null?"":text).split("\n").forEach(par=>{
+    const words=par.split(/\s+/).filter(Boolean);
+    if(!words.length){ out.push(""); return; }
+    let cur="";
+    words.forEach(wd=>{
+      while(exTextW(wd,pt,bold)>room&&wd.length>1){        /* a url longer than the box */
+        let k=wd.length; while(k>1&&exTextW(wd.slice(0,k),pt,bold)>room) k--;
+        if(cur){ out.push(cur); cur=""; }
+        out.push(wd.slice(0,k)); wd=wd.slice(k);
+      }
+      const t=cur?cur+" "+wd:wd;
+      if(cur&&exTextW(t,pt,bold)>room){ out.push(cur); cur=wd; } else cur=t;
+    });
+    if(cur) out.push(cur);
+  });
+  return out;
+}
+const EX_LH=1.25;                                   /* line height, as a multiple of the size */
+function exTextH(lines,pt){ return Math.max(1,lines)*pt*EX_LH/72; }
+/* one text box whose height is the height of its words, never a guess */
+function exPut(s,text,o){
+  const lines=o.lines||exWrap(text,o.size,o.w,o.bold);
+  const h=exTextH(lines.length,o.size);
+  s.addText(String(text),{x:o.x,y:o.y,w:o.w,h:h+0.02,margin:0,fontSize:o.size,color:o.color||"0D0D0D",
+    bold:!!o.bold,italic:!!o.italic,valign:"top",align:o.align||"left",fontFace:"Arial",
+    lineSpacing:o.size*EX_LH,charSpacing:o.charSpacing,hyperlink:o.hyperlink});
+  return h;
+}
+/* a status pill, from the panel's own [label, ground, ink] triples. The
+   influencer ground is the ink plus "1A" — eight hex digits, which a
+   .pptx cannot hold — so it becomes the ink at 90% transparency. */
+function exPill(s,st,x,y){
+  const label=String(st[0]||""), ink=String(st[2]||"#5C5077").replace("#","").slice(0,6);
+  let bg=String(st[1]||"#EFEDF6").replace("#",""), tr=0;
+  if(bg.length===8){ bg=bg.slice(0,6); tr=90; }
+  const w=exTextW(label,9,true)+0.26;
+  s.addShape("roundRect",{x,y,w,h:0.26,rectRadius:0.13,fill:{color:bg,transparency:tr},line:{color:bg,transparency:tr}});
+  s.addText(label,{x,y,w,h:0.26,margin:0,align:"center",valign:"middle",fontSize:9,bold:true,color:ink,fontFace:"Arial"});
+  return w;
+}
+
+/* THE FLOW. A slide is a page with a top and a bottom; `room(h)` asks
+   for h inches and starts the next slide when they are not there. */
+function exFlow(pptx,b,m){
+  const TOP=1.5, BOT=6.95, X=0.75, W=11.8;
+  const F={X,W,TOP,BOT,s:null,y:0,title:"",n:0};
+  F.start=(title,cont)=>{
+    const s=pptx.addSlide(); s.background={color:"FFFFFF"};
+    s.addText(`${MN[m]} ${YEAR}  ·  ${b.name}`.toUpperCase(),
+      {x:X,y:0.5,w:W,h:0.26,margin:0,fontSize:10,color:"D62828",bold:true,charSpacing:2,fontFace:"Arial"});
+    s.addText(title+(cont?"  (continued)":""),
+      {x:X,y:0.82,w:W,h:0.48,margin:0,fontSize:22,color:cont?"8A8A8A":"0D0D0D",bold:true,fontFace:"Arial",valign:"top"});
+    F.s=s; F.y=TOP; F.title=title; F.n++;
+    return s;
+  };
+  F.room=h=>{ if(F.y+h>BOT+0.001){ F.start(F.title,true); return true; } return false; };
+  F.left=()=>BOT-F.y;
+  return F;
+}
+
+/* a block of paragraphs that may run onto the next slide, split at a
+   paragraph if it can be and at a line only when one paragraph is
+   taller than a whole slide */
+function exParas(F,text,o){
+  const pars=String(text||"").split(/\n{2,}/).map(t=>t.replace(/\s+$/,"")).filter(t=>t.trim());
+  pars.forEach((par,i)=>{
+    const lines=exWrap(par,o.size,o.w||F.W,false);
+    let at=0;
+    while(at<lines.length){
+      const fit=Math.floor((F.left())/(o.size*EX_LH/72));
+      /* a paragraph that would fit whole on a fresh slide goes there whole */
+      const whole=at===0&&fit<lines.length&&exTextH(lines.length,o.size)<=F.BOT-F.TOP-0.2;
+      if(fit<1||whole){ const py=F.y; F.start(F.title,true); if(o.onCont) o.onCont(py); continue; }
+      const take=lines.slice(at,at+fit);
+      const h=exPut(F.s,take.join("\n"),{x:o.x||F.X,y:F.y,w:o.w||F.W,size:o.size,color:o.color,lines:take});
+      F.y+=h; at+=take.length;
+      if(at<lines.length){ const py=F.y; F.start(F.title,true); if(o.onCont) o.onCont(py); }
+    }
+    F.y+=(i<pars.length-1?o.size*0.7/72:0);
+  });
+}
+
+function exPlanSlides(pptx,b,m,opt){
+  const mp=monthPlanFor(activeBrand,YEAR,m);
+  const F=exFlow(pptx,b,m);
+
+  /* ── 1 · OBJECTIVE, THEME, GOALS ─────────────────────────────────── */
+  if(opt.plan&&exPlanHas(m)){
+    const one=String(mp.objective_line||"").trim();
+    const theme=mpPlain(mp.key_theme||"").trim();
+    const goals=mpvItems(mp,"goal");
+    F.start("Month plan");
+    if(one){
+      const lines=exWrap(one,26,F.W,true);
+      F.y+=exPut(F.s,one,{x:F.X,y:F.y,w:F.W,size:26,bold:true,lines})+0.22;
+    }
+    if(theme) { exParas(F,theme,{size:13,color:"3A3A3A"}); F.y+=0.3; }
+    if(goals.length){
+      /* cards three across; a row is as tall as its tallest goal */
+      const CW=(F.W-2*0.25)/3, PAD=0.12;
+      F.room(0.3+0.6);
+      F.s.addText("GOALS",{x:F.X,y:F.y,w:4,h:0.22,margin:0,fontSize:9,color:"8A8A8A",bold:true,charSpacing:2,fontFace:"Arial"});
+      F.y+=0.32;
+      for(let r=0;r<goals.length;r+=3){
+        const row=goals.slice(r,r+3).map(g=>{ const t=mpPlain(g.label).trim(); return {t,lines:exWrap(t,11,CW-2*PAD,false)}; });
+        const RH=Math.max(...row.map(c=>exTextH(c.lines.length,11)))+2*PAD;
+        if(F.room(RH)){
+          F.s.addText("GOALS",{x:F.X,y:F.y,w:4,h:0.22,margin:0,fontSize:9,color:"8A8A8A",bold:true,charSpacing:2,fontFace:"Arial"});
+          F.y+=0.32;
+        }
+        row.forEach((c,i)=>{
+          const x=F.X+i*(CW+0.25);
+          F.s.addShape("rect",{x,y:F.y,w:CW,h:RH,fill:{color:"F8F7F4"},line:{color:"E6E4DE",width:0.75}});
+          exPut(F.s,c.t,{x:x+PAD,y:F.y+PAD,w:CW-2*PAD,size:11,lines:c.lines});
+        });
+        F.y+=RH+0.14;
+      }
+    }
+  }
+
+  /* ── 2 · CAMPAIGNS, EACH WITH ITS WRITTEN PLAN ───────────────────── */
+  const camps=opt.camp?mpCamps(m):[];
+  if(camps.length){
+    F.start("Campaigns");
+    camps.forEach((c,i)=>{
+      const name=String(c.e.name||"Campaign").trim();
+      const when=mpSpan(c.sM,c.sD,c.eM,c.eD,true);
+      const plan=mpPlain(c.e.notes||"").trim();
+      const IX=F.X+0.28, IW=F.W-0.28;
+      const nl=exWrap(name,16,IW,true);
+      const headH=exTextH(nl.length,16)+0.05+exTextH(1,10.5);
+      /* a campaign's name never sits alone at the foot of a slide */
+      const firstPar=plan?exWrap(plan.split(/\n{2,}/)[0],12,IW,false).length:0;
+      if(i>0) F.y+=0.32;
+      F.room(headH+(plan?Math.min(3,firstPar)*12*EX_LH/72+0.1:0));
+      const y0=F.y, s0=F.s;
+      F.y+=exPut(F.s,name,{x:IX,y:F.y,w:IW,size:16,bold:true,lines:nl})+0.05;
+      F.y+=exPut(F.s,when,{x:IX,y:F.y,w:IW,size:10.5,color:"8A8A8A"});
+      let segTop=y0;
+      const bar=(s,top,bot)=>s.addShape("rect",{x:F.X,y:top,w:0.07,h:Math.max(0.2,bot-top),
+        fill:{color:(c.sM===c.eM?CAMP_PINK_DEEP:CAMP_PINK).replace("#","")},line:{type:"none"}});
+      if(plan){
+        F.y+=0.12;
+        let cur=s0;
+        exParas(F,plan,{x:IX,w:IW,size:12,color:"3A3A3A",onCont:py=>{
+          bar(cur,segTop,py); cur=F.s; segTop=F.y;
+          F.y+=exPut(F.s,name+"  (continued)",{x:IX,y:F.y,w:IW,size:11,bold:true,color:"8A8A8A"})+0.08;
+        }});
+        bar(F.s,segTop,F.y);
+      } else bar(F.s,y0,F.y);
+    });
+  }
+
+  /* ── 3 · PRODUCTION, 4 · INFLUENCERS — one line a row ───────────── */
+  const table=(title,cols,rows)=>{
+    if(!rows.length) return;
+    F.start(title);
+    const head=()=>{
+      cols.forEach(c=>F.s.addText(c.h.toUpperCase(),{x:F.X+c.x,y:F.y,w:c.w,h:0.22,margin:0,fontSize:9,
+        color:"8A8A8A",bold:true,charSpacing:2,fontFace:"Arial"}));
+      F.y+=0.3;
+      F.s.addShape("line",{x:F.X,y:F.y,w:F.W,h:0,line:{color:"E6E4DE",width:0.75}});
+      F.y+=0.1;
+    };
+    head();
+    rows.forEach(r=>{
+      const cells=cols.map((c,i)=>{ const v=r[i]; if(!v||v.pill) return {v,lines:[""]};
+        return {v,lines:exWrap(v.t,c.size||13,c.w-0.15,!!c.bold)}; });
+      const RH=Math.max(0.26,...cells.map((cl,i)=>exTextH(cl.lines.length,cols[i].size||13)))+0.2;
+      if(F.room(RH)) head();
+      cells.forEach((cl,i)=>{ const c=cols[i], x=F.X+c.x;
+        if(!cl.v) return;
+        if(cl.v.pill) exPill(F.s,cl.v.pill,x,F.y+0.02);
+        else exPut(F.s,cl.v.t,{x,y:F.y,w:c.w-0.15,size:c.size||13,bold:c.bold,color:c.color,
+                               lines:cl.lines,hyperlink:cl.v.url?{url:cl.v.url}:undefined});
+      });
+      F.y+=RH;
+      F.s.addShape("line",{x:F.X,y:F.y-0.1,w:F.W,h:0,line:{color:"EFEEEA",width:0.5}});
+    });
+  };
+  if(opt.prod) table("Production plan",
+    [{h:"When",x:0,w:2.6,color:"6B6B6B"},{h:"Shoot",x:2.6,w:7.0,bold:true},{h:"Status",x:9.6,w:2.2}],
+    mpProds(m).map(p=>[{t:prodWhen(p)},{t:prodWhat(p)},{pill:mpProdState(p)}]));
+  if(opt.infl) table("Influencers",
+    [{h:"Influencer",x:0,w:5.4,bold:true},{h:"Profile",x:5.4,w:4.2,color:"185FA5",size:12},{h:"Status",x:9.6,w:2.2}],
+    mpInfls(m).map(it=>{ const pf=mpProfOf(it);
+      return [{t:mpPlain(it.label).trim()||"Influencer"},
+              pf?{t:pf.nm+" · "+pf.u.replace(/^https?:\/\/(www\.)?/,"").replace(/\/$/,""),url:pf.u}:{t:"—"},
+              {pill:mpInflState(it)}]; }));
+  return F.n;
+}
+
 
 // ── BRAND BRIEF (per-brand marketing dashboard, staff only) ─────
 // Data lives in brands[activeBrand].brief (one jsonb object).
@@ -18345,87 +18780,26 @@ async function exEnsureSlides(rows){
   }catch(e){ /* a deck built from what is loaded beats no deck at all */ }
 }
 
-async function exportPptBlob(rows){
+async function exportPptBlob(rows,opt){
+  /* V113.0 — no picker (a gate, an old caller) means everything, as before */
+  opt=opt||{title:true,plan:true,camp:true,prod:true,infl:true,posts:true};
   const Pg=await loadExportLib("pptxgenjs");
   EX_VIDEO_SPENT={n:0};          /* the budget is per deck, not per session */
   await exEnsureSlides(rows);
   const pptx=new Pg();
   pptx.defineLayout({name:"CC169",width:13.33,height:7.5}); pptx.layout="CC169";
   const b=brands[activeBrand], W=13.33, H=7.5, PW=6.3;
+  if(opt.title!==false){
   const t=pptx.addSlide(); t.background={color:"0D0D0D"};
   t.addText(b.name.toUpperCase(),{x:0.7,y:2.6,w:10,h:0.5,fontSize:16,color:"D62828",bold:true,charSpacing:3,fontFace:"Arial"});
   t.addText([{text:`${MN[contentMonth]} ${YEAR}`,options:{breakLine:true}},{text:"Content Plan",options:{color:"AAAAAA"}}],
     {x:0.7,y:3.1,w:11,h:2.2,fontSize:44,color:"FFFFFF",bold:true,fontFace:"Arial"});
-
-  /* ══ MOTH — THE MONTH PLAN, ON ITS OWN SLIDE ══════════════════════
-     The deck was a title slide plus one slide per post, and the plan
-     that all those posts exist to serve was nowhere in it. The words
-     "Content Plan" on the title slide are decoration, not data.
-
-     Drawn only when there is something to draw: a brand with no theme
-     and no goals gets no slide rather than an empty one. The theme keeps
-     its line breaks — pptxgenjs honours \n — which is the same fix the
-     screen gets, in the place the client actually sees. */
-  {
-    const mp=monthPlanFor(activeBrand,YEAR,contentMonth);
-    /* MOTH — the theme can now hold markup, and pptxgenjs would print
-       the tags. mpPlain turns it back into words (and bullets) first. */
-    const theme=mpPlain(mp.key_theme).trim();
-    const goals=mpvItems(mp,"goal").filter(g=>!g.discipline||g.discipline==="social");
-    const prod=(()=>{const r=prodsForBrandMonth(activeBrand,YEAR,contentMonth);
-      return r.dated.concat(r.open).map(x=>({label:prodWhat(x)+" · "+prodWhen(x)}));})();
-    const infl=mpvItems(mp,"influencer").filter(i=>!i.discipline||i.discipline==="social");
-    if(theme||goals.length){
-      const p=pptx.addSlide(); p.background={color:"FFFFFF"};
-      p.addText(`${MN[contentMonth]} ${YEAR}  ·  ${b.name}`,
-        {x:0.75,y:0.62,w:11.8,h:0.3,fontSize:11,color:"D62828",bold:true,charSpacing:2,fontFace:"Arial"});
-      /* the first line is the theme's headline, the rest is the body —
-         the same split the card makes on screen */
-      const nl=theme.indexOf("\n");
-      const head=(nl>-1?theme.slice(0,nl):theme).trim();
-      const body=(nl>-1?theme.slice(nl+1):"").trim();
-      if(head) p.addText(head,{x:0.75,y:1.0,w:11.8,h:0.8,fontSize:32,color:"0D0D0D",bold:true,fontFace:"Arial"});
-      if(body) p.addText(body,{x:0.75,y:1.95,w:11.8,h:3.2,fontSize:13,color:"3A3A3A",
-        valign:"top",lineSpacing:20,fontFace:"Arial"});
-      /* ══ MOTH v81.7 — THE GOALS ARE CARDS, AND THEY ARE HIS WORDS ════
-         The mockup drew three big numbers — 1500 / Instagram followers —
-         and I talked Chirag out of building them, which is the right way
-         round for a drawing I made up the numbers for.
-
-         A goal is one line of free text he types: "Insta 1500 New
-         Followers", "50+ total comments". There is no target field
-         behind it. Printing 1500 large means guessing which number in
-         the sentence is the target and what the remaining words mean.
-         That works on those two and fails on "Grow reach in Surat by a
-         third" — silently, in a deck already in front of a client.
-
-         So the cards carry the sentence and give it the weight the
-         drawing was really asking for. Nothing is parsed, so nothing can
-         be parsed wrong. */
-      if(goals.length){
-        p.addText("GOALS",{x:0.75,y:5.35,w:11.8,h:0.25,fontSize:9,color:"AAAAAA",bold:true,charSpacing:2,fontFace:"Arial"});
-        const show=goals.slice(0,6);
-        const CW=2.45, GAP=0.25, CH=0.62;
-        show.forEach((g,n)=>{
-          const col=n%3, row=Math.floor(n/3);
-          const x=0.75+col*(CW+GAP), y=5.62+row*(CH+0.08);
-          p.addShape("rect",{x,y,w:CW,h:CH,fill:{color:"F8F7F4"},line:{color:"E6E4DE",width:0.75}});
-          p.addText(mpPlain(g.label),{x,y,w:CW,h:CH,margin:7,fontSize:10.5,color:"0D0D0D",
-            valign:"middle",align:"left",fontFace:"Arial",shrinkText:true});
-        });
-      }
-      const tail=[];
-      if(prod.length) tail.push(`${prod.length} shoot${prod.length===1?"":"s"}`);
-      if(mp.influencer_target>0) tail.push(`${infl.length} of ${mp.influencer_target} influencers`);
-      else if(infl.length) tail.push(`${infl.length} influencer${infl.length===1?"":"s"}`);
-      /* moved right to clear the cards, which now claim the left 7.85in */
-      if(tail.length) p.addText(tail.join("   ·   "),
-        {x:9.0,y:5.62,w:3.6,h:0.62,fontSize:12,color:"6B6B6B",valign:"middle",fontFace:"Arial"});
-      /* NEVER SILENTLY SHORTEN A LIST — the same rule as the carousel. */
-      if(goals.length>6) p.addText(`6 of ${goals.length} goals`,
-        {x:0.75,y:7.05,w:4,h:0.3,fontSize:9,color:"8A6A2F",fontFace:"Arial"});
-    }
   }
+
+  /* V113.0 — the month plan, measured and flowed across as many slides
+     as it needs. The single fixed-box slide that was here is the one in
+     Chirag's screenshot of 8 Oct; see exPlanSlides. */
+  exPlanSlides(pptx,b,contentMonth,opt);
 
   /* MOTH — a slot for something that could not be pictured. Same box the
      image would have had, so the grid does not shift, and it says what is
@@ -24120,7 +24494,7 @@ renderBnTabs=function(){
    and the old target-audience line in the database. Nothing here reads
    them. */
 
-const PR={key:null,loading:false,err:null,list:[],objs:[],bobjs:[],segs:[],bsegs:[],
+const PR={key:null,loading:false,err:null,list:[],objs:[],bobjs:[],segs:[],bsegs:[],chans:[],sways:[],
   streams:{},auds:{},months:{},cr:[],crc:{},
   open:null,seg:"running",obj:"",sg:"",sort:"updated",q:"",cols:null,edit:null,prog:null,aud:null,
   creative:null,th:{id:null,msgs:[],acts:[],loading:false,err:""},staged:[],draft:""};
@@ -24294,14 +24668,20 @@ function prKey(){ return String(activeBrand||""); }
 async function prLoad(k){
   PR.loading=true; PR.err=null;
   try{
-    const [mo,bo,ms,bs,a]=await Promise.all([
+    /* V113.1 — the Trade Channel and Specifier lists come down here
+       too. They were loaded only by the Lists and Vision pages, so the
+       Target groups box on Promotions had nothing to offer and made
+       you retype a name the master list already carries. */
+    const [mo,bo,ms,bs,ch,sw,a]=await Promise.all([
       sb.from("promotion_objectives").select("*").eq("active",true).order("sort"),
       sb.from("brand_objectives").select("*").eq("brand_id",k),
       sb.from("promotion_segments").select("*").eq("active",true).order("sort"),
       sb.from("brand_segments").select("*").eq("brand_id",k),
+      sb.from("stream_channel_options").select("key,label,pos,deleted_at").order("pos"),
+      sb.from("stream_sway_options").select("key,label,pos,deleted_at").order("pos"),
       sb.from("promotions").select("*").eq("brand_id",k).is("deleted_at",null).order("starts_on",{ascending:false,nullsFirst:true})
     ]);
-    const bad=[mo,bo,ms,bs,a].find(r=>r.error);
+    const bad=[mo,bo,ms,bs,ch,sw,a].find(r=>r.error);
     if(bad) throw new Error(bad.error.message);
     PR.objs=(mo.data||[]).filter(o=>o.active!==false);
     PR.bobjrows=(bo.data||[]).filter(x=>x.brand_id===k);   /* V110.9 — labels live here */
@@ -24313,6 +24693,8 @@ async function prLoad(k){
        their own, named by the brand, on the Vision page. The master
        list stays here to name the KIND each row is. */
     PR.segs=(ms.data||[]).filter(o=>o.active!==false);
+    PR.chans=(ch.data||[]).filter(o=>!o.deleted_at);
+    PR.sways=(sw.data||[]).filter(o=>!o.deleted_at);
     PR.bsegs=(bs.data||[]).filter(x=>x.brand_id===k&&!x.deleted_at)
       .sort((a,b)=>(a.sort||0)-(b.sort||0)||String(a.label||"").localeCompare(String(b.label||"")));
     const list=a.data||[], ids=list.map(p=>p.id);
@@ -25433,6 +25815,28 @@ async function crMarkSeen(cid,brandId){
   if(!CR_SEEN_OK) return;
   try{ await sb.from("creative_seen").upsert({user_email:me,creative_id:cid,brand_id:brandId||activeBrand,seen_at:now}); }catch(e){}
 }
+/* ── V113.3 · the bell knows about a meeting ─────────────────────────
+   meeting_seen copies task_seen and creative_seen exactly, which is
+   why this is nine lines and not a design. */
+let MEET_SEEN={}, MEET_SEEN_OK=false;
+async function loadMeetingSeen(){
+  try{
+    const me=(ME.email||"").toLowerCase(); if(!me) return;
+    const r=await sb.from("meeting_seen").select("meeting_id,seen_at").eq("user_email",me);
+    if(r.error) return;                       // the table is not there yet
+    MEET_SEEN_OK=true;
+    (r.data||[]).forEach(x=>{ MEET_SEEN[x.meeting_id]=x.seen_at; });
+  }catch(e){}
+}
+async function meetMarkSeen(mid,brandId){
+  if(!mid) return;
+  const me=(ME.email||"").toLowerCase(); if(!me) return;
+  const now=new Date().toISOString();
+  MEET_SEEN[mid]=now;
+  syncBell();
+  if(!MEET_SEEN_OK) return;
+  try{ await sb.from("meeting_seen").upsert({user_email:me,meeting_id:mid,brand_id:brandId||activeBrand,seen_at:now}); }catch(e){}
+}
 function prCrBack(){ PR.creative=null; render(); }
 async function prThLoad(cid){
   PR.th={id:cid,msgs:[],acts:[],loading:true,err:""};
@@ -26390,7 +26794,10 @@ async function plOutTrash(id){
    the topic is required before anything is written: brand_meetings
    refuses an empty topic, and an untitled row nobody can find again is
    worse than an unsaved one. The line by the title says which it is.  */
-const MOM={id:null,draft:null,state:"",timer:null,from:null};
+const MOM={id:null,draft:null,state:"",timer:null,from:null,
+  /* V113.3 — the signed passages, the one being edited, the fact
+     chip that is open, and what is half-typed in the add box. */
+  pass:[],passOk:false,ed:null,fc:"",npd:""};
 function momDraft(){
   return {id:null,brand_id:activeBrand,held_on:"",topic:"",location_kind:"online",location_name:"",
           cc_people:[],client_contact_ids:[],client_names:[],file_url:"",notes:""};
@@ -26404,6 +26811,8 @@ function plMeetOpen(id,m){
   if(id&&!x) return;
   MOM.from=(view==="mplan")?PLMODE:null;
   MOM.state=""; MOM.id=id||null;
+  MOM.pass=[]; MOM.passOk=false; MOM.ed=null; MOM.fc=""; MOM.npd="";
+  if(id){ momPassLoad(id); meetMarkSeen(id,activeBrand); }
   if(x){ MOM.draft=JSON.parse(JSON.stringify(x)); }
   else {
     const t=new Date();
@@ -26500,29 +26909,277 @@ async function momNewName(v){
    person rewrites the page; without this the paragraph somebody was
    half-way through typing would go with it. */
 function momKeepNotes(){
+  /* V113.3 — TWO BOXES NOW. #mom-legacy is the minutes as first
+     written, which still live on brand_meetings.notes; #mom-minutes
+     is the add box, whose words are not a row yet. Reading only one
+     of them is how a half-typed passage disappears when somebody
+     picks a person. */
+  const g=document.getElementById("mom-legacy");
+  if(g&&MOM.draft) MOM.draft.notes=mpClean(g.innerHTML).trim();
   const n=document.getElementById("mom-minutes");
-  if(n&&MOM.draft) MOM.draft.notes=mpClean(n.innerHTML).trim();
+  if(n) MOM.npd=rtValue(n);
 }
 function momMinutesBlur(){
+  if(MOM_RENDERING) return;
   mpBarHide(); momKeepNotes();
   if(MOM.timer){ clearTimeout(MOM.timer); MOM.timer=null; }
   momSave();
 }
+/* ══ V113.3 · THE PASSAGES ══════════════════════════════════════════
+   A passage is a row in post_comments — the one thread table that
+   already carries a post's comments, a task's messages, a shoot's
+   notes and a creative's. 02 - Minutes by author - migration.sql
+   added meeting_id and nothing else, so the author, the time, the
+   editing, the soft delete and the @names are the ones everything
+   else in the tool already uses.
+
+   THE MINUTES WRITTEN BEFORE TODAY ARE NOT MOVED. They stay on
+   brand_meetings.notes and are drawn as the first passage, signed by
+   whoever created the meeting — the only person who can edit them,
+   which is the same rule every other passage follows. A meeting with
+   no recorded creator shows that passage with no name, and then
+   nobody edits it. No backfill, so there is nothing to undo. */
+async function momPassLoad(id){
+  if(!id){ MOM.pass=[]; MOM.passOk=true; return; }
+  try{
+    const r=await sb.from("post_comments").select("*").eq("meeting_id",id).order("created_at");
+    if(r.error) return;                       /* the column is not there yet */
+    MOM.pass=(r.data||[]).filter(x=>!x.deleted_at&&x.meeting_id===id);
+    MOM.passOk=true;
+  }catch(e){}
+  if(view==="mom"&&MOM.id===id) renderMomPage();
+}
+/* Whoever wrote the row the legacy block belongs to. */
+function momCreator(){
+  const row=MOM.id?momRow(MOM.id):null;
+  const by=row&&row.created_by;
+  if(!by) return null;
+  return (PEOPLE||[]).find(p=>p.id===by)||null;
+}
+function momLegacyMine(){
+  const row=MOM.id?momRow(MOM.id):null;
+  return !!(row&&row.created_by&&ME.id&&row.created_by===ME.id);
+}
+function momCanRemove(c){ return fbIsMine(c)||ME.role==="admin"; }
+let MOM_POSTING=false;
+async function momPassAdd(){
+  if(MOM_POSTING||MOM_RENDERING) return;
+  momKeepNotes();
+  const body=String(MOM.npd||"").trim();
+  if(!body) return;
+  /* A passage has to hang on a meeting, so an unsaved one is written
+     first — and if it still has no topic, nothing is written at all
+     and the page says why, the same as before. */
+  if(!MOM.id){ await momSave(); }
+  if(!MOM.id) return;
+  MOM_POSTING=true;
+  try{
+    const row={id:newFbId("pm"),meeting_id:MOM.id,brand_id:activeBrand,parent_id:null,
+      author_id:ME.id||null,author_email:(ME.email||""),author_name:actorName(),
+      author_kind:actorKind(),body,mentions:extractMentions(body,activeBrand),
+      resolved:false,resolved_by:"",resolved_at:null,created_at:new Date().toISOString()};
+    const r=await sb.from("post_comments").insert([row]);
+    if(r.error){ momState("err"); toast("Not added — "+r.error.message,"err"); return; }
+    MOM.npd=""; MOM.pass=[...MOM.pass,row]; momState("saved");
+    meetMarkSeen(MOM.id,activeBrand);
+    renderMomPage();
+  }finally{ MOM_POSTING=false; }
+}
+function momPassEdit(id){ momKeepNotes(); MOM.ed=id; renderMomPage();
+  setTimeout(()=>{ const e=document.getElementById("mom-ed"); if(e) e.focus(); },30); }
+function momPassCancel(){ MOM.ed=null; renderMomPage(); }
+async function momPassSave(id){
+  if(MOM_RENDERING) return;
+  const c=MOM.pass.find(x=>x.id===id); if(!c) return;
+  const el=document.getElementById("mom-ed");
+  const body=el?rtValue(el):"";
+  MOM.ed=null;
+  if(!body.trim()||body===c.body){ renderMomPage(); return; }
+  const now=new Date().toISOString();
+  const r=await sb.from("post_comments")
+    .update({body,edited_at:now,updated_at:now,mentions:extractMentions(body,activeBrand)})
+    .eq("id",id).select("id");
+  if(r.error||!r.data||!r.data.length){ toast("Not changed — "+(r.error?r.error.message:"not allowed"),"err"); renderMomPage(); return; }
+  c.body=body; c.edited_at=now; momState("saved"); renderMomPage();
+}
+async function momPassRemove(id){
+  const c=MOM.pass.find(x=>x.id===id); if(!c) return;
+  if(!confirm("Remove this passage from the minutes?\n\nIt can be restored from History.")) return;
+  const r=await sb.from("post_comments").update({deleted_at:new Date().toISOString()}).eq("id",id).select("id");
+  if(r.error||!r.data||!r.data.length){ toast("Could not remove it — "+(r.error?r.error.message:"not allowed"),"err"); return; }
+  MOM.pass=MOM.pass.filter(x=>x.id!==id); renderMomPage();
+}
+function momFace(name,kind,cls){
+  const k=name||"?";
+  return `<span class="nav-av${kind==="client"?" client":""}${cls?" "+cls:""}" style="${avatarSkin(k,kind==="client")}">${
+    avatarInner(k,escAttr(String(k).slice(0,2).toUpperCase()))}</span>`;
+}
+/* one passage, read or being written in */
+function momPassHtml(who,kind,when,edited,body,acts,edId){
+  return `<div class="mom-pass">
+    ${momFace(who,kind)}
+    <div>
+      <div class="mom-by"><b>${escHtml(who||"Someone")}</b>
+        ${when?`<span class="wh">${escHtml(fbTimeLabel(when))}</span>`:""}
+        ${edited?`<span class="ed">· edited</span>`:""}
+        ${acts?`<div class="act">${acts}</div>`:""}
+      </div>
+      ${edId
+        ? `<div class="mom-ed-box" id="mom-ed" contenteditable="true"
+             onfocus="mpBarShow(this)" onblur="momPassSave('${escAttr(edId)}')"
+             oninput="fbMentionKey(event,'mom-ed',activeBrand,true)"
+             onkeydown="if(mentionKeyNav(event))return;if(event.key==='Escape'){event.preventDefault();momPassCancel();}">${body}</div>`
+        : (/^<div class="mom-bod"/.test(body) ? body : `<div class="mom-bod">${body}</div>`)}
+    </div>
+  </div>`;
+}
+/* THE FACTS, AS CHIPS. One chip opens at a time — MOM.fc — and the
+   control inside it is the one the form used, so saving did not change. */
+function momFactsHtml(d){
+  const team=(PEOPLE||[]).filter(pp=>pp.role!=="client");
+  const byId={}; PLD.contacts.forEach(c=>{ byId[c.id]=c; });
+  const chip=(label,rm)=>`<span class="mom-chip">${escHtml(label)}<i class="ti ti-x" onclick="${rm}" title="Remove"></i></span>`;
+  const ccNames=d.cc_people.map(id=>{ const pp=team.find(p=>p.id===id); return pp?pp.name:"Someone"; });
+  const clNames=d.client_contact_ids.map(id=>byId[id]?byId[id].name:"Contact").concat(d.client_names);
+  const fc=(key,on,inner)=>`<span class="mom-fc${on?"":" empty"}" onclick="momFc('${key}')">${inner}</span>`;
+  const out=[];
+
+  if(MOM.fc==="held_on") out.push(`<div class="mom-fed"><label>Date</label>
+    <input class="mom-in" type="date" id="mom-fci" value="${escAttr(d.held_on)}"
+      onchange="momSet('held_on',this.value)" onblur="momFc('')"></div>`);
+  else out.push(fc("held_on",!!d.held_on,d.held_on?escHtml(momDayLabel(d.held_on)):"+ Date"));
+
+  if(MOM.fc==="where") out.push(`<div class="mom-fed"><label>Where</label>
+    <select class="mom-in" onchange="momSet('location_kind',this.value)">${
+      Object.keys(PL_LOC).map(k=>`<option value="${k}"${d.location_kind===k?" selected":""}>${PL_LOC[k]}</option>`).join("")}</select>
+    <input class="mom-in" id="mom-fci" value="${escAttr(d.location_name)}" placeholder="Ahmedabad, Teams…"
+      oninput="momSet('location_name',this.value)" onblur="momFc('')"></div>`);
+  else out.push(fc("where",!!(d.location_kind||d.location_name),
+    (d.location_kind||d.location_name)
+      ? `${escHtml(PL_LOC[d.location_kind]||"Somewhere")}${d.location_name?`<span class="sub">· ${escHtml(d.location_name)}</span>`:""}`
+      : "+ Where"));
+
+  if(MOM.fc==="cc") out.push(`<div class="mom-fed"><label>CC team</label>
+    <div class="mom-chips">${d.cc_people.map(id=>{ const pp=team.find(p=>p.id===id);
+      return chip(pp?pp.name:"Someone",`momCc('${escAttr(id)}',false)`); }).join("")}
+      <select class="mom-pick" onchange="if(this.value)momCc(this.value,true)"><option value="">Add…</option>${
+        team.filter(pp=>d.cc_people.indexOf(pp.id)<0).map(pp=>`<option value="${escAttr(pp.id)}">${escHtml(pp.name)}</option>`).join("")}</select></div>
+    <span class="mom-fc" onclick="momFc('')">Done</span></div>`);
+  else out.push(fc("cc",!!ccNames.length, ccNames.length
+    ? `${ccNames.slice(0,3).map(nm=>momFace(nm,"team")).join("")}${escHtml(momNameList(ccNames))}`
+    : "+ CC team"));
+
+  if(MOM.fc==="cl") out.push(`<div class="mom-fed"><label>Client team</label>
+    <div class="mom-chips">${d.client_contact_ids.map(id=>chip(byId[id]?byId[id].name:"Contact",`momCl('${escAttr(id)}',false)`)).join("")
+      }${d.client_names.map((nm,i)=>chip(nm,`momName(${i})`)).join("")}
+      ${PLD.contacts.filter(c=>d.client_contact_ids.indexOf(c.id)<0).length
+        ? `<select class="mom-pick" onchange="if(this.value)momCl(this.value,true)"><option value="">Add a contact…</option>${
+            PLD.contacts.filter(c=>d.client_contact_ids.indexOf(c.id)<0)
+              .map(c=>`<option value="${escAttr(c.id)}">${escHtml(c.name||c.email||"Contact")}</option>`).join("")}</select>` : ""}
+      <input class="mom-pick" id="mom-newname" placeholder="Add a name"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();momNewName(this.value);this.value='';}"></div>
+    <span class="mom-fc" onclick="momFc('')">Done</span></div>`);
+  else out.push(fc("cl",!!clNames.length, clNames.length
+    ? `${escHtml(momNameList(clNames))}<span class="sub">· client</span>` : "+ Client team"));
+
+  if(MOM.fc==="link") out.push(`<div class="mom-fed"><label>Transcript</label>
+    <input class="mom-in wide" id="mom-fci" value="${escAttr(d.file_url)}" placeholder="https://"
+      oninput="momSet('file_url',this.value)"></div>
+    ${d.file_url?`<a class="mom-fc" href="${escAttr(d.file_url)}" target="_blank" rel="noopener">Open ›</a>`:""}
+    <span class="mom-fc" onclick="momFc('')">Done</span>`);
+  else out.push(fc("link",!!d.file_url,d.file_url
+    ? `<i class="ti ti-paperclip"></i> Transcript` : "+ Transcript"));
+
+  return `<div class="mom-facts">${out.join("")}</div>`;
+}
+/* "Chirag, Labdhi and 2 more" — a name list that cannot run away with
+   the chip row however many people were in the room. */
+/* "4 Oct 2026" — the facts line is read, not filled in, so the date
+   is words rather than the ISO string the input needs. */
+function momDayLabel(s){
+  const t=String(s||"");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+  return Number(t.slice(8,10))+" "+(MN[Number(t.slice(5,7))]||"").slice(0,3)+" "+t.slice(0,4);
+}
+function momNameList(a){
+  const f=(a||[]).map(x=>String(x).split(" ")[0]);
+  if(f.length<=3) return f.join(", ");
+  return f.slice(0,2).join(", ")+" and "+(f.length-2)+" more";
+}
+/* THE REDRAW IS DEFERRED, AND THAT IS NOT TIDINESS. Closing a chip
+   happens on the control's blur, and the blur fires WHILE the page is
+   being rewritten — so rendering straight from the handler tears the
+   node out from under the browser mid-assignment ("the node to be
+   removed is no longer a child of this node"). Leaving the open chip
+   where it is when nothing changes stops the same two handlers calling
+   each other in a circle. */
+let MOM_FCT=null;
+function momFc(k){
+  momKeepNotes();
+  const next=(MOM.fc===k)?"":k;
+  if(next===MOM.fc) return;
+  MOM.fc=next;
+  if(MOM_FCT) clearTimeout(MOM_FCT);
+  MOM_FCT=setTimeout(()=>{ MOM_FCT=null; renderMomPage();
+    if(MOM.fc){ const e=document.getElementById("mom-fci"); if(e) e.focus(); } },0);
+}
+/* ══ A REDRAW IS NOT A BLUR ══════════════════════════════════════════
+   Rewriting the page blurs whatever had focus, and on this page the
+   blur handlers SAVE: the add box posts a passage, an open passage
+   writes its edit. So opening a fact chip half-way through a
+   sentence posted the half-sentence as signed minutes. The words
+   are already kept by momKeepNotes before any redraw; what the
+   handlers must not do is treat the redraw as somebody finishing. */
+let MOM_RENDERING=false;
 function renderMomPage(){
   const main=document.getElementById("main"); if(!main) return;
   if(!plMerged()||!MOM.draft){ setView("mplan"); return; }
   const d=MOM.draft;
-  const team=(PEOPLE||[]).filter(pp=>pp.role!=="client");
-  const chip=(label,rm)=>`<span class="mom-chip">${escHtml(label)}<i class="ti ti-x" onclick="${rm}" title="Remove"></i></span>`;
-  const ccChips=d.cc_people.map(id=>{ const pp=team.find(p=>p.id===id); return chip(pp?pp.name:"Someone",`momCc('${escAttr(id)}',false)`); }).join("");
-  const ccOpts=team.filter(pp=>d.cc_people.indexOf(pp.id)<0).map(pp=>`<option value="${escAttr(pp.id)}">${escHtml(pp.name)}</option>`).join("");
-  const byId={}; PLD.contacts.forEach(c=>{ byId[c.id]=c; });
-  const clChips=d.client_contact_ids.map(id=>chip(byId[id]?byId[id].name:"Contact",`momCl('${escAttr(id)}',false)`)).join("")
-    +d.client_names.map((n,i)=>chip(n,`momName(${i})`)).join("");
-  const clOpts=PLD.contacts.filter(c=>d.client_contact_ids.indexOf(c.id)<0)
-    .map(c=>`<option value="${escAttr(c.id)}">${escHtml(c.name||c.email||"Contact")}</option>`).join("");
+  const canE=canEdit();
   const state=MOM.state==="typing"?"Saving…":MOM.state==="saved"?"Saved a moment ago"
     :MOM.state==="notopic"?"Not saved yet — give it a topic":MOM.state==="err"?"Not saved — try again":"";
+
+  /* the minutes as first written, if there are any */
+  const mine=momLegacyMine(), creator=momCreator();
+  const notes=String(d.notes||"").trim();
+  const legBody=(canE&&mine)
+    ? `<div class="mom-bod" id="mom-legacy" contenteditable="true"
+         onfocus="mpBarShow(this)" onblur="momMinutesBlur()"
+         oninput="fbMentionKey(event,'mom-legacy',activeBrand,true);momSoon()"
+         onkeydown="if(mentionKeyNav(event))return;">${mpRender(d.notes)}</div>`
+    : `<div class="mom-bod">${mpRender(d.notes)}</div>`;
+  /* NO CREATOR, NO NAME. The minutes written before today sit on a row
+     that may predate created_by, and printing "Someone" over them is a
+     signature the record does not have. Those stand on their own. */
+  const legacy=!notes ? ""
+    : !creator ? `<div class="mom-pass mom-unsigned"><span></span><div>${legBody}</div></div>`
+    : momPassHtml(creator.name, creator.role||"team", null, false,
+        legBody, "", null);
+
+  const passages=MOM.pass.map(c=>{
+    const editing=MOM.ed===c.id;
+    const acts=(canE&&!editing)
+      ? (fbIsMine(c)?`<span onclick="momPassEdit('${escAttr(c.id)}')">Edit</span>`:"")
+        +(momCanRemove(c)?`<span onclick="momPassRemove('${escAttr(c.id)}')">Remove</span>`:"")
+      : "";
+    return momPassHtml(c.author_name,c.author_kind,c.created_at,!!c.edited_at,
+      editing?c.body:fbBody(c.body||""),acts,editing?c.id:null);
+  }).join("");
+
+  const nothing=!legacy&&!passages;
+  const add=canE
+    ? `<div class="mom-newp${nothing?" first":""}">
+        ${momFace(actorName(),actorKind())}
+        <div><div class="mom-min-edit" id="mom-minutes" contenteditable="true"
+          data-ph="${escAttr(nothing?"Write the minutes…":"Add to the minutes…")}"
+          onfocus="mpBarShow(this)" onblur="mpBarHide();momPassAdd()"
+          oninput="fbMentionKey(event,'mom-minutes',activeBrand,true)"
+          onkeydown="if(mentionKeyNav(event))return;">${MOM.npd||""}</div></div>
+      </div>`
+    : (nothing?`<div class="mom-none">Nothing written yet</div>`:"");
+
+  MOM_RENDERING=true;
+  try{
   main.innerHTML=`<div class="mompage">
     <div class="pgbar">
       <span class="mom-back" onclick="momBack()"><i class="ti ti-chevron-left"></i> Plan</span>
@@ -26530,37 +27187,20 @@ function renderMomPage(){
       <span class="mom-state${MOM.state==="err"||MOM.state==="notopic"?" warn":""}" id="mom-state">${escHtml(state)}</span>
       <button class="btn btn-g btn-sm" onclick="momTrash()"><i class="ti ti-trash"></i> ${MOM.id?"Move to Trash":"Discard"}</button>
     </div>
-    <div class="mom-hd">
-      <input class="mom-ttl" id="mom-topic" value="${escAttr(d.topic)}" placeholder="What was the meeting about?"
-        oninput="momSet('topic',this.value)">
-    </div>
-    <div class="mom-facts">
-      <div class="mom-f"><label>Date</label>
-        <input class="mom-in" type="date" value="${escAttr(d.held_on)}" onchange="momSet('held_on',this.value)"></div>
-      <div class="mom-f"><label>Location</label>
-        <select class="mom-in" onchange="momSet('location_kind',this.value)">${Object.keys(PL_LOC).map(k=>`<option value="${k}"${d.location_kind===k?" selected":""}>${PL_LOC[k]}</option>`).join("")}</select></div>
-      <div class="mom-f"><label>Place</label>
-        <input class="mom-in" value="${escAttr(d.location_name)}" placeholder="Ahmedabad, Teams…" oninput="momSet('location_name',this.value)"></div>
-      <div class="mom-f grow"><label>CC team</label>
-        <div class="mom-chips">${ccChips}<select class="mom-pick" onchange="if(this.value)momCc(this.value,true)"><option value="">Add…</option>${ccOpts}</select></div></div>
-      <div class="mom-f grow"><label>Client team</label>
-        <div class="mom-chips">${clChips}${clOpts?`<select class="mom-pick" onchange="if(this.value)momCl(this.value,true)"><option value="">Add a contact…</option>${clOpts}</select>`:""}
-          <input class="mom-pick" id="mom-newname" placeholder="Add a name"
-            onkeydown="if(event.key==='Enter'){event.preventDefault();momNewName(this.value);this.value='';}"></div></div>
-      <div class="mom-f"><label>Transcript (link)</label>
-        <input class="mom-in wide" value="${escAttr(d.file_url)}" placeholder="https://" oninput="momSet('file_url',this.value)"></div>
-    </div>
     <div class="mom-wrap">
       <div class="mom-sheet">
+        <input class="mom-ttl" id="mom-topic" value="${escAttr(d.topic)}" placeholder="What was the meeting about?"
+          oninput="momSet('topic',this.value)">
+        ${momFactsHtml(d)}
+        <div class="mom-rule"></div>
         <div class="mom-slbl">Minutes</div>
-        <div class="mom-min-edit" id="mom-minutes" contenteditable="true"
-          onfocus="mpBarShow(this)" onblur="momMinutesBlur()"
-          oninput="fbMentionKey(event,'mom-minutes',activeBrand,true);momSoon()"
-          onkeydown="if(mentionKeyNav(event))return;">${d.notes?mpRender(d.notes):""}</div>
+        ${legacy}${passages}${add}
       </div>
     </div>
   </div>`;
+  }finally{ MOM_RENDERING=false; }
 }
+
 /* the route, and the button that opens it */
 (function(){
   const base=viewRoute;
@@ -27359,10 +27999,11 @@ function pbOpen(kind){
       ${kind==="seg"?`<div class="pbrow new">
         <input class="fi pbnm" id="pb-newnm" placeholder="New target group"
           onkeydown="if(event.key==='Enter'){event.preventDefault();pbNew();}">
-        <select class="fi pbkind" id="pb-newkind">${(L.master||[]).map(o=>
+        <select class="fi pbkind" id="pb-newkind" onchange="pbKindPicked()">${(L.master||[]).map(o=>
           `<option value="${escAttr(o.key)}">${escHtml(o.label)}</option>`).join("")}</select>
         <i class="ti ti-plus pbadd" title="Add it to this brand" onclick="pbNew()"></i>
       </div>`:""}</div>
+      ${kind==="seg"?`<div id="pb-segspare">${pbSegSpareHtml(pbFirstSegKey())}</div>`:""}
       ${kind==="obj"?(spare.length?`<div class="pbspare"><div class="pblbl">Add</div>
         <div class="prchips">${spare.map(o=>`<span class="propt" onclick="pbTake('${kind}','${escAttr(o.key)}')"><i class="ti ti-plus"></i> ${escHtml(o.label)}</span>`).join("")}</div></div>`
        :`<div class="pbspare"><span class="nsdim">Every term on the master list is already here</span></div>`):""}
@@ -27371,6 +28012,73 @@ function pbOpen(kind){
       <button class="btn btn-p" onclick="pbDone()">Done</button></div>`);
 }
 function pbDone(){ if(PR.draft){ prEditOpen(PR.draft.id); return; } closeM("promo"); }
+
+/* ══ V113.1 · THE CATEGORY OFFERS ITS OWN LIST ═════════════════════
+   Chirag, 8 October: "whenever I select a target group category, I
+   should be able to see all the options from the list visible here,
+   so I don't recreate the option new which already exist".
+
+   The Objectives box shows the master terms as chips because an
+   objective is taken once — what is left over IS the offer. A target
+   group can be taken many times (Investors and Home Buyers both sit
+   under Customers), so there was no leftover list and the box fell
+   back to free text. But two of the categories DO carry a named list:
+   Trade Channel has the channels and Specifiers has the specifiers.
+   Those are what the chips offer.
+
+   Customers, Internal Team and Open have no list of names — a brand
+   invents those words — so for them the box stays as it was.
+
+   A chip does not just fill in the name. It writes the key into the
+   row's own detail field, so the row is TIED to the list entry
+   rather than being a copy of its spelling: rename the entry later
+   and the link holds. */
+function pbSegList(key){
+  if(key==="trade_channel") return {rows:PR.chans||[], field:"channel"};
+  if(key==="specifier")     return {rows:PR.sways||[], field:"sway"};
+  return {rows:[], field:null};
+}
+function pbFirstSegKey(){
+  const el=document.getElementById("pb-newkind");
+  if(el) return el.value;
+  const m=(PR.segs||[])[0]; return m?m.key:"";
+}
+/* An entry is already here if a row under this category is LINKED to
+   it, or is simply named after it — a brand that typed "Carpenters"
+   before this existed should not be offered Carpenters again. */
+function pbSegHas(key,o){
+  const mine=(PR.bsegs||[]).filter(r=>r.segment_key===key);
+  return mine.some(r=>
+    r.channel===o.key ||
+    (Array.isArray(r.sway)&&r.sway.indexOf(o.key)>-1) ||
+    String(r.label||"").trim().toLowerCase()===String(o.label||"").trim().toLowerCase());
+}
+function pbSegSpareHtml(key){
+  const L=pbSegList(key); if(!L.rows.length) return "";
+  const spare=L.rows.filter(o=>!pbSegHas(key,o));
+  if(!spare.length) return `<div class="pbspare"><span class="nsdim">Every one on the list is already here</span></div>`;
+  return `<div class="pbspare"><div class="pblbl">Add</div>
+    <div class="prchips">${spare.map(o=>
+      `<span class="propt" onclick="pbTakeDetail('${escAttr(key)}','${escAttr(o.key)}')"><i class="ti ti-plus"></i> ${escHtml(o.label)}</span>`).join("")}</div></div>`;
+}
+function pbKindPicked(){
+  const host=document.getElementById("pb-segspare");
+  if(host) host.innerHTML=pbSegSpareHtml(pbFirstSegKey());
+}
+async function pbTakeDetail(segKey,key){
+  if(!canCap("edit_promotions")){ capDenied("Target groups"); return; }
+  const L=pbSegList(segKey);
+  const row=(L.rows||[]).find(o=>o.key===key); if(!row) return;
+  const patch={brand_id:activeBrand, segment_key:segKey, label:row.label,
+               sort:((PR.bsegs||[]).length+1)*10};
+  if(L.field==="sway") patch.sway=[key]; else if(L.field==="channel") patch.channel=key;
+  const r=await sb.from("brand_segments").insert([patch]).select("id");
+  if(r.error||!r.data||!r.data.length) return toast("Not added — "+(r.error?r.error.message:"not allowed"),"err");
+  toast(row.label+" added");
+  await prReloadNow(); pbOpen("seg");
+  const sel=document.getElementById("pb-newkind");
+  if(sel){ sel.value=segKey; pbKindPicked(); }
+}
 
 /* THE BRAND'S OWN WORD. Typing the master word back clears the
    rename rather than storing a copy, so the term keeps following the
@@ -27443,6 +28151,7 @@ async function pbDrop(kind,id){
 }
 
 window.pbNew=pbNew; window.pbOpen=pbOpen; window.pbTake=pbTake; window.pbDrop=pbDrop; window.pbRename=pbRename; window.pbDone=pbDone;
+window.pbKindPicked=pbKindPicked; window.pbTakeDetail=pbTakeDetail; window.pbSegSpareHtml=pbSegSpareHtml;
 /* the old names keep working — two gates and the page's own button
    call prObjOpen by name */
 prObjOpen=function(){ pbOpen("obj"); };
