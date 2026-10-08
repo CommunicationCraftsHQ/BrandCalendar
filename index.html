@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V113.7 Bologna"/>
+<meta name="cc-tool-version" content="V113.8 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3162,8 +3162,17 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .mom-fc .nav-av{width:19px;height:19px;font-size:9px;margin-right:-3px;}
 .mom-fed{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;margin:10px 0 2px;}
 .mom-fed>label{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--subtle);}
+/* background-COLOR, not the shorthand. `background:#fff` resets
+   background-image to none, which is how the shared chevron once
+   vanished off every influencer dropdown. MEASURED HERE, NOT ASSUMED:
+   .cc-stsel is declared far later in this stylesheet than .mom-in, so
+   it wins the cascade and the chevron was never at risk on this
+   control — putting the shorthand back leaves the arrow drawn. Kept
+   anyway, because the order of two rules is a thin thing to depend on,
+   but it repaired nothing. */
 .mom-in{height:32px;border:1px solid var(--div);border-radius:8px;padding:0 10px;font:inherit;font-size:13px;
-  background:#fff;min-width:150px;color:var(--text);box-sizing:border-box;}
+  background-color:#fff;min-width:150px;color:var(--text);box-sizing:border-box;}
+select.mom-in{padding-right:26px;}
 .mom-in.wide{min-width:220px;}
 .mom-in:focus{outline:none;border-color:var(--text);}
 .mom-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;border:1px solid var(--div);border-radius:8px;
@@ -11105,7 +11114,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V113.7 Bologna";
+const TOOL_VERSION="V113.8 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -27326,7 +27335,7 @@ function momFactsHtml(d){
   else out.push(fc("held_on",!!d.held_on,d.held_on?escHtml(momDayLabel(d.held_on)):"+ Date"));
 
   if(MOM.fc==="where") out.push(`<div class="mom-fed"><label>Where</label>
-    <select class="mom-in" onchange="momSet('location_kind',this.value)">${
+    <select class="mom-in cc-stsel" onchange="momSet('location_kind',this.value)">${
       Object.keys(PL_LOC).map(k=>`<option value="${k}"${d.location_kind===k?" selected":""}>${PL_LOC[k]}</option>`).join("")}</select>
     <input class="mom-in" id="mom-fci" value="${escAttr(d.location_name)}" placeholder="Ahmedabad, Teams…"
       oninput="momSet('location_name',this.value)">
