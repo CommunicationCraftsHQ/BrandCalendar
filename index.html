@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V113.13 Bologna"/>
+<meta name="cc-tool-version" content="V114.0 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -1613,6 +1613,18 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .nsec{padding:9px 15px 4px;font-size:11px;font-weight:700;letter-spacing:.09em;
   text-transform:uppercase;color:var(--subtle);}
 .nsec.men{color:var(--acc);}
+/* V114.0 TBILISI — the destination chip, and the faded Seen rows */
+.nbody .attr .dest{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:var(--muted);
+  background:rgba(13,13,13,.05);border-radius:999px;padding:1px 8px;max-width:100%;min-width:0;}
+.nbody .attr .dest .bd{width:7px;height:7px;border-radius:50%;display:inline-block;flex:none;}
+.nbody .attr .dest .tab{color:var(--subtle);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.nbody .attr .dest .tab:before{content:"·";margin:0 4px 0 1px;}
+.nbody .attr .dest.nobrand .tab:before{content:none;margin:0;}
+.nbody .attr .seenmark{font-size:10.5px;color:var(--subtle);font-style:italic;}
+.nrow.seen{opacity:.55;}
+.nrow.seen:hover{opacity:.85;}
+.nrow.seen .msg{font-weight:400;}
+.nsec.grey{color:var(--subtle);border-top:1px solid var(--div);margin-top:6px;padding-top:11px;}
 .ntabs{display:flex;gap:3px;padding:9px 12px;border-bottom:1px solid var(--div);background:rgba(13,13,13,.02);}
 /* a tab with nothing behind it is still a tab — quieter, not absent */
 .ntab.zero{opacity:.5;}
@@ -8586,7 +8598,19 @@ async function bpRemove(email){ const p=personByEmail(email); if(p) return bpSet
    More than one per brand is still allowed, and now for free: assign two
    Account managers. A rule of one turns a fortnight in Goa into a locked
    brand. */
-function pickBrand(k){ closeAllPops(); BRQ=""; const sel=document.getElementById("brand-sel"); if(sel) sel.value=k; setBrand(k); }
+/* V114.0 TBILISI — A BRAND OPENS ON PLAN. Chirag, 10 Oct: "A brand by
+   default should open on Plan." Picking a brand used to keep whatever
+   page you were on, so Tasks on one brand became Tasks on the next. The
+   page is set BEFORE setBrand draws, so it is drawn once. Doors that
+   name a page of their own — a bell row, a shared link, the address bar
+   on a reload — all pick the brand first and set their page after, so
+   they land where they said they would. */
+function pickBrand(k){ closeAllPops(); BRQ=""; const sel=document.getElementById("brand-sel"); if(sel) sel.value=k;
+  if(k&&brands[k]&&canEdit()){ view="mplan"; mpvMonth=0; }
+  setBrand(k);
+  if(view==="mplan"&&activeBrand===k){ ENG_OPEN=engReadOpen();
+    if(ENG.brand!==activeBrand) loadEngagement(activeBrand).then(()=>{ if(view==="mplan"&&activeBrand===k) renderMonthPlanView(); }); }
+}
 function syncBrandTrig(){
   const nm=document.getElementById("brand-trig-nm"), dot=document.getElementById("brand-trig-dot");
   if(!nm) return;
@@ -11189,7 +11213,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V113.13 Bologna";
+const TOOL_VERSION="V114.0 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -11468,7 +11492,7 @@ async function logAppEvent(type,detail){
    per person per Ahmedabad day, so the log stays small — CC Platform's
    Analytics counts people and days, never clicks. Weekends are kept
    here and left out there. */
-const PAGE_NAME={year:"Calendar",list:"Calendar",brief:"Vision",mplan:"Plan",content:"Posts",
+const PAGE_NAME={year:"Calendar",list:"Calendar",brief:"Strategy",mplan:"Plan",content:"Posts",
   branding:"Tasks",promotions:"Promotions",evmgr:"Events",history:"History"};
 const __pageSeen=new Set();
 function logPageOpen(v){
@@ -12010,7 +12034,7 @@ async function upsertBrand(row){
   const res=await sb.from("brands").upsert(row);
   if(res&&res.error&&/brief/i.test(res.error.message||"")){
     briefCol=false;
-    toast("Brand Vision not saved — the database is missing the 'brief' column. Everything else saved.","err");
+    toast("Brand Strategy not saved — the database is missing the 'brief' column. Everything else saved.","err");
     const r=Object.assign({},row);delete r.brief;return sb.from("brands").upsert(r);
   }
   return res;
@@ -13713,6 +13737,54 @@ async function loadNotifications(){
        is NOT zero, and it must not be reported as "showing 200 of 0". */
     NOTIF_TOTAL=(typeof r.count==="number")?r.count:NOTIF.length;
   }catch(e){ NOTIF=[]; NOTIF_TOTAL=0; }
+  await loadSeenMentions();          // V114.0 — alongside, never instead
+}
+/* ══ V114.0 TBILISI · THE @MENTIONS YOU HAVE ALREADY SEEN ═══════════
+   unread_notifications returns unread rows only, so a clicked row left
+   the bell for good — and the way back to that thread with it. A
+   SECOND view, recent_seen_mentions, returns the @mentions you read in
+   the last two days with the moment you read them. It is read alongside
+   the first and never replaces it: the bell's view is not rewritten
+   (Cape Town Stage 4's lesson), and the badge counts the first alone.
+   Failing to read it is not an error — a database without the view
+   yet simply has no Seen block. */
+let NOTIF_SEEN=[], NOTIF_SEEN_OK=false;
+const NOTIF_SEEN_KEEP_MS=2*24*60*60*1000;
+async function loadSeenMentions(){
+  try{
+    const r=await sb.from("recent_seen_mentions").select("*")
+      .order("seen_at",{ascending:false}).limit(100);
+    if(r.error){ NOTIF_SEEN=[]; NOTIF_SEEN_OK=false; return; }
+    NOTIF_SEEN=r.data||[]; NOTIF_SEEN_OK=true;
+  }catch(e){ NOTIF_SEEN=[]; NOTIF_SEEN_OK=false; }
+}
+/* The block is built from TWO places so a click moves a row at once:
+   a mention still held in NOTIF that the local seen marks now cover
+   (clicked this session, not yet refetched), and the rows the view
+   returned. One row, one entry — by comment id. Muted brands stay
+   muted here as everywhere. */
+function notifSeenItems(){
+  const me=(ME.email||"").toLowerCase();
+  const cut=Date.now()-NOTIF_SEEN_KEEP_MS;
+  const seenOf=r=> r.meeting_id?MEET_SEEN[r.meeting_id]
+                 :r.creative_id?CR_SEEN[r.creative_id]:r.task_id?TASK_SEEN[r.task_id]:POSTFB.seen[r.post_id];
+  const isMen=r=>!!r.mentions_me||(r.mentions||[]).some(m=>String(m).toLowerCase()===me);
+  const out={};
+  (NOTIF||[]).forEach(r=>{
+    if(!isMen(r)||brandMuted(r.brand_id)) return;
+    const s=seenOf(r); if(!s) return;
+    if(new Date(r.created_at)>new Date(s)) return;          // still unread
+    if(new Date(s).getTime()<cut) return;
+    out[r.comment_id]={...r,seen_at:s};
+  });
+  (NOTIF_SEEN||[]).forEach(r=>{
+    if(out[r.comment_id]||brandMuted(r.brand_id)) return;
+    const local=seenOf(r); const s=(local&&new Date(local)>new Date(r.seen_at))?local:r.seen_at;
+    if(!s||new Date(s).getTime()<cut) return;
+    out[r.comment_id]={...r,seen_at:s};
+  });
+  return Object.values(out).map(r=>notifItemOf(r,me))
+    .sort((a,b)=>new Date(b.seenAt)-new Date(a.seenAt));
 }
 async function notifMore(){
   NOTIF_WANT+=200;
@@ -14497,6 +14569,27 @@ async function fbMarkUnread(postId){
    did not have to be rewritten — only where the data comes from moved.
    Locally-marked-seen posts are filtered out too, so the count drops the
    instant you open something, without waiting for a round trip. */
+/* V114.0 TBILISI — the row-to-item shape, named so the Seen block
+   (notifSeenItems) builds the same item the panel already draws. */
+function notifItemOf(r,me){
+  return {
+      /* `post` is kept on EVERY row, nulls and all. Half the panel and
+         "mark all read" reach for it.post.id, and a row shaped
+         differently depending on its kind is how one of those quietly
+         starts throwing on a Tuesday. One shape, one extra field. */
+      kind:r.meeting_id?"meeting":r.creative_id?"creative":r.task_id?"task":"post",
+      meetingId:r.meeting_id||null, meetingTitle:r.meeting_title||"",
+      taskId:r.task_id||null, taskTitle:r.task_title||"",
+      creativeId:r.creative_id||null, creativeTitle:r.creative_title||"", promotionId:r.promotion_id||null,
+      brandId:r.brand_id, brandName:r.brand_name,
+      post:{id:r.post_id, month:r.post_month, date:r.post_date, year:r.post_year},
+      c:{id:r.comment_id, body:r.body, author_name:r.author_name,
+         author_email:r.author_email, author_kind:r.author_kind||"team",
+         created_at:r.created_at, mentions:r.mentions||[]},
+      mention:!!r.mentions_me||(r.mentions||[]).some(m=>String(m).toLowerCase()===me),
+      seenAt:r.seen_at||null
+  };
+}
 function notifItems(){
   const me=(ME.email||"").toLowerCase();
   return (NOTIF||[])
@@ -14513,22 +14606,7 @@ function notifItems(){
         :r.creative_id?CR_SEEN[r.creative_id]:r.task_id?TASK_SEEN[r.task_id]:POSTFB.seen[r.post_id];
       return !seen || new Date(r.created_at)>new Date(seen);
     })
-    .map(r=>({
-      /* `post` is kept on EVERY row, nulls and all. Half the panel and
-         "mark all read" reach for it.post.id, and a row shaped
-         differently depending on its kind is how one of those quietly
-         starts throwing on a Tuesday. One shape, one extra field. */
-      kind:r.meeting_id?"meeting":r.creative_id?"creative":r.task_id?"task":"post",
-      meetingId:r.meeting_id||null, meetingTitle:r.meeting_title||"",
-      taskId:r.task_id||null, taskTitle:r.task_title||"",
-      creativeId:r.creative_id||null, creativeTitle:r.creative_title||"", promotionId:r.promotion_id||null,
-      brandId:r.brand_id, brandName:r.brand_name,
-      post:{id:r.post_id, month:r.post_month, date:r.post_date, year:r.post_year},
-      c:{id:r.comment_id, body:r.body, author_name:r.author_name,
-         author_email:r.author_email, author_kind:r.author_kind||"team",
-         created_at:r.created_at, mentions:r.mentions||[]},
-      mention:!!r.mentions_me||(r.mentions||[]).some(m=>String(m).toLowerCase()===me)
-    }))
+    .map(r=>notifItemOf(r,me))
     /* ══ MOTH — MENTIONS FIRST, THEN NEWEST ═══════════════════════
        This was a single date sort, so a mention sat wherever its
        timestamp put it. Worse than it sounds: rows are then grouped by
@@ -14652,7 +14730,34 @@ async function notifMute(bid,on){
   if(!PREFS_OK){ toast("Muted for now — but this will come back when you reload","err"); return; }
   toast(on?`Muted ${name} — just for you`:`Notifications back on for ${name}`);
 }
-function notifRowHtml(it,bid){
+/* ══ V114.0 TBILISI · WHERE A ROW TAKES YOU ═════════════════════════
+   Chirag, 10 Oct: "Notifications with @mentions do not tell you which
+   brand they are going to lead you to or within a brand, which tab are
+   they taking you to." One chip on every row: the brand's dot and name,
+   then the tab and the thing — Posts · 22 Sep, Tasks · Anniversary film,
+   Promotions · Navratri, Plan · Monthly review. Under a brand heading the
+   brand is left off, since the heading already says it. The tab's word
+   is read from BN_TABS, so renaming a tab renames the chip. */
+function notifTabWord(k){
+  const t=(typeof BN_TABS!=="undefined")&&BN_TABS.find(x=>x.k===k);
+  return t?t.label:({content:"Posts",branding:"Tasks",promotions:"Promotions",mplan:"Plan"})[k]||"";
+}
+function notifDestHtml(it,bid,grouped){
+  const b=brands[bid]||{};
+  const tab=it.kind==="meeting"?notifTabWord("mplan"):it.kind==="creative"?notifTabWord("promotions")
+           :it.kind==="task"?notifTabWord("branding"):it.kind==="shoot"?notifTabWord("mplan"):notifTabWord("content");
+  const what=it.kind==="meeting"?(it.meetingTitle||"a meeting")
+            :it.kind==="creative"?(it.creativeTitle||"an ad creative")
+            :it.kind==="task"?(it.taskTitle||"a branding task")
+            :it.kind==="shoot"?"Production"
+            :notifDate(it.post.month,it.post.date);
+  return `<span class="dest${grouped?" nobrand":""}">${grouped?"":`<span class="bd" style="background:${b.color||"#6B6B6B"}"></span>${escHtml(b.name||it.brandName||"")}`}<span class="tab">${escHtml(tab)} · ${escHtml(what)}</span></span>`;
+}
+function notifRowHtml(it,bid,opts){
+  opts=opts||{};
+  const dest=notifDestHtml(it,bid,!!opts.grouped);
+  const seen=opts.seen?` seen`:"";
+  const seenMark=opts.seen&&it.seenAt?`<span class="seenmark">seen ${escHtml(fbTimeLabel(it.seenAt))}</span>`:"";
   /* A SHOOT IS NOT A COMMENT. Squeezed into the comment layout it read
      "Social content was scheduled / chiragdagli81 commented · Sun
      null" — a verb that never happened and a date that does not
@@ -14664,7 +14769,7 @@ function notifRowHtml(it,bid){
         avatarInner(it.c.author_name,escAttr(String(it.c.author_name||"?").slice(0,2).toUpperCase()))}</span>
       <div class="nbody">
         <div class="msg"><span class="ntag k-${escAttr(it.newsKind)}"><span class="ncam" aria-hidden="true">${PROD_CAM_SVG}</span>${escHtml(tag)}</span>${escHtml(it.head||"")}</div>
-        <div class="attr"><span class="nwhat">Production</span>${escHtml(it.line||"")}<span class="when">${fbTimeLabel(it.c.created_at)}</span></div>
+        <div class="attr">${dest}${escHtml(it.line||"")}<span class="when">${fbTimeLabel(it.c.created_at)}</span></div>
       </div></div>`;
   }
   /* A PASSAGE OF MINUTES IS NOT A COMMENT EITHER. Nobody "commented
@@ -14685,12 +14790,16 @@ function notifRowHtml(it,bid){
      for a mention and for an ordinary comment was byte-identical, and the
      only thing that changed was one word in `.attr`, which is the
      smallest and greyest text on the row. */
-  return `<div class="nrow unread${it.mention?" men":""}" onclick="notifOpen('${bid}','${it.kind}','${escAttr(target)}')">
+  /* V114.0 — the chip says where; the verb and the bare date it replaced
+     are kept in `verb`/`where` for the shoot row and for anybody reading
+     the record, not drawn. The mention is said by the row's red edge and
+     by the block it sits in. */
+  void verb; void where;
+  return `<div class="nrow${opts.seen?"":" unread"}${it.mention?" men":""}${seen}" onclick="notifOpen('${bid}','${it.kind}','${escAttr(target)}')">
     <span class="nav-av${it.c.author_kind==="client"?" client":""}" style="${avatarSkin(it.c.author_name,it.c.author_kind==="client")}">${avatarInner(it.c.author_name,escAttr(String(it.c.author_name||"?").slice(0,2).toUpperCase()))}</span>
     <div class="nbody">
       <div class="msg">${fbRich(mpPlain(String(it.c.body||"")).slice(0,160))}</div>
-      <div class="attr"><span class="who">${escAttr(it.c.author_name)}</span>${it.c.author_kind==="client"?` <span class="nkind">· client</span>`:""} ${verb} ·
-        ${where}<span class="when">${fbTimeLabel(it.c.created_at)}</span></div>
+      <div class="attr">${dest}<span class="who">${escAttr(it.c.author_name)}</span>${it.c.author_kind==="client"?` <span class="nkind">· client</span>`:""}${seenMark}<span class="when">${fbTimeLabel(it.c.created_at)}</span></div>
     </div></div>`;
 }
 
@@ -14732,7 +14841,15 @@ function buildNotifPanel(){
   const head=`<div class="nphead"><b>Notifications</b>
       ${all.length?`<span class="mark" onclick="notifMarkAll()">Mark all read</span>`:""}</div>`;
 
-  if(!all.length){
+  /* V114.0 TBILISI — the seen @mentions of the last two days. Chirag,
+     10 Oct: "'Seen' block should stay for additional two days in a faded
+     manner. Which you can find only in the Mentions tab. For every
+     other notification, this is not required." And: "The seen rows
+     should not be counted in the badge" — they are not in `all`, so no
+     count above touches them. A panel with nothing unread but a seen
+     mention still draws its tabs, or the block could not be reached. */
+  const seenMen=notifSeenItems();
+  if(!all.length&&!seenMen.length){
     el.innerHTML=`${head}<div class="npempty">Nothing waiting for you.</div>${notifTruncHtml()}${notifMutedBlock()}${notifMailBlock()}`;
     return;
   }
@@ -14744,11 +14861,15 @@ function buildNotifPanel(){
   /* ── a filtered tab is a flat list; there is nothing to group by ── */
   if(NOTIF_TAB!=="all"){
     const list=(NOTIF_TAB==="mention"?mentions:clients);
+    const seenBlock=(NOTIF_TAB==="mention"&&seenMen.length)
+      ?`<div class="nsec grey">Seen · kept two days</div>`+seenMen.map(it=>notifRowHtml(it,it.brandId,{seen:true})).join("")
+      :"";
     el.innerHTML=head+tabBar
       +(list.length?list.map(it=>notifRowHtml(it,it.brandId)).join("")
         :`<div class="npempty">${NOTIF_TAB==="mention"
             ?"Nobody has mentioned you in what is loaded."
             :"No client has commented in what is loaded."}</div>`)
+      +seenBlock
       +notifTruncHtml()+notifMutedBlock()+notifMailBlock();
     return;
   }
@@ -14758,6 +14879,10 @@ function buildNotifPanel(){
      row appearing in two places is a row you answer twice. Which also
      keeps every count honest — each number below counts the rows drawn
      underneath it, and nothing else. */
+  if(!all.length){
+    el.innerHTML=head+tabBar+`<div class="npempty">Nothing waiting for you.</div>`+notifTruncHtml()+notifMutedBlock()+notifMailBlock();
+    return;
+  }
   const rest=all.filter(i=>!i.mention);
   const menBlock=mentions.length?`<div class="nsec men">Mentioned you · ${mentions.length}</div>`
     +mentions.map(it=>notifRowHtml(it,it.brandId)).join(""):"";
@@ -14768,7 +14893,7 @@ function buildNotifPanel(){
   const byBrand={};
   rest.forEach(it=>{(byBrand[it.brandId]=byBrand[it.brandId]||{name:it.brandName,rows:[]}).rows.push(it);});
   const groups=Object.entries(byBrand).map(([bid,g])=>{
-    const rows=g.rows.map(it=>notifRowHtml(it,bid)).join("");
+    const rows=g.rows.map(it=>notifRowHtml(it,bid,{grouped:true})).join("");
     /* The bell sits NEXT TO THE BRAND NAME, on the heading that groups
        what it will silence — so what the button does is the thing you
        are looking at, and there is nothing to read to work it out. */
@@ -16391,7 +16516,7 @@ function closeBrief(){ briefEdit=false; view="year"; render(); }
 function bdToggleEdit(){
   /* LUCERN: was canCap("edit_brand_vision"), admin-only since Access
      Stage 3. Now admins, the brand's Ac Manager, and anyone on the brand. */
-  if(!briefEdit && !canEditVision()) return capDenied("Editing the Brand Vision");
+  if(!briefEdit && !canEditVision()) return capDenied("Editing the Brand Strategy");
   briefEdit=!briefEdit; renderBrief(); window.scrollTo(0,0); if(!briefEdit) toast("Brief saved"); }
 function bdo(){
   const b=brands[activeBrand]; if(!b.brief||typeof b.brief!=="object") b.brief={};
@@ -16772,7 +16897,7 @@ function bdExportXLSX(){
   const b=brands[activeBrand]; if(!b) return;
   const ws=XLSX.utils.aoa_to_sheet(bdBriefToAOA());
   ws["!cols"]=[{wch:20},{wch:18},{wch:52},{wch:42},{wch:30}];
-  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Brand Vision");
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Brand Strategy");
   const d=new Date(),pad=n=>String(n).padStart(2,"0");
   XLSX.writeFile(wb,`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}-${(b.name||"brand").toLowerCase().replace(/[^a-z0-9]+/g,"-")}-brand-brief.xlsx`);
   toast("Excel exported");
@@ -18079,7 +18204,16 @@ async function boot(){
   /* LYON — and last of all, the link somebody followed to get here. It
      runs AFTER loadAll because it navigates, and there is nothing to
      navigate to before the brands exist. */
+  /* V114.0 TBILISI — the file must be fully parsed before anything
+     navigates: the Plan page's state (PLD) and urlRestore itself are
+     declared BELOW this point, and when every await above resolves at
+     once (as the gate's stub does) boot gets here before the parser
+     has. A meeting link then died in a try/catch and landed on Plan. */
+  if(document.readyState==="loading") await new Promise(r=>document.addEventListener("DOMContentLoaded",r,{once:true}));
   try{ await openDeepLink(); }catch(e){}
+  /* and failing a link, the page the address bar remembers from before
+     the reload */
+  try{ await urlRestore(); }catch(e){}
 }
 
 /* ══ LYON · THE LINK THAT NEVER WORKED ════════════════════════════════
@@ -18114,6 +18248,16 @@ const DEEP_LS="cc_deep_link";
         post:q.get("post")||"", c:q.get("c")||"", task:q.get("task")||"",
         meeting:q.get("meeting")||""}));
     }
+  }catch(e){}
+})();
+/* V114.0 TBILISI — the page before the reload, stashed the same way and
+   for the same two reasons (the sign-in bounce, the tidied address).
+   Read back by urlRestore, at the end of this file. */
+const URL_LS="cc_url_state";
+(function stashUrlState(){
+  try{
+    const q=new URLSearchParams(location.search);
+    if(q.get("p")) sessionStorage.setItem(URL_LS,q.toString());
   }catch(e){}
 })();
 function takeDeepLink(){
@@ -20620,12 +20764,12 @@ function bvFingerprint(){ try{ return JSON.stringify(bdBriefToAOA()); }catch(e){
 
 /* ── THE WINDOW ───────────────────────────────────────────────────── */
 function bvOpen(){
-  if(!canEditVision()) return capDenied("Importing the Brand Vision");
+  if(!canEditVision()) return capDenied("Importing the Brand Strategy");
   const b=brands[activeBrand]||{};
   const c=bdCompleteness();
   document.getElementById("bv-body").innerHTML=`
    <div class="modal-top" style="padding:18px 20px 14px;">
-     <div class="modal-title" style="font-size:17px;">Brand Vision from a sheet
+     <div class="modal-title" style="font-size:17px;">Brand Strategy from a sheet
        <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${escAttr(b.name||"")}</span></div>
      <button class="modal-x" onclick="closeM('bv')">✕</button></div>
    <div class="modal-body" style="padding:16px 20px 20px;">
@@ -20677,7 +20821,7 @@ async function bvTemplate(filled){
   try{
     const EJ=await loadExportLib("exceljs");
     const wb=new EJ.Workbook();
-    const ws=wb.addWorksheet("Brand Vision",{views:[{state:"frozen",ySplit:1}]});
+    const ws=wb.addWorksheet("Brand Strategy",{views:[{state:"frozen",ySplit:1}]});
     const lk=wb.addWorksheet("_lists"); lk.state="veryHidden";
     lk.getCell(1,5).value=BV_MAGIC;
     lk.getCell(2,5).value=activeBrand;
@@ -20713,7 +20857,7 @@ async function bvTemplate(filled){
 }
 
 function bvPick(){
-  if(!canEditVision()) return capDenied("Importing the Brand Vision");
+  if(!canEditVision()) return capDenied("Importing the Brand Strategy");
   const inp=document.createElement("input");
   inp.type="file"; inp.accept=".xlsx";
   inp.onchange=()=>{ if(inp.files&&inp.files[0]) bvRead(inp.files[0]); };
@@ -20748,8 +20892,8 @@ async function bvRead(file){
     if(bId!==activeBrand)
       return bvRefuse("That sheet belongs to a different brand.",
         "It was made for “"+((brands[bId]||{}).name||bId)+"”. Open that brand and import it there.");
-    const ws=wb.getWorksheet("Brand Vision")||wb.worksheets.filter(x=>x.name!=="_lists")[0];
-    if(!ws) return bvRefuse("That file has no Brand Vision tab.","");
+    const ws=wb.getWorksheet("Brand Strategy")||wb.getWorksheet("Brand Vision")/* sheets exported before V114.0 */||wb.worksheets.filter(x=>x.name!=="_lists")[0];
+    if(!ws) return bvRefuse("That file has no Brand Strategy tab.","");
 
     const snap=String(lk.getCell(4,5).value||"");
     const stale=!!snap && snap!==bvFingerprint();
@@ -20773,7 +20917,7 @@ async function bvRead(file){
       if(!sec||!fld){ skip.push({row:n,why:!sec?"no section name":"no field name"}); continue; }
       const cm=sec.match(/^Category\s+(\d+)$/i), om=sec.match(/^Objective\s+(\d+)$/i);
       const known=BV_SECTIONS.some(s=>bvNorm(s)===bvNorm(sec));
-      if(!known&&!cm&&!om){ skip.push({row:n,why:"“"+sec+"” is not a section of the Brand Vision"}); continue; }
+      if(!known&&!cm&&!om){ skip.push({row:n,why:"“"+sec+"” is not a section of the Brand Strategy"}); continue; }
       seen[sec]=true;
       if(cm) catNums[+cm[1]]=true;
       if(om) segNums[+om[1]]=true;
@@ -20883,7 +21027,7 @@ async function bvRead(file){
     const diff=bvDiff(D0,next);
 
     if(!diff.length&&!skip.length)
-      return bvRefuse("Nothing in this sheet differs from the Brand Vision.",
+      return bvRefuse("Nothing in this sheet differs from the Brand Strategy.",
         "Every field it carries already says what the tool says.");
 
     BV={file:file.name,next:next,diff:diff,skip:skip,stale:stale,keep:stale};
@@ -20954,13 +21098,13 @@ function bvRender(){
   const skipN=BV.skip.length;
   document.getElementById("bv-body").innerHTML=`
    <div class="modal-top" style="padding:18px 20px 14px;">
-     <div class="modal-title" style="font-size:17px;">Brand Vision from a sheet
+     <div class="modal-title" style="font-size:17px;">Brand Strategy from a sheet
        <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${escAttr(BV.file)}</span></div>
      <button class="modal-x" onclick="closeM('bv')">✕</button></div>
    <div class="modal-body" style="padding:6px 20px 8px;max-height:60vh;overflow-y:auto;">
      ${BV.stale?`<div style="border:1px solid #E8C46A;border-radius:10px;padding:11px 13px;margin:8px 0 4px;background:var(--surface);">
        <div style="display:flex;align-items:center;gap:8px;">
-         <b style="font-size:13px;">The Brand Vision was edited in the tool after you downloaded this sheet.</b>
+         <b style="font-size:13px;">The Brand Strategy was edited in the tool after you downloaded this sheet.</b>
          <label style="margin-left:auto;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap;">
            <input type="checkbox" ${BV.keep?"":"checked"} onchange="bvToggle()"> import anyway</label>
        </div>
@@ -20971,7 +21115,7 @@ function bvRender(){
      ${clrs.length?head(clrs.length+" field"+(clrs.length===1?"":"s")+" will be emptied")+clrs.map(card).join(""):""}
      ${skipN?head(skipN+" row"+(skipN===1?"":"s")+" skipped")+
         BV.skip.map(s=>`<div style="font-size:12px;color:var(--muted);padding:3px 0;">${s.row?"Row "+s.row+" — ":""}${escAttr(s.why)}</div>`).join(""):""}
-     ${!BV.diff.length?`<div style="font-size:13px;color:var(--muted);padding:14px 0;">Nothing in this sheet differs from the Brand Vision.</div>`:""}
+     ${!BV.diff.length?`<div style="font-size:13px;color:var(--muted);padding:14px 0;">Nothing in this sheet differs from the Brand Strategy.</div>`:""}
    </div>
    <div style="display:flex;align-items:center;gap:10px;padding:12px 20px 18px;border-top:1px solid var(--div);">
      <span style="font-size:12.5px;color:var(--muted);">Nothing is saved yet.${
@@ -21028,7 +21172,7 @@ async function bvUndo(importId){
   if(!head.before) return toast("That import has nothing recorded to put back.","err");
   const now=JSON.stringify(bvDiff(bdo(),head.after||{}));
   if(now!=="[]")
-    return toast("The Brand Vision has been edited since that import — nothing undone.","err");
+    return toast("The Brand Strategy has been edited since that import — nothing undone.","err");
   const d=bvDiff(head.after||{},head.before||{});
   if(!d.length) return toast("Nothing left from that import to undo.","err");
   if(!confirm("Undo this import? "+d.length+" field"+(d.length===1?"":"s")+" will go back to what they were.")) return;
@@ -21049,7 +21193,7 @@ async function openVisionImportHistory(){
   if(!canEditVision()) return toast("View-only account","err");
   closeAllPops();
   document.getElementById("bvh-body").innerHTML=`<div class="modal-top" style="padding:18px 20px 14px;">
-     <div class="modal-title" style="font-size:17px;">Brand Vision import history</div>
+     <div class="modal-title" style="font-size:17px;">Brand Strategy import history</div>
      <button class="modal-x" onclick="closeM('bvhist')">✕</button></div>
    <div class="modal-body" style="padding:16px 20px 20px;font-size:13px;color:var(--muted);">Loading…</div>`;
   openM("bvhist");
@@ -21070,7 +21214,7 @@ async function openVisionImportHistory(){
     </div>`).join("")
     : `<div style="font-size:13px;color:var(--subtle);padding:14px 0;">Nothing has been imported for this brand yet.</div>`;
   document.getElementById("bvh-body").innerHTML=`<div class="modal-top" style="padding:18px 20px 14px;">
-     <div class="modal-title" style="font-size:17px;">Brand Vision import history
+     <div class="modal-title" style="font-size:17px;">Brand Strategy import history
        <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${escAttr((brands[activeBrand]||{}).name||"")}</span></div>
      <button class="modal-x" onclick="closeM('bvhist')">✕</button></div>
    <div class="modal-body" style="padding:6px 20px 20px;max-height:60vh;overflow-y:auto;">${rowsHtml}</div>`;
@@ -23785,7 +23929,7 @@ function syncTabs(){
    different screen is drawn, and "no brand" is not a layer. */
 const BN_TABS=[
   {k:"year",    icon:"ti-calendar",        label:"Calendar", go:"setView('year')",              on:["year","list"]},
-  {k:"brief",   icon:"ti-file-text",       label:"Vision",   go:"openBrief()",                  on:["brief"]},
+  {k:"brief",   icon:"ti-file-text",       label:"Strategy", go:"openBrief()",                  on:["brief"]},   /* V114.0 — was Vision */
   /* 0 — no month asked for. The view opens at the top of its own list,
    which is the latest month with work. See mpvSnap. */
   {k:"mplan",   icon:"ti-calendar-stats",  label:"Plan",     go:"openMonthPlanView(0)",on:["mplan"]},
@@ -24005,7 +24149,7 @@ const HIST_FIELDS={name:"Name",label:"Label",date:"Date",month:"Month",year:"Yea
   key_theme:"Key theme",mega:"Key date",brand_only:"Brand only",relevance:"Industry ratings",
   end_month:"End month",end_date:"End date",discipline:"Discipline",value:"Value",
   influencer_target:"Influencer target",inds:"Industries",audience:"Audience",
-  sort_order:"Order",email:"Email",tool:"Tool",brief:"Brand Vision"};
+  sort_order:"Order",email:"Email",tool:"Tool",brief:"Brand Strategy"};
 const histField=k=>HIST_FIELDS[k]||(k.charAt(0).toUpperCase()+k.slice(1).replace(/_/g," "));
 
 const HIST_PAGE=200;
@@ -26487,6 +26631,12 @@ function plMonthRange(m){ return [`${YEAR}-${plPad(m)}-01`, `${YEAR}-${plPad(m)}
   if(ci>-1) BN_TABS.splice(ci,1);
   const pi=BN_TABS.findIndex(t=>t.k==="mplan");
   if(pi>-1){ const t=BN_TABS.splice(pi,1)[0]; BN_TABS.unshift(t); }
+  /* V114.0 TBILISI — Chirag, 10 Oct: "Strategy Tab to be the first one
+     and after that Plan, Posts, Tasks, Promotions." One table drives the
+     bar, the phone's More drawer and the bell's chips, so the order is
+     set once, here, where Plan was already moved to the front. */
+  const si=BN_TABS.findIndex(t=>t.k==="brief");
+  if(si>-1){ const t=BN_TABS.splice(si,1)[0]; BN_TABS.unshift(t); }
 })();
 
 /* ── every road to the brand calendar now arrives at Plan ────────────
@@ -31443,6 +31593,89 @@ function mfTaskToday(t){
   const av=document.getElementById("acct-av");
   if(av&&window.MutationObserver) new MutationObserver(()=>mfSync()).observe(av,{childList:true,characterData:true,subtree:true,attributes:true});
   mfSync();
+})();
+</script>
+<script>
+/* ══ V114.0 TBILISI — THE ADDRESS BAR REMEMBERS THE PAGE ═══════════════
+   Chirag, 10 Oct: "when the page is reloaded or refreshed from any page
+   we land back on the exact same page." Nothing in this file ever wrote
+   the address during navigation; a reload always came back to the
+   calendar. Now every render() ends by writing where you are into the
+   query string with replaceState — no history entries, so Back still
+   leaves the tool — and boot reads it back after the brands exist.
+
+   WHAT IS WRITTEN: b the brand, p the page, y the year, m the month on
+   Plan or Posts, task / meeting the open thread (the same words Lyon's
+   shared links already use, so the link-opening code is what restores
+   them), pr and cr the open promotion and its creative.
+
+   STASHED AT ONCE. The Microsoft sign-in leaves the page and comes back
+   to a bare path, and takeDeepLink tidies the address before boot has
+   read it. So the query is copied into sessionStorage the moment this
+   script runs — boot() is already waiting on its first await — and
+   urlRestore reads the copy. A shared link (post/task/meeting) is left
+   to openDeepLink, which already lands on the exact thread. */
+/* The stash itself sits beside stashDeepLink, ABOVE boot(): a script at
+   the end of the file runs after boot has already reached takeDeepLink
+   when every await before it resolves in a microtask, as the stub's do —
+   the gate's reload came back to the calendar for exactly that reason. */
+function urlState(){
+  const q=new URLSearchParams();
+  const b=activeBrand&&brands[activeBrand]?activeBrand:"";
+  if(b) q.set("b",b);
+  q.set("p",view==="mom"?"meets":view);
+  q.set("y",String(YEAR));
+  /* on Plan the month that matters is the OPEN one — mpvMonth is a
+     scroll target the page consumes */
+  if(view==="mplan"&&typeof plMonthOpen==="function"&&plMonthOpen()) q.set("m",String(plMonthOpen()));
+  if(view==="content"&&contentMonth) q.set("m",String(contentMonth));
+  if(view==="branding"&&BR_OPEN) q.set("task",BR_OPEN);
+  if((view==="meets"||view==="mom")&&typeof ML!=="undefined"&&(ML.live||MOM.id)) q.set("meeting",ML.live||MOM.id);
+  if(view==="promotions"&&typeof PR!=="undefined"&&PR.open){ q.set("pr",PR.open); if(PR.creative) q.set("cr",PR.creative); }
+  return q;
+}
+let URL_HOLD=false;            /* true while restoring — nothing is written over the copy */
+function urlSync(){
+  if(URL_HOLD||!ME||!ME.id||!history.replaceState) return;
+  try{
+    const next="?"+urlState().toString();
+    if(location.search!==next) history.replaceState(null,"",location.pathname+next);
+  }catch(e){}
+}
+async function urlRestore(){
+  let raw=null;
+  try{ raw=sessionStorage.getItem(URL_LS); sessionStorage.removeItem(URL_LS); }catch(e){}
+  if(!raw) return;
+  const q=new URLSearchParams(raw);
+  /* a shared link names its own thread and openDeepLink has taken it */
+  if(q.get("task")||q.get("meeting")||q.get("post")) return;
+  const p=q.get("p")||"", b=q.get("b")||"", y=parseInt(q.get("y")||"",10), m=parseInt(q.get("m")||"",10)||0;
+  URL_HOLD=true;
+  try{
+    if(b&&brands[b]&&activeBrand!==b) pickBrand(b);
+    if(y&&y!==YEAR&&y>2000&&y<2100) setYear(y);
+    const hasBrand=!!(activeBrand&&brands[activeBrand]);
+    if(p==="mplan"&&hasBrand){ if(m&&typeof plMonthSet==="function") plMonthSet(m); openMonthPlanView(m||0); }
+    else if(p==="content"&&hasBrand){ socialLayer=true; if(m) contentMonth=m; setView("content"); }
+    else if(p==="branding"&&hasBrand){ navTasks(); }
+    else if(p==="brief"&&hasBrand){ openBrief(); }
+    else if(p==="meets"&&hasBrand){ setView("meets"); }
+    else if(p==="promotions"&&hasBrand){
+      await navPromotions();
+      const pr=q.get("pr"), cr=q.get("cr");
+      if(pr&&view==="promotions"){ PR.open=pr; PR.creative=cr||null; if(cr&&typeof prThLoad==="function") prThLoad(cr); render(); }
+    }
+    else if(p==="numbers"&&hasBrand&&typeof navNumbers==="function"){ await navNumbers(); }
+    else if(p&&p!==view&&viewRoute(p)){ setView(p); }
+  }finally{ URL_HOLD=false; urlSync(); }
+}
+(function(){
+  const baseRender=render;
+  /* twice: once now, once a beat later — the meetings page picks its
+     live card AFTER the render that drew it, and a state set in the
+     same tick as a render would otherwise wait for the next one */
+  render=function(){ const out=baseRender.apply(this,arguments); urlSync(); setTimeout(urlSync,80); return out; };
+  if(typeof mlLive==="function"){ const baseLive=mlLive; mlLive=function(){ const out=baseLive.apply(this,arguments); urlSync(); return out; }; }
 })();
 </script>
 </body>
