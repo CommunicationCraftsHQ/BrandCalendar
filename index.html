@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V113.10 Bologna"/>
+<meta name="cc-tool-version" content="V113.11 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3248,6 +3248,7 @@ select.mom-in{padding-right:26px;}
 .ml-node:before{content:"";position:absolute;left:-26px;top:22px;width:10px;height:10px;border-radius:50%;
   background:#fff;border:2px solid var(--div);box-sizing:border-box;}
 .ml-node.nw:before{border-color:var(--acc);}
+.ml-node.fresh:before{border-color:var(--acc);background:var(--acc);}
 .ml-node .mom-sheet{max-width:none;}
 .ml-card{position:relative;}
 .ml-card:not(.live){cursor:pointer;}
@@ -11178,7 +11179,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V113.10 Bologna";
+const TOOL_VERSION="V113.11 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -27184,49 +27185,62 @@ function momRow(id){
 }
 /* Opening: a saved meeting is edited in place through a copy, so a
    half-typed change never sits in the list behind the page. */
+/* ══ V113.11 — THERE IS ONE PLACE A MEETING IS READ AND WRITTEN ═════
+   Chirag, 9 Oct: "whats the need for individual meetings page ?" There
+   was none left. Every door — a tile, the bell, a share link, Add MOM —
+   comes through here, and here now means: the brand's page, with that
+   card open and live, scrolled to. A new meeting is a live card at the
+   top of the same page that becomes a row the moment it has a topic.
+   The old route stays only as a redirect, so a tab left open across
+   the upgrade does not dead-end. */
 function plMeetOpen(id,m){
   if(!plMerged()||!PLD.ok.meet) return;
   const x=id?momRow(id):null;
   if(id&&!x) return;
   /* ══ V113.6 — THE DOOR SHUTS BEHIND YOU ═══════════════════════════
-     Chirag, 8 Oct: "the page has changed to that MOM page, but the
-     dialogue is still open." A day window is a window ONTO the day; the
-     moment it sends you somewhere else it is in front of the thing you
-     asked for. Closed here rather than at each of the five places that
-     call this, so a door added later cannot forget. */
+     A day window is a window ONTO the day; the moment it sends you
+     somewhere else it is in front of the thing you asked for. */
   closeM("day-pop"); closeAllPops();
-  MOM.from=(view==="mplan")?PLMODE:(view==="meets"?"meets":null);
-  MOM.state=""; MOM.id=id||null;
-  MOM.pass=[]; MOM.passOk=false; MOM.ed=null; MOM.fc=""; MOM.npd="";
-  if(id){ momPassLoad(id); meetMarkSeen(id,activeBrand); }
-  if(x){ MOM.draft=JSON.parse(JSON.stringify(x)); }
-  else {
-    const t=new Date();
-    const mm=m||(t.getFullYear()===YEAR?t.getMonth()+1:(plWin()||1));
-    const day=(t.getFullYear()===YEAR&&t.getMonth()+1===mm)?t.getDate():1;
-    MOM.draft={...momDraft(),held_on:`${YEAR}-${plPad(mm)}-${plPad(day)}`};
+  if(id){
+    ML.want=id;                              /* honoured once the list is here */
+    if(ML.brand===activeBrand){ ML.open[id]=true; mlLive(id,true); ML.want=null; }
+    setView("meets");
+    mlScrollTo(id);
+    return;
   }
+  /* a new one: a live card at the top, dated into the month you were in */
+  if(MOM.id&&MOM.draft){ momKeepNotes(); ML.npd[MOM.id]=MOM.npd||""; if(MOM.timer){ clearTimeout(MOM.timer); MOM.timer=null; momSave(); } }
+  MOM.state=""; MOM.id=null; MOM.from="meets";
+  MOM.pass=[]; MOM.passOk=true; MOM.ed=null; MOM.fc=""; MOM.npd="";
+  const t=new Date();
+  const mm=m||(t.getFullYear()===YEAR?t.getMonth()+1:(plWin()||1));
+  const day=(t.getFullYear()===YEAR&&t.getMonth()+1===mm)?t.getDate():1;
+  MOM.draft={...momDraft(),held_on:`${YEAR}-${plPad(mm)}-${plPad(day)}`};
   const d=MOM.draft;
   d.cc_people=d.cc_people||[]; d.client_contact_ids=d.client_contact_ids||[]; d.client_names=d.client_names||[];
-  setView("mom");
-  setTimeout(()=>{ const i=document.getElementById("mom-topic"); if(i&&!MOM.id) i.focus(); },40);
+  ML.live=null;
+  if(view==="meets") renderMeetsPage(); else setView("meets");
+  setTimeout(()=>{ const i=document.getElementById("mom-topic"); if(i&&!MOM.id) i.focus(); },60);
 }
-/* ONE ANSWER, READ TWICE. The label on the back link and the place it
-   actually goes were two separate expressions, which is how a link
-   that says one thing and does another gets shipped. */
-function momBackTo(){
-  if(MOM.from==="meets") return "meets";
-  if(!MOM.id) return "mplan";          /* a meeting not written yet has no siblings to go back to */
-  const n=(ML.brand===activeBrand&&ML.meets.length) ? ML.meets.length : (PLD.meet||[]).length;
-  return n>1 ? "meets" : "mplan";
+function momTopicBlur(){
+  if(!ML.redrawOnBlur) return;
+  ML.redrawOnBlur=false;
+  if(MOM.timer){ clearTimeout(MOM.timer); MOM.timer=null; momSave(); }
+  setTimeout(()=>{ if(!MOM_RENDERING) momRedraw(); },0);
 }
+function mlScrollTo(id){
+  setTimeout(()=>{
+    const c=document.querySelector(`.ml-card[data-meet="${CSS.escape(id)}"]`);
+    if(c&&c.scrollIntoView) c.scrollIntoView({block:"start",behavior:"auto"});
+  },80);
+}
+/* Leaving a card means leaving nothing: the card is on the page you
+   are standing on. The page's own back goes to Plan. */
 function momBack(){
   const d=MOM.draft;
   if(d&&/^\d{4}-\d{2}-\d{2}$/.test(String(d.held_on||""))) mpvMonth=Number(String(d.held_on).slice(5,7));
-  if(MOM.from==="events") PLMODE="events";
-  const back=momBackTo();
-  MOM.id=null; MOM.draft=null; MOM.timer=null;
-  setView(back);
+  MOM.id=null; MOM.draft=null; MOM.timer=null; ML.live=null;
+  if(view==="meets") renderMeetsPage(); else setView("meets");
 }
 function momSet(k,v){
   if(!MOM.draft) return;
@@ -27265,12 +27279,25 @@ async function momSave(){
       if(r.error||!r.data||!r.data.length){ momState("err"); toast("Not saved — "+(r.error?r.error.message:"not allowed"),"err"); return; }
       const i=PLD.meet.findIndex(x=>x.id===MOM.id);
       if(i>-1) PLD.meet[i]={...PLD.meet[i],...row,id:MOM.id};
+      mlPut({...(momRow(MOM.id)||{}),...row,id:MOM.id});
     } else {
       row.id=crypto.randomUUID(); row.created_by=ME.id;
       const r=await sb.from("brand_meetings").insert([row]).select("id");
       if(r.error){ momState("err"); toast("Not saved — "+r.error.message,"err"); return; }
       MOM.id=row.id; MOM.draft.id=row.id; PLD.meet.push(row);
-      mlStale();                       /* the brand page holds its own list */
+      mlPut(row); ML.open[row.id]=true; ML.live=row.id;   /* the brand page holds its own list */
+      meetMarkSeen(row.id,activeBrand);                   /* you wrote it; you have read it */
+      /* the half-typed minutes of a meeting that had no id yet move under its id */
+      try{ const nv=localStorage.getItem(W_DRAFT_NS+momDraftKey(null));
+        if(nv){ localStorage.setItem(W_DRAFT_NS+momDraftKey(row.id),nv); localStorage.removeItem(W_DRAFT_NS+momDraftKey(null)); } }catch(e){}
+      /* THE CARD BECOMES A ROW WITHOUT PULLING THE CURSOR OUT OF THE
+         TITLE. A redraw now would blur the box being typed in — the
+         V113.3 fault. If the title has the cursor, the fresh card is
+         given its id in place and the redraw waits for the title to be
+         left; otherwise it happens now. */
+      const ti=document.getElementById("mom-topic");
+      if(ti&&document.activeElement===ti){ ML.redrawOnBlur=true; const c=ti.closest(".ml-card"); if(c) c.dataset.meet=row.id; }
+      else momRedraw();
     }
     momState("saved");
   });
@@ -27282,7 +27309,7 @@ async function momTrash(){
   const r=await sb.from("brand_meetings").update({deleted_at:new Date().toISOString()}).eq("id",MOM.id).select("id");
   if(r.error||!r.data||!r.data.length){ toast("Could not move it — "+(r.error?r.error.message:"not allowed"),"err"); return; }
   PLD.meet=PLD.meet.filter(x=>x.id!==MOM.id);
-  mlStale();
+  mlDrop(MOM.id);
   toast("Moved to Trash"); momBack();
 }
 /* the people pickers, on the page */
@@ -27378,7 +27405,7 @@ async function momPassAdd(){
       resolved:false,resolved_by:"",resolved_at:null,created_at:new Date().toISOString()};
     const r=await sb.from("post_comments").insert([row]);
     if(r.error){ momState("err"); toast("Not added — "+r.error.message,"err"); return; }
-    MOM.npd=""; wDraftClear("mom-minutes"); MOM.pass=[...MOM.pass,row]; momState("saved");
+    MOM.npd=""; wDraftClear(momDraftKey(MOM.id)); MOM.pass=[...MOM.pass,row]; momState("saved");
     meetMarkSeen(MOM.id,activeBrand);
     momRedraw();
   }finally{ MOM_POSTING=false; }
@@ -27632,10 +27659,7 @@ let MOM_RENDERING=false;
    was fine while the minutes had exactly one page. The brand's spine
    draws the same card, so a passage added there would have rewritten a
    page that is not on screen and left the one that is unchanged. */
-function momRedraw(){
-  if(view==="meets") renderMeetsPage();
-  else renderMomPage();
-}
+function momRedraw(){ renderMeetsPage(); }
 /* ══ V113.9 · ONE SHEET, DRAWN IN TWO PLACES ═════════════════════════
    Chirag, 8 Oct: "each meeting should be an individual card exactly how
    it is designed today, including with options to add comments or add
@@ -27653,6 +27677,14 @@ function momRedraw(){
    set of them on one page sends every handler to whichever the browser
    finds first. So the spine keeps ONE live card and the rest read, and
    clicking a read card makes it the live one. */
+/* V113.11 — THE DRAFT IS THE MEETING'S, NOT THE BOX'S. With one page the
+   box was the only one and "mom-minutes" named it well enough. On the
+   brand page the same box belongs to whichever card is live, so a draft
+   kept under the box's name would come back inside the wrong meeting;
+   the spine's box was given data-nodraft to stop that, which kept
+   nothing at all. Keyed by meeting, it is kept and it comes back where
+   it was typed. A meeting not yet written keeps its draft under "new". */
+function momDraftKey(id){ return "mom-minutes:"+(id||"new"); }
 function momSheetHtml(d,o){
   o=o||{};
   const ro=!!o.ro, id=o.id||null;
@@ -27695,7 +27727,7 @@ function momSheetHtml(d,o){
   const add=canE
     ? `<div class="mom-newp${nothing?" first":""}">
         ${momFace(actorName(),actorKind())}
-        <div><div class="mom-min-edit" id="mom-minutes" contenteditable="true"${o.spine?' data-nodraft="1"':''}
+        <div><div class="mom-min-edit" id="mom-minutes" contenteditable="true" data-draft="${escAttr(momDraftKey(id))}"
           data-ph="${escAttr(nothing?"Write the minutes…":"Add to the minutes…")}"
           onfocus="mpBarShow(this)" onblur="mpBarHide();momPassAdd()"
           oninput="fbMentionKey(event,'mom-minutes',activeBrand,true)"
@@ -27723,35 +27755,22 @@ function momSheetHtml(d,o){
   const ttl=ro
     ? `<div class="mom-ttl ro">${escHtml(d.topic||"Meeting")}</div>`
     : `<input class="mom-ttl" id="mom-topic" value="${escAttr(d.topic)}" placeholder="What was the meeting about?"
-        oninput="momSet('topic',this.value)">`;
+        oninput="momSet('topic',this.value)" onblur="momTopicBlur()">`;
   return `${ttl}
     ${momFactsHtml(d,ro)}
     <div class="mom-rule"></div>
     <div class="mom-slbl">Minutes</div>
     ${legacy}${passages}${add}`;
 }
+/* THE PAGE THIS WAS. A title, the fact chips, the signed passages and
+   the add box, on a page of its own with a back link to Plan. Retired
+   9 Oct 2026 at Chirag's word — "whats the need for individual meetings
+   page ?" — because every one of those things is on the card the brand
+   page draws, and the page offered nothing the card did not. A tab
+   still holding the old view lands on the brand page. */
 function renderMomPage(){
-  const main=document.getElementById("main"); if(!main) return;
-  if(!plMerged()||!MOM.draft){ setView("mplan"); return; }
-  const d=MOM.draft;
-  const state=MOM.state==="typing"?"Saving…":MOM.state==="saved"?"Saved a moment ago"
-    :MOM.state==="notopic"?"Not saved yet — give it a topic":MOM.state==="err"?"Not saved — try again":"";
-  MOM_RENDERING=true;
-  try{
-  main.innerHTML=`<div class="mompage">
-    <div class="pgbar">
-      <span class="mom-back" onclick="momBack()"><i class="ti ti-chevron-left"></i> ${momBackTo()==="meets"?"Meetings":"Plan"}</span>
-      <span style="flex:1"></span>
-      <span class="mom-state${MOM.state==="err"||MOM.state==="notopic"?" warn":""}" id="mom-state">${escHtml(state)}</span>
-      ${MOM.id?`<button class="btn btn-g btn-sm" id="mom-link" onclick="momCopyLink('${escAttr(MOM.id)}',event)"
-        title="Copy a link that opens these minutes"><i class="ti ti-link"></i> Copy link</button>`:""}
-      <button class="btn btn-g btn-sm" onclick="momTrash()"><i class="ti ti-trash"></i> ${MOM.id?"Move to Trash":"Discard"}</button>
-    </div>
-    <div class="mom-wrap">
-      <div class="mom-sheet">${momSheetHtml(d,{id:MOM.id,pass:MOM.pass})}</div>
-    </div>
-  </div>`;
-  }finally{ MOM_RENDERING=false; }
+  if(view==="mom"){ setView("meets"); return; }
+  renderMeetsPage();
 }
 
 /* ══ V113.9 · EVERY MEETING WITH A BRAND, ON ONE PAGE ════════════════
@@ -27781,7 +27800,7 @@ function renderMomPage(){
    visit after this ships NOTHING has been looked at by this measure,
    and without that bound a brand with forty meetings would open all
    forty exactly once and look broken. */
-const ML={brand:null,loading:false,ok:true,meets:[],pass:{},open:{},npd:{},live:null};
+const ML={brand:null,loading:false,ok:true,meets:[],pass:{},open:{},npd:{},live:null,want:null,redrawOnBlur:false};
 const ML_FULL=3, ML_AUTO=10;
 function mlOpen(){
   if(!plMerged()) return;
@@ -27814,6 +27833,8 @@ async function mlLoad(bid){
   }
   ML.brand=bid; ML.meets=meets; ML.pass=pass; ML.ok=mt.ok;
   ML.open={}; ML.npd={}; ML.live=null; ML.loading=false;
+  if(ML.want){ const w=ML.want; ML.want=null;
+    if(meets.some(x=>x.id===w)){ ML.open[w]=true; mlLive(w,true); mlScrollTo(w); } }
   if(view==="meets") renderMeetsPage();
 }
 /* The brand page reads every year in one go and keeps the answer, so a
@@ -27821,7 +27842,16 @@ async function mlLoad(bid){
    that no longer exists. Caught by a gate, not by reading: the spine
    had been opened before the November meeting was written and went on
    showing six. Marked stale here; the next render reloads. */
-function mlStale(){ ML.brand=null; }
+function mlPut(row){
+  if(ML.brand!==activeBrand||!row||!row.id) return;
+  ML.meets=[...ML.meets.filter(x=>x.id!==row.id),row]
+    .sort((p,q)=>String(q.held_on).localeCompare(String(p.held_on))
+      ||String(q.created_at||"").localeCompare(String(p.created_at||"")));
+}
+function mlDrop(id){
+  if(ML.brand!==activeBrand) return;
+  ML.meets=ML.meets.filter(x=>x.id!==id); delete ML.open[id]; delete ML.pass[id]; delete ML.npd[id];
+}
 function mlPassOf(id){ return (MOM.id===id?MOM.pass:(ML.pass[id]||[])); }
 function mlDefaultOpen(x,i){
   if(i<ML_FULL) return true;
@@ -27855,8 +27885,8 @@ function mlLive(id,quiet){
      card switch, to stop one card's words bleeding into the next — and
      a gate caught what that really did: opening the brand page threw
      away a half-typed line that was being kept for a meeting's OWN
-     page. The spine's box carries data-nodraft and never restores from
-     that slot anyway, so the clear protected nothing and cost that. */
+     page. The box's draft is keyed by meeting now (momDraftKey), so a
+     clear here would protect nothing and cost that. */
   MOM.state=""; MOM.id=id; MOM.from="meets";
   MOM.pass=ML.pass[id]||[]; MOM.passOk=true;
   MOM.ed=null; MOM.fc=""; MOM.npd=ML.npd[id]||"";
@@ -27898,8 +27928,8 @@ function mlCardHtml(x,i){
         title="Fold this meeting away"><i class="ti ti-chevron-up"></i></span>
       <span class="ml-ca" onclick="momCopyLink('${escAttr(x.id)}',event)"
         title="Copy a link that opens these minutes"><i class="ti ti-link"></i></span>
-      <span class="ml-ca" onclick="event.stopPropagation();plMeetOpen('${escAttr(x.id)}')"
-        title="Open this meeting on its own page, where the date, the room and the people can be changed"><i class="ti ti-arrow-up-right"></i></span>
+      ${live&&canEdit()?`<span class="ml-ca" onclick="event.stopPropagation();momTrash()"
+        title="Move this meeting to Trash"><i class="ti ti-trash"></i></span>`:""}
     </div>
     ${momSheetHtml(d,{id:x.id,pass:mlPassOf(x.id),ro:!live,spine:true,npd:ML.npd[x.id]})}
   </div>`;
@@ -27912,14 +27942,29 @@ function renderMeetsPage(){
   const ms=ML.meets||[];
   /* the newest card is the one you came to write in, unless you have
      already picked another */
-  if(ms.length&&!(MOM.id&&ms.some(x=>x.id===MOM.id))&&canEdit()) mlLive(ms[0].id,true);
+  if(ms.length&&!MOM.draft&&canEdit()) mlLive(ms[0].id,true);
+  else if(ms.length&&MOM.id&&!ms.some(x=>x.id===MOM.id)&&canEdit()) mlLive(ms[0].id,true);
 
+  /* A MEETING NOT WRITTEN YET is a live card at the top of the spine,
+     drawn from the draft because it has no row to be drawn from. The
+     moment it has a topic it is a row, mlPut puts it in the list, and
+     this branch stops applying to it without a redraw being needed. */
+  const fresh=(MOM.draft&&!MOM.id)?MOM.draft:null;
+  const newNode=fresh?`<div class="ml-node fresh"><div class="mom-sheet ml-card live" data-meet="">
+      <div class="ml-chd">
+        <span class="mom-state${MOM.state==="err"||MOM.state==="notopic"?" warn":""}" id="mom-state">${
+          escHtml(MOM.state==="typing"?"Saving…":MOM.state==="notopic"?"Not saved yet — give it a topic":MOM.state==="err"?"Not saved — try again":"")}</span>
+        <span class="ml-ca" onclick="event.stopPropagation();momTrash()" title="Discard this meeting"><i class="ti ti-trash"></i></span>
+      </div>
+      ${momSheetHtml(fresh,{id:null,pass:[],spine:true})}
+    </div></div>`:"";
   let body="";
-  if(ML.loading&&!ms.length) body=`<div class="ml-wait">Reading the meetings…</div>`;
-  else if(!ML.ok) body=`<div class="ml-wait">The meetings could not be read just now.</div>`;
-  else if(!ms.length) body=`<div class="ml-wait">No meetings logged for ${escHtml(nm)} yet.</div>`;
+  if(ML.loading&&!ms.length&&!fresh) body=`<div class="ml-wait">Reading the meetings…</div>`;
+  else if(!ML.ok&&!fresh) body=`<div class="ml-wait">The meetings could not be read just now.</div>`;
+  else if(!ms.length) body=fresh?`<div class="ml-spine">${newNode}</div>`:`<div class="ml-wait">No meetings logged for ${escHtml(nm)} yet.</div>`;
   else {
     let y=null, out=[];
+    if(fresh) out.push(`<div class="ml-yr">New</div><div class="ml-spine">${newNode}</div>`);
     ms.forEach((x,i)=>{
       const yr=String(x.held_on).slice(0,4);
       if(yr!==y){ if(y!==null) out.push(`</div>`); y=yr; out.push(`<div class="ml-yr">${escHtml(yr)}</div><div class="ml-spine">`); }
@@ -27951,7 +27996,7 @@ function renderMeetsPage(){
 (function(){
   const base=viewRoute;
   viewRoute=function(v){
-    if(v==="mom") return {render:renderMomPage,sidebar:buildMonthPlanSidebar,needs:"brand+edit"};
+    if(v==="mom") return {render:renderMomPage,sidebar:buildMonthPlanSidebar,needs:"brand+edit"};   /* redirect only */
     if(v==="meets") return {render:renderMeetsPage,sidebar:buildMonthPlanSidebar,needs:"brand+edit"};
     return base(v);
   };
