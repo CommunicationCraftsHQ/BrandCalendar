@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V113.12 Bologna"/>
+<meta name="cc-tool-version" content="V113.13 Bologna"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -9462,28 +9462,31 @@ function brOpenPanelHtml(t){
   else if(tab==="brief")          body=brBriefHtml(t);
   else if(tab==="history")        body=brHistoryHtml(t);
   else                            body=`<div class="br-thread">${threadHtml(t)}</div>`;
+  /* ══ V113.13 · ONE MESSAGE BOX ════════════════════════════════════
+     Chirag, 9–10 Oct: every conversation in the suite writes in the same
+     box. This was the last plain textarea with its own row of written
+     buttons (@ Tag someone, Attach a file, Add a link, post as the
+     client) — the buttons Ghent retired in September. It is now the
+     shared box: the black bar for formatting, link and the clip, @ by
+     typing, files by the clip or a drop, the round arrow to send.
+     "Post as the client" went with it, on his word: clients get their own
+     section later. The draft is kept per task by the shared draft store,
+     so a re-render no longer needs TASK.draft to carry it. */
   const composer=(tab==="talk"&&canComment())?`
-    <div class="th-c" data-drop="task:">
-      <span class="th-av">${escHtml(brInitials(ME.id)||"··")}</span>
-      <div style="flex:1">
-        <textarea id="th-in" rows="1" placeholder="${TASK.asClient?"What the client said…":"Write a message…"}"
-          onkeydown="mentionKeyNav(event)"
-          oninput="TASK.draft=this.value;fbMentionKey(event,'th-in',activeBrand,true)"
-          onblur="closeMentionBox()">${escHtml(TASK.draft||"")}</textarea>
-        <div class="th-cb">
-          <button class="th-chip" onclick="mentionStart('th-in')">@ Tag someone</button>
-          <input type="file" id="th-files" multiple style="display:none;" onchange="taskStageFiles(this.files)">
-          <button class="th-chip" onclick="document.getElementById('th-files').click()">Attach a file</button>
-          <button class="th-chip" onclick="taskAddLink()">Add a link</button>
-          <button class="th-chip${TASK.asClient?" on":""}" onclick="taskToggleAsClient()">
-            ${TASK.asClient?"✓ posting as the client":"post as the client"}</button>
-          <button class="btn btn-p" style="margin-left:auto" onclick="taskPost()">Post</button>
-        </div>
-        ${TASK_STAGED.length?`<span class="stagedfs" style="margin-top:8px;">${
-          TASK_STAGED.map((f,i)=>`<span class="stagedf" title="${escAttr(f.name)}"><span class="sfn">${escHtml(f.name)}</span>
-            <b>${kbmb(f.size)}</b><i onclick="taskUnstage(${i})" title="Remove">&times;</i></span>`).join("")}</span>`:""}
-        ${TASK.asClient?`<div class="th-note">This will be recorded as the client's words, entered by you — both names are kept.</div>`:""}
+    <div class="ccm-wrap" data-drop="task:">
+      <div class="ccm">
+        <span class="th-av ccm-av">${escHtml(brInitials(ME.id)||"··")}</span>
+        <div id="th-in" class="ccw rt" contenteditable="true" data-ph="Write a message" data-att="task"
+          data-draft="th-${escAttr(t.id)}"
+          onkeydown="if(mentionKeyNav(event))return;if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();taskPost();}"
+          oninput="fbMentionKey(event,'th-in',activeBrand,true)"
+          onfocus="rtFocus(this)" onblur="mpBarHide();setTimeout(closeMentionBox,150)"></div>
+        <button class="ccm-send" onclick="taskPost()" title="Post"><i class="ti ti-arrow-up"></i></button>
       </div>
+      <input type="file" id="th-files" multiple style="display:none;" onchange="taskStageFiles(this.files)">
+      ${TASK_STAGED.length?`<span class="stagedfs">${
+        TASK_STAGED.map((f,i)=>`<span class="stagedf" title="${escAttr(f.name)}"><span class="sfn">${escHtml(f.name)}</span>
+          <b>${kbmb(f.size)}</b><i onclick="taskUnstage(${i})" title="Remove">&times;</i></span>`).join("")}</span>`:""}
     </div>`:"";
   /* V108.8 — NO stopPropagation HERE. Review, the lightbox and the video
      player are ONE delegated listener on `document`, so a panel that
@@ -10041,7 +10044,10 @@ function msgHtml(m){
   if(TASK_EDITING===m.id) return `<div class="th-m">
     <span class="th-av${client?" cli":""}">${escHtml(brInitials(m.author_id)||"··")}</span>
     <div class="th-b">
-      <textarea id="th-edit-${escAttr(m.id)}" class="th-ed" rows="3">${escHtml(m.body||"")}</textarea>
+      <div id="th-edit-${escAttr(m.id)}" class="ccw rt" contenteditable="true" data-nodraft="1"
+        onkeydown="if(mentionKeyNav(event))return;if(event.key==='Escape'){event.preventDefault();taskCancelEdit();}"
+        oninput="fbMentionKey(event,'th-edit-${escAttr(m.id)}',activeBrand,true)"
+        onfocus="rtFocus(this)" onblur="mpBarHide();setTimeout(closeMentionBox,150)">${wRender(m.body||"")}</div>
       <div style="display:flex;gap:6px;margin-top:7px;">
         <button class="btn btn-p btn-sm" onclick="taskSaveEdit('${escAttr(m.id)}')">Save</button>
         <button class="btn btn-g btn-sm" onclick="taskCancelEdit()">Cancel</button></div>
@@ -10122,7 +10128,7 @@ function taskStartEdit(id){ TASK_EDITING=id; render(); }
 function taskCancelEdit(){ TASK_EDITING=null; render(); }
 async function taskSaveEdit(id){
   const el=document.getElementById("th-edit-"+id); if(!el) return;
-  const body=(el.value||"").trim(); if(!body) return;
+  const body=rtValue(el); if(!body) return;
   const m=TASK.msgs.find(x=>x.id===id); if(!m||!fbIsMine(m)) return;
   const now=new Date().toISOString();
   m.body=body; m.edited_at=now; TASK_EDITING=null; render();
@@ -10291,7 +10297,7 @@ async function taskPost(){
 async function taskPostInner(){
   const t=brTask(); if(!t) return;
   const box=document.getElementById("th-in");
-  const body=((box?box.value:TASK.draft)||"").trim();
+  const body=box?rtValue(box):"";
   /* LIMA v78.1 — A FILE ON ITS OWN IS A MESSAGE.
      This returned on an empty box BEFORE it looked at what was staged,
      so attaching a file and pressing Post did nothing whatsoever — no
@@ -10300,8 +10306,9 @@ async function taskPostInner(){
      with files but no words is still a comment worth having'. Same rule,
      borrowed rather than reinvented. */
   if(!body&&!TASK_STAGED.length) return;
-  const asClient=TASK.asClient;
-  if(asClient&&!ME.id){ toast("Cannot record who typed this — sign in again","err"); return; }
+  /* V113.13 — nothing is typed as the client any more; the row shape
+     stays, so the thread still reads the old client rows correctly */
+  const asClient=false;
   const row={
     id:"c"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36),
     task_id:t.id, brand_id:activeBrand, body,
@@ -10319,9 +10326,8 @@ async function taskPostInner(){
     mentions:asClient?[]:brMentions(body)};
   const r=await sb.from("post_comments").insert([row]);
   if(r.error){ dbErr(r); return; }
-  if(box) box.value="";
+  if(box){ wDraftClear(box); rtClear(box); }
   TASK.draft="";
-  TASK.asClient=false;
   /* THE MESSAGE APPEARS FIRST, THE FILES FILL IN BEHIND IT — the same
      order the social composer uses, and the progress bar is what makes
      the wait legible rather than alarming. */
@@ -10333,7 +10339,6 @@ async function taskPostInner(){
     if(view==="branding"&&BR_OPEN) render();
   }
 }
-function taskToggleAsClient(){ TASK.asClient=!TASK.asClient; render(); }
 
 /* V108.5 — renderTask() is gone. The task screen it drew is now the
    panel under the row (brOpenPanelHtml), so there is one drawing of a
@@ -11184,7 +11189,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V113.12 Bologna";
+const TOOL_VERSION="V113.13 Bologna";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -14304,6 +14309,7 @@ document.addEventListener("drop",e=>{
   const [what,arg]=String(el.dataset.drop).split(":");
   if(what==="comment")      fbStageFiles(arg,files);
   else if(what==="task")    taskStageFiles(files);
+  else if(what==="creative") prStage(files);
   else if(what==="brief")   briefUploadImage(arg,files);
   /* The message pane's clip opens the comment composer's own input — see
      mpAttachOpen — so it is already covered by "comment" above. No branch
@@ -18588,13 +18594,13 @@ function fbPanelHtml(p){
      .comp46 wraps the avatar, the text box, the send button and that
      strip, so every part of the composer is the target. */
   const composer=canComment()?`<div class="comp46" data-drop="comment:${p.id}">
-      <div class="crow46">${av(actorName(),actorKind())}
-        <div id="fb-new-${p.id}" class="cin46 rt" contenteditable="true" data-ph="Write a comment" data-att="comment" data-post="${p.id}"
+      <div class="ccm"><span class="ccm-av">${av(actorName(),actorKind())}</span>
+        <div id="fb-new-${p.id}" class="ccw rt" contenteditable="true" data-ph="Write a comment" data-att="comment" data-post="${p.id}"
           onkeydown="if(mentionKeyNav(event))return;if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();fbAddComment('${p.id}',null);}"
           oninput="fbMentionKey(event,'fb-new-${p.id}','${p.brand_id||activeBrand}')"
           onfocus="rtFocus(this)"
           onblur="mpBarHide();setTimeout(closeMentionBox,150)"></div>
-        <button class="send46" onclick="fbAddComment('${p.id}',null)" title="Post"><i class="ti ti-arrow-up"></i></button>
+        <button class="ccm-send" onclick="fbAddComment('${p.id}',null)" title="Post"><i class="ti ti-arrow-up"></i></button>
       </div>
       <div class="cextra">
         <input type="file" id="fb-files-${p.id}" multiple style="display:none;" onchange="fbStageFiles('${p.id}',this.files)">
@@ -23268,6 +23274,12 @@ function mpAttachOpen(ev){
     if(inp) inp.click();
     return false;
   }
+  /* V113.13 — the task and the creative conversations, the same way */
+  if(f&&f.dataset&&(f.dataset.att==="task"||f.dataset.att==="creative")){
+    const inp=document.getElementById(f.dataset.att==="task"?"th-files":"prc-files");
+    if(inp) inp.click();
+    return false;
+  }
   const t=mpAttTarget(); if(!t) return false;
   MP_UP_TARGET=t;
   const el=mpAttEl();
@@ -26238,23 +26250,20 @@ function prCreativeHtml(p,c){
     <div style="padding:0 32px 24px;"><div class="tk-grid">
       <div class="tk-thread">
         ${body}
-        <div class="th-c">
-          <span class="th-av">${escHtml(brInitials(ME.id)||"··")}</span>
-          <div style="flex:1">
-            <textarea id="prc-in" rows="2" placeholder="Write a message…"
-              onkeydown="mentionKeyNav(event)"
-              oninput="PR.draft=this.value;fbMentionKey(event,'prc-in',activeBrand,true)"
-              onblur="closeMentionBox()">${escHtml(PR.draft||"")}</textarea>
-            <div class="th-cb">
-              <button class="th-chip" onclick="mentionStart('prc-in')">@ Tag someone</button>
-              <input type="file" id="prc-files" multiple style="display:none;" onchange="prStage(this.files)">
-              <button class="th-chip" onclick="document.getElementById('prc-files').click()">Attach a file</button>
-              <button class="btn btn-p" style="margin-left:auto" onclick="prPost()">Post</button>
-            </div>
-            ${PR.staged.length?`<span class="stagedfs" style="margin-top:8px;">${
-              PR.staged.map((f,i)=>`<span class="stagedf" title="${escAttr(f.name)}"><span class="sfn">${escHtml(f.name)}</span>
-                <b>${kbmb(f.size)}</b><i onclick="prUnstage(${i})" title="Remove">&times;</i></span>`).join("")}</span>`:""}
+        <div class="ccm-wrap" data-drop="creative:">
+          <div class="ccm">
+            <span class="th-av ccm-av">${escHtml(brInitials(ME.id)||"··")}</span>
+            <div id="prc-in" class="ccw rt" contenteditable="true" data-ph="Write a message" data-att="creative"
+              data-draft="prc-${escAttr(c.id)}"
+              onkeydown="if(mentionKeyNav(event))return;if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();prPost();}"
+              oninput="fbMentionKey(event,'prc-in',activeBrand,true)"
+              onfocus="rtFocus(this)" onblur="mpBarHide();setTimeout(closeMentionBox,150)"></div>
+            <button class="ccm-send" onclick="prPost()" title="Post"><i class="ti ti-arrow-up"></i></button>
           </div>
+          <input type="file" id="prc-files" multiple style="display:none;" onchange="prStage(this.files)">
+          ${PR.staged.length?`<span class="stagedfs">${
+            PR.staged.map((f,i)=>`<span class="stagedf" title="${escAttr(f.name)}"><span class="sfn">${escHtml(f.name)}</span>
+              <b>${kbmb(f.size)}</b><i onclick="prUnstage(${i})" title="Remove">&times;</i></span>`).join("")}</span>`:""}
         </div>
       </div>
       <div class="tk-side">
@@ -26284,14 +26293,14 @@ async function prPost(){
   if(PR_POSTING) return; PR_POSTING=true;
   try{
     const cid=PR.creative; const box=document.getElementById("prc-in");
-    const body=((box?box.value:PR.draft)||"").trim();
+    const body=box?rtValue(box):"";
     if(!body&&!PR.staged.length) return;
     const row={id:"c"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36),
       creative_id:cid, brand_id:activeBrand, body, author_kind:"team", author_name:actorName(),
       author_email:ME.email||"", author_id:ME.id||null, mentions:brMentions(body)};
     const r=await sb.from("post_comments").insert([row]);
     if(r.error){ toast("Could not post — "+r.error.message,"err"); return; }
-    if(box) box.value=""; PR.draft="";
+    if(box){ wDraftClear(box); rtClear(box); } PR.draft="";
     const staged=PR.staged; PR.staged=[];
     await prThLoad(cid);
     if(staged.length){
