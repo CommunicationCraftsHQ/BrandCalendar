@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V114.8 Tbilisi"/>
+<meta name="cc-tool-version" content="V115.0 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2788,6 +2788,31 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .brl-lens span{height:28px;padding:0 11px;border-radius:6px;display:flex;align-items:center;
   font-size:12.5px;font-weight:600;cursor:pointer;color:var(--muted)}
 .brl-lens span.on{background:#fff;color:var(--text);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+/* ══ JSR · CLIENT VIEW, 10 Oct ═══════════════════════════════════════
+   Chirag picked option A: while the team looks through the client's
+   eyes the page turns pale blue and the list wears a blue frame, so the
+   client's list can never be mistaken for the team's. The client
+   themself sees the ordinary page. */
+.brl-lens span.cv .ti{font-size:13px;margin-right:4px;}
+body.brcv #main{background:#E9F1FC!important;}
+body.brcv .brl{border:2px solid #378ADD;}
+body.brcv .brl-lens span.cv.on{background:#378ADD;color:#fff;}
+.brl-cvh{color:var(--subtle);font-size:15px;flex:none;}
+.jsr-pick{margin:0 0 12px 41px;padding:12px 14px;border:1px solid var(--div);border-radius:12px;background:#FCFCFB;}
+.jsr-pick .hd{display:flex;align-items:center;font-size:10.5px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--subtle);margin-bottom:10px;}
+.jsr-pick .hd .x{margin-left:auto;cursor:pointer;font-size:15px;letter-spacing:0;padding:0 4px;}
+.jsr-pick .hd .x:hover{color:var(--text);}
+.jsr-pick .set{display:flex;gap:10px;flex-wrap:wrap;}
+.jsr-t{position:relative;width:120px;cursor:pointer;}
+.jsr-t .pic{display:flex;align-items:center;justify-content:center;width:120px;height:90px;border-radius:8px;
+  border:1px solid var(--div);overflow:hidden;background:#F6F5F2;color:var(--subtle);font-size:11px;font-weight:800;}
+.jsr-t .pic img{width:100%;height:100%;object-fit:cover;}
+.jsr-t b{display:block;font-size:11.5px;font-weight:600;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.jsr-t .tk{position:absolute;top:7px;left:7px;width:20px;height:20px;border-radius:6px;background:#fff;
+  border:1.5px solid #CFCCC4;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;}
+.jsr-t.on .tk{background:#0D0D0D;border-color:#0D0D0D;color:#fff;}
+.jsr-t.on .pic{outline:2px solid #0D0D0D;outline-offset:1px;}
 
 /* ══ V108.5 BOLOGNA · THE TASK LIST ════════════════════════════════
    The grid gains one cell for the row menu and loses the lens group.
@@ -8347,6 +8372,7 @@ function closeM(id){const ov=document.getElementById("ov-"+id); if(ov) ov.classL
 
 function setView(v,btn){
   view=v;
+  if(v!=="branding") document.body.classList.remove("brcv");
   document.querySelectorAll(".tab-item").forEach(t=>t.classList.toggle("on",t.dataset.v===v));
   render();
 }
@@ -9217,7 +9243,7 @@ function brSetGroup(v){ brGroup=!!v; closeAllPops(); render(); }
    So Custom order leaves the grouped view rather than offering handles
    that would write an order the screen could not show. */
 let brDragId=null;
-function brMayReorder(){ return brSort==="manual" && !brGroup && can("task_reorder"); }
+function brMayReorder(){ return brSort==="manual" && !brGroup && !brCV() && can("task_reorder"); }
 
 /* ══ LYON · THE ORDER OF THE TASK LIST ═══════════════════════
    One fixed order — soonest delivery first — answered one question, and
@@ -9390,9 +9416,10 @@ function brRowHtml(t,showTag){
     <span class="brl-car">${open?'⌄':'›'}</span>
     <div class="brl-nm"><span class="nmt" title="${escAttr(t.title)}">${escHtml(t.title)}</span>
       ${showTag&&pj?`<span class="brl-pj" style="color:${escAttr(pj.colour||'#7C3AED')}">◧ ${escHtml(pj.name)}</span>`:''}
-      ${unread?`<span class="brl-un" title="${unread} new message${unread===1?'':'s'}">${unread}</span>`:''}
-      ${brNeedsClosing(t)?`<span class="brl-flag" title="Every step is approved and the task is not Done">approved · close it</span>`:''}
-      ${!ms.length&&!brIsAM(t)?'<small>no steps</small>':''}</div>
+      ${t.client_hidden&&!brCV()?'<i class="ti ti-eye-off brl-cvh" title="Hidden from client"></i>':''}
+      ${unread&&!brCV()?`<span class="brl-un" title="${unread} new message${unread===1?'':'s'}">${unread}</span>`:''}
+      ${brNeedsClosing(t)&&!brCV()?`<span class="brl-flag" title="Every step is approved and the task is not Done">approved · close it</span>`:''}
+      ${!ms.length&&!brIsAM(t)&&!brCV()?'<small>no steps</small>':''}</div>
     ${brStatusCell(t)}
     ${brStepCell(t,segs,tip)}
     ${brCells(t).join('')}
@@ -9536,6 +9563,7 @@ async function brPickStatus(e,id,k){
    others. One menu, the same list everywhere, and each line is there
    only if the person may actually do it. */
 function brRowMenu(t){
+  if(brCV()) return `<span></span>`;
   const open=(BR_MENU===t.id), st=brStatusOf(t), may=brIsAM(t);
   if(!open) return `<span class="brl-dots" onclick="brOpenMenu(event,'${t.id}')" title="More">···</span>`;
   const L=[];
@@ -9544,6 +9572,7 @@ function brRowMenu(t){
   if(can("task_create")) L.push(`<div onclick="brMenuDo(event,'dup','${t.id}')"><span class="ic">⧉</span>Duplicate</div>`);
   L.push(`<div onclick="brMenuDo(event,'link','${t.id}')"><span class="ic">🔗</span>Copy link</div>`);
   if(TASK_SEEN[t.id]) L.push(`<div onclick="brMenuDo(event,'unread','${t.id}')"><span class="ic">◷</span>Mark unread</div>`);
+  if(may) L.push(`<div onclick="brMenuDo(event,'cvhide','${t.id}')"><span class="ic"><i class="ti ti-${t.client_hidden?"eye":"eye-off"}"></i></span>${t.client_hidden?"Show to client":"Hide from client"}</div>`);
   if(may&&t.archived_at) L.push(`<div class="sep" onclick="brMenuDo(event,'restore','${t.id}')"><span class="ic">↩</span>Restore</div>`);
   else if(may&&st==="closed") L.push(`<div class="sep" onclick="brMenuDo(event,'reopen','${t.id}')"><span class="ic">↩</span>Reopen</div>`);
   if(brCanArchive(t)&&!t.archived_at) L.push(`<div class="${(may&&st==="closed")?'':'sep'}" onclick="brMenuDo(event,'archive','${t.id}')"><span class="ic">▽</span>Archive<small>keeps the status</small></div>`);
@@ -9574,6 +9603,7 @@ function brMenuDo(e,what,id){
   if(what==='dup')     { render(); return brDuplicateTask(id); }
   if(what==='link')    { render(); return taskCopyLink(id); }
   if(what==='unread')  { render(); return taskMarkUnread(id); }
+  if(what==='cvhide')  { return brSetClientHidden(id); }
   if(what==='archive') { render(); return brSetArchived(id,1); }
   if(what==='restore') { render(); return brSetArchived(id,0); }
   if(what==='reopen')  { render(); return brReopen(id); }
@@ -9714,9 +9744,9 @@ function brStepAt(taskId,iso){
   const s=ms.find(m=>!m.approved_at||String(m.approved_at)>at);
   return s?(s.name||""):"";
 }
-function brFilesHtml(t){
+function brFilesHtml(t,msgs){
   const all=[];
-  (TASK.msgs||[]).forEach(m=>(assetsFor("message",m.id)||[]).filter(a=>!a.deleted_at)
+  (msgs||TASK.msgs||[]).forEach(m=>(assetsFor("message",m.id)||[]).filter(a=>!a.deleted_at)
     .forEach(a=>all.push({a,m})));
   if(!all.length) return `<div class="br-empty2">Nothing has been attached to this task yet.</div>`;
   all.sort((x,y)=>String(y.a.created_at||y.m.created_at||"").localeCompare(String(x.a.created_at||x.m.created_at||"")));
@@ -9754,7 +9784,8 @@ function brFileFilter(e,k){ if(e){ e.stopPropagation(); } BR_FFILT=k; render(); 
 function brFileJump(e,mid){
   if(e&&e.target&&e.target.closest("[data-open],[data-doctab],.brf-x")) return;
   if(e) e.stopPropagation();
-  BR_TAB="talk"; render();
+  const jm=(TASK.msgs||[]).find(x=>x.id===mid);
+  BR_TAB=(jm&&brMsgAud(jm)==="client"&&!brCV())?"client":"talk"; render();
   setTimeout(()=>{ const el=document.querySelector('.th-m[data-mid="'+mid+'"]');
     if(el){ el.scrollIntoView({block:"center",behavior:"smooth"}); el.classList.add("brf-hit");
       setTimeout(()=>el.classList.remove("brf-hit"),1600); } },60);
@@ -9795,15 +9826,26 @@ function brBriefMore(e){ if(e){ e.preventDefault(); e.stopPropagation(); } BR_BR
 function brOpenPanelHtml(t){
   const pj=brProject(t.project_id);
   const unread=brUnreadFor(t.id);
-  const nFiles=(TASK.msgs||[]).reduce((n,m)=>n+((assetsFor("message",m.id)||[]).length),0);
-  const tab=BR_TAB;
+  /* JSR — the same panel for the team and the client; brCV() decides
+     which messages it is drawn from, and nothing else about it changes */
+  const cv=brCV();
+  if(cv&&!["talk","files"].includes(BR_TAB)) BR_TAB="talk";
+  const tab=BR_TAB, aud=brPaneAud();
+  const shown=cv?brMsgsFor("client"):(TASK.msgs||[]);
+  const nFiles=shown.reduce((n,m)=>n+((assetsFor("message",m.id)||[]).length),0);
+  const nClient=brMsgsFor("client").length;
+  const paneMsgs=brMsgsFor(aud);
   let body;
   if(TASK.id!==t.id||TASK.loading) body=`<div class="th-load">Loading the task…</div>`;
   else if(TASK.err)               body=`<div class="th-load">Could not load it — ${escHtml(TASK.err)}</div>`;
-  else if(tab==="files")          body=brFilesHtml(t);
+  else if(tab==="files")          body=brFilesHtml(t,shown);
   else if(tab==="brief")          body=brBriefHtml(t);
   else if(tab==="history")        body=brHistoryHtml(t);
-  else                            body=`<div class="br-thread">${threadHtml(t)}</div>`;
+  else if(aud==="client"&&!paneMsgs.length)
+                                  body=`<div class="br-empty2">${cv?"Nothing has been shared yet.":"Nothing has been shared with the client yet."}</div>`;
+  else                            body=`<div class="br-thread">${threadHtml(t,paneMsgs)}</div>`;
+  const writes=aud==="client"?brMayWriteClient(t):canComment();
+  const picked=JSR_PICKED.map(id=>jsrAsset(id)).filter(Boolean);
   /* ══ V113.13 · ONE MESSAGE BOX ════════════════════════════════════
      Chirag, 9–10 Oct: every conversation in the suite writes in the same
      box. This was the last plain textarea with its own row of written
@@ -9814,22 +9856,25 @@ function brOpenPanelHtml(t){
      "Post as the client" went with it, on his word: clients get their own
      section later. The draft is kept per task by the shared draft store,
      so a re-render no longer needs TASK.draft to carry it. */
-  const composer=(tab==="talk"&&canComment())?`
+  const composer=((tab==="talk"||tab==="client")&&writes)?`
     <div class="ccm-wrap" data-drop="task:">
+      ${aud==="client"&&JSR_PICK&&!brIsClient()?jsrPickHtml():""}
       ${TASK_REPLY&&TASK.id===t.id?`<div class="tm-qbar">${taskReplyQuote(TASK_REPLY.aid,true)}<span class="x" onclick="taskReplyClear()" title="Not a reply">✕</span></div>`:""}
       <div class="ccm">
-        <span class="th-av ccm-av">${escHtml(brInitials(ME.id)||"··")}</span>
-        <div id="th-in" class="ccw rt" contenteditable="true" data-ph="Write a message" data-att="task"
-          data-draft="th-${escAttr(t.id)}"
+        <span class="th-av ccm-av${brIsClient()?" cli":""}">${escHtml(brInitials(ME.id)||(ME.email||"··").slice(0,2).toUpperCase())}</span>
+        <div id="th-in" class="ccw rt" contenteditable="true" data-ph="Write a message" data-att="${aud==="client"&&!brIsClient()?"taskc":"task"}"
+          data-draft="th-${escAttr(t.id)}${aud==="client"?"-c":""}"
           onkeydown="if(mentionKeyNav(event))return;if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();taskPost();}"
           oninput="fbMentionKey(event,'th-in',activeBrand,true)"
           onfocus="rtFocus(this)" onblur="mpBarHide();setTimeout(closeMentionBox,150)"></div>
         <button class="ccm-send" onclick="taskPost()" title="Post"><i class="ti ti-arrow-up"></i></button>
       </div>
       <input type="file" id="th-files" multiple style="display:none;" onchange="taskStageFiles(this.files)">
-      ${TASK_STAGED.length?`<span class="stagedfs">${
+      ${TASK_STAGED.length||(aud==="client"&&picked.length)?`<span class="stagedfs">${
         TASK_STAGED.map((f,i)=>`<span class="stagedf" title="${escAttr(f.name)}"><span class="sfn">${escHtml(f.name)}</span>
-          <b>${kbmb(f.size)}</b><i onclick="taskUnstage(${i})" title="Remove">&times;</i></span>`).join("")}</span>`:""}
+          <b>${kbmb(f.size)}</b><i onclick="taskUnstage(${i})" title="Remove">&times;</i></span>`).join("")
+        +(aud==="client"?picked.map(a=>`<span class="stagedf" title="${escAttr(a.filename||"")}"><span class="sfn">${escHtml(a.filename||"File")}</span>
+          <b>${kbmb(a.bytes)}</b><i onclick="jsrUnpick('${escAttr(a.id)}')" title="Remove">&times;</i></span>`).join(""):"")}</span>`:""}
     </div>`:"";
   /* V108.8 — NO stopPropagation HERE. Review, the lightbox and the video
      player are ONE delegated listener on `document`, so a panel that
@@ -9847,21 +9892,22 @@ function brOpenPanelHtml(t){
          the Copy link button has always had, which is the shape he
          pointed at when he said "slightly more prominent". -->
     <div class="br-tabs">
-      <span class="${tab==="talk"?"on":""}" onclick="brTabTo(event,'talk')">Conversation${unread?`<span class="n">${unread}</span>`:""}</span>
+      <span class="${tab==="talk"?"on":""}" onclick="brTabTo(event,'talk')">Conversation${unread&&!cv?`<span class="n">${unread}</span>`:""}</span>
       <span class="${tab==="files"?"on":""}" onclick="brTabTo(event,'files')">Files${nFiles?` · ${nFiles}`:""}</span>
+      ${cv?"":`<span class="${tab==="client"?"on":""}" onclick="brTabTo(event,'client')">Client${nClient?` · ${nClient}`:""}</span>
       <span class="${tab==="brief"?"on":""}" onclick="brTabTo(event,'brief')">Brief</span>
-      <span class="${tab==="history"?"on":""}" onclick="brTabTo(event,'history')">History</span>
+      <span class="${tab==="history"?"on":""}" onclick="brTabTo(event,'history')">History</span>`}
       <span class="br-gap"></span>
-      ${t.archived_at?`<span class="br-arch">Archived ${fmtShort(t.archived_at)}</span>`:""}
-      ${canEdit()?`<button class="br-ico" onclick="brOpenTask('${t.id}')" title="Edit details" aria-label="Edit details"><i class="ti ti-pencil"></i></button>`:""}
-      ${can("task_create")?`<button class="br-ico" onclick="brDuplicateTask('${t.id}')" title="Duplicate this task" aria-label="Duplicate"><i class="ti ti-copy"></i></button>`:""}
+      ${t.archived_at&&!cv?`<span class="br-arch">Archived ${fmtShort(t.archived_at)}</span>`:""}
+      ${canEdit()&&!cv?`<button class="br-ico" onclick="brOpenTask('${t.id}')" title="Edit details" aria-label="Edit details"><i class="ti ti-pencil"></i></button>`:""}
+      ${can("task_create")&&!cv?`<button class="br-ico" onclick="brDuplicateTask('${t.id}')" title="Duplicate this task" aria-label="Duplicate"><i class="ti ti-copy"></i></button>`:""}
       <button class="br-ico" onclick="taskCopyLink('${t.id}')" title="Copy a link that opens this task" aria-label="Copy link"><i class="ti ti-link"></i></button>
-      ${TASK_SEEN[t.id]?`<button class="br-ico" onclick="taskMarkUnread('${t.id}')" title="Put this task back in your bell" aria-label="Mark unread"><i class="ti ti-bell-plus"></i></button>`:""}
+      ${TASK_SEEN[t.id]&&!cv?`<button class="br-ico" onclick="taskMarkUnread('${t.id}')" title="Put this task back in your bell" aria-label="Mark unread"><i class="ti ti-bell-plus"></i></button>`:""}
       ${brCanArchive(t)?`<button class="br-ico" onclick="brSetArchived('${t.id}',${t.archived_at?0:1})"
          title="${t.archived_at?"Put it back in the working list, with the status it has":"Put it out of the way — the status it has is kept"}"
          aria-label="${t.archived_at?"Restore":"Archive"}"><i class="ti ti-${t.archived_at?"archive-off":"archive"}"></i></button>`:""}
     </div>
-    ${tab==="talk"?brBriefPin(t):""}
+    ${tab==="talk"&&!cv?brBriefPin(t):""}
     ${body}${composer}</div></div>`;
 }
 
@@ -9891,6 +9937,7 @@ function brVisible(){
        hides is the archive, and "Hide closed" is a filter people choose
        rather than a rule the screen applies to them. */
     : BR.tasks.filter(t=>!t.archived_at&&(!brFilter.hideClosed||brStatusOf(t)!=="closed"));
+  if(brCV()) out=out.filter(t=>!t.client_hidden);
   if(brFilter.status&&!brFilter.archived) out=out.filter(t=>brStatusOf(t)===brFilter.status);
   if(brFilter.project) out=out.filter(t=>(t.project_id||"")===brFilter.project);
   if(brFilter.owner) out=out.filter(t=>(t.owner_id||"")===brFilter.owner);
@@ -10264,8 +10311,140 @@ let TASK={id:null,msgs:[],acts:[],loading:false,err:"",asClient:false,draft:""};
    exactly what it answered yesterday; turning Creator off in the matrix
    is what makes the separation real, and it does it without this line
    moving again. Same shape for archiving and for brand people below. */
-function brIsAM(t){ return !!t && can("task_advance") && (ME.role==="admin" || t.owner_id===ME.id); }
-function brCanArchive(t){ return !!t && can("task_archive") && (ME.role==="admin" || t.owner_id===ME.id); }
+function brIsAM(t){ return !!t && !brCV() && can("task_advance") && (ME.role==="admin" || t.owner_id===ME.id); }
+function brCanArchive(t){ return !!t && !brCV() && can("task_archive") && (ME.role==="admin" || t.owner_id===ME.id); }
+
+/* ══ JSR · ONE SCREEN, TWO AUDIENCES — 10 October 2026 ═════════════════
+   Chirag: "I don't want to maintain two different mechanisms and layouts
+   … both of them in principle and functionality work exactly the same,
+   with the only difference being who has access to what."
+
+   So there is NO client screen. The client's list is this list and the
+   client's job is this opened task, drawn by the same functions, with
+   one question asked in a handful of places: brCV() — is this being seen
+   as the client sees it? That is true for a client account, and for the
+   team while "Client view" is switched on. Where it is true, the
+   controls that change the work are not drawn (brIsAM answers no), a
+   task hidden from the client is not listed, and the conversation shown
+   is the client one.
+
+   A message carries who it is for — post_comments.audience, 'team' or
+   'client'. The team's Conversation tab is the team's; the Client tab is
+   what the client sees as their Conversation. The database refuses a
+   client account everything else (01 - Client view of tasks -
+   migration.sql), so this is a curtain in front of a wall, not the wall.
+   A row read before that migration has no audience and is the team's,
+   which is what every existing message is. */
+let BR_CV=false;          // the team, looking through the client's eyes
+let JSR_PICK=false;       // "Files in this task" open over the Client tab's box
+let JSR_PICKED=[];        // asset ids from the task, going out with the next client message
+function brIsClient(){ return ME.role==="client"; }
+function brCV(){ return brIsClient()||BR_CV; }
+function brMsgAud(m){ return m&&m.audience==="client"?"client":"team"; }
+function brMsgsFor(aud){ return (TASK.msgs||[]).filter(m=>brMsgAud(m)===aud); }
+function brPaneAud(){ return (brCV()||BR_TAB==="client")?"client":"team"; }
+/* Who writes to the client: the client, and on the agency side the
+   task's Ac Manager or an admin. The database asks the same question. */
+function brMayWriteClient(t){
+  if(!t) return false;
+  if(brIsClient()) return canComment();
+  return can("comment") && (ME.role==="admin" || t.owner_id===ME.id);
+}
+function brSetCV(v){
+  BR_CV=!!v; closeAllPops(); JSR_PICK=false;
+  if(BR_CV&&!["talk","files"].includes(BR_TAB)) BR_TAB="talk";
+  render();
+}
+/* where a notification lands: the Client tab when the newest word from
+   somebody else on this task went to (or came from) the client */
+function brLandTab(){
+  if(brCV()) return "talk";
+  const me=(ME.email||"").toLowerCase();
+  const last=(TASK.msgs||[]).filter(m=>String(m.author_email||"").toLowerCase()!==me).slice(-1)[0];
+  return last&&brMsgAud(last)==="client"?"client":"talk";
+}
+async function brSetClientHidden(id){
+  const t=BR.tasks.find(x=>x.id===id);
+  if(!t||!brIsAM(t)){ toast("Only the Ac Manager decides what the client sees","err"); return render(); }
+  const on=!t.client_hidden;
+  t.client_hidden=on; render();
+  const r=await sb.from("branding_tasks").update({client_hidden:on}).eq("id",id);
+  if(r.error){ t.client_hidden=!on; render(); dbErr(r); return; }
+  logTask(id,on?"hid the task from the client":"showed the task to the client");
+  toast(on?"Hidden from the client":"The client can see this task");
+}
+
+/* ── "Files in this task": the Client tab's clip offers the task's own
+   files, so the file the team discussed is the file the client gets.
+   A picked file is COPIED — new objects in the bucket, a new assets row
+   on the client message — never shared by pointer, because removing a
+   file deletes its bytes, and the team removing their copy must never
+   take the client's with it. */
+function jsrTaskFiles(){
+  const out=[];
+  brMsgsFor("team").forEach(m=>(assetsFor("message",m.id)||[])
+    .filter(a=>!a.deleted_at&&a.kind!=="link").forEach(a=>out.push(a)));
+  return out;
+}
+function jsrPickHtml(){
+  const files=jsrTaskFiles();
+  const tiles=files.length?files.map(a=>{
+    const on=JSR_PICKED.includes(a.id), pic=a.thumb_path||a.view_path||a.poster_path||"";
+    const ext=String(extOf(a.filename)||"").toUpperCase().slice(0,4)||"FILE";
+    return `<div class="jsr-t${on?" on":""}" data-aid="${escAttr(a.id)}" onclick="jsrPickToggle(event,'${escAttr(a.id)}')" title="${escAttr(a.filename||"")}">
+      <span class="tk">${on?"✓":""}</span>
+      <span class="pic"${pic?` data-sign="${escAttr(pic)}"`:""}>${pic?"":escHtml(ext)}</span>
+      <b>${escHtml(a.filename||"File")}</b></div>`;
+  }).join(""):`<div class="br-empty2" style="padding:6px 0">No files in this task's conversation yet.</div>`;
+  return `<div class="jsr-pick"><div class="hd">Files in this task<span class="x" onclick="jsrPickClose(event)" title="Close">✕</span></div>
+    <div class="set">${tiles}</div></div>`;
+}
+function jsrPickOpen(ev){
+  if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+  mpAttClose(); JSR_PICK=true; render(); return false;
+}
+function jsrPickClose(e){ if(e){ e.preventDefault(); e.stopPropagation(); } JSR_PICK=false; render(); }
+function jsrPickToggle(e,aid){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  const i=JSR_PICKED.indexOf(aid);
+  if(i>-1) JSR_PICKED.splice(i,1); else JSR_PICKED.push(aid);
+  render();
+}
+function jsrUnpick(aid){ JSR_PICKED=JSR_PICKED.filter(x=>x!==aid); render(); }
+function jsrAsset(aid){ return jsrTaskFiles().find(a=>a.id===aid)||null; }
+async function jsrCopyAssets(ids,ownerId){
+  let failed=0;
+  for(const aid of ids){
+    const a=jsrAsset(aid); if(!a){ failed++; continue; }
+    const base=mediaPath(activeBrand,"message",ownerId,a.filename||"file");
+    const made=[];
+    const cp=async(from,to)=>{
+      if(!from) return "";
+      const r=await sb.storage.from(MEDIA_BUCKET).copy(from,to);
+      if(r.error) throw new Error(r.error.message||"copy refused");
+      made.push(to); return to;
+    };
+    try{
+      const storage_path=await cp(a.storage_path,base);
+      const thumb_path =await cp(a.thumb_path, base+".thumb.jpg");
+      const view_path  =await cp(a.view_path,  base+".view.jpg");
+      const poster_path=await cp(a.poster_path,base+".poster.jpg");
+      const row={...a,id:"a"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36),
+        owner_kind:"message",owner_id:ownerId,brand_id:activeBrand,
+        storage_path,thumb_path,view_path,poster_path,
+        created_by:(ME.email||"").toLowerCase(),created_at:new Date().toISOString()};
+      delete row.deleted_at;
+      const ins=await sb.from("assets").insert([row]);
+      if(ins.error) throw new Error(ins.error.message||"could not record it");
+      const k=assetKey("message",ownerId); (ASSETS[k]=ASSETS[k]||[]).push(row);
+    }catch(e){
+      failed++;
+      if(made.length) try{ await removeFiles(made); }catch(_){}
+      console.warn("[jsr copy]",a.filename,e&&e.message);
+    }
+  }
+  if(failed) toast(`${failed} file${failed===1?"":"s"} could not be shared — try again`,"err");
+}
 
 async function loadThread(taskId){
   const draft=(TASK.id===taskId?TASK.draft:"")||"";
@@ -10346,7 +10525,7 @@ function brTabTo(e,k){ if(e){ e.preventDefault(); e.stopPropagation(); } BR_TAB=
 function brTask(){ return BR.tasks.find(t=>t.id===TASK.id)||null; }
 
 /* ── the thread, with milestone dividers derived from the work ──────*/
-function threadHtml(t){
+function threadHtml(t,msgs){
   const ms=brMsFor(t.id);
   /* A divider belongs where a milestone was APPROVED, not where it was
      due — the due date is a plan and the approval is what happened. */
@@ -10360,7 +10539,7 @@ function threadHtml(t){
      where it belongs, and this draws only what people actually wrote. */
   const rows=[];
   let mi=0, prev=null;
-  for(const m of TASK.msgs){
+  for(const m of (msgs||TASK.msgs)){
     while(mi<marks.length && String(marks[mi].at)<=String(m.created_at)){
       rows.push(`<div class="th-div"><span>${escHtml(marks[mi].label)}</span></div>`); mi++; prev=null;
     }
@@ -10383,7 +10562,7 @@ function msgHtml(m,o){
      Ac Manager types what the client said on a call and the thread then
      claims the client wrote it. The database refuses a client message
      with no entered_by, and this line is why. */
-  const by=client&&m.entered_by?`<span class="th-by">· added by ${escHtml(brPersonName(m.entered_by))}, from a call</span>`:"";
+  const by=client&&m.entered_by&&m.entered_by!==m.author_id?`<span class="th-by">· added by ${escHtml(brPersonName(m.entered_by))}, from a call</span>`:"";
   /* THE BRIEF IS NOT A MESSAGE. It is drawn at the top of every thread
      out of branding_tasks.brief and has no post_comments row at all, so
      it gets no actions — Edit on it would look like it edits the brief
@@ -10430,7 +10609,7 @@ function msgHtml(m,o){
   /* 10 Oct — MESSAGES C. The picture sits on the name line; everything
      this person posted hangs under it. A continuing message has no name
      line of its own. A reply to a file carries the file above its words. */
-  const rp=taskReplyOf(m.body), mine=!client&&fbIsMine(m);
+  const rp=taskReplyOf(m.body), mine=(brIsClient()?client:!client)&&fbIsMine(m);
   const when=m.created_at?fmtWhen(m.created_at):"";
   return `<div class="th-m tm${client?" cli":""}${mine?" me":""}${o.cont?" cont":""}" data-mid="${escAttr(m.id)}">
     ${o.cont?"":`<div class="tm-who"><span class="th-av${client?" cli":""}">${escHtml(brInitials(m.author_id)||"··")}</span><b>${who}</b>
@@ -10748,31 +10927,40 @@ async function taskPostInner(){
      reported as one. The post chat has always had this right: 'a comment
      with files but no words is still a comment worth having'. Same rule,
      borrowed rather than reinvented. */
-  if(!body&&!TASK_STAGED.length) return;
+  /* JSR — the pane decides who the message is for */
+  const aud=brPaneAud(), toClient=aud==="client";
+  const pickedIds=toClient?JSR_PICKED.slice():[];
+  if(!body&&!TASK_STAGED.length&&!pickedIds.length) return;
+  if(toClient&&!brMayWriteClient(t)){ toast("Only the Ac Manager writes to the client","err"); return; }
   /* 10 Oct — a reply to a file carries the file at the start of its body */
   const rpl=(TASK_REPLY&&TASK.id===t.id)?TASK_REPLY.aid:null;
   /* V113.13 — nothing is typed as the client any more; the row shape
      stays, so the thread still reads the old client rows correctly */
-  const asClient=false;
+  const asClient=false, isClient=brIsClient();
   const row={
     id:"c"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36),
     task_id:t.id, brand_id:activeBrand, body:(rpl?"[[file:"+rpl+"]]":"")+body,
-    author_kind:asClient?"client":"team",
+    author_kind:(asClient||isClient)?"client":"team",
     author_name:asClient?"Client":actorName(),
     author_email:asClient?"":(ME.email||""),
     author_id:asClient?null:(ME.id||null),
-    entered_by:asClient?(ME.id||null):null,
+    /* a client's own words: the database wants to know who pressed the
+       keys on every client row, and here it is the client */
+    entered_by:(asClient||isClient)?(ME.id||null):null,
+    ...(toClient?{audience:"client"}:{}),
     /* MENTIONS, NOT `tagged`. post_comments.mentions already existed and
        is the column the notification view reads; the `tagged uuid[]` I
        added in the Stage 3 migration duplicated it and is left unused.
        Writing to both would be two truths about one thing.
        A message typed AS THE CLIENT tags nobody: the client is not
        choosing to pull the team in, the Ac Manager is transcribing. */
-    mentions:asClient?[]:brMentions(body)};
+    mentions:(asClient||toClient)?[]:brMentions(body)};
   const r=await sb.from("post_comments").insert([row]);
   if(r.error){ dbErr(r); return; }
   if(box){ wDraftClear(box); rtClear(box); }
   TASK.draft=""; if(rpl) TASK_REPLY=null;
+  if(toClient){ JSR_PICKED=[]; JSR_PICK=false; }
+  if(pickedIds.length) await jsrCopyAssets(pickedIds,row.id);
   /* THE MESSAGE APPEARS FIRST, THE FILES FILL IN BEHIND IT — the same
      order the social composer uses, and the progress bar is what makes
      the wait legible rather than alarming. */
@@ -10797,9 +10985,10 @@ function renderBranding(){
      second lock, on the screen itself, because a render function that
      trusts its caller is one call site away from a blank page. */
   if(!b){ mc.innerHTML=""; return; }
-  const canE=canEdit();
+  document.body.classList.toggle("brcv",BR_CV&&!brIsClient());
+  const canE=canEdit()&&!brCV();
   const rows=(BR.ok&&brInSync())?brVisible():[];
-  const total=BR.ok?BR.tasks.filter(t=>!t.archived_at&&t.status!=="closed").length:0;
+  const total=BR.ok?BR.tasks.filter(t=>!t.archived_at&&t.status!=="closed"&&!(brCV()&&t.client_hidden)).length:0;
   const filtered=!!(brFilter.status||brFilter.project||brFilter.owner||brFilter.overdue
                     ||brFilter.unread||brFilter.archived||brFilter.hideClosed||(brFilter.q||"").trim());
 
@@ -10896,6 +11085,9 @@ function renderBranding(){
      ${BR.ok?`<span class="brfb-w"><button class="brfb-add" onclick="brFPop(event,'add')">+ Filter</button>${
         BR_FPOP==="add"?brAddPopHtml():""}</span>`:""}
      <span class="brfb-end">
+       ${BR.ok&&!brIsClient()?`<span class="brl-lens">
+     <span class="${BR_CV?"":"on"}" onclick="brSetCV(0)">Team</span>
+     <span class="cv${BR_CV?" on":""}" onclick="brSetCV(1)"><i class="ti ti-eye"></i>Client view</span></span>`:""}
        ${BR.ok?`<span class="brl-lens">
      <span class="${brGroup?"":"on"}" onclick="brSetGroup(0)">Flat</span>
      <span class="${brGroup?"on":""}" onclick="brSetGroup(1)">By project</span></span>`:""}
@@ -11634,7 +11826,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V114.8 Tbilisi";
+const TOOL_VERSION="V115.0 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -13209,7 +13401,7 @@ async function listPrefix(prefix,depth=0,seen={n:0}){
 const SHOOT_FN="https://qsxldzqdjdplffxqdokd.supabase.co/functions/v1/shoot-file";
 const MASTER_MAX=2*1024*1024*1024;
 const MASTER_KINDS={image:["jpg","jpeg","png","tif","tiff","heic","webp","gif"],
-  video:["mp4","mov","m4v","mxf","avi","mkv","webm"],psd:["psd","psb"],ai:["ai","eps","indd"],zip:["zip","rar","7z"]};
+  video:["mp4","mov","m4v","mxf","avi","mkv","webm"],psd:["psd","psb"],ai:["ai","eps","indd"],zip:["zip","rar","7z"],deck:["pptx","ppt","key"],pdf:["pdf"]};
 function masterKindOf(name){
   const m=/\.([A-Za-z0-9]+)$/.exec(String(name||"")); const e=m?m[1].toLowerCase():"";
   return Object.keys(MASTER_KINDS).find(k=>MASTER_KINDS[k].includes(e))||null;
@@ -13218,7 +13410,7 @@ function masterStoreFor(file){
   const size=(file&&file.size)||0;
   if(size<=W_UPLOAD_MAX) return {store:"supabase"};
   const kind=masterKindOf(file.name);
-  if(!kind) return {refuse:"Only images, video, Photoshop, Illustrator and zip files can be stored as masters over 50 MB. This one is a ."+((/\.([A-Za-z0-9]+)$/.exec(file.name||"")||[])[1]||"file with no type")+"."};
+  if(!kind) return {refuse:"Only images, video, Photoshop, Illustrator, zip, PowerPoint and PDF files can be stored as masters over 50 MB. This one is a ."+((/\.([A-Za-z0-9]+)$/.exec(file.name||"")||[])[1]||"file with no type")+"."};
   if(size>MASTER_MAX) return {refuse:"Masters can be up to 2 GB. This one is "+(size/1073741824).toFixed(1)+" GB."};
   return {store:"sharepoint",kind};
 }
@@ -14941,6 +15133,47 @@ document.addEventListener("drop",e=>{
   if(!el) return;
   const files=dzFiles(e);
   if(!files.length) return;   /* dragged text or a link, not a file */
+  dzRoute(el,files);
+});
+/* ══ PASTE, 10 Oct — Chirag: "copy and paste items directly from
+   clipboards, just like how you can do in Microsoft Word". Approved.
+   A screenshot, a copied image or a file copied in Finder goes to the
+   SAME door a drop goes to, so the staged chips, the size limits and
+   "held until posted" are unchanged. Text from Word, Outlook or a web
+   page keeps what this box can store — bold, italic, lists, links — and
+   loses colours, fonts and tables; a table's cells are kept apart by a
+   space and its rows by a line, so the words do not run together. */
+function dzPasteName(f,i){
+  const plain=/^image\.(png|jpe?g|gif|webp)$/i.test(f.name||"")||!f.name;
+  if(!plain) return f;
+  const d=new Date(), p=n=>String(n).padStart(2,"0");
+  const ext=((f.type||"image/png").split("/")[1]||"png").replace("jpeg","jpg");
+  const nm=`Screenshot ${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}.${p(d.getMinutes())}.${p(d.getSeconds())}${i?"-"+(i+1):""}.${ext}`;
+  try{ return new File([f],nm,{type:f.type||"image/png"}); }catch(_){ return f; }
+}
+document.addEventListener("paste",e=>{
+  const box=e.target&&e.target.closest&&e.target.closest('.ccw[contenteditable="true"]');
+  if(!box) return;
+  const cd=e.clipboardData; if(!cd) return;
+  let files=[...(cd.files||[])];
+  if(!files.length&&cd.items) files=[...cd.items].filter(it=>it.kind==="file").map(it=>it.getAsFile()).filter(Boolean);
+  if(files.length){
+    e.preventDefault();
+    const zone=box.closest("[data-drop]");
+    if(!zone){ toast("Files cannot be attached here","err"); return; }
+    dzRoute(zone,files.map(dzPasteName));
+    return;
+  }
+  const html=cd.getData("text/html");
+  if(html){
+    e.preventDefault();
+    const tidy=String(html).replace(/<\/t[dh]>/gi," </td>").replace(/<\/tr>/gi,"<br></tr>");
+    const clean=wClean(tidy);
+    try{ document.execCommand("insertHTML",false,clean); }catch(_){}
+    try{ box.dispatchEvent(new Event("input",{bubbles:true})); }catch(_){}
+  }
+});
+function dzRoute(el,files){
   const [what,arg]=String(el.dataset.drop).split(":");
   if(what==="comment")      fbStageFiles(arg,files);
   else if(what==="task")    taskStageFiles(files);
@@ -14950,7 +15183,7 @@ document.addEventListener("drop",e=>{
      mpAttachOpen — so it is already covered by "comment" above. No branch
      for it here: an untested branch that never runs is a thing somebody
      later has to work out the purpose of. */
-});
+}
 
 /* ── the @ autocomplete ──
    CHENNAI, 4 September 2026 — IT HAD NO KEYBOARD.
@@ -15557,6 +15790,7 @@ async function notifOpen(brandId,kind,postId){
       loadThread(taskId)
     ]);
     if(activeBrand!==brandId||BR_OPEN!==taskId) return;   // somebody moved on meanwhile
+    BR_TAB=brLandTab();
     setView("branding");
     const row=document.querySelector(".brl-tr.opened");
     if(row&&row.scrollIntoView) row.scrollIntoView({block:"start",behavior:"auto"});
@@ -24061,6 +24295,22 @@ function mpAttachOpen(ev){
   if(f&&f.dataset&&f.dataset.att==="comment"){
     const inp=document.getElementById("fb-files-"+f.dataset.post);
     if(inp) inp.click();
+    return false;
+  }
+  /* JSR — the Client tab's clip offers the files already in the task
+     first, because sharing one of those is the whole point of the tab */
+  if(f&&f.dataset&&f.dataset.att==="taskc"){
+    const el=mpAttEl();
+    el.innerHTML=`
+      <div class="door" onmousedown="return jsrPickOpen(event)">
+        <i class="ti ti-files"></i>
+        <div><div class="t">Files in this task</div>
+             <div class="s">the ones already in the conversation</div></div></div>
+      <div class="door" onmousedown="return (mpAttClose(),document.getElementById('th-files').click(),false)">
+        <i class="ti ti-upload"></i>
+        <div><div class="t">Upload a file</div>
+             <div class="s">from your computer</div></div></div>`;
+    mpAttPlace();
     return false;
   }
   /* V113.13 — the task and the creative conversations, the same way */
