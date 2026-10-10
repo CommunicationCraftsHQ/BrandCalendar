@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V114.4 Tbilisi"/>
+<meta name="cc-tool-version" content="V114.6 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -11629,7 +11629,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V114.4 Tbilisi";
+const TOOL_VERSION="V114.6 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -22725,11 +22725,26 @@ function wBytes(n){
 
    When two tools disagree, the shared version is the better sentence —
    not the shorter one, and not whichever tool was read first. */
+/* BOLOGNA, 10 Oct — THE WALL NOW SAYS WHAT TO EXPORT. The plan is no
+   longer the ceiling (Supabase is paid), the HABIT is: a 400 MB master
+   in a post is a file nobody can post. Chirag kept the 50 MB wall for
+   every social-ready place on purpose, so the sentence names the spec
+   the file should have been exported at, by kind. One line, no second
+   paragraph. Masters belong on the shoot in the Production Planner. */
+function wExportSpec(file){
+  const t = String((file && file.type) || "").toLowerCase();
+  const n = String((file && file.name) || "").toLowerCase();
+  if (/^video\//.test(t) || /\.(mp4|mov|m4v|webm|mkv|avi)$/.test(n))
+    return "export it at 1080×1920, H.264, under 50 MB";
+  if (/^image\//.test(t) || /\.(jpe?g|png|gif|webp|tiff?|heic|psd)$/.test(n))
+    return "export it at 1080 px wide, JPG, under 5 MB";
+  return "export a version under 50 MB";
+}
 function wTooBig(file){
   if(!file || (file.size||0) <= W_UPLOAD_MAX) return "";
-  return "it is "+wBytes(file.size)+" and the ceiling is "+wBytes(W_UPLOAD_MAX)
-       + " per file — that is the storage plan's limit, not the tool's."
-       + " Paste a link to it, or flatten it first";
+  return "it is "+wBytes(file.size)+" and the ceiling here is "+wBytes(W_UPLOAD_MAX)
+       + " per file — " + wExportSpec(file)
+       + ". A master this size belongs on the shoot, in the Production Planner";
 }
 
 /* ══ BOLOGNA — WHAT A PERSON LOOKS LIKE, ANSWERED ONCE ════════════════
@@ -23693,17 +23708,6 @@ function wBarCheck(){
   wBarHide();
 }
 document.addEventListener("focusin",wBarCheck,true);
-/* The open fact chip closes on Escape or on a click outside it — the
-   two ways a person actually means "done" without pressing Done. */
-document.addEventListener("keydown",e=>{
-  if(e.key==="Escape"&&typeof MOM!=="undefined"&&MOM&&MOM.fc){ momFc(""); }
-},true);
-document.addEventListener("mousedown",e=>{
-  if(typeof MOM==="undefined"||!MOM||!MOM.fc) return;
-  const t=e.target;
-  if(t&&t.closest&&(t.closest(".mom-fed")||t.closest("#mom-pp")||t.closest("#mp-bar"))) return;
-  momFc("");
-},true);
 document.addEventListener("focusout",()=>setTimeout(wBarCheck,0),true);
 /* A redraw does not move focus, so focus alone cannot catch a box that
    was torn out mid-edit. This does, and costs nothing when the bar is
@@ -23801,6 +23805,21 @@ try{
 }catch(e){}
 
 /* ==CC-WRITER-BAR:END== */
+/* V114.6 — Calendar-only: the MOM fact chip. Lived inside the shared
+   block by mistake (V113.7) and was carried to the kit on 10 Oct; the
+   kit has no MOM, so these two listeners stay here, outside the markers. */
+/* The open fact chip closes on Escape or on a click outside it — the
+   two ways a person actually means "done" without pressing Done. */
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&typeof MOM!=="undefined"&&MOM&&MOM.fc){ momFc(""); }
+},true);
+document.addEventListener("mousedown",e=>{
+  if(typeof MOM==="undefined"||!MOM||!MOM.fc) return;
+  const t=e.target;
+  if(t&&t.closest&&(t.closest(".mom-fed")||t.closest("#mom-pp")||t.closest("#mp-bar"))) return;
+  momFc("");
+},true);
+
 
 /* the old names again — same object, one place it is defined */
 const mpBarEl=wBarEl, mpBarShow=wBarShow, mpBarHide=wBarHide;
