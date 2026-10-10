@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V115.1 Tbilisi"/>
+<meta name="cc-tool-version" content="V115.2 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -11826,7 +11826,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V115.1 Tbilisi";
+const TOOL_VERSION="V115.2 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -15745,6 +15745,31 @@ function notifBrand(k,v){
   activeBrand=k; view=v; applyLayerDefaults();
   document.querySelectorAll(".tab-item").forEach(t=>t.classList.toggle("on",t.dataset.v===v));
 }
+/* ══ V115.2 TBILISI · THE ONE ROAD INTO A TASK ════════════════════════
+   SPEED, 10 Oct — straight to the task: the brand is switched without a
+   stop on its Plan page, its task list and the thread are read together,
+   "seen" is written without waiting for it, and the page is drawn once,
+   with the task open and its row in view.
+   This was first written inside the bell. The share link (?task=, which
+   the Platform's Open task uses) kept the old road — pickBrand, so Plan
+   drew and loaded, then the list, then the thread, and the row never
+   scrolled. A fix made in one door is not made in the others, so every
+   door calls THIS: the bell, the share link, and whatever comes next. */
+async function goToTask(brandId,taskId){
+  notifBrand(brandId,"branding");
+  BR_OPEN=taskId; BR_TAB='talk';
+  if(TASK_REPLY&&TASK.id!==taskId) TASK_REPLY=null;
+  taskMarkSeen(taskId);
+  await Promise.all([
+    BR.brand!==brandId ? loadBranding(brandId) : null,
+    loadThread(taskId)
+  ]);
+  if(activeBrand!==brandId||BR_OPEN!==taskId) return;   // somebody moved on meanwhile
+  BR_TAB=brLandTab();
+  setView("branding");
+  const row=document.querySelector(".brl-tr.opened");
+  if(row&&row.scrollIntoView) row.scrollIntoView({block:"start",behavior:"auto"});
+}
 async function notifOpen(brandId,kind,postId){
   closeAllPops();
   if(kind==="shoot"){ openProdInPlanner(postId); return; }
@@ -15778,24 +15803,7 @@ async function notifOpen(brandId,kind,postId){
     return;
   }
   if(kind==="task"){
-    const taskId=postId;                       // same slot, different thing
-    /* SPEED, 10 Oct — straight to the task: the brand is switched without
-       a stop on its Plan page, its task list and the thread are read
-       together, "seen" is written without waiting for it, and the page
-       is drawn once, with the task open. */
-    notifBrand(brandId,"branding");
-    BR_OPEN=taskId; BR_TAB='talk';
-    if(TASK_REPLY&&TASK.id!==taskId) TASK_REPLY=null;
-    taskMarkSeen(taskId);
-    await Promise.all([
-      BR.brand!==brandId ? loadBranding(brandId) : null,
-      loadThread(taskId)
-    ]);
-    if(activeBrand!==brandId||BR_OPEN!==taskId) return;   // somebody moved on meanwhile
-    BR_TAB=brLandTab();
-    setView("branding");
-    const row=document.querySelector(".brl-tr.opened");
-    if(row&&row.scrollIntoView) row.scrollIntoView({block:"start",behavior:"auto"});
+    await goToTask(brandId,postId);            // same slot, different thing
     return;
     /* WAIT FOR THE BRANDING LOAD. renderTask() looks the task up in BR
        and bounces to the list when it is not there yet — so opening a
@@ -19164,9 +19172,7 @@ async function openDeepLink(){
               .eq("id",d.task).is("deleted_at",null).maybeSingle();
     const row=r&&r.data;
     if(!row||!brands[row.brand_id]){ toast("That task is not available to you","err"); return; }
-    pickBrand(row.brand_id);
-    if(BR.brand!==row.brand_id) await loadBranding(row.brand_id);
-    openTaskScreen(row.id);
+    await goToTask(row.brand_id,row.id);      // V115.2 — the bell's road, not pickBrand's
     return;
   }
 
