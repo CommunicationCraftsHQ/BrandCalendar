@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V114.2 Tbilisi"/>
+<meta name="cc-tool-version" content="V114.3 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3102,6 +3102,12 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .nrow.nc{display:block;}
 .nc-ctx{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;min-width:0;}
 .nc-ctx .bd{width:8px;height:8px;border-radius:50%;flex:none;}
+/* V114.3 — the heading IS the destination chip: brand · tab · the thing */
+.nbody .nc-ctx .dest,.nc-ctx .dest{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:var(--text);
+  background:none;border-radius:0;padding:0;max-width:100%;min-width:0;}
+.nc-ctx .dest .tab{color:var(--text);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+.nc-ctx .dest .tab:before{content:"·";margin:0 5px 0 0;color:var(--muted);font-weight:500;}
+.nc-ctx .dest.nobrand .tab:before{content:none;margin:0;}
 .nc-ctx .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
 .nc-ctx .bn{color:var(--muted);font-weight:500;white-space:nowrap;flex:none;}
 .nc-q{margin:6px 0 6px 15px;padding:7px 10px;background:rgba(13,13,13,.045);border-radius:8px;font-size:13px;line-height:1.45;color:var(--text);
@@ -10270,6 +10276,11 @@ async function loadThread(taskId){
        Aires set for social and New York kept. Nothing is fetched for a
        task nobody has opened. */
     const live=(c.data||[]).filter(x=>!x.deleted_at);
+    /* SPEED, 10 Oct — the files and the reactions both need only the
+       message ids, so they are asked for together */
+    const rxP=live.length
+      ? Promise.resolve(sb.from("comment_reactions").select("*").in("comment_id",live.map(x=>x.id))).catch(()=>null)
+      : Promise.resolve(null);
     try{ await loadAssetsFor("message",live.map(x=>x.id)); }catch(e){}
     /* LUCERN — reactions come with the thread, on the same terms.
        comment_reactions is keyed on comment_id, and a task message IS a
@@ -10280,8 +10291,8 @@ async function loadThread(taskId){
     TASK_RX={};
     if(live.length){
       try{
-        const rx=await sb.from("comment_reactions").select("*").in("comment_id",live.map(x=>x.id));
-        if(!rx.error) (rx.data||[]).forEach(r=>{
+        const rx=await rxP;
+        if(rx&&!rx.error) (rx.data||[]).forEach(r=>{
           (TASK_RX[r.comment_id]=TASK_RX[r.comment_id]||[]).push(r); });
       }catch(e){}
     }
@@ -11618,7 +11629,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V114.2 Tbilisi";
+const TOOL_VERSION="V114.3 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -12287,6 +12298,17 @@ function prodDayMap(m){
 }
 
 async function loadAll(showToast){
+  /* SPEED, 10 Oct — these eight used to run one after another, AFTER the
+     calendar's own read below, so a refresh waited through ten rounds of
+     the database. None of them needs another's answer: each fills its own
+     store, and nothing draws until all of them are back. They start now,
+     alongside the main read, and are waited for at the same point as
+     before. The client's own-brand reload below is unchanged. */
+  const side=Promise.all([
+    loadProductions(), loadDelivery(), loadCommitments(),
+    loadProductionComments(), loadProductionFiles(), loadProductionSeen(),
+    loadPostFeedback(), loadBranding(activeBrand)
+  ].map(p=>Promise.resolve(p).catch(()=>{})));
   const [inds,evts,brs,bevs,prefs,posts,briefs,social,monthPlans,monthItems]=await Promise.all([
     sb.from("industries").select("*").order("pos"),
     sb.from("events").select("*").is("deleted_at",null),
@@ -12315,21 +12337,11 @@ async function loadAll(showToast){
     sb.from("social_month_items").select("*"),
   ]);
   const err=[inds,evts,brs,bevs,prefs,posts,briefs,social,monthPlans,monthItems].find(r=>r.error);
-  if(err){toast(err.error.message,"err");return;}
+  if(err){toast(err.error.message,"err");await side;return;}
   G={inds:inds.data,evts:evts.data,brs:brs.data,bevs:bevs.data,prefs:prefs.data||[],posts:posts.data,briefs:briefs.data,social:social.data,monthPlans:monthPlans.data,monthItems:monthItems.data};
-  await loadProductions();  // Minsk: non-fatal — the day mark and the
-                            // month plan's Production section both read it
-  await loadDelivery();     // Cadence: promised against delivered.
-  await loadCommitments();  // Cadence: the months the contracts promise.
-                            // AFTER the shoots on purpose — the view
-                            // already excludes booked months, and
-                            // loading it second keeps the two reads in
-                            // the order a person would ask them in.
-  await loadProductionComments();  // Wasp
-  await loadProductionFiles();     // Wasp
-  await loadProductionSeen();      // the four events on the bell
-  await loadPostFeedback(); // Atlas: non-fatal — panel hides if tables absent
-  await loadBranding(activeBrand); // Cape Town: non-fatal, same contract
+  /* Minsk, Cadence, Wasp, the bell (Atlas) and Cape Town's tasks — all
+     non-fatal, all started above, all back before anything is drawn */
+  await side;
   buildYearView();
   if(ME.role==="client"&&ME.brand_id&&brands[ME.brand_id]) activeBrand=ME.brand_id;
   /* that line can set the brand AFTER loadBranding already ran with none,
@@ -15215,12 +15227,9 @@ function notifRowHtml(it,bid,opts){
      message quoted under it, and who and when at the foot. Your own @name
      is taken out of the quote: "@ you" says it once, plainly. */
   if(true){
-    const b=brands[bid]||{};
-    const title=isMeet?(it.meetingTitle||"A meeting"):isCr?(it.creativeTitle||"An ad creative")
-      :isTask?(it.taskTitle||"A branding task"):"Post · "+notifDate(it.post.month,it.post.date);
     const q=notifExcerpt(it);
     return `<div class="nrow nc${opts.seen?"":" unread"}${it.mention?" men":""}${seen}" onclick="notifOpen('${bid}','${it.kind}','${escAttr(target)}')">
-      <div class="nc-ctx"><span class="bd" style="background:${b.color||"#6B6B6B"}"></span><span class="t">${escHtml(title)}</span>${opts.grouped?"":`<span class="bn">· ${escHtml(b.name||it.brandName||"")}</span>`}</div>
+      <div class="nc-ctx">${notifDestHtml(it,bid,!!opts.grouped)}</div>
       <div class="nc-q${q.dim?" dim":""}">${q.dim?escHtml(q.text):fbRich(q.text)}</div>
       <div class="nc-ft"><span class="who">${escHtml(it.c.author_name||"")}</span>${it.c.author_kind==="client"?`<span class="nkind">· client</span>`:""}${it.mention?`<span class="at">@ you</span>`:""}${opts.seen&&it.seenAt?`<span class="seenmark">· seen ${escHtml(fbTimeLabel(it.seenAt))}</span>`:""}<span class="when">${fbTimeLabel(it.c.created_at)}</span></div>
     </div>`;
@@ -15354,6 +15363,15 @@ function buildNotifPanel(){
 
   el.innerHTML=head+tabBar+menBlock+groups+notifTruncHtml()+notifMutedBlock()+notifMailBlock();
 }
+/* SPEED, 10 Oct — switch brand WITHOUT drawing anything. pickBrand()
+   lands on the brand's Plan page, draws it and starts its reads, which
+   is right for the switcher and wrong for a bell row that is about to
+   leave it: that was the blank page Chirag saw before the task. */
+function notifBrand(k,v){
+  BRQ=""; const sel=document.getElementById("brand-sel"); if(sel) sel.value=k;
+  activeBrand=k; view=v; applyLayerDefaults();
+  document.querySelectorAll(".tab-item").forEach(t=>t.classList.toggle("on",t.dataset.v===v));
+}
 async function notifOpen(brandId,kind,postId){
   closeAllPops();
   if(kind==="shoot"){ openProdInPlanner(postId); return; }
@@ -15380,15 +15398,31 @@ async function notifOpen(brandId,kind,postId){
   }
   if(kind==="creative"){
     const [pid,cid]=String(postId).split("|");   /* same slot, two ids */
-    pickBrand(brandId);
-    await crMarkSeen(cid,brandId);
+    notifBrand(brandId,"promotions");
+    crMarkSeen(cid,brandId);
     PR.key=null; PR.open=pid; PR.creative=cid; PR.staged=[]; PR.draft="";
     setView("promotions"); prThLoad(cid);
     return;
   }
   if(kind==="task"){
     const taskId=postId;                       // same slot, different thing
-    pickBrand(brandId);
+    /* SPEED, 10 Oct — straight to the task: the brand is switched without
+       a stop on its Plan page, its task list and the thread are read
+       together, "seen" is written without waiting for it, and the page
+       is drawn once, with the task open. */
+    notifBrand(brandId,"branding");
+    BR_OPEN=taskId; BR_TAB='talk';
+    if(TASK_REPLY&&TASK.id!==taskId) TASK_REPLY=null;
+    taskMarkSeen(taskId);
+    await Promise.all([
+      BR.brand!==brandId ? loadBranding(brandId) : null,
+      loadThread(taskId)
+    ]);
+    if(activeBrand!==brandId||BR_OPEN!==taskId) return;   // somebody moved on meanwhile
+    setView("branding");
+    const row=document.querySelector(".brl-tr.opened");
+    if(row&&row.scrollIntoView) row.scrollIntoView({block:"start",behavior:"auto"});
+    return;
     /* WAIT FOR THE BRANDING LOAD. renderTask() looks the task up in BR
        and bounces to the list when it is not there yet — so opening a
        notification for a brand you were not already on would land you on
@@ -15405,7 +15439,7 @@ async function notifOpen(brandId,kind,postId){
   const row=(NOTIF||[]).find(r=>r.post_id===postId);
   const month=(p&&p.month)||(row&&row.post_month);
   if(!month) return;
-  pickBrand(brandId);
+  notifBrand(brandId,"content");
   socialLayer=true; contentMonth=month; setView("content");
   fbOpen[postId]=true; fbMarkSeen(postId);
   await fbEnsureLoaded(postId);          // its thread is no longer preloaded
@@ -18179,6 +18213,7 @@ function applyMenuVisibility(){
    by anything yet. */
 const TOOLROLE_TO_LEGACY={admin:"admin",account_manager:"team",creator:"team",
                           client_reviewer:"client",client_viewer:"client"};
+let RA_PRE=null;      // SPEED — the tool-roles read boot() starts early
 async function resolveAccess(userId, legacyRole){
   ME.toolRole=null; ME.caps={}; ME.accessSource="grant";
   /* VALENCIA — THE FALLBACK IS GONE, AND THIS IS THE HALF THAT MATTERS.
@@ -18202,7 +18237,8 @@ async function resolveAccess(userId, legacyRole){
   ME.globalRole=legacyRole||null;
   ME.toolRoles={};
   try{
-    const r=await sb.from("user_tool_roles").select("tool,role").eq("user_id",userId);
+    const pre=RA_PRE; RA_PRE=null;
+    const r=await (pre||sb.from("user_tool_roles").select("tool,role").eq("user_id",userId));
     /* VALENCIA — THIS EARLY RETURN IS THE BREAK-GLASS, and it is the one
        piece of the old fallback that is kept ON PURPOSE.
 
@@ -18600,6 +18636,10 @@ async function boot(){
     authMsg("That is not a Communication Crafts mailbox. Sign in with your email and password below.");
     return;
   }
+  /* SPEED, 10 Oct — the tool roles are asked for at the same moment as
+     the profile; resolveAccess() picks the answer up instead of asking
+     again. One round trip saved on every refresh. */
+  RA_PRE=Promise.resolve(sb.from("user_tool_roles").select("tool,role").eq("user_id",session.user.id));
   const {data:prof,error}=await sb.from("profiles").select("role,brand_id,email,emoji").eq("id",session.user.id).single();
   if(error){authMsg(error.message);document.getElementById("auth-screen").style.display="flex";return;}
   ME={id:session.user.id,role:prof.role,brand_id:prof.brand_id,email:prof.email||session.user.email,emoji:prof.emoji||""};
