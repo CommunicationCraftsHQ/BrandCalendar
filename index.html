@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V115.2 Tbilisi"/>
+<meta name="cc-tool-version" content="V115.3 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -4968,20 +4968,14 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
       <div class="field"><label class="fl">Password</label><input class="fi" id="auth-pass" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')signIn()"/></div>
       <button class="btn btn-p" style="width:100%;justify-content:center;" onclick="signIn()">Sign in</button>
       <button class="btn btn-g btn-sm" style="width:100%;justify-content:center;margin-top:8px;" onclick="forgotPass()">Forgot password?</button>
-      <div style="border-top:1px solid var(--div);margin:14px 0 10px;"></div>
-      <button class="btn btn-s btn-sm" style="width:100%;justify-content:center;" onclick="showSignup()">New here? Create your account</button>
-    </div>
-    <div id="auth-signup" style="display:none;">
-      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6;">Your <b>@communicationcrafts.com</b> account is your Outlook one — go back and use <b>Sign in with Communication Crafts</b>. Access to each tool is given to you by Chirag; it does not arrive on its own.</div>
-      <div class="field"><label class="fl">Work email</label><input class="fi" id="su-email" type="email" autocomplete="username" placeholder="you@communicationcrafts.com"/></div>
-      <div class="field"><label class="fl">Choose a password</label><input class="fi" id="su-pass" type="password" autocomplete="new-password" onkeydown="if(event.key==='Enter')signUp()"/></div>
-      <button class="btn btn-p" style="width:100%;justify-content:center;" onclick="signUp()">Create account &amp; enter</button>
-      <button class="btn btn-g btn-sm" style="width:100%;justify-content:center;margin-top:8px;" onclick="showSignin()">Back to sign in</button>
     </div>
     <div id="auth-setpass" style="display:none;">
-      <div class="field"><label class="fl">Choose a password</label><input class="fi" id="auth-newpass" type="password" autocomplete="new-password"/></div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px;">Choose your password</div>
+      <div id="auth-setpass-who" style="font-size:12.5px;color:var(--muted);margin-bottom:14px;"></div>
+      <div class="field"><label class="fl">New password</label><input class="fi" id="auth-newpass" type="password" autocomplete="new-password"/></div>
+      <div class="field"><label class="fl">Type it again</label><input class="fi" id="auth-newpass2" type="password" autocomplete="new-password" onkeydown="if(event.key==='Enter')setNewPass()"/></div>
       <button class="btn btn-p" style="width:100%;justify-content:center;" onclick="setNewPass()">Save password &amp; enter</button>
-      <button class="btn btn-g btn-sm" style="width:100%;justify-content:center;margin-top:8px;" onclick="RECOVERY_MODE=false;document.getElementById('auth-setpass').style.display='none';document.getElementById('auth-form').style.display='block';document.getElementById('auth-screen').style.display='none';boot();">Cancel</button>
+      <button id="auth-setpass-cancel" class="btn btn-g btn-sm" style="width:100%;justify-content:center;margin-top:8px;" onclick="RECOVERY_MODE=false;document.getElementById('auth-setpass').style.display='none';document.getElementById('auth-form').style.display='block';document.getElementById('auth-screen').style.display='none';boot();">Cancel</button>
     </div>
     <div id="auth-pending" style="display:none;font-size:13px;color:var(--muted);line-height:1.6;">
       ✓ You're signed in. Nothing has been given to you yet.<br/>Ask Chirag for the tools you need, then refresh this page.
@@ -11826,7 +11820,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V115.2 Tbilisi";
+const TOOL_VERSION="V115.3 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -12134,7 +12128,7 @@ function logPageOpen(v){
    screen instead of a build. */
 const canEdit=()=>can("create");
 
-function authMsg(t){document.getElementById("auth-msg").textContent=t||"";}
+function authMsg(t,good){const m=document.getElementById("auth-msg"); m.style.color=good?"#3B6D11":""; m.textContent=t||"";}
 async function signIn(){
   /* VALENCIA — a CC mailbox signs in with Microsoft, and only Microsoft.
      THIS IS NOT THE ENFORCEMENT. Refusing a password sign-in server-side
@@ -12153,8 +12147,6 @@ async function signIn(){
   if(error){authMsg(error.message);return;}
   authMsg(""); boot();
 }
-function showSignup(){document.getElementById("auth-form").style.display="none";document.getElementById("auth-signup").style.display="block";authMsg("");}
-function showSignin(){document.getElementById("auth-signup").style.display="none";document.getElementById("auth-form").style.display="block";authMsg("");}
 /* ══ ANTWERP — sign in with a Communication Crafts account ═══════════
    The Microsoft app registration is single-tenant, so only CCT Digisol
    accounts ever reach this. That stops other companies; it does NOT
@@ -12178,36 +12170,91 @@ async function signInMicrosoft(){
      at all means it did not happen. */
   if(error) authMsg(error.message);
 }
-async function signUp(){
-  /* VALENCIA — checklist items 2 and 3. There is no password sign-up
-     any more: a CC mailbox uses the button, and nobody outside CC gets
-     an account at all until the outside door is designed as its own
-     piece of work.
+/* ══ TBILISI V115.3 — CLIENT ACCOUNTS ═══════════════════════════════
+   A client is welcomed from CC Platform › People & access. The welcome
+   email carries a starting password that works ONCE and expires after 7
+   days; the first sign-in goes straight to "Choose your password" and
+   the Calendar stays shut until it is done. "Forgot password" emails a
+   new starting password the same way.
 
-     THE REFUSAL IS THE Before User Created HOOK, not this function. Two
-     different sentences here only so the person reads the one that tells
-     them what to do — a Microsoft error code helps nobody. Deleting the
-     panel instead was the other option and was NOT taken: somebody who
-     arrives here needs to be told why, and an absent button explains
-     nothing. */
-  const email=document.getElementById("su-email").value.trim();
-  if(email.toLowerCase().endsWith(CC_DOMAIN)){
-    authMsg("Your Communication Crafts account is your Outlook one — use the button on the sign-in screen. There is no separate password here.");
-  }else{
-    authMsg("Accounts here are for Communication Crafts staff. Speak to Chirag if you need access.");
+   The function `client-welcome` holds every rule (it is the only thing
+   that can write the account's cc_start flag); this page only asks it.
+   The flag rides in the session itself, so a staff sign-in costs no
+   extra round trip. */
+const CW_FN=SB_URL+"/functions/v1/client-welcome";
+let START_MODE=false;
+async function callWelcome(action,body,token){
+  let r;
+  try{
+    r=await fetch(CW_FN,{method:"POST",
+      headers:{authorization:"Bearer "+(token||SB_KEY),apikey:SB_KEY,"content-type":"application/json"},
+      body:JSON.stringify(Object.assign({action},body||{}))});
+  }catch(e){ throw new Error("Could not reach the server. Check your connection and try again."); }
+  const text=await r.text(); let out={};
+  try{ out=text?JSON.parse(text):{}; }catch(e){ out={}; }
+  if(!r.ok) throw new Error(out.error||("The server refused ("+r.status+")."));
+  return out;
+}
+/* Returns true when boot may carry on, false when this screen took over. */
+async function clientStartGate(session){
+  let out;
+  try{ out=await callWelcome("start",{},session.access_token); }
+  catch(e){
+    await sb.auth.signOut();
+    showSignInForm(); authMsg(e.message); return false;
   }
+  if(out.state==="ok"){
+    START_MODE=true; showSetPass();
+    document.getElementById("auth-setpass-who").textContent=session.user.email||"";
+    return false;
+  }
+  if(out.state==="expired"||out.state==="used"){
+    await sb.auth.signOut(); showSignInForm();
+    authMsg(out.state==="expired"
+      ?"That starting password has expired. Click Forgot password? and a new one will be emailed to you."
+      :"That starting password has already been used. Click Forgot password? and a new one will be emailed to you.");
+    return false;
+  }
+  await sb.auth.refreshSession();   // "done": the flag was stale
+  return true;
+}
+function showSignInForm(){
+  document.getElementById("auth-screen").style.display="flex";
+  document.getElementById("auth-setpass").style.display="none";
+  document.getElementById("auth-pending").style.display="none";
+  document.getElementById("auth-form").style.display="block";
 }
 async function forgotPass(){
   const email=document.getElementById("auth-email").value.trim();
   if(!email){authMsg("Type your email above first, then click this again.");return;}
-  const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
-  authMsg(error?error.message:"Check your email for the reset link.");
+  if(email.toLowerCase().endsWith(CC_DOMAIN)){authMsg("Communication Crafts accounts sign in with the button above.");return;}
+  authMsg("Sending\u2026");
+  try{ await callWelcome("forgot",{email}); }
+  catch(e){ authMsg(e.message); return; }
+  authMsg("A new starting password is on its way to "+email+".",true);
 }
 async function setNewPass(){
   const pw=document.getElementById("auth-newpass").value;
-  if(!pw||pw.length<6){authMsg("Password must be at least 6 characters.");return;}
-  const {error}=await sb.auth.updateUser({password:pw});
-  if(error){authMsg(error.message);return;}
+  const pw2=document.getElementById("auth-newpass2").value;
+  if(!pw||pw.length<8){authMsg("Use at least 8 characters.");return;}
+  if(pw!==pw2){authMsg("The two passwords are not the same.");return;}
+  if(START_MODE){
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session){showSignInForm();authMsg("Your sign-in has expired. Sign in again.");return;}
+    let out;
+    try{ out=await callWelcome("set-password",{password:pw},session.access_token); }
+    catch(e){ authMsg(e.message); return; }
+    if(out.state!=="saved"&&out.state!=="done"){
+      await sb.auth.signOut(); showSignInForm();
+      authMsg("That starting password is no longer valid. Click Forgot password? for a new one.");
+      return;
+    }
+    await sb.auth.refreshSession();
+    START_MODE=false;
+  }else{
+    const {error}=await sb.auth.updateUser({password:pw});
+    if(error){authMsg(error.message);return;}
+  }
   RECOVERY_MODE=false;
   document.getElementById("auth-setpass").style.display="none";
   document.getElementById("auth-form").style.display="block";
@@ -12221,8 +12268,9 @@ function showSetPass(){
   document.getElementById("auth-screen").style.display="flex";
   document.getElementById("auth-form").style.display="none";
   document.getElementById("auth-pending").style.display="none";
-  const su=document.getElementById("auth-signup"); if(su) su.style.display="none";
   document.getElementById("auth-setpass").style.display="block";
+  const _c=document.getElementById("auth-setpass-cancel"); if(_c) _c.style.display=START_MODE?"none":"";
+  const _w=document.getElementById("auth-setpass-who"); if(_w) _w.textContent="";
   authMsg("");
 }
 // expired or already-used email links arrive with an error in the URL — explain instead of staying silent
@@ -19017,6 +19065,9 @@ async function boot(){
     document.getElementById("auth-form").style.display="block";
     authMsg("That is not a Communication Crafts mailbox. Sign in with your email and password below.");
     return;
+  }
+  if(_md.cc_start&&!RECOVERY_MODE){
+    if(!(await clientStartGate(session))) return;
   }
   /* SPEED, 10 Oct — the tool roles are asked for at the same moment as
      the profile; resolveAccess() picks the answer up instead of asking
