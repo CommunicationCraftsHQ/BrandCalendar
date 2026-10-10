@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V114.6 Tbilisi"/>
+<meta name="cc-tool-version" content="V114.7 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -8926,14 +8926,17 @@ async function loadAssignments(){
        was empty; on 29 Sep the handover wrote 34,712 rows and everybody
        whose rows fell past the first 1,000 was on no brands. Ordered on
        the primary key so the pages cannot overlap or skip. */
-    const PAGE=1000; let from=0, rows=[];
-    for(;;){
-      const r=await sb.from("user_brands").select("user_id,brand_id")
-        .order("user_id").order("brand_id").range(from,from+PAGE-1);
-      if(r.error) return;
-      const got=r.data||[]; rows=rows.concat(got);
-      if(got.length<PAGE) break;
-      from+=PAGE;
+    const PAGE=1000, AT_ONCE=4; let rows=[];
+    /* SPEED 3 — four pages are asked for at the same time, and four more
+       only if the last of them came back full. Measured on the live
+       database: asking for the row count first costs more than it saves. */
+    const page=from=>sb.from("user_brands").select("user_id,brand_id")
+      .order("user_id").order("brand_id").range(from,from+PAGE-1);
+    for(let from=0;;from+=PAGE*AT_ONCE){
+      const got=await Promise.all([...Array(AT_ONCE)].map((_,i)=>page(from+i*PAGE)));
+      if(got.some(r=>r.error)) return;
+      got.forEach(r=>{ rows=rows.concat(r.data||[]); });
+      if((got[AT_ONCE-1].data||[]).length<PAGE) break;
     }
     rows.forEach(x=>{ (ASSIGN[x.brand_id]=ASSIGN[x.brand_id]||[]).push(x.user_id); });
     ASSIGN_OK=true;
@@ -11629,7 +11632,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V114.6 Tbilisi";
+const TOOL_VERSION="V114.7 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -12306,8 +12309,8 @@ async function loadAll(showToast){
      before. The client's own-brand reload below is unchanged. */
   /* SPEED 2 — commitments, production notes, files and seen-marks are
      not needed to draw the page; they load behind it (see bgFill) */
-  BG_P=Promise.all([loadCommitments(), loadProductionComments(), loadProductionFiles(), loadProductionSeen()]
-    .map(p=>Promise.resolve(p).catch(()=>{})));
+  /* SPEED 3 — commitments, production notes, files and seen-marks, and
+     the bell, start after the first draw (bgStart) */
   const side=Promise.all([
     loadProductions(), loadDelivery(),
     loadPostFeedback(), loadBranding(activeBrand)
@@ -12368,7 +12371,7 @@ async function loadAll(showToast){
     toast("Could not read what your role is allowed to do, so some buttons are hidden. Reload to try again.","err");
   render();
   /* SPEED 2 — and the rest fills in when it lands */
-  if(BG_P){ const bg=BG_P; BG_P=null; bg.then(bgFill); }
+  bgStart().then(bgFill);
   startRealtime(); // Sydney: live updates from teammates (safe no-op if sockets unavailable)
   if(showToast) toast("Refreshed");
 }
@@ -12756,6 +12759,12 @@ let TASK_SEEN_OK=false;      // false until we know the table is there
    while somebody is typing: a redraw would take their cursor away, and
    the next ordinary redraw picks the data up anyway. */
 let BG_P=null;
+/* SPEED 3 — the slow reads, started only once the page is on screen */
+function bgStart(){
+  return Promise.all([loadNotifications(), loadCommentCounts(), loadCommitments(),
+    loadProductionComments(), loadProductionFiles(), loadProductionSeen()]
+    .map(p=>Promise.resolve(p).catch(()=>{})));
+}
 function bgFill(){
   try{ syncBell(); buildNotifPanel(); }catch(e){}
   const a=document.activeElement;
@@ -12765,8 +12774,8 @@ function bgFill(){
 async function loadPostFeedback(){
   /* the bell and the comment counts — the two slowest reads in the tool —
      start here and are not waited for */
-  const bell=Promise.all([loadNotifications(),loadCommentCounts()].map(p=>Promise.resolve(p).catch(()=>{})));
-  BG_P=BG_P?Promise.all([BG_P,bell]):bell;
+  /* SPEED 3 — started by bgStart() after the page is drawn, not here:
+     started alongside, they slowed every other read down with them */
   try{
     const me=(ME.email||"").toLowerCase();
     const [sn]=await Promise.all([
