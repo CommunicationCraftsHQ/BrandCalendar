@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V114.3 Tbilisi"/>
+<meta name="cc-tool-version" content="V114.4 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -11629,7 +11629,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V114.3 Tbilisi";
+const TOOL_VERSION="V114.4 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -12304,9 +12304,12 @@ async function loadAll(showToast){
      store, and nothing draws until all of them are back. They start now,
      alongside the main read, and are waited for at the same point as
      before. The client's own-brand reload below is unchanged. */
+  /* SPEED 2 — commitments, production notes, files and seen-marks are
+     not needed to draw the page; they load behind it (see bgFill) */
+  BG_P=Promise.all([loadCommitments(), loadProductionComments(), loadProductionFiles(), loadProductionSeen()]
+    .map(p=>Promise.resolve(p).catch(()=>{})));
   const side=Promise.all([
-    loadProductions(), loadDelivery(), loadCommitments(),
-    loadProductionComments(), loadProductionFiles(), loadProductionSeen(),
+    loadProductions(), loadDelivery(),
     loadPostFeedback(), loadBranding(activeBrand)
   ].map(p=>Promise.resolve(p).catch(()=>{})));
   const [inds,evts,brs,bevs,prefs,posts,briefs,social,monthPlans,monthItems]=await Promise.all([
@@ -12364,6 +12367,8 @@ async function loadAll(showToast){
   if(ME.role!=="pending" && !ME.capsOk)
     toast("Could not read what your role is allowed to do, so some buttons are hidden. Reload to try again.","err");
   render();
+  /* SPEED 2 — and the rest fills in when it lands */
+  if(BG_P){ const bg=BG_P; BG_P=null; bg.then(bgFill); }
   startRealtime(); // Sydney: live updates from teammates (safe no-op if sockets unavailable)
   if(showToast) toast("Refreshed");
 }
@@ -12746,13 +12751,27 @@ let NOTIF=[];                // rows from unread_notifications
    migration for why widening post_seen was the worse of the two. */
 let TASK_SEEN={};            // taskId -> seen_at
 let TASK_SEEN_OK=false;      // false until we know the table is there
+/* SPEED 2, 10 Oct — what the page can draw without, and fills in after.
+   bgFill() redraws once everything behind the page is back, but never
+   while somebody is typing: a redraw would take their cursor away, and
+   the next ordinary redraw picks the data up anyway. */
+let BG_P=null;
+function bgFill(){
+  try{ syncBell(); buildNotifPanel(); }catch(e){}
+  const a=document.activeElement;
+  const typing=a&&(a.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName));
+  if(!typing) try{ render(); }catch(e){}
+}
 async function loadPostFeedback(){
+  /* the bell and the comment counts — the two slowest reads in the tool —
+     start here and are not waited for */
+  const bell=Promise.all([loadNotifications(),loadCommentCounts()].map(p=>Promise.resolve(p).catch(()=>{})));
+  BG_P=BG_P?Promise.all([BG_P,bell]):bell;
   try{
     const me=(ME.email||"").toLowerCase();
     const [sn]=await Promise.all([
       sb.from("post_seen").select("*").eq("user_email",me),
-      loadNotifications(),
-      loadCommentCounts(),
+
       loadShareLinks(),
       loadTaskSeen(),
       loadCreativeSeen(),
