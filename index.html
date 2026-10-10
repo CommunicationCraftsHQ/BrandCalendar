@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V114.7 Tbilisi"/>
+<meta name="cc-tool-version" content="V114.8 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3083,6 +3083,8 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .tf-nm{font-size:12px;font-weight:600;margin-top:5px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .tf-doc+.tf-nm,.tf-doc~.tf-nm{max-width:132px;}
 .tf-sz{font-size:11px;color:var(--subtle);}
+/* V114.8 — a file over 50 MB is a master, and says so */
+.tf-master{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--acc);border:1px solid var(--acc);border-radius:4px;padding:0 5px;line-height:1.4;vertical-align:1px;}
 .tf-all{display:flex;gap:14px;font-size:12px;color:var(--muted);}
 .tf-all span.dl{font-weight:600;cursor:pointer;}
 .tf-all span.dl:hover{color:var(--text);}
@@ -10487,13 +10489,13 @@ function taskFilesHtml(m){
           <div class="ft"><span class="tf-ty ${tfTy(a)}">${escHtml(ext)}</span><span>${a.page_count>1?a.page_count+" pages":""}</span></div>
           ${stateBadge(a,up)}${ov}</div>
         <div class="tf-nm" style="max-width:132px" title="${escAttr(a.filename)}">${escHtml(a.filename||"File")}</div>
-        <div class="tf-sz">${escHtml(a.bytes?kbmb(a.bytes):"")}</div></div>`;
+        <div class="tf-sz">${isMaster(a)?'<span class="tf-master">Master</span> ':""}${escHtml(a.bytes?kbmb(a.bytes):"")}</div></div>`;
     }
     const src=a.thumb_path||a.poster_path||a.view_path||"";
     return `<div class="tf" data-aid="${escAttr(a.id)}">
       <div class="tf-pic" data-sign="${escAttr(src)}" ${open}>${isVid?`<span class="tf-play">▶</span>`:""}${stateBadge(a,up)}${ov}</div>
       <div class="tf-nm" title="${escAttr(a.filename)}">${escHtml(a.filename||"Image")}</div>
-      <div class="tf-sz">${escHtml(facts.join(" · "))}</div></div>`;
+      <div class="tf-sz">${isMaster(a)?'<span class="tf-master">Master</span> ':""}${escHtml(facts.join(" · "))}</div></div>`;
   }).join("");
   const many=list.length>1;
   const all=many?`<div class="tf-all"><span>${list.length} files</span>${dl&&list.some(assetDownloadable)
@@ -10778,7 +10780,7 @@ async function taskPostInner(){
   await loadThread(t.id); render();
   if(staged.length){
     await uploadMany(staged,{ownerKind:"message",ownerId:row.id,
-      brandId:activeBrand,onTick:()=>{ if(view==="branding"&&BR_OPEN) render(); }});
+      brandId:activeBrand,master:true,taskId:t.id,onTick:()=>{ if(view==="branding"&&BR_OPEN) render(); }});
     if(view==="branding"&&BR_OPEN) render();
   }
 }
@@ -11632,7 +11634,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V114.7 Tbilisi";
+const TOOL_VERSION="V114.8 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -13189,7 +13191,78 @@ async function listPrefix(prefix,depth=0,seen={n:0}){
 /* One file, start to finish. Returns the asset row, or null.
    onTick reports progress so the composer can show a bar for something
    that may take minutes. */
-async function uploadAsset(file,{ownerKind,ownerId,brandId,slideNo=null,onTick}){
+/* ══ V114.8 — A TASK FILE OVER 50 MB IS A MASTER, AND GOES TO SHAREPOINT ══
+   Chirag, 10 Oct: "in case of marketing calendar, we do want to allow
+   uploading of 50 MB plus files in the tasks, the same way how you have
+   currently planned them in production planner." Tasks only. Posts and
+   comments keep the wall and its export sentence — a 400 MB file in a
+   post is the habit the wall exists to stop.
+
+   THE RULES ARE THE PLANNER'S (cc-suite/production/src/shootFile.js),
+   copied here because this file cannot import a module; the function
+   `shoot-file` enforces the same limits server-side, so a drift between
+   the two copies is caught by the server, not by a person. The bytes go
+   straight from the browser to Microsoft in 10 MB pieces; the small
+   derivatives (thumbnail, view copy, poster) still go to the bucket, so
+   every card and lightbox draws a master exactly as it draws any file.
+   Only the ORIGINAL lives in the CC Suite Files library. */
+const SHOOT_FN="https://qsxldzqdjdplffxqdokd.supabase.co/functions/v1/shoot-file";
+const MASTER_MAX=2*1024*1024*1024;
+const MASTER_KINDS={image:["jpg","jpeg","png","tif","tiff","heic","webp","gif"],
+  video:["mp4","mov","m4v","mxf","avi","mkv","webm"],psd:["psd","psb"],ai:["ai","eps","indd"],zip:["zip","rar","7z"]};
+function masterKindOf(name){
+  const m=/\.([A-Za-z0-9]+)$/.exec(String(name||"")); const e=m?m[1].toLowerCase():"";
+  return Object.keys(MASTER_KINDS).find(k=>MASTER_KINDS[k].includes(e))||null;
+}
+function masterStoreFor(file){
+  const size=(file&&file.size)||0;
+  if(size<=W_UPLOAD_MAX) return {store:"supabase"};
+  const kind=masterKindOf(file.name);
+  if(!kind) return {refuse:"Only images, video, Photoshop, Illustrator and zip files can be stored as masters over 50 MB. This one is a ."+((/\.([A-Za-z0-9]+)$/.exec(file.name||"")||[])[1]||"file with no type")+"."};
+  if(size>MASTER_MAX) return {refuse:"Masters can be up to 2 GB. This one is "+(size/1073741824).toFixed(1)+" GB."};
+  return {store:"sharepoint",kind};
+}
+const isMaster=a=>!!a&&a.store==="sharepoint";
+async function callShoot(action,body){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session) throw new Error("Your sign-in has expired. Reload the page.");
+  let r;
+  try{
+    r=await fetch(SHOOT_FN,{method:"POST",
+      headers:{authorization:"Bearer "+(session.access_token||""),"content-type":"application/json"},
+      body:JSON.stringify(Object.assign({action},body||{}))});
+  }catch(e){ throw new Error("Could not reach the server. Check your connection and try again."); }
+  const text=await r.text(); let out={};
+  try{ out=text?JSON.parse(text):{}; }catch(e){ out={}; }
+  if(!r.ok) throw new Error(out.error||("The server refused ("+r.status+").")); 
+  return out;
+}
+const MASTER_CHUNK=10*1024*1024;
+async function uploadMasterTo(file,{brandId,taskId},onPct){
+  const {uploadUrl}=await callShoot("upload",{scope:"task",name:file.name,size:file.size,brand_id:brandId,task_id:taskId});
+  let sent=0,item=null;
+  while(sent<file.size){
+    const end=Math.min(sent+MASTER_CHUNK,file.size);
+    const r=await fetch(uploadUrl,{method:"PUT",headers:{"content-range":"bytes "+sent+"-"+(end-1)+"/"+file.size},body:file.slice(sent,end)});
+    if(!r.ok&&r.status!==202) throw new Error("The upload stopped at "+Math.round(sent/file.size*100)+"%. Nothing was attached — try again.");
+    if(r.status===200||r.status===201) item=await r.json();
+    sent=end; if(onPct) onPct(sent/file.size);
+  }
+  if(!item||!item.id) throw new Error("Microsoft did not confirm the file. Nothing was attached — try again.");
+  return callShoot("confirm",{scope:"task",item_id:item.id,brand_id:brandId});
+}
+/* the original's address, asked for at the moment it is wanted and kept
+   for 45 minutes — Microsoft's address expires within the hour */
+const MASTER_URLS={};
+async function masterUrl(a){
+  const hit=MASTER_URLS[a.id]; if(hit&&hit.exp>Date.now()) return hit.url;
+  try{ const r=await callShoot("open",{asset_id:a.id}); MASTER_URLS[a.id]={url:r.url,exp:Date.now()+45*60000}; return r.url; }
+  catch(e){ toast(e.message||"That file could not be opened","err"); return ""; }
+}
+/* the original, whichever store it is in */
+async function originalUrl(a){ return isMaster(a)?masterUrl(a):originalUrl(a); }
+
+async function uploadAsset(file,{ownerKind,ownerId,brandId,slideNo=null,onTick,master=false,taskId=null}){
   const id=newFbId("as"), kind=assetKindOf(file);
   const tick=(pct,state,reason)=>{ UPLOADS[id]={name:file.name,bytes:file.size,pct,state,reason:reason||""};
                                    noteUploadLive(ownerKind,ownerId,id,file,pct,state);
@@ -13204,7 +13277,16 @@ async function uploadAsset(file,{ownerKind,ownerId,brandId,slideNo=null,onTick})
      four tools now share; the Planner's terser version is gone. The
      number went with it, because a ceiling that lives in two files is
      a ceiling somebody will change in one. */
-  const tooBig=wTooBig(file);
+  /* V114.8 — the door is opened ONLY by the caller that may (the task
+     thread). Every other caller meets the wall exactly as before. */
+  const where=master?masterStoreFor(file):null;
+  if(where&&where.refuse){
+    tick(0,"failed",where.refuse);
+    noteUploadFail(ownerKind,ownerId,file,where.refuse);
+    return null;
+  }
+  const toSharePoint=!!(where&&where.store==="sharepoint");
+  const tooBig=toSharePoint?"":wTooBig(file);
   if(tooBig){
     const why=tooBig;
     tick(0,"failed",why);
@@ -13236,13 +13318,23 @@ async function uploadAsset(file,{ownerKind,ownerId,brandId,slideNo=null,onTick})
     tick(12,"uploading");
 
     const base=mediaPath(brandId,ownerKind,ownerId,file.name);
-    const put=await putObject(base,file,file.type||"application/octet-stream");
-    const storage_path=put.path;
-    if(!storage_path){
-      const why=put.error||"Upload was refused";
-      tick(0,"failed",why);
-      noteUploadFail(ownerKind,ownerId,file,why);
-      return null;
+    let storage_path="", sp_item_id="";
+    if(toSharePoint){
+      /* the original goes to Microsoft, in pieces, with the bar moving */
+      let got;
+      try{ got=await uploadMasterTo(file,{brandId,taskId},pct=>tick(12+Math.round(pct*64),"uploading")); }
+      catch(e){ const why=e.message||"Upload was refused"; tick(0,"failed",why); noteUploadFail(ownerKind,ownerId,file,why); return null; }
+      sp_item_id=got.sp_item_id||"";
+      if(!sp_item_id){ const why="Microsoft did not confirm the file"; tick(0,"failed",why); noteUploadFail(ownerKind,ownerId,file,why); return null; }
+    }else{
+      const put=await putObject(base,file,file.type||"application/octet-stream");
+      storage_path=put.path;
+      if(!storage_path){
+        const why=put.error||"Upload was refused";
+        tick(0,"failed",why);
+        noteUploadFail(ownerKind,ownerId,file,why);
+        return null;
+      }
     }
     /* Nothing to roll back here: the original is written FIRST, so a
        refusal at this point means the bucket is untouched. The order is
@@ -13275,7 +13367,10 @@ async function uploadAsset(file,{ownerKind,ownerId,brandId,slideNo=null,onTick})
       duration_s:(d.duration==null||!isFinite(Number(d.duration)))?null:Number(d.duration),
       page_count:whole(d.pages),
       slide_no:slideNo,status,fail_reason:"",
-      created_by:(ME.email||"").toLowerCase(),created_at:new Date().toISOString()};
+      created_by:(ME.email||"").toLowerCase(),created_at:new Date().toISOString(),
+      /* V114.8 — where the original is. Written only for a master, so a
+         row for an ordinary file is the same row it always was. */
+      ...(toSharePoint?{store:"sharepoint",sp_item_id}:{})};
     const ins=await sb.from("assets").insert([row]);
     /* UTRECHT — THE MESSAGE WAS ALREADY CONFESSING.
        "Saved the file but could not record it" is what this said, and
@@ -13383,6 +13478,12 @@ async function deleteAsset(id,ownerKind,ownerId){
   const row=(ASSETS[k]||[]).find(a=>a.id===id)
          || (await sb.from("assets").select("*").eq("id",id).maybeSingle()).data;
   if(!row){ toast("That attachment is already gone","err"); return false; }
+  /* V114.8 — a master's bytes are in SharePoint: the function moves the
+     file to the site's recycle bin (93 days) before the row goes */
+  if(isMaster(row)){
+    try{ await callShoot("remove",{asset_id:row.id}); }
+    catch(e){ toast(e.message||"Could not remove the master","err"); return false; }
+  }
   const r=await removeAssetsAndFiles([row]);
   if(!r.rows){ toast(r.error||"Could not remove that attachment","err"); return false; }
   ASSETS[k]=(ASSETS[k]||[]).filter(a=>a.id!==id);
@@ -13651,7 +13752,7 @@ async function playInline(assetId){
   let a=null;
   for(const k of Object.keys(ASSETS)){ const f=(ASSETS[k]||[]).find(x=>x.id===assetId); if(f){a=f;break;} }
   if(!a) return;
-  const u=await signedUrl(a.storage_path);
+  const u=await originalUrl(a);
   if(!u){ toast("This video is not available."); return; }
   tile.classList.add("playing");
   tile.removeAttribute("data-play");
@@ -13764,7 +13865,7 @@ function openDocTab(assetId){
   const a=(own.list||[]).find(x=>x.id===assetId); if(!a) return;
   const w=window.open("","_blank");
   if(w){ try{ w.opener=null; }catch(e){} }
-  signedUrl(a.storage_path).then(u=>{
+  originalUrl(a).then(u=>{
     if(!u){ if(w) w.close(); toast("That file is not available","err"); return; }
     if(w) w.location.href=u; else window.location.href=u;
   }).catch(()=>{ if(w) w.close(); toast("That file could not be opened","err"); });
@@ -13816,13 +13917,22 @@ function assetById(id){
    purged video has a poster and no original, and a button that delivers
    the poster under the video's name is a lie with a filename on it. */
 function assetDownloadable(a){
-  return !!(a && !a.deleted_at && a.storage_path && !a.purged_at && a.kind!=="link");
+  return !!(a && !a.deleted_at && (a.storage_path||isMaster(a)) && !a.purged_at && a.kind!=="link");
 }
 async function assetDownload(id,ev){
   if(ev){ ev.stopPropagation(); ev.preventDefault(); }
   if(!canDownload()){ capDenied("Downloading a file"); return; }
   const a=assetById(id);
   if(!assetDownloadable(a)){ toast("There is no original file to download","err"); return; }
+  if(isMaster(a)){
+    /* V114.8 — a master downloads from Microsoft's address. The tab is
+       opened on the click itself, then pointed at the file. */
+    const w=window.open("","_blank"); if(w){ try{ w.opener=null; }catch(e){} }
+    const u=await masterUrl(a);
+    if(!u){ if(w) w.close(); return; }
+    if(w) w.location.href=u; else window.location.href=u;
+    return;
+  }
   /* The download option puts Content-Disposition on the signed url, so
      the browser saves it under its real name and the bytes never pass
      through this page. Fetching it into a blob first would hold a whole
@@ -13900,7 +14010,7 @@ async function paintLightbox(){
   if(cap) cap.textContent=`${a.filename}${a.slide_no?" · slide "+a.slide_no:""}  ·  ${LB.i+1} of ${LB.list.length}`;
   if(!body) return;
   if(playable(a)){
-    const u=await signedUrl(a.storage_path);
+    const u=await originalUrl(a);
     body.innerHTML=u?`<video controls autoplay playsinline src="${escAttr(u)}"></video>`
                     :`<div style="color:#fff;font-size:13px;">This video is not available.</div>`;
   }else if(a.purged_at&&a.kind==="video"){
@@ -13920,7 +14030,7 @@ async function paintLightbox(){
        Chirag chose this one on 24 August, knowing that. If the rule
        ever has to hold for documents too, the answer is rendering the
        pages ourselves — not a smaller iframe. */
-    const u=await signedUrl(a.storage_path);
+    const u=await originalUrl(a);
     body.innerHTML=u?`<iframe class="mlbdoc" src="${escAttr(u)}#view=FitH"
                         title="${escAttr(a.filename)}"></iframe>`
                     :`<div style="color:#fff;font-size:13px;">This document is not available.</div>`;
@@ -14008,7 +14118,7 @@ async function paintReview(){
 
   if(stage){
     if(playable(a)){
-      const u=await signedUrl(a.storage_path);
+      const u=await originalUrl(a);
       stage.innerHTML=u?`<video controls autoplay playsinline src="${escAttr(u)}"
                            controlsList="nodownload" oncontextmenu="return false"></video>`
                       :`<div class="rvnone">This video is not available.</div>`;
@@ -14022,7 +14132,7 @@ async function paintReview(){
          reaches only one of them is how they drift into disagreeing
          about what a file is. No zoom transform here — the viewer has
          its own, and two zooms fight. */
-      const u=await signedUrl(a.storage_path);
+      const u=await originalUrl(a);
       stage.innerHTML=u?`<iframe class="rvdoc" src="${escAttr(u)}#view=FitH"
                            title="${escAttr(a.filename)}"></iframe>`
                       :`<div class="rvnone">This document is not available.</div>`;
@@ -19469,7 +19579,7 @@ async function exMedia(post){
           videoSkip="the deck's video budget is full";
         } else {
           try{
-            const vu=await signedUrl(a.storage_path);
+            const vu=await originalUrl(a);
             if(vu){
               const vb=await (await fetch(vu)).arrayBuffer();
               videoData="data:"+(a.mime||"video/mp4")+";base64,"+bufToB64(vb);
