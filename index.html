@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V115.5 Tbilisi"/>
+<meta name="cc-tool-version" content="V115.7 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3910,13 +3910,27 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
 .prtv.sm{font-size:13.5px;font-weight:600;letter-spacing:0;margin-top:5px;}
 .prtv small{font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:0;}
 .prtsep{color:#C9C6C0;margin:0 7px;}
-.prgrp{display:flex;align-items:center;gap:9px;padding:9px 20px;background:#F7F6F3;
-  border-top:1px solid var(--div);border-bottom:1px solid var(--div);flex-wrap:wrap;}
+/* V115.6 — the heading is a grid on the row template, not a flex bar
+   with its numbers shoved to the right edge. */
+.prgrp{display:grid;gap:8px;align-items:center;padding:8px 16px;background:#F7F6F3;
+  border-top:1px solid var(--div);border-bottom:1px solid var(--div);}
 .prlist .prgrp:first-of-type{border-top:0;}
-.prgc{font-size:11.5px;color:var(--muted);}
-.prgr{margin-left:auto;font-size:12px;color:#55524D;font-variant-numeric:tabular-nums;}
+.prgrp>div{min-width:0;}
+.prgh{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0;}
+.prgh.wide{flex-wrap:nowrap;overflow:visible;position:relative;z-index:1;}
+.prgh.wide .probj{flex:0 0 auto;}
+.prgc{font-size:11.5px;color:var(--muted);white-space:nowrap;}
+.prgr{font-size:12px;color:#55524D;font-variant-numeric:tabular-nums;
+  overflow:hidden;text-overflow:ellipsis;}
 .prgr b{font-weight:700;color:var(--ink,#0D0D0D);}
-@media (max-width:1240px){ .prgr{margin-left:0;width:100%;} }
+.prgr.in{flex:1 1 100%;}
+.prgl{white-space:normal;line-height:1.25;}
+.prgl+.prgl{margin-top:2px;}
+/* the budget figure keeps its basis on a line of its own rather than
+   losing the end of it to an ellipsis */
+.prrow .prbd .bs,.prgr .bs{display:block;font-size:11px;font-weight:500;color:var(--muted);
+  letter-spacing:0;margin-top:1px;}
+.prrow .prbd{white-space:normal;line-height:1.25;}
 .prhd,.prrow{display:grid;gap:8px;align-items:center;padding:0 16px;}
 .prhd{height:34px;border-bottom:1px solid var(--div);font-size:9.5px;font-weight:700;
   text-transform:uppercase;letter-spacing:.04em;color:var(--subtle);white-space:nowrap;}
@@ -3931,7 +3945,8 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
 .prnm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .prrow .prdt{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .prrow .prmn{font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.prrow .prsg{display:inline-block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom;}
+.prrow .prsg,.prrow .probj{display:inline-block;max-width:100%;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;vertical-align:bottom;}
 .prpg{display:flex;flex-direction:column;gap:4px;min-width:0;}
 .prpg .t{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .prpgb{height:4px;border-radius:2px;background:#eceef1;overflow:hidden;}
@@ -4614,6 +4629,12 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
              ignored — a trap worth removing rather than documenting. There is
              one place to manage people now, and this is the door to it. -->
         <div class="brow" data-need="admin" onclick="closeAllPops();window.open('app.html#people','_blank')"><i class="ti ti-users"></i><span class="bnm">People &amp; access</span><i class="ti ti-external-link" style="margin-left:auto;font-size:12px;opacity:.5;"></i></div>
+        <!-- HELP DESK, 11 Oct 2026 — one door in every tool to the Asks,
+             Release notes and Playbooks screens in CC Platform. Staff only
+             (data-need="staff"); the red dot means a release note this
+             person has not opened yet — refreshHelpDeskDot() asks the
+             same two tables the kit's helpDeskUnread() asks. -->
+        <div class="brow" data-need="staff" id="acct-helpdesk-row" onclick="closeAllPops();window.open('app.html#asks?from=Marketing%20Calendar','_blank')"><i class="ti ti-lifebuoy"></i><span class="bnm">Help desk</span><span id="acct-helpdesk-dot" style="display:none;margin-left:auto;width:7px;height:7px;border-radius:50%;background:var(--acc);flex:none;"></span><i id="acct-helpdesk-ext" class="ti ti-external-link" style="margin-left:auto;font-size:12px;opacity:.5;"></i></div>
         <!-- UTRECHT — the sweep. data-need="admin" is Bergen's rule: the
              row declares what it needs and applyMenuVisibility() decides.
              Nothing new had to be taught to the menu. -->
@@ -11838,7 +11859,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V115.5 Tbilisi";
+const TOOL_VERSION="V115.7 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -18619,11 +18640,32 @@ function menuAllows(need){
   if(need==="admin")     return ME.role==="admin";
   if(need==="edit")      return canEdit();
   if(need==="suite")     return SUITE.mine>=2;
+  if(need==="staff")     return !!ME && ME.role!=="client" && ME.role!=="pending";   /* HELP DESK */
   return canCap(need);
 }
 
+/* HELP DESK — the red dot: a release note newer than the last time this
+   person opened Release notes in CC Platform. Same two reads as the kit's
+   helpDeskUnread(); cached for a minute so opening the menu is free. */
+let HD_DOT={at:0,on:false};
+async function refreshHelpDeskDot(){
+  const dot=document.getElementById("acct-helpdesk-dot"), ext=document.getElementById("acct-helpdesk-ext");
+  if(!dot||!ME||!ME.id) return;
+  if(Date.now()-HD_DOT.at<60000){ dot.style.display=HD_DOT.on?"":"none"; if(ext) ext.style.display=HD_DOT.on?"none":""; return; }
+  HD_DOT.at=Date.now();
+  try{
+    const [{data:seen},{data:last}]=await Promise.all([
+      sb.from("helpdesk_seen").select("releases_at").eq("user_id",ME.id).maybeSingle(),
+      sb.from("helpdesk_releases").select("created_at").is("deleted_at",null).order("created_at",{ascending:false}).limit(1)
+    ]);
+    const since=(seen&&seen.releases_at)||null;
+    HD_DOT.on=!!((last||[]).filter(r=>!since||r.created_at>since).length);
+  }catch(e){ HD_DOT.on=false; }
+  dot.style.display=HD_DOT.on?"":"none"; if(ext) ext.style.display=HD_DOT.on?"none":"";
+}
 function applyMenuVisibility(){
   const menu=document.getElementById("acct-menu"); if(!menu) return;
+  refreshHelpDeskDot();
   menu.querySelectorAll(".brow[data-need]").forEach(r=>{
     r.style.display=menuAllows(r.getAttribute("data-need"))?"":"none";
   });
@@ -26005,8 +26047,9 @@ function prBudgetOpen(p){ return (p&&p.budget_basis)==="team_to_set"; }
 function prBudgetCell(p){
   if(prBudgetOpen(p)) return '<span class="prtbs">Team to set</span>';
   if(prNumOr(p.planned_spend)===null) return '<span class="nsdim">—</span>';
-  return prMoney(p.planned_spend,prCur(p))+(((p.budget_basis||"total")==="total")?""
-         :" "+escHtml(PR_BASIS[p.budget_basis][1]));
+  const b=(p.budget_basis||"total");
+  return prMoney(p.planned_spend,prCur(p))
+    +(b==="total"?"":` <span class="bs">${escHtml(PR_BASIS[b][1])}</span>`);
 }
 
 /* ── small helpers ────────────────────────────────────────────────── */
@@ -26346,18 +26389,24 @@ function prAddPopHtml(){
    of the seven shown by default add up to less than the band at 1180,
    which is the sum the gate re-measures. */
 const PR_COLS=[
-  {k:"name",   label:null,            w:"minmax(94px,1.5fr)", lock:true},
-  {k:"obj",    label:"Objective",     w:"minmax(82px,100px)"},
-  {k:"seg",    label:"Target group",  w:"minmax(88px,134px)"},
-  {k:"runs",   label:"Runs",          w:"134px"},
-  {k:"status", label:"Status",        w:"78px"},
-  {k:"prog",   label:"Progress",      w:"minmax(150px,1fr)"},
-  {k:"budget", label:"Budget",        w:"minmax(96px,112px)"},
-  {k:"spent",  label:"Spent",         w:"minmax(74px,92px)"},
-  {k:"plats",  label:"Platforms",     w:"minmax(96px,120px)"},
-  {k:"crs",    label:"Creatives",     w:"80px"},
-  {k:"by",     label:"Hit it by",     w:"100px"},
-  {k:"touched",label:"Last touched",  w:"104px"}
+  /* V115.6 — THE NAME NO LONGER EATS THE SLACK. At 1.5fr it took
+     every spare pixel and left Target group and Budget clipping their
+     own contents two columns over. The name is now a plain 1fr with a
+     ceiling, and the pixels it gives up go where text was being cut:
+     Target group holds a long chip, Budget holds "a month" after the
+     figure, Spent holds a six-figure sum. */
+  {k:"name",   label:null,            w:"minmax(92px,0.9fr)", lock:true},
+  {k:"obj",    label:"Objective",     w:"minmax(78px,104px)"},
+  {k:"seg",    label:"Target group",  w:"minmax(86px,176px)"},
+  {k:"runs",   label:"Runs",          w:"minmax(134px,146px)"},
+  {k:"status", label:"Status",        w:"minmax(76px,84px)"},
+  {k:"prog",   label:"Progress",      w:"minmax(148px,1fr)"},
+  {k:"budget", label:"Budget",        w:"minmax(100px,124px)"},
+  {k:"spent",  label:"Spent",         w:"minmax(82px,104px)"},
+  {k:"plats",  label:"Platforms",     w:"minmax(96px,124px)"},
+  {k:"crs",    label:"Creatives",     w:"minmax(72px,80px)"},
+  {k:"by",     label:"Hit it by",     w:"minmax(92px,104px)"},
+  {k:"touched",label:"Last touched",  w:"minmax(96px,108px)"}
 ];
 const PR_COLS_DEF=["obj","seg","runs","status","prog","budget","spent"];
 function prShown(){ return PR.cols ? PR.cols : (PR.cols=PR_COLS_DEF.slice()); }
@@ -26489,7 +26538,7 @@ function prListHtml(){
   const tpl=prGridTpl(), cols=prVisibleCols();
   /* V115.5 — grouped by objective, every group carrying its own
      numbers. The sort still decides the order WITHIN a group. */
-  const body=prGroupRows(rows).map(g=>prGroupHeadHtml(g)
+  const body=prGroupRows(rows).map(g=>prGroupHeadHtml(g,tpl,cols)
     +g.rows.map(p=>prRowHtml(p,tpl,cols)+(PR.open===p.id?prPanelHtml(p):"")).join("")).join("");
   return bar+`<div class="nswrap" style="padding-top:0"><div class="prlist">
     ${prTotalsHtml(rows)}
@@ -26536,17 +26585,24 @@ function prBudgetRoll(rows){
   });
   out.by=by; return out;
 }
-function prBudgetRollHtml(rows){
+/* V115.6 — `stack` is for the narrow Budget column in a group
+   heading: each basis takes its own line, with its wording under the
+   figure, instead of running off the end of the column. The totals
+   strip up top has the room and keeps the inline form. */
+function prBudgetRollHtml(rows,stack){
   const r=prBudgetRoll(rows), parts=[];
   ["total","per_day","per_week","per_month"].forEach(b=>{
     if(!r.by[b]) return;
     Object.keys(r.by[b]).forEach(c=>{
-      const tail=(b==="total")?"":" "+PR_BASIS[b][1];
-      parts.push(prMoney(r.by[b][c],c)+escHtml(tail));
+      const tail=(b==="total")?"":PR_BASIS[b][1];
+      parts.push(prMoney(r.by[b][c],c)+(tail?(stack
+        ?` <span class="bs">${escHtml(tail)}</span>`:" "+escHtml(tail)):""));
     });
   });
   if(r.toSet) parts.push(`<span class="nsdim">${r.toSet} to set</span>`);
-  return parts.length?parts.join('<span class="prtsep">·</span>'):'<span class="nsdim">—</span>';
+  if(!parts.length) return '<span class="nsdim">—</span>';
+  return stack ? parts.map(x=>`<div class="prgl">${x}</div>`).join("")
+               : parts.join('<span class="prtsep">·</span>');
 }
 function prSpendTotal(rows){
   let t=null; rows.forEach(p=>{ const v=prSpendAll(p); if(v!==null) t=(t===null?0:t)+v; });
@@ -26581,20 +26637,45 @@ function prGroupRows(rows){
   if(rest.length) out.push({key:null,rows:rest});
   return out;
 }
-function prGroupHeadHtml(g){
+/* V115.6 — THE GROUP HEADING STANDS ON THE SAME COLUMNS AS THE ROWS.
+   It used to be a flex bar with its numbers pushed to the right edge,
+   so a group's budget sat nowhere near the Budget column under it and
+   the eye had to guess which figure belonged to which heading. It is
+   now the same grid as the head row and the lines: the objective sits
+   over Promotion, the results over Progress, and the two money
+   figures land squarely under Budget and Spent. A column that is
+   switched off hands its piece to the heading, so nothing is lost. */
+function prGroupHeadHtml(g,tpl,cols){
   const n=g.rows.length;
   let res=null; g.rows.forEach(p=>{ const v=prResultAll(p); if(v!==null) res=(res===null?0:res)+v; });
   const unit=g.key?(prObjUnit(g.key)||"results"):"results";
   const label=g.key?prObjLabel(g.key):"No objective";
-  return `<div class="prgrp">
-    <span class="probj ${g.key?prObjClass(g.key):"o-other"}">${escHtml(label)}</span>
-    <span class="prgc">${n} ${n===1?"promotion":"promotions"}</span>
-    <span class="prgr">${res===null?'<span class="nsdim">nothing recorded</span>'
-      :`<b>${prFmt(res)}</b> ${escHtml(unit)} so far`}<span class="prtsep">·</span>${
-      prBudgetRollHtml(g.rows)}<span class="prtsep">·</span>${
-      prSpendTotal(g.rows)===null?'<span class="nsdim">nothing spent</span>'
-        :prSpendRollHtml(g.rows)+" spent"}</span>
-  </div>`;
+  const mark={prog:"res",budget:"bud",spent:"spd"};
+  const piece={
+    prog:  res===null?'<span class="nsdim">nothing recorded</span>'
+            :`<b>${prFmt(res)}</b> ${escHtml(unit)} so far`,
+    budget:prBudgetRollHtml(g.rows,true),
+    spent: prSpendTotal(g.rows)===null?'<span class="nsdim">—</span>'
+            :prSpendRollHtml(g.rows)
+  };
+  const spare=[];
+  /* the heading's name and count run on one line and lean into the
+     column beside them WHEN that column is empty in a heading — the
+     chip for a long objective would otherwise wrap and make every
+     group band a different height. */
+  const spill=(cols&&cols[1]&&!mark[cols[1].k])?" wide":"";
+  const cells=(cols||[]).map(c=>{
+    if(c.lock) return `<div class="prgh${spill}">
+      <span class="probj ${g.key?prObjClass(g.key):"o-other"}">${escHtml(label)}</span>
+      <span class="prgc">${n} ${n===1?"promotion":"promotions"}</span></div>`;
+    if(piece[c.k]!==undefined){ const v=piece[c.k], m=mark[c.k]; delete piece[c.k];
+      return `<div class="prgr ${m}">${v}</div>`; }
+    return "<div></div>";
+  });
+  Object.keys(piece).forEach(k=>spare.push(piece[k]));
+  if(spare.length&&cells.length) cells[0]=cells[0].replace("</div>",
+    `<span class="prgr in">${spare.join('<span class="prtsep">\u00b7</span>')}</span></div>`);
+  return `<div class="prgrp" style="grid-template-columns:${tpl}">${cells.join("")}<div></div></div>`;
 }
 
 /* ── one promotion, one line ──────────────────────────────────────── */
@@ -26622,7 +26703,7 @@ function prCellHtml(p,k){
               prBasis(p)==="per_month"?' <span class="nsdim">this month</span>':""}`}</div>
         <div class="prpgb"><i style="width:${pc}%"></i></div></div>`;
     }
-    case "budget": return `<div class="prmn">${prBudgetCell(p)}</div>`;
+    case "budget": return `<div class="prmn prbd">${prBudgetCell(p)}</div>`;
     case "spent":  return `<div class="prmn">${g.spend!==null&&g.spend!==undefined?prMoney(g.spend,cur):'<span class="nsdim">—</span>'}</div>`;
     case "plats": {
       const st=prStreams(p.id);
