@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V115.3 Tbilisi"/>
+<meta name="cc-tool-version" content="V115.5 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3899,6 +3899,24 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
    the head row and to every line, so a column cannot drift between
    the heading and the line under it. */
 .prlist{background:#fff;border-radius:13px;box-shadow:0 1px 3px rgba(0,0,0,.05);overflow:hidden;}
+/* ══ V115.5 · THE TOTALS STRIP AND THE OBJECTIVE GROUPS ════════════
+   The strip sits inside the same white card as the list, above the
+   head row, so the page keeps one card as the listing rules ask. */
+.prtot{display:flex;border-bottom:1px solid var(--div);background:#FBFAF9;flex-wrap:wrap;}
+.prtot>div{padding:12px 20px;border-right:1px solid #F0EEEA;min-width:0;}
+.prtot>div:last-child{border-right:0;}
+.prtk{font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);}
+.prtv{font-size:18px;font-weight:700;letter-spacing:-.02em;margin-top:3px;font-variant-numeric:tabular-nums;}
+.prtv.sm{font-size:13.5px;font-weight:600;letter-spacing:0;margin-top:5px;}
+.prtv small{font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:0;}
+.prtsep{color:#C9C6C0;margin:0 7px;}
+.prgrp{display:flex;align-items:center;gap:9px;padding:9px 20px;background:#F7F6F3;
+  border-top:1px solid var(--div);border-bottom:1px solid var(--div);flex-wrap:wrap;}
+.prlist .prgrp:first-of-type{border-top:0;}
+.prgc{font-size:11.5px;color:var(--muted);}
+.prgr{margin-left:auto;font-size:12px;color:#55524D;font-variant-numeric:tabular-nums;}
+.prgr b{font-weight:700;color:var(--ink,#0D0D0D);}
+@media (max-width:1240px){ .prgr{margin-left:0;width:100%;} }
 .prhd,.prrow{display:grid;gap:8px;align-items:center;padding:0 16px;}
 .prhd{height:34px;border-bottom:1px solid var(--div);font-size:9.5px;font-weight:700;
   text-transform:uppercase;letter-spacing:.04em;color:var(--subtle);white-space:nowrap;}
@@ -11820,7 +11838,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V115.3 Tbilisi";
+const TOOL_VERSION="V115.5 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -12592,6 +12610,14 @@ async function loadAll(showToast){
   await side;
   buildYearView();
   if(ME.role==="client"&&ME.brand_id&&brands[ME.brand_id]) activeBrand=ME.brand_id;
+  /* V115.4 — A CLIENT WITH SEVERAL BRANDS. People & access ticks brands
+     for a person; the profile's one brand stays empty. The database now
+     hands a client every ticked brand, so put them on the first by name
+     instead of on "All brands", which a client never needs. */
+  else if(ME.role==="client"&&!activeBrand){
+    const mine=Object.keys(brands).sort((a,b)=>String(brands[a].name||"").localeCompare(String(brands[b].name||"")));
+    if(mine.length) activeBrand=mine[0];
+  }
   /* that line can set the brand AFTER loadBranding already ran with none,
      so a client would have opened Branding to an empty screen that was
      not empty. Load again only if that actually happened. */
@@ -26461,11 +26487,114 @@ function prListHtml(){
      Audience inside every row, so one promotion took the room eight
      should. Mockup 18. */
   const tpl=prGridTpl(), cols=prVisibleCols();
-  const body=rows.map(p=>prRowHtml(p,tpl,cols)+(PR.open===p.id?prPanelHtml(p):"")).join("");
+  /* V115.5 — grouped by objective, every group carrying its own
+     numbers. The sort still decides the order WITHIN a group. */
+  const body=prGroupRows(rows).map(g=>prGroupHeadHtml(g)
+    +g.rows.map(p=>prRowHtml(p,tpl,cols)+(PR.open===p.id?prPanelHtml(p):"")).join("")).join("");
   return bar+`<div class="nswrap" style="padding-top:0"><div class="prlist">
+    ${prTotalsHtml(rows)}
     <div class="prhd" style="grid-template-columns:${tpl}">
       ${cols.map(c=>`<div>${c.lock?"Promotion":escHtml(c.label)}</div>`).join("")}<div></div>
     </div>${body}</div></div>`;
+}
+
+/* ══ V115.5 · THE TOTALS STRIP AND THE OBJECTIVE GROUPS ════════════
+   Chirag, 10 October: "it will be great to have a row which gives you
+   a total of important numbers... I think there has to be an
+   objective angle to the whole listing."
+
+   BUDGETS DO NOT ADD UP, and pretending they do would be the worst
+   thing this strip could do. ₹2,50,000 a month and ₹1,50,000 in total
+   are not ₹4,00,000 of anything. So every basis is counted on its own
+   line and nothing is converted — Chirag chose this over normalising
+   everything to a month, 10 Oct. Currencies are kept apart for the
+   same reason. Team to set has no amount at all, so it is a count.
+
+   SPENT IS DIFFERENT. Money already spent is money already spent,
+   whatever basis it was budgeted on, so it adds and it is one figure.
+   It is summed over EVERY month recorded, not the month prProgress
+   happens to be scoped to, or the strip would mix this month's spend
+   with another promotion's lifetime. */
+function prSpendAll(p){
+  let s=null;
+  (PR.months[p.id]||[]).forEach(m=>{ const y=prNumOr(m.spend); if(y!==null) s=(s===null?0:s)+y; });
+  return s;
+}
+function prResultAll(p){
+  let v=null;
+  (PR.months[p.id]||[]).forEach(m=>{ const x=prNumOr(m.result_value); if(x!==null) v=(v===null?0:v)+x; });
+  return v;
+}
+/* {basis: {currency: amount}} plus a count of the ones with no amount */
+function prBudgetRoll(rows){
+  const by={}, out={toSet:0};
+  rows.forEach(p=>{
+    if(prBudgetOpen(p)){ out.toSet++; return; }
+    const v=prNumOr(p.planned_spend); if(v===null) return;
+    const b=(p.budget_basis||"total"), c=prCur(p);
+    by[b]=by[b]||{}; by[b][c]=(by[b][c]||0)+v;
+  });
+  out.by=by; return out;
+}
+function prBudgetRollHtml(rows){
+  const r=prBudgetRoll(rows), parts=[];
+  ["total","per_day","per_week","per_month"].forEach(b=>{
+    if(!r.by[b]) return;
+    Object.keys(r.by[b]).forEach(c=>{
+      const tail=(b==="total")?"":" "+PR_BASIS[b][1];
+      parts.push(prMoney(r.by[b][c],c)+escHtml(tail));
+    });
+  });
+  if(r.toSet) parts.push(`<span class="nsdim">${r.toSet} to set</span>`);
+  return parts.length?parts.join('<span class="prtsep">·</span>'):'<span class="nsdim">—</span>';
+}
+function prSpendTotal(rows){
+  let t=null; rows.forEach(p=>{ const v=prSpendAll(p); if(v!==null) t=(t===null?0:t)+v; });
+  return t;
+}
+function prSpendRollHtml(rows){
+  const by={};
+  rows.forEach(p=>{ const v=prSpendAll(p); if(v===null) return;
+    const c=prCur(p); by[c]=(by[c]||0)+v; });
+  const ks=Object.keys(by);
+  if(!ks.length) return '<span class="nsdim">Nothing spent yet</span>';
+  return ks.map(c=>prMoney(by[c],c)).join('<span class="prtsep">·</span>');
+}
+function prTotalsHtml(rows){
+  const objs={}; rows.forEach(p=>{ if(p.objective_key) objs[p.objective_key]=1; });
+  return `<div class="prtot">
+    <div><div class="prtk">Showing</div><div class="prtv">${rows.length}
+      <small>${rows.length===1?"promotion":"promotions"}</small></div></div>
+    <div><div class="prtk">Objectives</div><div class="prtv">${Object.keys(objs).length}
+      <small>of ${(PR.objs||[]).length}</small></div></div>
+    <div><div class="prtk">Budget</div><div class="prtv sm">${prBudgetRollHtml(rows)}</div></div>
+    <div><div class="prtk">Spent so far</div><div class="prtv sm">${prSpendRollHtml(rows)}</div></div>
+  </div>`;
+}
+/* The groups follow the MASTER list's order, so two brands reading the
+   same page see their objectives in the same sequence. A promotion
+   with no objective falls to the bottom under its own heading. */
+function prGroupRows(rows){
+  const order=(PR.objs||[]).map(o=>o.key), seen={}, out=[];
+  order.forEach(k=>{ const r=rows.filter(p=>p.objective_key===k); if(r.length){ seen[k]=1; out.push({key:k,rows:r}); } });
+  const rest=rows.filter(p=>!p.objective_key||order.indexOf(p.objective_key)<0);
+  if(rest.length) out.push({key:null,rows:rest});
+  return out;
+}
+function prGroupHeadHtml(g){
+  const n=g.rows.length;
+  let res=null; g.rows.forEach(p=>{ const v=prResultAll(p); if(v!==null) res=(res===null?0:res)+v; });
+  const unit=g.key?(prObjUnit(g.key)||"results"):"results";
+  const label=g.key?prObjLabel(g.key):"No objective";
+  return `<div class="prgrp">
+    <span class="probj ${g.key?prObjClass(g.key):"o-other"}">${escHtml(label)}</span>
+    <span class="prgc">${n} ${n===1?"promotion":"promotions"}</span>
+    <span class="prgr">${res===null?'<span class="nsdim">nothing recorded</span>'
+      :`<b>${prFmt(res)}</b> ${escHtml(unit)} so far`}<span class="prtsep">·</span>${
+      prBudgetRollHtml(g.rows)}<span class="prtsep">·</span>${
+      prSpendTotal(g.rows)===null?'<span class="nsdim">nothing spent</span>'
+        :prSpendRollHtml(g.rows)+" spent"}</span>
+  </div>`;
 }
 
 /* ── one promotion, one line ──────────────────────────────────────── */
