@@ -13,7 +13,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V115.7 Tbilisi"/>
+<meta name="cc-tool-version" content="V115.8 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3962,7 +3962,10 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
    stay on one line at 1180. */
 .prfb-q{width:200px;flex:none;min-width:0;}
 @media(max-width:1340px){.prfb-q{width:150px;}}
-@media(max-width:1180px){.prfb-q{width:112px;}}
+/* V115.8 — the Import button joined the row and took it 10px past the
+   band at 1180. The search box gives the width up, as the rule above
+   says it should; it still holds a word and a half. */
+@media(max-width:1180px){.prfb-q{width:94px;}}
 .pgbar.prfb .brfb-chip,.pgbar.prfb .brfb-add,.pgbar.prfb .btn{flex:none;}
 .prcols .n{font-weight:700;}
 .prcols .of{color:var(--subtle);font-weight:500;margin:0 2px 0 3px;}
@@ -11859,7 +11862,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V115.7 Tbilisi";
+const TOOL_VERSION="V115.8 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -26516,6 +26519,7 @@ function prListHtml(){
       <span class="brfb-w"><button class="brfb-add" onclick="prFPop(event,'add')"><i class="ti ti-plus"></i> Filter</button>${
         PR_FPOP==="add"?prAddPopHtml():""}</span>
       <span style="flex:1"></span>
+      ${canEditP?`<button class="btn btn-s" style="background:var(--surface);" onclick="priOpen()" aria-label="Import campaigns" title="Download these campaigns or a blank template, and put a filled sheet back"><i class="ti ti-upload"></i></button>`:""}
       ${canEditP?`<button class="btn btn-p" onclick="prEditOpen(null)"><i class="ti ti-plus"></i> New promotion</button>`:""}
       ${prColsHtml()}
       ${sortChip}
@@ -30405,8 +30409,667 @@ async function pbDrop(kind,id){
   toast(row.label+" taken off"); await prReloadNow(); pbOpen(kind);
 }
 
+
+/* ══ V115.8 · CAMPAIGNS FROM A SHEET ═════════════════════════════════
+   Chirag, 12 October: "Just like we have import functionalities in the
+   posts and tasks page, we need an import functionality on this page
+   as well. So multiple campaign data can be imported in one go."
+
+   Built on the Tasks importer (Tallinn), part for part: a sheet that
+   only this brand's Promotions page can have made, a hidden stamp of
+   what every campaign held when it was downloaded, a review before
+   anything is written, a record of what was written, and an undo.
+
+   THREE THINGS THAT ARE THIS PAGE'S OWN, and each is his call:
+
+   · ONE TAB. Campaigns only. The month-by-month numbers stay typed in
+     the tool where the person entering them can see the target they
+     are being measured against.
+   · A WORD THE BRAND DOES NOT HAVE SKIPS THE ROW. An objective or a
+     target group the brand has not got is named back at you and the
+     row is left out — the same line Tasks takes with owners and
+     projects. A typo must not add a second "Engagment" to a master
+     list that exists so brands can be compared.
+   · PLATFORMS ARE ADDED, NEVER TAKEN AWAY. A platform block carries
+     creatives and their conversations; the tool itself refuses to
+     remove one that does. A sheet leaving a platform out is a sheet
+     that was not asked about it.
+
+   And the rule that is the same everywhere: the sheet ADDS and
+   CHANGES. Anything the sheet does not mention is left as it is.
+   ══════════════════════════════════════════════════════════════════ */
+const PRI_MAGIC="CC-PROMOTIONS-SHEET-V1";
+const PRI_LAST=301;          /* header + 300 dressed rows */
+let PI=null;                 /* the parsed, checked sheet awaiting confirmation */
+
+const PRI_KIND={ongoing:"Ongoing",one_off:"One-off"};
+const priIso=d=>d?String(d).slice(0,10):"";
+const priPretty=iso=>{ if(!iso) return ""; const p=String(iso).split("-");
+  return (+p[2])+" "+(MN[+p[1]]||"").slice(0,3)+" "+p[0]; };
+/* prStreams already sorts; PR.streams is keyed by campaign, not a flat
+   list, which is why this asks it rather than filtering. */
+const priPlats=pid=>prStreams(pid).map(s=>s.platform);
+const priStream=sid=>{ let hit=null;
+  Object.keys(PR.streams||{}).forEach(k=>{ (PR.streams[k]||[]).forEach(s=>{ if(s.id===sid) hit=s; }); });
+  return hit; };
+const priPlatWords=keys=>keys.map(k=>(PR_PLAT[k]||PR_PLAT.other).label).join(", ");
+
+/* one string saying what a campaign holds right now. It is what the
+   download stamps and what the import compares against, so "somebody
+   changed this in the tool while you had the file open" is answered by
+   the VALUES, not by trusting a timestamp column to have been bumped. */
+function priFingerprint(p){
+  const seg=prSegOf(p);
+  /* JSON, not a joined string — a separator is one campaign name away
+     from appearing inside a value and making two rows match. */
+  return JSON.stringify([ (p.name||"").trim(), p.objective_key||"", seg?seg.id:"",
+    p.kind||"one_off", priIso(p.starts_on), priIso(p.ends_on),
+    p.target_value===null||p.target_value===undefined?"":String(p.target_value),
+    prBasis(p), priIso(p.target_on),
+    p.planned_spend===null||p.planned_spend===undefined?"":String(p.planned_spend),
+    p.budget_basis||"total", prCur(p), priPlats(p.id).join("|") ]);
+}
+
+/* ── THE WINDOW ───────────────────────────────────────────────────── */
+function priOpen(){
+  if(!canCap("edit_promotions")) return capDenied("Importing campaigns");
+  const b=brands[activeBrand]||{};
+  const n=(PR.list||[]).length;
+  prBox(`<div class="modal-top"><div>
+      <div class="modal-title">Campaigns from a sheet</div>
+      <div class="modal-sub">${escHtml(b.name||"")}</div></div>
+     <button class="modal-x" onclick="closeM('promo')">✕</button></div>
+   <div class="modal-body" style="padding:16px 20px 20px;">
+     <div style="display:flex;gap:10px;flex-wrap:wrap;">
+       <button class="btn btn-s" onclick="priTemplate(false)"><i class="ti ti-file-spreadsheet"></i> Blank template</button>
+       <button class="btn btn-s" onclick="priTemplate(true)"><i class="ti ti-download"></i> These campaigns${n?" · "+n:""}</button>
+       <button class="btn btn-p" onclick="priPick()"><i class="ti ti-upload"></i> Choose a filled sheet</button>
+     </div>
+     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--div);">
+       <button class="btn btn-s btn-sm" onclick="priHistory()"><i class="ti ti-file-import"></i> History</button>
+     </div>
+   </div>`);
+}
+
+/* ── THE FILE ─────────────────────────────────────────────────────── */
+async function priTemplate(filled){
+  if(!canCap("edit_promotions")) return capDenied("Downloading the sheet");
+  const b=brands[activeBrand]||{};
+  try{
+    const EJ=await loadExportLib("exceljs");
+    const wb=new EJ.Workbook();
+    const ws=wb.addWorksheet("Campaigns",{views:[{state:"frozen",ySplit:1}]});
+    const lk=wb.addWorksheet("_lists"); lk.state="veryHidden";
+
+    /* every dropdown is the BRAND'S own words — the list the Lists page
+       keeps, not the master spellings underneath it */
+    const objs=(PR.bobjs||[]).map(k=>({key:k,word:prObjLabel(k)}));
+    const segs=(PR.bsegs||[]).map(r=>({id:r.id,word:prSegLabel(r)}));
+    const kinds=Object.values(PRI_KIND);
+    const tbs=Object.keys(PR_TB).map(k=>PR_TB[k][1]);
+    const bbs=Object.keys(PR_BASIS).map(k=>PR_BASIS[k][1]);
+    const plats=Object.keys(PR_PLAT).map(k=>PR_PLAT[k].label);
+
+    objs.forEach((o,i)=>lk.getCell(i+1,1).value=o.word);
+    segs.forEach((s,i)=>lk.getCell(i+1,2).value=s.word);
+    kinds.forEach((v,i)=>lk.getCell(i+1,3).value=v);
+    tbs.forEach((v,i)=>lk.getCell(i+1,4).value=v);
+    bbs.forEach((v,i)=>lk.getCell(i+1,10).value=v);
+    PR_CUR.forEach((v,i)=>lk.getCell(i+1,11).value=v);
+    lk.getCell(1,5).value=PRI_MAGIC;
+    lk.getCell(2,5).value=activeBrand;
+    lk.getCell(3,5).value="promotions";
+    /* the platform words are carried so the reader can name them back
+       even on a brand that has none of them in use yet */
+    lk.getCell(1,12).value=plats.join(", ");
+
+    ws.columns=[{header:"Campaign ID",width:16},{header:"Name",width:34},
+      {header:"Objective",width:20},{header:"Target group",width:20},
+      {header:"Kind",width:12},{header:"Starts on",width:15},{header:"Ends on",width:15},
+      {header:"Target",width:11},{header:"Target basis",width:13},{header:"Hit it by",width:15},
+      {header:"Budget",width:13},{header:"Budget basis",width:14},{header:"Currency",width:10},
+      {header:"Platforms",width:30}];
+    ws.getRow(1).font={bold:true};
+    const nO=Math.max(1,objs.length), nS=Math.max(1,segs.length);
+    for(let n=2;n<=PRI_LAST;n++){
+      ws.getCell(n,1).font={color:{argb:"FF9A9A96"},size:9};
+      ws.getCell(n,3).dataValidation={type:"list",allowBlank:true,formulae:["=_lists!$A$1:$A$"+nO]};
+      ws.getCell(n,4).dataValidation={type:"list",allowBlank:true,formulae:["=_lists!$B$1:$B$"+nS]};
+      ws.getCell(n,5).dataValidation={type:"list",allowBlank:true,formulae:["=_lists!$C$1:$C$"+kinds.length]};
+      ws.getCell(n,6).numFmt="mmm d, yyyy";
+      ws.getCell(n,7).numFmt="mmm d, yyyy";
+      ws.getCell(n,9).dataValidation={type:"list",allowBlank:true,formulae:["=_lists!$D$1:$D$"+tbs.length]};
+      ws.getCell(n,10).numFmt="mmm d, yyyy";
+      ws.getCell(n,12).dataValidation={type:"list",allowBlank:true,formulae:["=_lists!$J$1:$J$"+bbs.length]};
+      ws.getCell(n,13).dataValidation={type:"list",allowBlank:true,formulae:["=_lists!$K$1:$K$"+PR_CUR.length]};
+    }
+
+    if(filled){
+      const rows=(PR.list||[]).slice()
+        .sort((a,c)=>(priIso(a.starts_on)||"9999").localeCompare(priIso(c.starts_on)||"9999")
+                   ||String(a.name||"").localeCompare(String(c.name||"")));
+      rows.forEach((p,i)=>{
+        const n=i+2, seg=prSegOf(p);
+        const put=(col,iso)=>{ if(!iso) return; const q=iso.split("-");
+          const dc=ws.getCell(n,col); dc.value=new Date(Date.UTC(+q[0],+q[1]-1,+q[2]));
+          dc.numFmt="mmm d, yyyy"; };
+        ws.getCell(n,1).value=p.id;
+        ws.getCell(n,2).value=p.name||"";
+        ws.getCell(n,3).value=p.objective_key?prObjLabel(p.objective_key):"";
+        ws.getCell(n,4).value=seg?prSegLabel(seg):"";
+        ws.getCell(n,5).value=PRI_KIND[p.kind||"one_off"]||PRI_KIND.one_off;
+        put(6,priIso(p.starts_on));
+        put(7,priIso(p.ends_on));
+        if(prNumOr(p.target_value)!==null) ws.getCell(n,8).value=Number(p.target_value);
+        ws.getCell(n,9).value=PR_TB[prBasis(p)][1];
+        put(10,priIso(p.target_on));
+        if(prNumOr(p.planned_spend)!==null) ws.getCell(n,11).value=Number(p.planned_spend);
+        ws.getCell(n,12).value=PR_BASIS[p.budget_basis||"total"][1];
+        ws.getCell(n,13).value=prCur(p);
+        ws.getCell(n,14).value=priPlatWords(priPlats(p.id));
+        lk.getCell(i+1,6).value=p.id;
+        lk.getCell(i+1,7).value=priFingerprint(p);
+      });
+    }
+
+    const buf=await wb.xlsx.writeBuffer();
+    dlBlob(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),
+      seHandle(b.name)+"-campaigns"+(filled?"":"-template")+".xlsx");
+  }catch(e){ toast("Download failed: "+(e.message||""),"err"); }
+}
+
+function priPick(){
+  if(!canCap("edit_promotions")) return capDenied("Importing campaigns");
+  const inp=document.createElement("input");
+  inp.type="file"; inp.accept=".xlsx";
+  inp.onchange=()=>{ if(inp.files&&inp.files[0]) priRead(inp.files[0]); };
+  inp.click();
+}
+
+function priRefuse(title,detail){
+  PI=null;
+  prBox(`<div class="modal-top"><div><div class="modal-title">Import stopped</div></div>
+     <button class="modal-x" onclick="closeM('promo')">✕</button></div>
+   <div class="modal-body" style="padding:6px 20px 18px;">
+     <div style="font-size:13.5px;font-weight:600;color:#C62828;">${escHtml(title)}</div>
+     ${detail?`<div style="font-size:12.5px;color:var(--muted);margin-top:6px;">${escHtml(detail)}</div>`:""}
+   </div>
+   <div style="display:flex;justify-content:flex-end;padding:12px 20px 18px;border-top:1px solid var(--div);">
+     <button class="btn btn-g" onclick="closeM('promo')">Close</button>
+   </div>`);
+}
+
+/* a date cell back to the yyyy-mm-dd the database holds. UTC getters,
+   because the cell holds a UTC instant we wrote — the v99.1 lesson. */
+function priDate(v){
+  if(v instanceof Date){
+    if(isNaN(v)) return null;
+    const p=n=>String(n).padStart(2,"0");
+    return v.getUTCFullYear()+"-"+p(v.getUTCMonth()+1)+"-"+p(v.getUTCDate());
+  }
+  const s=sdStr(v); if(!s) return "";
+  const d=new Date(s); if(isNaN(d)) return null;
+  const p=n=>String(n).padStart(2,"0");
+  return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate());
+}
+function priNum(v){
+  const s=sdStr(v).replace(/[,\s₹$]/g,"").replace(/^د\.إ/,"");
+  if(s==="") return "";
+  const n=Number(s);
+  return (isNaN(n)||n<0)?null:n;
+}
+
+async function priRead(file){
+  try{
+    const wb=await xlRead(file);
+    const lk=wb.getWorksheet("_lists");
+    if(!lk||String(lk.getCell(1,5).value||"")!==PRI_MAGIC)
+      return priRefuse("This file was not downloaded from the Promotions page.",
+        "Download the blank template or these campaigns, fill it in, then choose it here.");
+    const bId=String(lk.getCell(2,5).value||"");
+    if(bId!==activeBrand)
+      return priRefuse("That sheet belongs to a different brand.",
+        "It was made for “"+((brands[bId]||{}).name||bId)+"”. Open that brand and import it there.");
+    const ws=wb.getWorksheet("Campaigns");
+    if(!ws) return priRefuse("That file has no Campaigns tab.","");
+
+    const snap={};
+    for(let n=1;n<=PRI_LAST;n++){ const id=lk.getCell(n,6).value; if(!id) break;
+      snap[String(id)]=String(lk.getCell(n,7).value||""); }
+
+    priRender(Object.assign({file:file.name},priScan(ws,snap)));
+  }catch(e){ priRefuse("That file could not be read.",e.message||""); }
+}
+
+/* THE RULES LIVE HERE, NOT INSIDE THE FILE READER. Everything above is
+   opening a workbook and checking it is ours; everything below is what
+   a row is allowed to say, which is the part worth testing. Split so a
+   gate can hand it rows without a spreadsheet library and a network to
+   fetch one with. */
+function priScan(ws,snap){
+    snap=snap||{};
+    const byId={}; (PR.list||[]).forEach(p=>{ byId[p.id]=p; });
+    /* every lookup is on the BRAND'S word, lowercased — the master
+       spelling is matched too, so a sheet made before a rename still
+       lands on the right row */
+    const objBy={}; (PR.bobjs||[]).forEach(k=>{
+      objBy[String(prObjLabel(k)).trim().toLowerCase()]=k;
+      objBy[String(k).trim().toLowerCase()]=k; });
+    const segBy={}; (PR.bsegs||[]).forEach(r=>{
+      segBy[String(prSegLabel(r)).trim().toLowerCase()]=r.id; });
+    const kindBy={}; Object.entries(PRI_KIND).forEach(([k,v])=>{
+      kindBy[v.toLowerCase()]=k; kindBy[k]=k; });
+    const tbBy={}; Object.entries(PR_TB).forEach(([k,v])=>{
+      tbBy[v[1].toLowerCase()]=k; tbBy[k]=k; });
+    const bbBy={}; Object.entries(PR_BASIS).forEach(([k,v])=>{
+      bbBy[v[1].toLowerCase()]=k; bbBy[k]=k; });
+    const platBy={}; Object.entries(PR_PLAT).forEach(([k,v])=>{
+      platBy[v.label.toLowerCase()]=k; platBy[k]=k; });
+
+    const create=[],change=[],conflict=[],skip=[]; let same=0, platsHeld=0;
+    /* v100.1's lesson, carried over: a blank template cannot name a
+       campaign that does not exist yet, so a person types their own
+       keys — CAMP-01, CAMP-02 — and every row must not then be read as
+       "a campaign the tool already has". A value SHAPED LIKE ONE OF
+       OUR IDS means that campaign, and is still refused by name when
+       it is gone; so does a value that MATCHES a campaign on this
+       brand right now. Anything else is a key for this sheet. */
+    const isOurId=v=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
+      || Object.prototype.hasOwnProperty.call(byId,v);
+    const seenKey={};
+
+    for(let n=2;n<=PRI_LAST;n++){
+      const id=sdStr(sdCell(ws,n,1));
+      const name=sdStr(sdCell(ws,n,2));
+      const objN=sdStr(sdCell(ws,n,3));
+      const segN=sdStr(sdCell(ws,n,4));
+      const kindN=sdStr(sdCell(ws,n,5));
+      const sV=sdCell(ws,n,6), eV=sdCell(ws,n,7);
+      const tgtV=sdCell(ws,n,8);
+      const tbN=sdStr(sdCell(ws,n,9));
+      const byV=sdCell(ws,n,10);
+      const budV=sdCell(ws,n,11);
+      const bbN=sdStr(sdCell(ws,n,12));
+      const curN=sdStr(sdCell(ws,n,13));
+      const platN=sdStr(sdCell(ws,n,14));
+      if(!id&&!name&&!objN&&!segN&&!kindN&&!sV&&!eV&&!tgtV&&!tbN&&!byV&&!budV&&!bbN&&!curN&&!platN) continue;
+      if(!name){ skip.push({row:n,why:"no name"}); continue; }
+
+      if(!objN){ skip.push({row:n,why:"no objective — a campaign has to have one"}); continue; }
+      const objective_key=objBy[objN.toLowerCase()];
+      if(!objective_key){ skip.push({row:n,why:"“"+objN+"” is not one of this brand’s objectives"}); continue; }
+
+      let brand_segment_id=null;
+      if(segN){ const sid=segBy[segN.toLowerCase()];
+        if(!sid){ skip.push({row:n,why:"“"+segN+"” is not one of this brand’s target groups"}); continue; }
+        brand_segment_id=sid; }
+
+      const kind=kindN?kindBy[kindN.toLowerCase()]:"one_off";
+      if(kindN&&!kind){ skip.push({row:n,why:"“"+kindN+"” is not Ongoing or One-off"}); continue; }
+      const ong=(kind==="ongoing");
+
+      const s=priDate(sV); if(s===null){ skip.push({row:n,why:"the start date could not be read"}); continue; }
+      const e=ong?"":priDate(eV);
+      if(e===null){ skip.push({row:n,why:"the end date could not be read"}); continue; }
+      if(s&&e&&e<s){ skip.push({row:n,why:"the end date is before the start"}); continue; }
+      const by=ong?"":priDate(byV);
+      if(by===null){ skip.push({row:n,why:"the Hit it by date could not be read"}); continue; }
+
+      const tgt=priNum(tgtV);
+      if(tgt===null){ skip.push({row:n,why:"the target is not a number"}); continue; }
+      const tb=tbN?tbBy[tbN.toLowerCase()]:"total";
+      if(tbN&&!tb){ skip.push({row:n,why:"“"+tbN+"” is not one of the three target bases"}); continue; }
+
+      const bb=bbN?bbBy[bbN.toLowerCase()]:"total";
+      if(bbN&&!bb){ skip.push({row:n,why:"“"+bbN+"” is not one of the budget bases"}); continue; }
+      /* Team to set is a state with no amount behind it, so an amount
+         beside it would be a figure nobody could see */
+      const bud=(bb==="team_to_set")?"":priNum(budV);
+      if(bud===null){ skip.push({row:n,why:"the budget is not a number"}); continue; }
+      const cur=curN?curN.toUpperCase():"INR";
+      if(PR_CUR.indexOf(cur)<0){ skip.push({row:n,why:"“"+curN+"” is not a currency this tool holds"}); continue; }
+
+      const wantPlats=[]; let badPlat="";
+      platN.split(",").forEach(x=>{ const w=x.trim(); if(!w) return;
+        const k=platBy[w.toLowerCase()]; if(!k){ badPlat=badPlat||w; return; }
+        if(wantPlats.indexOf(k)<0) wantPlats.push(k); });
+      if(badPlat){ skip.push({row:n,why:"“"+badPlat+"” is not a platform this tool holds"}); continue; }
+
+      const want={name:name,objective_key:objective_key,brand_segment_id:brand_segment_id,
+        kind:kind,starts_on:s||null,ends_on:ong?null:(e||null),
+        target_value:tgt===""?null:tgt, target_basis:tb, target_on:ong?null:(by||null),
+        planned_spend:bud===""?null:bud, budget_basis:bb, budget_currency:cur,
+        plats:wantPlats};
+
+      if(!id||!isOurId(id)){
+        if(!wantPlats.length){ skip.push({row:n,why:"a new campaign needs at least one platform"}); continue; }
+        if(id){ if(seenKey[id]){ skip.push({row:n,why:"“"+id+"” is used as a Campaign ID twice"}); continue; }
+          seenKey[id]=true; }
+        create.push({row:n,want:want}); continue;
+      }
+      const p=byId[id];
+      if(!p){ skip.push({row:n,why:"that campaign is no longer here"}); continue; }
+
+      const segNow=prSegOf(p);
+      const havePlats=priPlats(p.id);
+      const now={name:(p.name||"").trim(),objective_key:p.objective_key||"",
+        brand_segment_id:segNow?segNow.id:null,kind:p.kind||"one_off",
+        starts_on:priIso(p.starts_on)||null,ends_on:priIso(p.ends_on)||null,
+        target_value:prNumOr(p.target_value),target_basis:prBasis(p),
+        target_on:priIso(p.target_on)||null,
+        planned_spend:prNumOr(p.planned_spend),budget_basis:p.budget_basis||"total",
+        budget_currency:prCur(p)};
+      const diff=[];
+      if(now.name!==want.name) diff.push(["Name",now.name,want.name]);
+      if((now.objective_key||"")!==(want.objective_key||""))
+        diff.push(["Objective",prObjLabel(now.objective_key)||"—",objN]);
+      if((now.brand_segment_id||"")!==(want.brand_segment_id||""))
+        diff.push(["Target group",segNow?prSegLabel(segNow):"—",segN||"—"]);
+      if(now.kind!==want.kind)
+        diff.push(["Kind",PRI_KIND[now.kind],PRI_KIND[want.kind]]);
+      if((now.starts_on||"")!==(want.starts_on||""))
+        diff.push(["Starts on",priPretty(now.starts_on)||"—",priPretty(want.starts_on)||"—"]);
+      if((now.ends_on||"")!==(want.ends_on||""))
+        diff.push(["Ends on",priPretty(now.ends_on)||"—",priPretty(want.ends_on)||"—"]);
+      if((now.target_value===null?"":String(now.target_value))!==(want.target_value===null?"":String(want.target_value)))
+        diff.push(["Target",now.target_value===null?"—":prFmt(now.target_value),
+                            want.target_value===null?"—":prFmt(want.target_value)]);
+      if(now.target_basis!==want.target_basis)
+        diff.push(["Target basis",PR_TB[now.target_basis][1],PR_TB[want.target_basis][1]]);
+      if((now.target_on||"")!==(want.target_on||""))
+        diff.push(["Hit it by",priPretty(now.target_on)||"—",priPretty(want.target_on)||"—"]);
+      if((now.planned_spend===null?"":String(now.planned_spend))!==(want.planned_spend===null?"":String(want.planned_spend)))
+        diff.push(["Budget",now.planned_spend===null?"—":prMoney(now.planned_spend,now.budget_currency),
+                            want.planned_spend===null?"—":prMoney(want.planned_spend,want.budget_currency)]);
+      if(now.budget_basis!==want.budget_basis)
+        diff.push(["Budget basis",PR_BASIS[now.budget_basis][1],PR_BASIS[want.budget_basis][1]]);
+      if(now.budget_currency!==want.budget_currency)
+        diff.push(["Currency",now.budget_currency,want.budget_currency]);
+      /* ONLY WHAT THE SHEET ADDS. A platform block carries creatives
+         and their conversations, so a sheet that leaves one out has
+         not been asked about it — it is held, counted, and said once
+         at the end rather than on every row. */
+      const addPlats=want.plats.filter(k=>havePlats.indexOf(k)<0);
+      const gone=havePlats.filter(k=>want.plats.indexOf(k)<0);
+      if(gone.length) platsHeld++;
+      if(addPlats.length)
+        diff.push(["Platforms",priPlatWords(havePlats)||"—",priPlatWords(havePlats.concat(addPlats))]);
+      want.addPlats=addPlats;
+      if(!diff.length){ same++; continue; }
+
+      const was=snap[id];
+      const moved=was!==undefined && priFingerprint(p)!==was;
+      (moved?conflict:change).push({row:n,id:id,promo:p,want:want,diff:diff,keep:moved});
+    }
+
+    return {create:create,change:change,conflict:conflict,skip:skip,
+            same:same,platsHeld:platsHeld};
+}
+
+function priToggle(which,i){ PI[which][i].keep=!PI[which][i].keep; priRender(); }
+
+/* takes what it is to draw, so the review can be built from a scan
+   without reaching into this block's own variable from outside it */
+function priRender(next){
+  if(next) PI=next;
+  if(!PI) return;
+  const head=t=>`<div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--subtle);text-transform:uppercase;margin:12px 0 5px;">${t}</div>`;
+  const fld=(l,a,b)=>`
+    <div style="margin-top:5px;">
+      <div style="font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--subtle);text-transform:uppercase;">${escHtml(l)}</div>
+      <div style="font-size:12px;color:var(--muted);text-decoration:line-through;">${escHtml(a)||"—"}</div>
+      <div style="font-size:12.5px;">${escHtml(b)||"—"}</div>
+    </div>`;
+  const card=(inner,tint)=>`<div style="border:1px solid var(--div);border-radius:9px;padding:9px 11px;margin-bottom:7px;${tint||""}">${inner}</div>`;
+
+  let body="";
+  if(PI.create.length){
+    body+=head(PI.create.length+" new");
+    body+=PI.create.map(c=>card(
+      `<div style="font-weight:600;font-size:13px;">${escHtml(c.want.name)}</div>
+       <div style="font-size:12px;color:var(--muted);margin-top:2px;">
+         ${escHtml(prObjLabel(c.want.objective_key))} · ${escHtml(PRI_KIND[c.want.kind])}${
+         c.want.starts_on?" · from "+escHtml(priPretty(c.want.starts_on)):""} · ${
+         escHtml(priPlatWords(c.want.plats))}</div>`)).join("");
+  }
+  if(PI.change.length){
+    body+=head(PI.change.length+" changed");
+    body+=PI.change.map(c=>card(
+      `<div style="font-weight:600;font-size:13px;">${escHtml(c.promo.name||"")}</div>
+       ${c.diff.map(d=>fld(d[0],d[1],d[2])).join("")}`)).join("");
+  }
+  if(PI.conflict.length){
+    body+=head(PI.conflict.length+" changed in the tool since you downloaded");
+    body+=PI.conflict.map((c,i)=>card(
+      `<div style="display:flex;align-items:center;gap:8px;">
+         <div style="font-weight:600;font-size:13px;flex:1;">${escHtml(c.promo.name||"")}</div>
+         <label style="font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:5px;cursor:pointer;">
+           <input type="checkbox" ${c.keep?"checked":""} onchange="priToggle('conflict',${i})"> Keep what is in the tool</label>
+       </div>
+       ${c.diff.map(d=>fld(d[0],d[1],d[2])).join("")}`,"background:#FFF9EC;border-color:#F0DFB8;")).join("");
+  }
+  if(PI.skip.length){
+    body+=head(PI.skip.length+" skipped");
+    body+=`<div style="font-size:12px;color:var(--muted);line-height:1.7;">${
+      PI.skip.map(s=>"Row "+s.row+" — "+escHtml(s.why)).join("<br>")}</div>`;
+  }
+  const notes=[];
+  if(PI.same) notes.push(PI.same+" already matched");
+  if(PI.platsHeld) notes.push(PI.platsHeld+(PI.platsHeld===1?" campaign keeps a platform":" campaigns keep platforms")+" the sheet left out");
+  if(notes.length) body+=`<div style="font-size:12px;color:var(--muted);margin-top:12px;padding-top:10px;border-top:1px solid var(--div);">${escHtml(notes.join(" · "))}</div>`;
+
+  const willWrite=PI.create.length+PI.change.length+PI.conflict.filter(x=>!x.keep).length;
+  prBox(`<div class="modal-top"><div>
+      <div class="modal-title">Campaigns from a sheet</div>
+      <div class="modal-sub">${escHtml(PI.file||"")}</div></div>
+     <button class="modal-x" onclick="closeM('promo')">✕</button></div>
+   <div class="modal-body" style="padding:4px 20px 16px;max-height:60vh;overflow:auto;">
+     ${body||'<div style="font-size:13px;color:var(--muted);padding:14px 0;">Nothing in that sheet changes anything here.</div>'}
+   </div>
+   <div style="display:flex;justify-content:flex-end;gap:9px;padding:12px 20px 18px;border-top:1px solid var(--div);">
+     <button class="btn btn-g" onclick="closeM('promo')">Cancel</button>
+     <button class="btn btn-p" ${willWrite?"":"disabled style=opacity:.5"} onclick="priSave()">
+       Write ${willWrite} campaign${willWrite===1?"":"s"}</button>
+   </div>`,true);
+}
+
+async function priSave(){
+  if(!PI||!canCap("edit_promotions")) return;
+  const btn=document.querySelector("#promo-body .btn-p");
+  if(btn){ btn.disabled=true; btn.style.opacity=".5"; }
+  const rows=[];
+
+  /* THE ID IS MADE HERE, not read back from the insert. An import that
+     creates twenty rows and then asks the database what it just made is
+     twenty round trips and twenty chances to lose track of one. */
+  for(const c of PI.create){
+    const id=crypto.randomUUID();
+    const w=c.want;
+    const segRow=(PR.bsegs||[]).find(x=>x.id===w.brand_segment_id)||null;
+    const r=await sb.from("promotions").insert([{id:id,brand_id:activeBrand,
+      name:w.name,objective_key:w.objective_key,
+      brand_segment_id:w.brand_segment_id,segment_key:segRow?segRow.segment_key:null,
+      kind:w.kind,target_value:w.target_value,target_unit:prObjUnit(w.objective_key),
+      target_basis:w.target_basis,target_on:w.target_on,
+      starts_on:w.starts_on,ends_on:w.ends_on,
+      planned_spend:w.planned_spend,budget_basis:w.budget_basis,budget_currency:w.budget_currency,
+      /* the pre-rebuild column is still not-null in the database */
+      platform:(w.plats[0]==="linkedin"?"other":w.plats[0]),
+      created_by:ME.id||null,updated_at:new Date().toISOString()}]);
+    if(r.error){ dbErr(r); continue; }
+    rows.push({kind:"promotion",row_id:id,made:true,before:null});
+    /* the objective joins the brand's list if it is not already on it */
+    if((PR.bobjs||[]).indexOf(w.objective_key)<0)
+      await sb.from("brand_objectives").insert([{brand_id:activeBrand,objective_key:w.objective_key}]);
+    for(let i=0;i<w.plats.length;i++){
+      const sid=crypto.randomUUID();
+      const sr=await sb.from("promotion_streams").insert([{id:sid,promotion_id:id,platform:w.plats[i],sort:i}]);
+      if(sr.error){ dbErr(sr); continue; }
+      rows.push({kind:"stream",row_id:sid,made:true,before:null});
+    }
+  }
+
+  for(const c of PI.change.concat(PI.conflict.filter(x=>!x.keep))){
+    const p=c.promo, w=c.want;
+    const segNow=prSegOf(p);
+    const before={name:p.name||"",objective_key:p.objective_key||null,
+      brand_segment_id:segNow?segNow.id:null,kind:p.kind||"one_off",
+      starts_on:p.starts_on||null,ends_on:p.ends_on||null,
+      target_value:p.target_value===undefined?null:p.target_value,
+      target_basis:p.target_basis||null,target_on:p.target_on||null,
+      planned_spend:p.planned_spend===undefined?null:p.planned_spend,
+      budget_basis:p.budget_basis||"total",budget_currency:prCur(p)};
+    const segRow=(PR.bsegs||[]).find(x=>x.id===w.brand_segment_id)||null;
+    const r=await sb.from("promotions").update({
+      name:w.name,objective_key:w.objective_key,
+      brand_segment_id:w.brand_segment_id,segment_key:segRow?segRow.segment_key:null,
+      kind:w.kind,target_value:w.target_value,target_unit:prObjUnit(w.objective_key),
+      target_basis:w.target_basis,target_on:w.target_on,
+      starts_on:w.starts_on,ends_on:w.ends_on,
+      planned_spend:w.planned_spend,budget_basis:w.budget_basis,budget_currency:w.budget_currency,
+      updated_at:new Date().toISOString()}).eq("id",c.id);
+    if(r.error){ dbErr(r); continue; }
+    rows.push({kind:"promotion",row_id:c.id,made:false,before:before,
+      after:{name:w.name,objective_key:w.objective_key,brand_segment_id:w.brand_segment_id,
+        kind:w.kind,starts_on:w.starts_on,ends_on:w.ends_on,target_value:w.target_value,
+        target_basis:w.target_basis,target_on:w.target_on,planned_spend:w.planned_spend,
+        budget_basis:w.budget_basis,budget_currency:w.budget_currency}});
+    const have=priPlats(c.id).length;
+    for(let i=0;i<(w.addPlats||[]).length;i++){
+      const sid=crypto.randomUUID();
+      const sr=await sb.from("promotion_streams").insert([{id:sid,promotion_id:c.id,
+        platform:w.addPlats[i],sort:have+i}]);
+      if(sr.error){ dbErr(sr); continue; }
+      rows.push({kind:"stream",row_id:sid,made:true,before:null});
+    }
+  }
+
+  try{
+    const ins=await sb.from("promotion_imports").insert({brand_id:activeBrand,file_name:PI.file||"",
+      actor_email:(ME.email||""),actor_name:actorName(),rows_changed:rows.length,reverts_id:null})
+      .select("id").single();
+    if(ins&&ins.data&&rows.length)
+      await sb.from("promotion_import_rows").insert(rows.map(r=>({import_id:ins.data.id,
+        brand_id:activeBrand,kind:r.kind,row_id:r.row_id,made:r.made,
+        before:r.before,after:r.after||null})));
+  }catch(e){}
+
+  const made=rows.filter(r=>r.made&&r.kind==="promotion").length;
+  const upd=rows.filter(r=>!r.made).length;
+  closeM("promo"); PI=null;
+  await prReloadNow(); render();
+  toast([made?made+" created":"",upd?upd+" changed":""].filter(Boolean).join(" · ")||"Nothing changed");
+}
+
+/* ── UNDO ─────────────────────────────────────────────────────────────
+   Removes what it made and puts back what it changed. Anything edited
+   since is left alone and counted — a campaign is somebody's live
+   spend, and an undo that takes work with it is worse than none. */
+async function priUndo(importId){
+  if(!canCap("edit_promotions")) return capDenied("Undoing an import");
+  let head=null,rows=[];
+  try{
+    const h=await sb.from("promotion_imports").select("*").eq("id",importId).single();
+    head=(h&&h.data)||null;
+    const r=await sb.from("promotion_import_rows").select("*").eq("import_id",importId);
+    rows=(r&&r.data)||[];
+  }catch(e){}
+  if(!head) return toast("Nothing recorded for that import.","err");
+  const kill=[],back=[],kept=[];
+  rows.forEach(r=>{
+    if(r.kind==="stream"){
+      const s=priStream(r.row_id); if(!s) return;
+      /* a platform block somebody has put creatives on is not this
+         import's to remove any more */
+      if((PR.cr||[]).some(c=>c.stream_id===s.id)){ kept.push(s); return; }
+      kill.push({kind:"stream",id:s.id}); return;
+    }
+    const p=(PR.list||[]).find(x=>x.id===r.row_id); if(!p) return;
+    if(r.made){ kill.push({kind:"promotion",id:p.id}); return; }
+    /* edited since the import? Compare what is there now against what
+       the import WROTE, not against what it replaced — the same
+       question the download's fingerprint answers, asked later. */
+    const a=r.after||null;
+    if(a && ((p.name||"")!==(a.name||"")
+          || (p.objective_key||"")!==(a.objective_key||"")
+          || (p.brand_segment_id||"")!==(a.brand_segment_id||"")
+          || (p.kind||"")!==(a.kind||"")
+          || priIso(p.starts_on)!==priIso(a.starts_on)
+          || priIso(p.ends_on)!==priIso(a.ends_on)
+          || String(p.target_value==null?"":p.target_value)!==String(a.target_value==null?"":a.target_value)
+          || String(p.planned_spend==null?"":p.planned_spend)!==String(a.planned_spend==null?"":a.planned_spend)
+          || (p.budget_basis||"")!==(a.budget_basis||""))){ kept.push(p); return; }
+    back.push({kind:"promotion",id:p.id,before:r.before||{}});
+  });
+  if(!kill.length&&!back.length) return toast("Nothing left from that import to undo.","err");
+  if(!confirm("Undo this import? "+
+      [kill.length?kill.length+" removed":"",back.length?back.length+" put back":""].filter(Boolean).join(", ")+
+      (kept.length?". "+kept.length+" edited since will be left alone.":".")))
+    return;
+
+  for(const k of kill){
+    if(k.kind==="promotion") await sb.from("promotions").update({deleted_at:new Date().toISOString()}).eq("id",k.id);
+    else await sb.from("promotion_streams").delete().eq("id",k.id);
+  }
+  for(const b of back){
+    await sb.from("promotions").update({name:b.before.name,objective_key:b.before.objective_key,
+      brand_segment_id:b.before.brand_segment_id,kind:b.before.kind,
+      starts_on:b.before.starts_on,ends_on:b.before.ends_on,
+      target_value:b.before.target_value,target_basis:b.before.target_basis,
+      target_on:b.before.target_on,planned_spend:b.before.planned_spend,
+      budget_basis:b.before.budget_basis,budget_currency:b.before.budget_currency,
+      updated_at:new Date().toISOString()}).eq("id",b.id);
+  }
+  try{
+    await sb.from("promotion_imports").insert({brand_id:head.brand_id,file_name:"",
+      actor_email:(ME.email||""),actor_name:actorName(),
+      rows_changed:kill.length+back.length,reverts_id:importId});
+  }catch(e){}
+  closeM("promo");
+  await prReloadNow(); render();
+  toast([kill.length?kill.length+" removed":"",back.length?back.length+" put back":"",
+         kept.length?kept.length+" left alone":""].filter(Boolean).join(" · "));
+}
+
+async function priHistory(){
+  if(!canCap("edit_promotions")) return capDenied("Import history");
+  let list=[];
+  try{
+    const r=await sb.from("promotion_imports").select("*").eq("brand_id",activeBrand)
+      .order("created_at",{ascending:false}).limit(30);
+    list=(r&&r.data)||[];
+  }catch(e){}
+  const when=t=>{ const d=new Date(t); if(isNaN(d)) return "";
+    return d.getDate()+" "+(MN[d.getMonth()+1]||"").slice(0,3)+" "+d.getFullYear()+
+      " · "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); };
+  const undone={}; list.forEach(r=>{ if(r.reverts_id) undone[r.reverts_id]=true; });
+  const body=list.length?list.map(r=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--div);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12.5px;font-weight:600;">${
+          r.reverts_id?"Undo":escHtml(r.file_name||"a sheet")}</div>
+        <div style="font-size:11.5px;color:var(--muted);">${escHtml(when(r.created_at))} · ${
+          escHtml(r.actor_name||r.actor_email||"someone")} · ${r.rows_changed} row${r.rows_changed===1?"":"s"}</div>
+      </div>
+      ${(!r.reverts_id&&!undone[r.id]&&r.rows_changed)
+        ?`<button class="btn btn-s btn-sm" onclick="priUndo('${escAttr(r.id)}')">Undo</button>`
+        :`<span style="font-size:11.5px;color:var(--subtle);">${undone[r.id]?"undone":""}</span>`}
+    </div>`).join("")
+    :'<div style="font-size:13px;color:var(--muted);padding:14px 0;">No imports yet.</div>';
+  prBox(`<div class="modal-top"><div><div class="modal-title">Campaign import history</div>
+      <div class="modal-sub">${escHtml((brands[activeBrand]||{}).name||"")}</div></div>
+     <button class="modal-x" onclick="closeM('promo')">✕</button></div>
+   <div class="modal-body" style="padding:4px 20px 16px;max-height:60vh;overflow:auto;">${body}</div>
+   <div style="display:flex;justify-content:flex-end;padding:12px 20px 18px;border-top:1px solid var(--div);">
+     <button class="btn btn-g" onclick="priOpen()">Back</button>
+   </div>`);
+}
+
 window.pbWriteNew=pbWriteNew; window.pbNew=pbNew; window.pbOpen=pbOpen; window.pbTake=pbTake; window.pbDrop=pbDrop; window.pbRename=pbRename; window.pbDone=pbDone;
 window.pbKindPicked=pbKindPicked; window.pbTakeDetail=pbTakeDetail; window.pbSegSpareHtml=pbSegSpareHtml;
+window.priOpen=priOpen; window.priTemplate=priTemplate; window.priPick=priPick;
+window.priToggle=priToggle; window.priSave=priSave; window.priUndo=priUndo; window.priHistory=priHistory;
+window.priScan=priScan; window.priRender=priRender; window.priFingerprint=priFingerprint;
 /* the old names keep working — two gates and the page's own button
    call prObjOpen by name */
 prObjOpen=function(){ pbOpen("obj"); };
