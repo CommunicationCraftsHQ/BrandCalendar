@@ -21,7 +21,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V116.2 Tbilisi"/>
+<meta name="cc-tool-version" content="V116.3 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -4675,6 +4675,71 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
   body.mf-notabs .mf-tabs{display:none!important;}
   body.mf-notabs.mf-framed .main{padding-bottom:calc(var(--mf-safe) + 12px)!important;}
   .mf-framed .mf-more{display:none!important;}
+}
+</style>
+<style>
+/* ══ V116.3 TBILISI · ONE PATTERN FOR THE PAGE BAR ═══════════════════════
+   Chirag, 14 Oct, approved in "02 - Phone three bars - mockup": Posts and
+   Tasks carry the same five tiles in the same order — Search, Filter (the
+   count lives in it), a two-way switch, Sort, More. The bar slides away
+   as the page scrolls down and returns on a small pull down. Phone only. */
+@media(max-width:768px){
+  :root.mfsub.mftiles{--mf-sub:72px;}
+  :root.mfsub.mfhid{--mf-sub:0px;}
+  :root.mfsub .mf-sub{transition:height .18s ease,padding .18s ease;}
+  :root.mfsub.mfhid .mf-sub{height:0!important;padding-top:0!important;padding-bottom:0!important;border-bottom-width:0!important;overflow:hidden!important;}
+  :root.mftiles .mf-sub{padding:8px 12px;align-items:stretch;gap:8px;}
+  :root.mftiles .mf-sub > .mf-g{display:none!important;}
+  :root:not(.mftiles) #mf-sw,:root:not(.mftiles) #mf-tl{display:none!important;}
+  #mf-tl{display:flex;gap:8px;align-items:stretch;}
+  .mft{flex:none;min-width:62px;padding:0 10px;border-radius:14px;background:var(--surface,#fff);border:1px solid rgba(13,13,13,.08);
+       display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:inherit;font-size:12px;font-weight:600;
+       color:#3A3A3A;position:relative;cursor:pointer;white-space:nowrap;}
+  .mft .ti{font-size:21px;color:var(--text);line-height:1;}
+  .mft b{font-weight:800;color:var(--text);}
+  .mft.on{background:var(--text);border-color:var(--text);color:#fff;}
+  .mft.on .ti,.mft.on b{color:#fff;}
+  .mft .bd{position:absolute;top:5px;right:7px;min-width:16px;height:16px;border-radius:99px;background:var(--acc);color:#fff;
+       font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;}
+  .mft.flip{flex-direction:row;gap:0;padding:4px;}
+  .mft.flip span{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0 10px;height:100%;
+       border-radius:10px;color:#9A9A9A;}
+  .mft.flip span .ti{color:#9A9A9A;}
+  .mft.flip span.on{background:var(--text);color:#fff;}
+  .mft.flip span.on .ti{color:#fff;}
+  /* search: a tile until tapped, then the whole bar */
+  #mf-sw{display:none;flex:1 1 auto;align-items:center;gap:6px;}
+  .mf-sub.searching > #mf-sw{display:flex!important;}
+  .mf-sub.searching #mf-tl{display:none;}
+  #mf-sw input{flex:1;min-width:0;height:44px;border-radius:999px;border:1px solid var(--div);background:var(--surface,#fff);
+       padding:0 16px;font:inherit;font-size:15px;}
+  #mf-sw button{width:40px;height:40px;border:0;background:none;font-size:21px;display:flex;align-items:center;justify-content:center;padding:0;color:var(--text);}
+  /* the page's own bars stay off the page on these two screens */
+  :root.mftiles #main .pgbar,:root.mftiles #main .brfb,:root.mftiles #main .wa-chips{display:none!important;}
+  /* Tasks in any order but newest-message, and grouped by project */
+  :root.mfdom .wa-list > *{order:0!important;}
+  :root.mfgrp .wa-list .brl-ph{display:flex!important;}
+  /* the sheets */
+  .mfs-scrim{position:fixed;inset:0;background:rgba(13,13,13,.38);z-index:880;}
+  .mfs{position:fixed;left:0;right:0;bottom:0;z-index:890;background:#fff;border-radius:18px 18px 0 0;
+       box-shadow:0 -14px 44px rgba(13,13,13,.22);padding:8px 16px calc(14px + var(--mf-safe,0px));max-height:80vh;max-height:80dvh;overflow-y:auto;}
+  .mfs::before{content:"";display:block;width:36px;height:4px;border-radius:2px;background:var(--div);margin:2px auto 10px;}
+  .mfs .hd{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:16px;}
+  .mfs .hd button{border:0;background:none;color:var(--acc);font:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:6px 0;}
+  .mfs h4{margin:14px 0 8px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8A8A8A;}
+  .mfs .row{display:flex;flex-wrap:wrap;gap:8px;}
+  .mfs .ch{height:34px;padding:0 14px;border-radius:99px;border:1px solid rgba(13,13,13,.12);display:inline-flex;align-items:center;gap:6px;
+       font:inherit;font-size:13px;font-weight:600;color:#333;background:#fff;cursor:pointer;}
+  .mfs .ch.on{background:var(--text);color:#fff;border-color:var(--text);}
+  .mfs .ch .n{font-weight:700;color:#999;}
+  .mfs .ch.on .n{color:rgba(255,255,255,.6);}
+  .mfs .ft{display:flex;gap:10px;margin-top:18px;}
+  .mfs .ft button{height:44px;border-radius:12px;font:inherit;font-weight:700;font-size:14px;cursor:pointer;}
+  .mfs .ft .b1{flex:1;border:1px solid rgba(13,13,13,.12);background:#fff;}
+  .mfs .ft .b2{flex:2;border:0;background:var(--acc);color:#fff;}
+  .mfs .li{display:flex;align-items:center;gap:12px;padding:13px 4px;font-size:15px;cursor:pointer;border-radius:10px;}
+  .mfs .li .ti{font-size:20px;}
+  .mfs .li .ck{margin-left:auto;color:var(--acc);}
 }
 </style>
 </head>
@@ -12068,7 +12133,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V116.2 Tbilisi";
+const TOOL_VERSION="V116.3 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -34195,6 +34260,297 @@ function mfSubFill(){
   };
   MF_Q.addEventListener("change",()=>{ try{ render(); }catch(e){} mfSubFill(); mfTabsFill(); });
   mfSubFill(); mfTabsFill();
+})();
+</script>
+
+<script>
+/* ══ V116.3 TBILISI · ONE PATTERN FOR THE PAGE BAR ═══════════════════════
+   On Posts and Tasks the bar is five tiles, built here and nowhere else:
+     Search   a tile; tapped, the whole bar becomes a box. The box is ONE
+              element kept for the life of the page, so typing never
+              loses the caret to a redraw.
+     Filter   reads the result ("12 posts") and opens one sheet with every
+              filter the page has. Black with a count when any is on.
+     Switch   two modes of one thing: Posts View ⇄ Edit, Tasks List ⇄ Projects.
+     Sort     reads the order it is in.
+     More     the rarely used: import, download, export.
+   Every tile drives the page's EXISTING state — contentMode,
+   contentStatusFilter, contentFormatFilter, WA_CHIP, brFilter, brSort,
+   brGroup — so the desk and the phone can never disagree about what is
+   filtered. Two filters are new on Posts (search, Unread / This week);
+   they live only here and only narrow what Posts draws. */
+let MF_PQ="";              // Posts: search text
+let MF_PQK="all";          // Posts: all | unread | week
+let MF_PSORT="date";       // Posts: date | late | status
+let MF_TSORT="latest";     // Tasks on a phone: latest | a BR_SORT key
+try{ const s=localStorage.getItem("cc_mf_tsort"); if(s) MF_TSORT=s; }catch(e){}
+let MF_SHEET=null;         // which sheet is open: filter | sort | more
+function mfTiles(){ return mfNarrow() && (view==="content"||view==="branding"); }
+
+/* ── Posts: the two new filters, applied where Posts reads its posts ── */
+function mfPostKeep(p){
+  if(MF_PQ){
+    const c=p.content||{}, q=MF_PQ.toLowerCase();
+    const txt=[c.concept,(c.instagram||{}).caption,(c.facebook||{}).caption,(c.instagram||{}).hashtags,p.notes,p.format,p.status]
+      .filter(Boolean).join(" ").toLowerCase();
+    if(txt.indexOf(q)<0) return false;
+  }
+  if(MF_PQK==="unread") return fbUnreadCountFor(p.id)>0;
+  if(MF_PQK==="week"){
+    const d=new Date((p.year||YEAR),(p.month||1)-1,p.date||1), t=new Date(); t.setHours(0,0,0,0);
+    const e=new Date(t); e.setDate(e.getDate()+7);
+    return d>=t && d<e;
+  }
+  return true;
+}
+(function(){
+  const baseSoc=socialForBrandYear;
+  let inPosts=false;
+  socialForBrandYear=function(){
+    const r=baseSoc.apply(this,arguments);
+    return (inPosts&&mfNarrow()&&(MF_PQ||MF_PQK!=="all")) ? r.filter(mfPostKeep) : r;
+  };
+  const baseRS=renderSocial;
+  renderSocial=function(){
+    inPosts=true;
+    try{ return baseRS.apply(this,arguments); }
+    finally{ inPosts=false; try{ mfPostOrder(); }catch(e){} }
+  };
+})();
+/* the posts come out in date order; the other two orders are a re-stack */
+function mfPostOrder(){
+  if(!mfNarrow()||MF_PSORT==="date") return;
+  const grid=document.querySelector("#content-list > div"); if(!grid) return;
+  const cards=[...grid.children];
+  const all=(brands[activeBrand]&&brands[activeBrand].social)||[];
+  const st={drafting:0,review:1,internal_review:1,approved:2};
+  const of=id=>all.find(x=>"pcard-"+x.id===id)||{};
+  if(MF_PSORT==="late") cards.reverse();
+  else cards.sort((a,b)=>(st[of(a.id).status]??9)-(st[of(b.id).status]??9));
+  cards.forEach(c=>grid.appendChild(c));
+}
+
+/* ── counting what is on screen, and what is switched on ── */
+function mfShownCount(){
+  if(view==="content") return document.querySelectorAll("#content-list [id^='pcard-']").length;
+  return document.querySelectorAll("#main .wa-list > .wa-r:not(.wa-x)").length;
+}
+function mfFiltersOn(){
+  if(view==="content") return (contentStatusFilter?1:0)+(contentFormatFilter?1:0)+(MF_PQK!=="all"?1:0);
+  let n=(typeof WA_CHIP!=="undefined"&&WA_CHIP&&WA_CHIP!=="all")?1:0;
+  Object.keys(BR_FIELD).forEach(k=>{ if(brFilter[k]) n++; });
+  ["overdue","hideClosed","archived"].forEach(k=>{ if(brFilter[k]) n++; });
+  return n;
+}
+const MF_TSORT_LBL={latest:"Latest",due:"Due date",overdue:"Overdue",updated:"Updated",status:"Status",owner:"Owner",title:"A–Z",manual:"Custom"};
+const MF_PSORT_LBL={date:"Date",late:"Newest",status:"Status"};
+function mfMoreItems(){
+  const out=[];
+  if(view==="content"){
+    if(canEdit()) out.push(["ti-upload","Import or download this month","sdOpen()"]);
+  }else{
+    if(canEdit()&&!(typeof brIsClient==="function"&&brIsClient())&&BR&&BR.ok) out.push(["ti-upload","Import or download tasks","tkOpen()"]);
+  }
+  return out;
+}
+
+/* ── the tiles ── */
+function mfTilesHtml(){
+  const posts=(view==="content");
+  const n=mfShownCount(), on=mfFiltersOn(), word=posts?"post":"task";
+  const t=(icon,label,act,cls)=>`<button class="mft${cls?" "+cls:""}" onclick="${act}"><i class="ti ${icon}"></i><span>${label}</span></button>`;
+  let h=t("ti-search",(posts?MF_PQ:brFilter.q)?"<b>Search</b>":"Search","mfSearchOpen()",(posts?MF_PQ:brFilter.q)?"on":"");
+  h+=`<button class="mft${on?" on":""}" onclick="mfSheet('filter')">${on?`<span class="bd">${on}</span>`:""}<i class="ti ti-adjustments-horizontal"></i><span><b>${n}</b> ${word}${n===1?"":"s"}</span></button>`;
+  if(posts){
+    h+=`<button class="mft flip" onclick="setContentMode(contentMode==='edit'?'view':'edit')" aria-label="Switch between view and edit">`+
+       `<span class="${contentMode==="edit"?"":"on"}"><i class="ti ti-eye"></i>View</span>`+
+       `<span class="${contentMode==="edit"?"on":""}"><i class="ti ti-pencil"></i>Edit</span></button>`;
+    h+=t("ti-arrows-sort",MF_PSORT_LBL[MF_PSORT]||"Date","mfSheet('sort')");
+  }else{
+    h+=`<button class="mft flip" onclick="mfSetGroup(!brGroup)" aria-label="Switch between list and projects">`+
+       `<span class="${brGroup?"":"on"}"><i class="ti ti-list"></i>List</span>`+
+       `<span class="${brGroup?"on":""}"><i class="ti ti-folders"></i>Projects</span></button>`;
+    h+=t("ti-arrows-sort",MF_TSORT_LBL[mfTSortNow()]||"Sort","mfSheet('sort')");
+  }
+  if(mfMoreItems().length) h+=t("ti-dots","More","mfSheet('more')");
+  return h;
+}
+function mfTSortNow(){ return (MF_TSORT==="latest")?"latest":brSort; }
+function mfSetGroup(v){ brGroup=!!v; mfOrderMode(); render(); }
+function mfOrderMode(){
+  const r=document.documentElement;
+  const tasks=mfNarrow()&&view==="branding";
+  r.classList.toggle("mfgrp",tasks&&!!brGroup);
+  r.classList.toggle("mfdom",tasks&&(!!brGroup||MF_TSORT!=="latest"));
+}
+
+/* ── search ── */
+function mfSearchBox(){
+  let w=document.getElementById("mf-sw");
+  const sub=document.getElementById("mf-sub");
+  if(!w&&sub){
+    w=document.createElement("div"); w.id="mf-sw";
+    w.innerHTML=`<button aria-label="Close search" onclick="mfSearchClose()"><i class="ti ti-arrow-left"></i></button>`+
+      `<input type="text" enterkeyhint="search" id="mf-q" autocomplete="off" oninput="mfSearchType(this.value)"/>`+
+      `<button aria-label="Clear" onclick="mfSearchType('');document.getElementById('mf-q').value='';document.getElementById('mf-q').focus()"><i class="ti ti-x"></i></button>`;
+    sub.insertBefore(w,sub.firstChild);
+  }
+  return w;
+}
+function mfSearchOpen(){
+  const w=mfSearchBox(); if(!w) return;
+  const q=document.getElementById("mf-q");
+  q.placeholder=view==="content"?"Search posts…":"Search tasks…";
+  q.value=view==="content"?MF_PQ:(brFilter.q||"");
+  document.getElementById("mf-sub").classList.add("searching");
+  setTimeout(()=>{ try{ q.focus(); }catch(e){} },30);
+}
+function mfSearchClose(){
+  const s=document.getElementById("mf-sub"); if(s) s.classList.remove("searching");
+  const q=document.getElementById("mf-q"); if(q) q.blur();
+  mfTilesPaint();
+}
+function mfSearchType(v){
+  if(view==="content"){ MF_PQ=v; renderSocial(); }
+  else{ brFilter.q=v; render(); }
+}
+
+/* ── sheets ── */
+function mfSheetClose(){ MF_SHEET=null; document.querySelectorAll(".mfs,.mfs-scrim").forEach(e=>e.remove()); }
+function mfSheet(k){
+  MF_SHEET=k;
+  document.querySelectorAll(".mfs,.mfs-scrim").forEach(e=>e.remove());
+  const sc=document.createElement("div"); sc.className="mfs-scrim"; sc.onclick=mfSheetClose;
+  const sh=document.createElement("div"); sh.className="mfs"; sh.id="mf-sheet";
+  sh.onclick=e=>e.stopPropagation();
+  document.body.appendChild(sc); document.body.appendChild(sh);
+  mfSheetPaint();
+}
+function mfSheetPaint(){
+  const sh=document.getElementById("mf-sheet"); if(!sh||!MF_SHEET) return;
+  const posts=(view==="content");
+  const ch=(on,label,act,n)=>`<button class="ch${on?" on":""}" onclick="${act}">${escHtml(label)}${n!=null&&n!==""?` <span class="n">${n}</span>`:""}</button>`;
+  let h="";
+  if(MF_SHEET==="filter"){
+    const n=mfShownCount(), word=posts?"post":"task";
+    h=`<div class="hd">Filter ${word}s<button onclick="mfFilterClear()">Clear</button></div>`;
+    if(posts){
+      h+=`<h4>Quick</h4><div class="row">`+[["all","All"],["unread","Unread"],["week","This week"]]
+        .map(([k,l])=>ch(MF_PQK===k,l,`mfPQuick('${k}')`)).join("")+`</div>`;
+      const mPosts=socialForBrandYear(activeBrand,YEAR).filter(p=>p.month===contentMonth);
+      const cnt=f=>mPosts.filter(f).length;
+      h+=`<h4>Status</h4><div class="row">`+[["drafting","Drafting"],["review","In review"],["approved","Approved"]]
+        .map(([k,l])=>ch(contentStatusFilter===k,l,`mfPStatus('${k}')`,cnt(p=>p.status===k))).join("")+`</div>`;
+      h+=`<h4>Format</h4><div class="row">`+SOCIAL_FORMATS
+        .map(f=>ch(contentFormatFilter===f,f.charAt(0).toUpperCase()+f.slice(1),`mfPFormat('${f}')`,cnt(p=>(p.format||"static")===f))).join("")+`</div>`;
+    }else{
+      const client=(typeof brIsClient==="function"&&brIsClient());
+      const quick=[["all","All"],["unread","Unread"],["week","Due this week"]].concat(client?[]:[["client","With client"],["mine","Mine"]]);
+      h+=`<h4>Quick</h4><div class="row">`+quick.map(([k,l])=>ch((WA_CHIP||"all")===k,l,`mfTQuick('${k}')`)).join("")+`</div>`;
+      if(BR&&BR.ok) Object.keys(BR_FIELD).forEach(k=>{
+        const opts=brFieldOpts(k).filter(o=>o.v&&o.n);
+        if(!opts.length) return;
+        h+=`<h4>${escHtml(BR_FIELD[k])}</h4><div class="row">`+
+          opts.map(o=>ch(brFilter[k]===o.v,o.label,`mfTField('${k}','${escAttr(o.v)}')`,o.n)).join("")+`</div>`;
+      });
+      h+=`<h4>Also</h4><div class="row">`+[["overdue","Late"],["hideClosed","Hide closed"],["archived","Archived"]]
+        .map(([k,l])=>ch(!!brFilter[k],l,`mfTToggle('${k}')`)).join("")+`</div>`;
+    }
+    h+=`<div class="ft"><button class="b1" onclick="mfFilterClear()">Clear</button><button class="b2" onclick="mfSheetClose()">Show ${n} ${word}${n===1?"":"s"}</button></div>`;
+  }else if(MF_SHEET==="sort"){
+    h=`<div class="hd">Sort</div>`;
+    const opts=posts?[["date","Date, earliest first"],["late","Date, newest first"],["status","Status"]]
+      :[["latest","Latest message first"]].concat(Object.entries(BR_SORT).filter(([k])=>k!=="manual"||brSort==="manual"));
+    const cur=posts?MF_PSORT:mfTSortNow();
+    h+=opts.map(([k,l])=>`<div class="li" onclick="${posts?`mfPSort('${k}')`:`mfTSort('${k}')`}"><span>${escHtml(l)}</span>${cur===k?`<i class="ti ti-check ck"></i>`:""}</div>`).join("");
+  }else{
+    h=`<div class="hd">More</div>`+mfMoreItems().map(([ic,l,act])=>
+      `<div class="li" onclick="mfSheetClose();${act}"><i class="ti ${ic}"></i><span>${escHtml(l)}</span></div>`).join("");
+  }
+  sh.innerHTML=h;
+}
+/* every choice applies at once; the sheet stays and follows the page */
+function mfPQuick(k){ MF_PQK=k; renderSocial(); }
+function mfPStatus(k){ contentStatusFilter=(contentStatusFilter===k)?"":k; renderSocial(); }
+function mfPFormat(f){ contentFormatFilter=(contentFormatFilter===f)?"":f; renderSocial(); }
+function mfPSort(k){ MF_PSORT=k; mfSheetClose(); renderSocial(); }
+function mfTQuick(k){ WA_CHIP=k; render(); }
+function mfTField(k,v){ brFilter.archived=false; brFilter[k]=(brFilter[k]===v?"":v); render(); }
+function mfTToggle(k){ if(k==="archived"&&!brFilter.archived){ mfSheetClose(); return brShowArchived(); } brFilter[k]=!brFilter[k]; render(); }
+function mfTSort(k){
+  MF_TSORT=(k==="latest")?"latest":k;
+  try{ localStorage.setItem("cc_mf_tsort",MF_TSORT); }catch(e){}
+  mfSheetClose();
+  if(k!=="latest") brSetSort(k); else { mfOrderMode(); render(); }
+}
+function mfFilterClear(){
+  if(view==="content"){ contentStatusFilter=""; contentFormatFilter=""; MF_PQK="all"; renderSocial(); return; }
+  WA_CHIP="all";
+  Object.keys(BR_FIELD).forEach(k=>brFilter[k]="");
+  brFilter.overdue=false; brFilter.hideClosed=false;
+  if(brFilter.archived){ brFilter.archived=false; }
+  render();
+}
+
+/* ── painting the bar ── */
+function mfTilesPaint(){
+  const el=document.getElementById("mf-tl"); if(!el) return;
+  const html=mfTilesHtml(); if(el.innerHTML!==html) el.innerHTML=html;
+}
+(function(){
+  const baseFill=mfSubFill;
+  mfSubFill=function(){
+    const sub=document.getElementById("mf-sub");
+    const tiles=mfTiles()&&!!sub;
+    document.documentElement.classList.toggle("mftiles",tiles);
+    mfOrderMode();
+    if(!tiles){
+      if(sub) sub.classList.remove("searching");
+      return baseFill.apply(this,arguments);
+    }
+    document.documentElement.classList.add("mfsub");
+    MF_SUB_BUSY=true;
+    try{
+      sub.querySelectorAll(":scope > .mf-g, :scope > .mf-srch, :scope > .mf-sclose, :scope > button:not(.mft)").forEach(n=>n.remove());
+      mfSearchBox();
+      let tl=document.getElementById("mf-tl");
+      if(!tl){ tl=document.createElement("div"); tl.id="mf-tl"; sub.appendChild(tl); }
+      /* the page's "add" is still the round + */
+      document.querySelectorAll(".mf-fab").forEach(b=>{ if(!document.getElementById("main").contains(b)) b.remove(); });
+      const add=document.querySelector(view==="content"
+        ? "#main .pgbar button.btn-p" : "#main .brfb .brfb-end .btn-p");
+      if(add&&add.querySelector(".ti-plus")){ add.classList.add("mf-fab"); sub.appendChild(add); }
+      sub.dataset.v=view;
+      mfTilesPaint();
+      if(MF_SHEET) mfSheetPaint();
+    }finally{ MF_SUB_BUSY=false; }
+  };
+  /* leaving the page closes its sheet and its search */
+  const baseGo=mfPageGo;
+  mfPageGo=function(){ mfSheetClose(); const s=document.getElementById("mf-sub"); if(s) s.classList.remove("searching"); showBar(); return baseGo.apply(this,arguments); };
+
+  /* ── the bar slides away on the way down, and back on a small pull ── */
+  let last=0;
+  function showBar(){ document.documentElement.classList.remove("mfhid"); }
+  document.addEventListener("scroll",e=>{
+    if(!mfNarrow()) return;
+    const t=e.target, el=(t===document||t===document.documentElement)?document.scrollingElement:t;
+    if(!el||!(el.id==="main"||(el.classList&&el.classList.contains("main"))||el===document.scrollingElement)) return;
+    if(MF_SHEET||document.getElementById("mf-sub").classList.contains("searching")) return;
+    const st=el.scrollTop, d=st-last; last=st;
+    if(st<24){ showBar(); return; }
+    if(d>8) document.documentElement.classList.add("mfhid");
+    else if(d<-6) showBar();
+  },true);
+  /* a pull down at the very top (nothing left to scroll) still brings it back */
+  let y0=null;
+  document.addEventListener("touchstart",e=>{ y0=e.touches&&e.touches[0]?e.touches[0].clientY:null; },{passive:true});
+  document.addEventListener("touchmove",e=>{
+    if(y0==null||!e.touches||!e.touches[0]) return;
+    if(e.touches[0].clientY-y0>14) showBar();
+  },{passive:true});
+  window.mfShowBar=showBar;
+  try{ mfSubFill(); }catch(e){}
 })();
 </script>
 </body>
