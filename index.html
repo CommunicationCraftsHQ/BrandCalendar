@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V116.7 Tbilisi"/>
+<meta name="cc-tool-version" content="V116.8 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3200,7 +3200,36 @@ body.brcv .brl-lens span.cv.on{background:#378ADD;color:#fff;}
 .brl-tr.drg:hover .brl-grip{opacity:1;background:#F1EFEA;}
 .brl-tr.drg:active .brl-grip{cursor:grabbing;}
 
+/* ══ V116.8 — the listing standard on Tasks ═══════════════════════ */
+.brfb-cnt{display:inline-flex;align-items:baseline;gap:4px;font-size:14px;white-space:nowrap;margin-right:4px;}
+.brfb-cnt b{font-weight:700;}
+.brfb-cnt span{color:var(--muted);font-size:12.5px;}
+.nav-btn.brk-colsbtn{gap:6px;font-weight:700;}
+.nav-btn.brk-colsbtn i,.nav-btn.brk-io i{font-size:16px;}
+.nav-btn.brk-io{gap:5px;}
+.brk-ioh{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);padding:8px 10px 4px;}
+.brk-ioh i{font-size:13px;}
+.brk-iosep{height:1px;background-color:var(--div);margin:5px 4px;}
+.brk-bx{width:16px;height:16px;border-radius:4px;border:1.5px solid #CFCFCB;display:grid;place-items:center;font-size:10px;color:#fff;flex:none;}
+.brk-bx.on{background-color:#0D0D0D;border-color:#0D0D0D;}
+.brk-bx i{font-size:10px;}
+.brow.brk-lock{cursor:default;color:var(--muted);}
+.brow.brk-lock:hover{background:transparent;}
+.brk-reset{font-size:12px;font-weight:600;color:var(--muted);padding:8px 10px 4px;border-top:1px solid var(--div);margin-top:4px;cursor:pointer;}
+.brk-reset:hover{color:var(--text);}
+.brl.h-st .h-st,.brl.h-st .brl-stw,.brl.h-ms .h-ms,.brl.h-ms .brl-sg,
+.brl.h-own .c-own,.brl.h-due .c-due,.brl.h-del .c-del{display:none;}
+@media(min-width:1101px){ .brl.cx>.brl-hd,.brl.cx>.brl-tr{grid-template-columns:var(--brg1);} }
+@media(min-width:769px){ #main .brfb .brfb-end .brfb-mnew{display:none;} }
+.brfb .brfb-view{display:none;}
+.brfb{flex-wrap:nowrap;}
+@media(min-width:769px) and (max-width:1360px){
+  #main .brfb .brfb-end .brl-lens{display:none;}
+  #main .brfb .brfb-end .brfb-view{display:inline-flex;}
+  #main .brfb .brfb-q{width:auto;flex:0 1 200px;min-width:34px;}
+}
 @media(max-width:1100px){
+  .brl.cx>.brl-hd,.brl.cx>.brl-tr{grid-template-columns:var(--brg2);}
   .brl-hd,.brl-tr{grid-template-columns:3px 20px minmax(0,1fr) 130px 120px 92px 100px 30px;}
   .brl-hd .c:last-of-type,.brl-tr .c:nth-of-type(3){display:none;}
 }
@@ -4982,6 +5011,14 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
     <button class="qtog" id="past-tog" onclick="setFromNow(!fromNow)" title="Show months before this one">
       <i class="sw"></i> Past months
     </button>
+    <!-- V116.8 — THE LISTING STANDARD. On Tasks the black bar carries the
+         page's own controls, in the suite's order: Columns · Import /
+         Export · New task · bell. brNavSync shows them on Tasks only. -->
+    <div class="bsw mf-hide" id="brk-cols" style="display:none;">
+      <button class="nav-btn brk-colsbtn" id="brk-cols-btn" onclick="brColsOpen(event)" title="Columns" aria-label="Columns">
+        <i class="ti ti-columns-3"></i><span id="brk-cn">6/6</span></button>
+      <div class="bpanel right" id="brk-cols-panel"></div>
+    </div>
     <div class="bsw mf-hide">
       <!-- MOTH — the export's own progress, anchored to the export
            button so it is where you last clicked, not floating. -->
@@ -4991,6 +5028,7 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
       </button>
       <div class="bpanel right" id="export-panel"></div>
     </div>
+    <button class="nav-btn red mf-hide" id="brk-new" style="display:none;" onclick="brNewTask()"><i class="ti ti-plus"></i> New task</button>
     <div class="bsw">
       <button class="bell" id="bell-btn" onclick="toggleBell(event)" title="Notifications">
         <i class="ti ti-bell"></i><span class="badge zero" id="bell-badge">0</span>
@@ -8868,7 +8906,7 @@ function setView(v,btn){
    that looked like it should be clickable and was not. */
 function goHome(){ closeAllPops(); if(view!=="year") setView("year"); else render(); }
 function closeAllPops(){
-  ["brand-panel","export-panel","notif-panel","acct-menu"].forEach(id=>{
+  ["brand-panel","export-panel","notif-panel","acct-menu","brk-cols-panel"].forEach(id=>{
     const el=document.getElementById(id); if(el) el.classList.remove("open");
   });
 }
@@ -8923,7 +8961,7 @@ let POP_CLICK_INSIDE=false;
 document.addEventListener("click",e=>{
   const t=e.target;
   POP_CLICK_INSIDE=!!(t&&t.closest&&
-    t.closest("#brand-panel,#export-panel,#notif-panel,#acct-menu,.brl-menu,.brfb-pop"));
+    t.closest("#brand-panel,#export-panel,#notif-panel,#acct-menu,.brl-menu,.brfb-pop"))||!!(t&&t.closest&&t.closest("#brk-cols-panel"));
 },true);
 document.addEventListener("click",()=>{
   if(POP_CLICK_INSIDE) return;
@@ -9715,6 +9753,10 @@ const BR_PILL={not_started:'p-plan',drafting:'p-draft',
    Stage became the trail inside the open task, so nothing it showed is
    lost by fixing the columns. */
 const BR_COLS=['Owner','Next due','Delivery'];
+/* V116.8 — THE COLUMNS BUTTON. Task is locked; the five beside it can be
+   switched off, per person, in this browser. 6/6 counts Task. */
+const BRK_COLS=[['st','Status'],['ms','Milestones'],['own','Owner'],['due','Next due'],['del','Delivery']];
+let BRK_HIDE=(()=>{ try{ return new Set(JSON.parse(localStorage.getItem("cc-br-cols")||"[]")); }catch(e){ return new Set(); } })();
 /* ONE TASK OPEN AT A TIME, and that is Chirag's rule from 22 Sep: "you
    could only have one task open at a time, so the length remains
    controlled, but you don't have to go to a separate page." A single id
@@ -9854,13 +9896,55 @@ function brNextDue(t){
 }
 function brCells(t){
   const nd=brNextDue(t);
-  return [ `<span class="c">${escHtml(brPersonName(t.owner_id))}</span>`,
-           `<span class="c${nd.late?' late':''}">${escHtml(nd.txt)}</span>`,
-           `<span class="c">${t.delivery_date?fmtShort(t.delivery_date):'—'}</span>` ];
+  return [ `<span class="c c-own">${escHtml(brPersonName(t.owner_id))}</span>`,
+           `<span class="c c-due${nd.late?' late':''}">${escHtml(nd.txt)}</span>`,
+           `<span class="c c-del">${t.delivery_date?fmtShort(t.delivery_date):'—'}</span>` ];
 }
 function fmtShort(iso){
   const d=new Date(String(iso).slice(0,10));
   return isNaN(d)?'—':`${String(d.getDate()).padStart(2,'0')} ${MN[d.getMonth()+1].slice(0,3)}`;
+}
+function brColsClass(){
+  return "brl"+(BRK_HIDE.size?" cx":"")+[...BRK_HIDE].map(k=>" h-"+k).join("");
+}
+function brColsGrid(){
+  if(!BRK_HIDE.size) return "";
+  const W1={st:"140px",ms:"150px",own:"104px",due:"112px",del:"100px"};
+  const W2={st:"130px",ms:"120px",own:"92px",due:"100px"};
+  const g=(W)=>["3px","20px","minmax(0,1fr)"].concat(BRK_COLS.map(([k])=>k).filter(k=>W[k]&&!BRK_HIDE.has(k)).map(k=>W[k])).concat(["30px"]).join(" ");
+  return `--brg1:${g(W1)};--brg2:${g(W2)};`;
+}
+function brColsFill(){
+  const el=document.getElementById("brk-cols-panel"); if(!el) return;
+  el.innerHTML=`<div class="brk-ioh">Columns</div>
+    <div class="brow brk-lock"><span class="brk-bx on"><i class="ti ti-lock"></i></span><span class="bnm">Task</span></div>`+
+    BRK_COLS.map(([k,l])=>`<div class="brow" onclick="brColFlip('${k}')"><span class="brk-bx${BRK_HIDE.has(k)?"":" on"}">${BRK_HIDE.has(k)?"":"✓"}</span><span class="bnm">${l}</span></div>`).join("")+
+    (BRK_HIDE.size?`<div class="brk-reset" onclick="brColFlip('')">Show all</div>`:"");
+}
+function brColsOpen(e){ brColsFill(); popOpen("brk-cols-panel",e); }
+function brColFlip(k){
+  if(!k) BRK_HIDE.clear(); else if(BRK_HIDE.has(k)) BRK_HIDE.delete(k); else BRK_HIDE.add(k);
+  try{ localStorage.setItem("cc-br-cols",JSON.stringify([...BRK_HIDE])); }catch(e){}
+  render(); brColsFill();
+}
+function brIoOn(){ return view==="branding"&&BR&&BR.ok&&!!activeBrand&&!brIsClient()&&canEdit()&&!brCV()&&can("task_create"); }
+/* V116.8 — what the black bar shows depends on the page. Called by every
+   render: Tasks draws its three, every other page puts Export back. */
+function brNavSync(canE){
+  const onT=view==="branding"&&BR&&BR.ok&&!!activeBrand&&!brIsClient();
+  const cols=document.getElementById("brk-cols"), nw=document.getElementById("brk-new"), ex=document.getElementById("export-btn");
+  if(cols) cols.style.display=onT?"":"none";
+  if(nw) nw.style.display=(onT&&canE)?"":"none";
+  const cn=document.getElementById("brk-cn"); if(cn) cn.textContent=`${1+BRK_COLS.length-BRK_HIDE.size}/${1+BRK_COLS.length}`;
+  if(ex){
+    if(!ex.dataset.orig) ex.dataset.orig=ex.innerHTML;
+    const io=brIoOn();
+    const want=io?'<i class="ti ti-upload"></i><i class="ti ti-download"></i>':ex.dataset.orig;
+    if(ex.innerHTML!==want) ex.innerHTML=want;
+    ex.classList.toggle("brk-io",io);
+    ex.title=io?"Import / Export":"";
+    if(io) ex.setAttribute("aria-label","Import / Export"); else ex.removeAttribute("aria-label");
+  }
 }
 function brRowHtml(t,showTag){
   const pj=brProject(t.project_id), pr=brProgress(t), ms=brMsFor(t.id);
@@ -11500,8 +11584,9 @@ function renderBranding(){
         brFilter.archived?"Archiving a task puts it here and leaves its status alone."
         :(filtered?"Clear them in the panel on the left.":(canE?"Add the first one with the button above.":""))}</div></div>`;
   } else {
-    const head=`<div class="brl-hd"><span></span><span></span><span>Task</span><span>Status</span>
-      <span>Milestones</span>${BR_COLS.map(x=>`<span class="c">${x}</span>`).join("")}<span></span></div>`;
+    const BRKC=["c-own","c-due","c-del"];
+    const head=`<div class="brl-hd"><span></span><span></span><span>Task</span><span class="h-st">Status</span>
+      <span class="h-ms">Milestones</span>${BR_COLS.map((x,i)=>`<span class="c ${BRKC[i]}">${x}</span>`).join("")}<span></span></div>`;
     let rowsHtml="";
     if(brGroup){
       /* Projects first, then everything else. NO HEADING FOR THE
@@ -11522,33 +11607,14 @@ function renderBranding(){
     } else {
       rows.forEach(t=>{ rowsHtml+=brRowHtml(t,true); if(BR_OPEN===t.id) rowsHtml+=brOpenPanelHtml(t); });
     }
-    body=`<div class="brl">${head}${rowsHtml}</div>`;
+    body=`<div class="${brColsClass()}" style="${brColsGrid()}">${head}${rowsHtml}</div>`;
   }
   mc.innerHTML=`
    ${pageHead()}
    <!-- VERONA — the row is the frame's, like every other page's. It
         carried its own spacing before and that is exactly how five pages
         ended up with five rhythms. -->
-   <div class="pgbar" style="justify-content:space-between;">
-     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;">
-       <div style="font-size:15px;font-weight:700;flex:0 0 auto;white-space:nowrap;">
-         ${BR.ok
-            ? (brFilter.archived
-                 ? `${rows.length} Archived`
-                 : (brFilter.status==="closed"
-                      ? `${rows.length} Closed`
-                      : `${rows.length} Branding task${rows.length===1?"":"s"}`))
-            : "Branding"}
-         ${BR.ok&&brFilter.archived
-            ? `<span style="font-weight:400;color:var(--subtle);"> · put away, status kept</span>`
-            : (BR.ok&&brFilter.status==="closed"
-                ? `<span style="font-weight:400;color:var(--subtle);"> · finished, still here</span>`
-                : (BR.ok&&filtered&&rows.length!==total
-                    ? `<span style="font-weight:400;color:var(--subtle);"> · of ${total}</span>`:""))}
-       </div>
-       </div>
-     </div>
-   </div>
+   <!-- V116.8 — the title line went: its count is in the one row below. -->
    <div style="padding:0 32px 20px;">
    <!-- ══ V108.5 · ONE ROW, THE PORTFOLIO'S ════════════════════════
         Chirag, 22 Sep: "filter and sorting styling and workflow
@@ -11570,18 +11636,27 @@ function renderBranding(){
      ${BR.ok?`<span class="brfb-w"><button class="brfb-add" onclick="brFPop(event,'add')">+ Filter</button>${
         BR_FPOP==="add"?brAddPopHtml():""}</span>`:""}
      <span class="brfb-end">
+       ${BR.ok?`<span class="brfb-cnt" data-gate="br-count"><b>${rows.length} ${brFilter.archived?"Archived":(brFilter.status==="closed"?"Closed":`Branding task${rows.length===1?"":"s"}`)}</b>${
+          filtered&&rows.length!==total?`<span> of ${total}</span>`:""}</span>`:""}
        ${BR.ok&&!brIsClient()?`<span class="brl-lens">
      <span class="${BR_CV?"":"on"}" onclick="brSetCV(0)">Team</span>
      <span class="cv${BR_CV?" on":""}" onclick="brSetCV(1)"><i class="ti ti-eye"></i>Client view</span></span>`:""}
        ${BR.ok?`<span class="brl-lens">
      <span class="${brGroup?"":"on"}" onclick="brSetGroup(0)">Flat</span>
      <span class="${brGroup?"on":""}" onclick="brSetGroup(1)">By project</span></span>`:""}
+       ${BR.ok?`<span class="brfb-w brfb-view"><span class="brfb-chip${BR_FPOP==="view"?" open":""}" onclick="brFPop(event,'view')" data-gate="br-view">View
+     <span class="val">${brIsClient()?"":(BR_CV?"Client view":"Team")+" · "}${brGroup?"By project":"Flat"}</span></span>${
+     BR_FPOP==="view"?`<div class="brfb-pop">${brIsClient()?"":[["0","Team"],["1","Client view"]].map(([k,l])=>
+       `<div class="brfb-opt${(BR_CV?"1":"0")===k?" on":""}" onclick="event.stopPropagation();BR_FPOP=null;brSetCV(${k})"><span class="bx">${(BR_CV?"1":"0")===k?"✓":""}</span><span class="nm">${l}</span></div>`).join("")+'<div class="brk-iosep"></div>'}${
+       [["0","Flat"],["1","By project"]].map(([k,l])=>
+       `<div class="brfb-opt${(brGroup?"1":"0")===k?" on":""}" onclick="event.stopPropagation();BR_FPOP=null;brSetGroup(${k})"><span class="bx">${(brGroup?"1":"0")===k?"✓":""}</span><span class="nm">${l}</span></div>`).join("")}</div>`:""}</span>`:""}
        ${BR.ok?`<span class="brfb-w"><span class="brfb-chip${BR_FPOP==="sort"?" open":""}" onclick="brFPop(event,'sort')">Sort
      <span class="op">by</span><span class="val">${escHtml(BR_SORT[brSort]||"")}</span></span>${
      BR_FPOP==="sort"?`<div class="brfb-pop">${Object.entries(BR_SORT).map(([k,v])=>
        `<div class="brfb-opt${brSort===k?" on":""}" onclick="brPickSort(event,'${k}')"><span class="bx">${brSort===k?"✓":""}</span><span class="nm">${escHtml(v)}</span></div>`).join("")}</div>`:""}</span>`:""}
-       ${canE&&BR.ok?`<button class="btn btn-s" style="background:var(--surface);white-space:nowrap;" onclick="tkOpen()" aria-label="Import tasks" title="Download these tasks or a blank template, and put a filled sheet back"><i class="ti ti-upload"></i></button>`:""}
-       ${canE&&BR.ok?`<button class="btn btn-p" style="white-space:nowrap;" onclick="brNewTask()"><i class="ti ti-plus"></i> New task</button>`:""}
+       ${/* V116.8 — New task lives in the black bar. This copy stays for
+            the phone, which lifts it into the round + button. */""}
+       ${canE&&BR.ok?`<button class="btn btn-p brfb-mnew" style="white-space:nowrap;" onclick="brNewTask()"><i class="ti ti-plus"></i> New task</button>`:""}
      </span>
    </div>
      ${body}
@@ -11593,6 +11668,7 @@ function renderBranding(){
      task drew an empty grey box. Chirag found it on 23 Sep. */
   hydrateMedia(mc);
   brPlaceMenus();
+  brNavSync(canE);
 }
 
 /* ── year stepper ── */
@@ -11635,6 +11711,17 @@ function buildExportPanel(){
      and live here. Import WRITES, so it keeps its own confirm step — the
      menu entry is shared, the safety is not. */
   const isBrief=!!document.querySelector(".bd-wrap");
+  if(brIoOn()){
+    const n=(typeof brVisibleRows==="function"?brVisibleRows():null);
+    el.innerHTML=`<div class="brk-ioh"><i class="ti ti-upload"></i>Import</div>
+      <div class="brow act" onclick="closeAllPops();tkPick()"><i class="ti ti-file-upload"></i><span class="bnm">Fill from a sheet</span></div>
+      <div class="brow act" onclick="closeAllPops();tkTemplate(false)"><i class="ti ti-file-spreadsheet"></i><span class="bnm">Blank template</span></div>
+      <div class="brow act" onclick="closeAllPops();openTaskImportHistory()"><i class="ti ti-history"></i><span class="bnm">Past imports</span></div>
+      <div class="brk-iosep"></div>
+      <div class="brk-ioh"><i class="ti ti-download"></i>Export</div>
+      <div class="brow act" onclick="closeAllPops();tkTemplate(true)"><i class="ti ti-table"></i><span class="bnm">This list${(BR.tasks||[]).length?" · "+BR.tasks.length:""}</span></div>`;
+    return;
+  }
   el.innerHTML=`<div class="exscope"><b>What will be exported</b>
       <div>${escAttr(line1)}<br><span class="dim">${escAttr(line2)}</span></div></div>`
     + (isContent
@@ -12311,7 +12398,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V116.7 Tbilisi";
+const TOOL_VERSION="V116.8 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -22695,7 +22782,7 @@ function closeAllPops(){
      without the id would come back on the very next render, which is
      the bug V106.2 fixed for the View panel. */
   BR_MENU=null; BR_STMENU=null; BR_FPOP=null; BR_MSMENU=null;
-  ["brand-panel","export-panel","notif-panel","acct-menu"].forEach(id=>{
+  ["brand-panel","export-panel","notif-panel","acct-menu","brk-cols-panel"].forEach(id=>{
     const el=document.getElementById(id); if(el) el.classList.remove("open");
   });
   const sc=document.getElementById("acct-scrim"); if(sc) sc.classList.remove("on");
@@ -25480,7 +25567,10 @@ function mountFrameRow(){
      frame's height and gap without touching what they say. */
   const head=main.querySelector(":scope > .em2-page > .year-head");
   if(head){ head.classList.add("pgbar","pgbar-head"); return; }
-  if(host.querySelector(":scope > .pgbar, :scope > .ph-acts-only")) return;
+  /* V116.8 — Tasks' filter row is its first row now that the title
+     line has gone, so it takes the band's place rather than sitting
+     under an empty one. */
+  if(host.querySelector(":scope > .pgbar, :scope > .ph-acts-only, :scope > div > .brfb")) return;
   const row=document.createElement("div");
   row.className="pgbar pgbar-empty";
   row.setAttribute("aria-hidden","true");
@@ -25529,6 +25619,7 @@ function renderNoBrands(){
 }
 
 function render(){
+  if(view!=="branding"){ try{ brNavSync(false); }catch(e){} }
   const brandEl=document.getElementById("nav-brand-txt");
   if(brandEl) brandEl.innerHTML=`Marketing Calendar<span class="dot">.</span>`;
 
