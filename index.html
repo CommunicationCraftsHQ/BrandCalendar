@@ -3,6 +3,25 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<script>
+/* V116.6 Tbilisi — Chirag, 14 Oct: "the font sizes everywhere are extremely
+   small ... the minimum has to increase at least 20%." On a touch phone the
+   page is laid out 1.2 times narrower and shown at full width, so every
+   letter, icon and tap target is 20% larger and nothing is redrawn. The
+   computer is untouched. */
+(function(){
+  var S=1.2;
+  function fit(){
+    try{
+      var m=document.querySelector('meta[name="viewport"]'); if(!m) return;
+      var w=screen.width||0, touch=window.matchMedia&&matchMedia("(pointer:coarse)").matches;
+      m.setAttribute("content", touch&&w&&w<=600 ? "width="+Math.round(w/S) : "width=device-width, initial-scale=1.0");
+    }catch(e){}
+  }
+  fit();
+  window.addEventListener("orientationchange",function(){ setTimeout(fit,50); });
+})();
+</script>
 <title>Marketing Calendar 2026</title>
 <!-- V110.2 — the Calendar's own icon, satin set v2 (transparent), 30 Sep 2026 -->
 <link rel="icon" href="https://communicationcraftshq.github.io/BrandCalendar/icons/marketing-calendar/favicon.ico?v=champagneF7" sizes="16x16 32x32 48x48 256x256"/>
@@ -21,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V116.5 Tbilisi"/>
+<meta name="cc-tool-version" content="V116.6 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -4827,6 +4846,28 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
   .ccm.mbx.has > .ccm-send{display:flex!important}
   .ccm.mbx.has > .mb-cam{display:none}
   #mp-bar.mb-off{display:none!important}
+}
+</style>
+<style>
+/* ══ V116.6 TBILISI · THE POST CARD, SECOND PASS ══════════════════════════
+   No picture: a quarter-height strip. A picture or video: shown whole, at
+   its own shape, never cropped. Several: swipe through them. A video plays
+   in the card. */
+@media(max-width:768px){
+  .pc46.pcx .pcimg.empty{aspect-ratio:4/1!important;flex-direction:row!important;gap:8px}
+  .pc46.pcx .pcimg.empty i{font-size:20px!important}
+  .pc46.pcx .pcimg.x-media{aspect-ratio:auto!important;display:block!important;position:relative;background:#F4F3EF}
+  .pc46.pcx .pcimg.x-media > img{display:none!important}
+  .pc46.pcx .x-strip{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .pc46.pcx .x-strip::-webkit-scrollbar{display:none}
+  .pc46.pcx .x-slide{flex:0 0 100%;scroll-snap-align:center;position:relative;display:flex;align-items:center;justify-content:center;background:#F4F3EF}
+  .pc46.pcx .x-slide img,.pc46.pcx .x-slide video{width:100%;height:100%;object-fit:contain;display:block}
+  .pc46.pcx .x-play{position:absolute;inset:0;margin:auto;width:64px;height:64px;border-radius:50%;border:0;background:rgba(13,13,13,.62);color:#fff;
+       display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;z-index:2}
+  .pc46.pcx .x-n{position:absolute;top:10px;right:10px;background:rgba(13,13,13,.62);color:#fff;font-size:12px;font-weight:700;border-radius:99px;padding:3px 9px;z-index:2}
+  .pc46.pcx .x-dots{display:flex;justify-content:center;gap:5px;padding:8px 0 0}
+  .pc46.pcx .x-dots i{width:6px;height:6px;border-radius:50%;background:#D5D3CC;display:block}
+  .pc46.pcx .x-dots i.on{background:#0D0D0D}
 }
 </style>
 </head>
@@ -12220,7 +12261,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V116.5 Tbilisi";
+const TOOL_VERSION="V116.6 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -35086,6 +35127,139 @@ function mbAll(){
   const mo=new MutationObserver(()=>{ if(q) return; q=true; requestAnimationFrame(()=>{ q=false; try{ mbAll(); }catch(e){} }); });
   mo.observe(document.body,{childList:true,subtree:true});
   try{ mbAll(); pcxAll(); }catch(e){}
+})();
+</script>
+<script>
+/* ══ V116.6 TBILISI ══════════════════════════════════════════════════════
+   1 · the card's media: whole, swipeable, playable
+   2 · opening a thread keeps that post where it was on the screen
+   3 · threads open fast: what they need is fetched side by side, the
+       reactions only for this thread, and on a phone every post's thread
+       is fetched quietly after the page draws */
+const PCX_MEDIA={};
+function pcxAssets(id){
+  const vis=a=>a&&!a.deleted_at&&a.kind!=="doc"&&(a.thumb_path||a.poster_path||a.view_path);
+  const bySlide=v=>v.slice().sort((x,y)=>(x.slide_no||99)-(y.slide_no||99));
+  const rs=roundsFor(id);
+  for(let i=rs.length-1;i>=0;i--){ const v=roundAssets(rs[i].id).filter(vis); if(v.length) return bySlide(v); }
+  const cs=(POSTFB.comments[id]||[]).filter(c=>!c.deleted_at).slice().sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  for(const c of cs){ const v=(assetsFor("comment",c.id)||[]).filter(vis); if(v.length) return bySlide(v); }
+  if(SLIDES_BY_POST[id]&&SLIDES_BY_POST[id].filter(vis).length) return bySlide(SLIDES_BY_POST[id].filter(vis));
+  const l=LEAD_BY_POST[id]; return vis(l)?[l]:[];
+}
+function pcxMedia(id,box){
+  const list=pcxAssets(id);
+  if(!list.length) return;
+  PCX_MEDIA[id]=list;
+  const a0=list[0], ar=(a0.width&&a0.height)?(a0.width/a0.height):1;
+  box.classList.remove("empty"); box.classList.add("x-media");
+  box.removeAttribute("data-sign"); box.removeAttribute("onclick"); box.removeAttribute("title");
+  box.innerHTML=`<div class="x-strip" style="aspect-ratio:${ar}">${list.map((a,i)=>`<div class="x-slide" data-i="${i}">${
+      a.kind==="video"?`<button class="x-play" onclick="pcxPlay(this,'${escAttr(id)}',${i})" aria-label="Play"><i class="ti ti-player-play-filled"></i></button>`:""}</div>`).join("")}</div>`+
+    (list.length>1?`<span class="x-n">1/${list.length}</span><div class="x-dots">${list.map((a,i)=>`<i class="${i?"":"on"}"></i>`).join("")}</div>`:"");
+  const slides=[...box.querySelectorAll(".x-slide")];
+  list.forEach((a,i)=>{
+    const p=a.kind==="video"?(a.poster_path||a.thumb_path):(a.view_path||a.thumb_path||a.poster_path);
+    if(p) signedUrl(p).then(u=>{ if(u&&slides[i]&&!slides[i].querySelector("video")) slides[i].insertAdjacentHTML("afterbegin",`<img src="${escAttr(u)}" alt="" draggable="false">`); }).catch(()=>{});
+  });
+  if(list.length>1){
+    const strip=box.querySelector(".x-strip"), n=box.querySelector(".x-n"), dots=[...box.querySelectorAll(".x-dots i")];
+    strip.addEventListener("scroll",()=>{
+      const i=Math.round(strip.scrollLeft/Math.max(1,strip.clientWidth));
+      if(n) n.textContent=(i+1)+"/"+list.length;
+      dots.forEach((d,k)=>d.classList.toggle("on",k===i));
+    },{passive:true});
+  }
+}
+async function pcxPlay(btn,id,i){
+  const a=(PCX_MEDIA[id]||[])[i], slide=btn&&btn.closest(".x-slide"); if(!a||!slide) return;
+  if(!playable(a)){ toast("This video is not available."); return; }
+  const u=await originalUrl(a);
+  if(!u){ toast("This video is not available."); return; }
+  slide.innerHTML=`<video controls autoplay playsinline preload="metadata" src="${escAttr(u)}" controlsList="nodownload" oncontextmenu="return false"></video>`;
+}
+(function(){
+  const base=pcxCard;
+  pcxCard=function(card){
+    const fresh=!card.classList.contains("pcx");
+    base.apply(this,arguments);
+    if(!fresh||!card.classList.contains("pcx")) return;
+    const wrap=card.parentElement, id=String((wrap&&wrap.id)||"").replace(/^pcard-/,"");
+    const box=card.querySelector(".pcimg");
+    if(id&&box) pcxMedia(id,box);
+  };
+})();
+
+/* ── 2 · the post you tapped stays put ── */
+let PCX_ANCHOR=null;
+function pcxScroller(){
+  const m=document.getElementById("main");
+  return (m&&m.scrollHeight>m.clientHeight+2)?m:document.scrollingElement;
+}
+function pcxHold(){
+  if(!PCX_ANCHOR) return;
+  const w=document.getElementById("pcard-"+PCX_ANCHOR.id); if(!w) return;
+  const d=w.getBoundingClientRect().top-PCX_ANCHOR.top;
+  if(Math.abs(d)>1){ const s=pcxScroller(); if(s) s.scrollTop+=d; }
+}
+(function(){
+  const baseT=fbTogglePanel;
+  fbTogglePanel=async function(id){
+    if(!mfNarrow()) return baseT.apply(this,arguments);
+    const w=document.getElementById("pcard-"+id);
+    PCX_ANCHOR=w?{id,top:w.getBoundingClientRect().top}:null;
+    try{ return await baseT.apply(this,arguments); }
+    finally{ pcxHold(); setTimeout(()=>{ pcxHold(); PCX_ANCHOR=null; },400); }
+  };
+  const baseR=renderSocial;
+  renderSocial=function(){ const r=baseR.apply(this,arguments); try{ pcxHold(); }catch(e){} return r; };
+})();
+
+/* ── 3 · threads open fast ── */
+fbEnsureLoaded=async function(postId){
+  if(FB_LOADED[postId]) return;
+  FB_LOADED[postId]=true;
+  try{
+    const [c,a]=await Promise.all([
+      sb.from("post_comments").select("*").eq("post_id",postId).order("created_at"),
+      sb.from("post_activity").select("*").eq("post_id",postId).order("created_at")
+    ]);
+    if(c.error){ FB_LOADED[postId]=false; return; }
+    POSTFB.comments[postId]=c.data||[];
+    POSTFB.activity[postId]=(a.error?[]:(a.data||[]));
+    const ids=(c.data||[]).map(x=>x.id);
+    const [rx]=await Promise.all([
+      ids.length?sb.from("comment_reactions").select("*").in("comment_id",ids):Promise.resolve({data:[],error:null}),
+      loadAssetsFor("comment",ids),
+      loadAssetsFor("post_brief",[postId]),
+      loadRoundsFor(postId)
+    ]);
+    if(rx&&!rx.error){
+      POSTFB.reactions=POSTFB.reactions||{};
+      ids.forEach(i=>{ delete POSTFB.reactions[i]; });
+      (rx.data||[]).forEach(r=>{(POSTFB.reactions[r.comment_id]=POSTFB.reactions[r.comment_id]||[]).push(r);});
+    }
+  }catch(e){ FB_LOADED[postId]=false; }
+};
+let PCX_PRE_BUSY=false; const PCX_TRIED={};
+async function pcxPrefetch(){
+  if(PCX_PRE_BUSY||!mfNarrow()||view!=="content"||!activeBrand||!brands[activeBrand]) return;
+  const ids=[...document.querySelectorAll("#main [id^='pcard-']")].map(n=>n.id.slice(6)).filter(id=>!FB_LOADED[id]&&!PCX_TRIED[id]);
+  if(!ids.length) return;
+  ids.forEach(id=>{ PCX_TRIED[id]=true; });
+  PCX_PRE_BUSY=true;
+  try{
+    for(let i=0;i<ids.length;i+=4) await Promise.all(ids.slice(i,i+4).map(id=>fbEnsureLoaded(id).catch(()=>{})));
+  }finally{ PCX_PRE_BUSY=false; }
+  if(view!=="content") return;
+  /* redraw once, holding whatever post is at the top of the screen */
+  const top=[...document.querySelectorAll("#main [id^='pcard-']")].find(n=>n.getBoundingClientRect().bottom>80);
+  if(top&&!PCX_ANCHOR) PCX_ANCHOR={id:top.id.slice(6),top:top.getBoundingClientRect().top,pre:true};
+  try{ renderSocial(); }finally{ pcxHold(); if(PCX_ANCHOR&&PCX_ANCHOR.pre) PCX_ANCHOR=null; }
+}
+(function(){
+  const baseR=renderSocial;
+  renderSocial=function(){ const r=baseR.apply(this,arguments); setTimeout(()=>{ pcxPrefetch(); },600); return r; };
 })();
 </script>
 </body>
