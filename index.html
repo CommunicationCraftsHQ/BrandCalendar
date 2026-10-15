@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V117.8 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.0 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3249,7 +3249,15 @@ body.brcv .brl-lens span.cv.on{background:#378ADD;color:#fff;}
 .brl-pl .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .brl-pl .k{color:var(--subtle);font-size:12px;}
 .brl-pl mark{background:#FFF3B0;color:inherit;border-radius:2px;padding:0 1px;}
+.brl-owners .fb-sec{padding:10px 8px 3px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);font-weight:600;display:block;cursor:default;}
 .brl-owem{margin-right:5px;}
+/* V117.9 — the drawer's Ac Manager field and its menu */
+.bt-ownw{position:relative;}
+.bt-ownw .bt-own{width:100%;height:36px;border:1px solid var(--div);border-radius:8px;padding:0 10px;font-size:13.5px;font-family:inherit;color:var(--text);background:var(--surface);display:flex;align-items:center;gap:6px;cursor:pointer;text-align:left;}
+.bt-ownw .bt-own.none{color:var(--subtle);}
+.bt-ownw .bt-own .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bt-ownw .bt-own .ti{color:var(--subtle);font-size:13px;}
+.bt-ownw .brl-menu.brl-owners{left:0;right:auto;top:40px;width:100%;z-index:90;}
 .brl-menu.brl-owners .ic{font-size:10px;font-weight:700;}
 .brl-tr .c-lnk,.brl-hd .c-lnk{text-align:center;}
 .brl-lnk{cursor:pointer;color:var(--subtle);font-size:15px;padding:4px;border-radius:6px;}
@@ -4051,6 +4059,7 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
 
 /* the toolbar's own two additions to the shared filter bar */
 .pgbar.prfb{flex-wrap:nowrap;gap:8px;}
+@media(max-width:1400px){#main .pgbar.prfb.fb{flex-wrap:wrap;row-gap:8px;}}
 /* THE SEARCH BOX GIVES UP THE WIDTH FIRST — the same rule the
    Portfolio's own bar follows, for the same reason: it is the one
    control that still works at two thirds the size, and the row has to
@@ -9940,36 +9949,6 @@ function fltSortRows(rows, sorts, sortBy, sortDir){
 function fltByText(f){ return (a, b) => String(f(a) || "").localeCompare(String(f(b) || ""), undefined, { sensitivity: "base" }); }
 function fltByNum(f){ return (a, b) => ((f(a) ?? Infinity) - (f(b) ?? Infinity)); }
 
-/* ── HOW + FILTER OFFERS A FIELD (Chirag, 15 Oct 2026) ──────────────
-   "A two-step filter is only worth it if the list to choose from is too
-   long." So the offer is shaped by the field's values, not by habit:
-     none   — nothing on screen holds a value: the field is not offered
-     yesno  — the values are yes and no: one line, one click, no picker
-     inline — up to FLT_INLINE_MAX values: the values sit under the field
-              name, one click each; a chip appears at once
-     door   — more than that: the field is a door to the picker, as before
-   The chip's own picker is unchanged, so is not / is empty / is not
-   empty are one click away whichever way the filter was added. */
-const FLT_INLINE_MAX = 6;
-function fltIsYesNo(opts){
-  const vs = (opts || []).map(o => String(o[0]).toLowerCase()).sort();
-  return vs.length === 2 && vs[0] === "no" && vs[1] === "yes";
-}
-function fltOfferKind(opts, fd){
-  const live = (opts || []).filter(o => (o[2] || 0) > 0);
-  if (!live.length) return "none";
-  if ((fd && fd.yesno) || fltIsYesNo(opts)) {
-    /* "Late · 0" is a line that narrows to nothing: not offered. */
-    const yes = (opts || []).find(o => String(o[0]).toLowerCase() === "yes");
-    return yes && (yes[2] || 0) > 0 ? "yesno" : "none";
-  }
-  return live.length <= FLT_INLINE_MAX ? "inline" : "door";
-}
-/* The rows that hold nothing for a field — the "empty" pill's count. */
-function fltEmptyCount(rows, k, valsOf){
-  return (rows || []).filter(r => fltValues(valsOf(r, k)).length === 0).length;
-}
-
 /* ==CC-FILTER-CORE:END== */
 
 /* ==CC-FILTER-BAR:BEGIN== */
@@ -10040,36 +10019,6 @@ function fltAddField(e, id, k){
   h.set(fs.concat([fltNew(k)]));
   FLT_UI = { id, open: fs.length, term: "" }; h.render(); fltFocusTerm();
 }
-/* ── ONE STEP WHEN THE LIST IS SHORT (15 Oct 2026) ──────────────────
-   A value drawn under its field in the + Filter menu: one click adds the
-   chip (or widens an existing "is" chip to the value), a second click
-   takes the value out again, and an emptied chip goes. The menu stays
-   open so two values cost two clicks, not four. */
-function fltPickInline(e, id, k, v){
-  if (e) { e.preventDefault(); e.stopPropagation(); }
-  const h = fltHost(id), fs = h.get(), at = fs.findIndex(f => f.k === k);
-  if (at < 0) { h.set(fs.concat([fltNew(k, [v])])); }
-  else {
-    const f = fs[at], vals = new Set(f.vals); vals.has(v) ? vals.delete(v) : vals.add(v);
-    h.set(vals.size ? fs.map((x, n) => (n === at ? { k, op: f.op, vals } : x)) : fs.filter((_, n) => n !== at));
-  }
-  FLT_UI = { id, open: "new", term: "" }; h.render();
-}
-/* A yes/no field is one line: on adds "is yes", off removes the chip. */
-function fltToggleYesNo(e, id, k){
-  if (e) { e.preventDefault(); e.stopPropagation(); }
-  const h = fltHost(id), fs = h.get(), at = fs.findIndex(f => f.k === k);
-  h.set(at < 0 ? fs.concat([fltNew(k, ["yes"])]) : fs.filter((_, n) => n !== at));
-  FLT_UI = { id, open: "new", term: "" }; h.render();
-}
-/* "empty" under a field: the rows with nothing in it. */
-function fltPickEmpty(e, id, k){
-  if (e) { e.preventDefault(); e.stopPropagation(); }
-  const h = fltHost(id), fs = h.get(), at = fs.findIndex(f => f.k === k);
-  const on = at >= 0 && fs[at].op === "is empty";
-  h.set(on ? fs.filter((_, n) => n !== at) : fs.filter((_, n) => n !== at).concat([{ k, op: "is empty", vals: new Set() }]));
-  FLT_UI = { id, open: "new", term: "" }; h.render();
-}
 function fltReset(e, id){
   if (e) { e.preventDefault(); e.stopPropagation(); }
   const h = fltHost(id); h.set([]); FLT_UI = { id: null, open: null, term: "" }; h.render();
@@ -10120,45 +10069,12 @@ function fltChipHtml(id, f, i){
 }
 function fltAddHtml(id){
   const h = fltHost(id), fs = h.get(), open = fltIsOpen(id, "new");
-  const on = k => fs.find(f => f.k === k) || null;
-  /* A door field leaves the menu once it is on the bar (its chip is the
-     control now). An inline or yes/no field stays, showing its state, so
-     a second value is one more click. A field with nothing in it is not
-     offered at all. */
-  const kinds = new Map(h.fields.map(fd => [fd.k, fltOfferKind(h.optionsFor(fd.k), fd)]));
-  const offer = h.fields.filter(fd => kinds.get(fd.k) !== "none" && (kinds.get(fd.k) !== "door" || !on(fd.k)));
-  const icon = fd => `<i class="ti ti-${fltEsc(fd.icon || "filter")}" style="color:var(--subtle);font-size:15px"></i>`;
-  const line = fd => {
-    const kind = kinds.get(fd.k), f = on(fd.k), opts = h.optionsFor(fd.k);
-    if (kind === "yesno") {
-      const lit = !!f && f.op === "is" && f.vals.has("yes") && !f.vals.has("no");
-      const yes = opts.find(o => String(o[0]).toLowerCase() === "yes");
-      return `<div class="fb-opt fb-yn${lit ? " on" : ""}" data-fb-field="${fltEsc(fd.k)}" onclick="fltToggleYesNo(event,'${id}','${fltEsc(fd.k)}')">${icon(fd)}
-        <span class="nm">${fltEsc(fd.label)}</span><span class="ct">${yes ? yes[2] : ""}</span>${lit ? `<i class="ti ti-check fb-tick"></i>` : ""}</div>`;
-    }
-    if (kind === "inline") {
-      const lit = v => !!f && f.op === "is" && f.vals.has(v);
-      const empty = h.emptyFor ? h.emptyFor(fd.k) : 0;
-      const eLit = !!f && f.op === "is empty";
-      return `<div class="fb-fld" data-fb-field="${fltEsc(fd.k)}">${icon(fd)}<span class="nm">${fltEsc(fd.label)}</span></div>
-        <div class="fb-vals">` + opts.filter(o => (o[2] || 0) > 0).map(o =>
-          `<span class="fb-pill${lit(o[0]) ? " on" : ""}" data-fb-val="${fltEsc(o[0])}" onclick="fltPickInline(event,'${id}','${fltEsc(fd.k)}',${JSON.stringify(o[0]).replace(/"/g, "&quot;")})">${fltEsc(o[1])} <span class="ct">${o[2]}</span></span>`).join("")
-        + (empty ? `<span class="fb-pill fb-empty${eLit ? " on" : ""}" onclick="fltPickEmpty(event,'${id}','${fltEsc(fd.k)}')">— empty <span class="ct">${empty}</span></span>` : "") + `</div>`;
-    }
-    return `<div class="fb-opt fb-door" data-fb-field="${fltEsc(fd.k)}" onclick="fltAddField(event,'${id}','${fltEsc(fd.k)}')">${icon(fd)}
-        <span class="nm">${fltEsc(fd.label)}</span><span class="ct">${opts.filter(o => (o[2] || 0) > 0).length}</span><i class="ti ti-chevron-right fb-go"></i></div>`;
-  };
-  /* Inline fields first, then the one-click lines under "Only", then the
-     doors under "Pick from a list" — unless the host groups its fields,
-     in which case each group keeps its own heading and order. */
-  const section = (list) => {
-    const inl = list.filter(fd => kinds.get(fd.k) === "inline"), yn = list.filter(fd => kinds.get(fd.k) === "yesno"), dr = list.filter(fd => kinds.get(fd.k) === "door");
-    return inl.map(line).join("")
-      + (yn.length ? `<div class="fb-sec">Only</div>` + yn.map(line).join("") : "")
-      + (dr.length ? `<div class="fb-sec">Pick from a list</div>` + dr.map(line).join("") : "");
-  };
+  const offer = h.fields.filter(fd => !fs.some(f => f.k === fd.k));
+  const line = fd => `<div class="fb-opt" data-fb-field="${fltEsc(fd.k)}" onclick="fltAddField(event,'${id}','${fltEsc(fd.k)}')">
+      <i class="ti ti-${fltEsc(fd.icon || "filter")}" style="color:var(--subtle);font-size:15px"></i>
+      <span class="nm">${fltEsc(fd.label)}</span><span class="ct">${h.optionsFor(fd.k).length}</span></div>`;
   let rows;
-  if (!h.groups) rows = section(offer);
+  if (!h.groups) rows = offer.map(line).join("");
   else {
     const seen = new Set(); rows = "";
     h.groups.forEach(([g, label]) => {
@@ -10169,7 +10085,7 @@ function fltAddHtml(id){
     rows += offer.filter(fd => !seen.has(fd.k)).map(line).join("");
   }
   return `<span class="fb-w"><button class="fb-add" data-fb-add onclick="fltOpen(event,'${id}','new')"><i class="ti ti-plus"></i> Filter</button>${
-    open ? `<div class="fb-pop open fb-offer" onclick="event.stopPropagation()"><div class="fb-pop-top"><span class="nm">Filter by…</span><span class="sp"></span></div>${
+    open ? `<div class="fb-pop open" onclick="event.stopPropagation()"><div class="fb-pop-top"><span class="nm">Filter by…</span><span class="sp"></span></div>${
       rows || `<div class="fb-none">Every filter with something in it is already on the bar.</div>`}</div>` : ""}</span>`;
 }
 /* The chips, then + Filter, then Reset when anything is doing something. */
@@ -10250,7 +10166,7 @@ function brOptionsFor(k){
   return fltCounts(base,k,brValsOf,BR_YESNO);
 }
 FLT_HOSTS.tasks={
-  fields:BR_FIELDS, optionsFor:brOptionsFor, emptyFor:k=>fltEmptyCount(brBaseRows(),k,brValsOf),
+  fields:BR_FIELDS, optionsFor:brOptionsFor,
   get:()=>brFilter.f, set:fs=>{ brFilter.f=fs; },
   render:()=>render(),
 };
@@ -10510,15 +10426,21 @@ function brOwnerPeople(){
     .map(p=>({id:p.id,nm:(p.name||p.email||"").split("@")[0],em:p.emoji||emojiFor(p.name||p.email)||"",on:here.has(p.id)}))
     .sort((a,b)=>a.nm.localeCompare(b.nm));
 }
-function brOwnerMenuHtml(t){
+/* V117.9 — ONE PERSON MENU, two doors. The row's owner cell and the task
+   drawer's Ac Manager field draw the same search-first list; `pick` is
+   the handler's name, called as pick(event, personId); `draw` redraws
+   whichever host is showing it after a keystroke in the search box. */
+let BR_OWDRAW=null;
+function brPersonMenuHtml(curId, pick, draw){
+  BR_OWDRAW=draw||null;
   const q=BR_OWQ.trim().toLowerCase();
   const all=brOwnerPeople().filter(p=>!q||p.nm.toLowerCase().includes(q));
   const mark=nm=>{ if(!q) return escHtml(nm); const i=nm.toLowerCase().indexOf(q); return i<0?escHtml(nm):escHtml(nm.slice(0,i))+"<mark>"+escHtml(nm.slice(i,i+q.length))+"</mark>"+escHtml(nm.slice(i+q.length)); };
-  const line=p=>`<div class="brl-pl${p.id===t.owner_id?' on':''}" onclick="brPickOwner(event,'${t.id}','${escAttr(p.id)}')">
-      <span class="em">${p.em?escHtml(p.em):`<span class="ic">${escHtml(brInitials(p.id))}</span>`}</span><span class="nm">${mark(p.nm)}</span>${p.id===t.owner_id?'<span class="k">✓</span>':''}</div>`;
+  const line=p=>`<div class="brl-pl${p.id===curId?' on':''}" onclick="${pick}(event,'${escAttr(p.id)}')">
+      <span class="em">${p.em?escHtml(p.em):`<span class="ic">${escHtml(brInitials(p.id))}</span>`}</span><span class="nm">${mark(p.nm)}</span>${p.id===curId?'<span class="k">✓</span>':''}</div>`;
   const here=all.filter(p=>p.on), rest=all.filter(p=>!p.on);
   let list="";
-  if(!q) list+=`<div class="brl-pl${t.owner_id?'':' on'}" onclick="brPickOwner(event,'${t.id}','')"><span class="em">—</span><span class="nm">unassigned</span>${t.owner_id?'':'<span class="k">✓</span>'}</div>`;
+  if(!q) list+=`<div class="brl-pl${curId?'':' on'}" onclick="${pick}(event,'')"><span class="em">—</span><span class="nm">unassigned</span>${curId?'':'<span class="k">✓</span>'}</div>`;
   if(here.length&&rest.length) list+=`<div class="fb-sec">On this brand</div>`+here.map(line).join("")+`<div class="fb-sec">Everyone</div>`+rest.map(line).join("");
   else list+=here.concat(rest).map(line).join("");
   if(!all.length) list+=`<div class="fb-none">Nobody called “${escHtml(BR_OWQ.trim())}”.</div>`;
@@ -10526,10 +10448,13 @@ function brOwnerMenuHtml(t){
     <div class="bp-q"><i class="ti ti-search"></i><input id="brl-owq" placeholder="Find a person…" value="${escAttr(BR_OWQ)}" oninput="brOwnerQ(this.value)" onclick="event.stopPropagation()"></div>
     <div class="brl-pls">${list}</div></div>`;
 }
+function brOwnerMenuHtml(t){ BR_OWFOR=t.id; return brPersonMenuHtml(t.owner_id, "brPickOwnerRow", null); }
+let BR_OWFOR=null;   /* which task's row menu is open */
+function brPickOwnerRow(e,who){ return brPickOwner(e,BR_OWFOR,who); }
 function brOwnerQ(v){
   BR_OWQ=v;
   const box=document.getElementById("brl-owq"), at=box?box.selectionStart:null;
-  render();
+  if(BR_OWDRAW) BR_OWDRAW(); else render();
   const b2=document.getElementById("brl-owq");
   if(b2){ b2.focus(); try{ b2.setSelectionRange(at,at); }catch(e){} }
 }
@@ -11315,6 +11240,33 @@ function uuidOrNull(v){
   return UUID_RE.test(s)?s:null;
 }
 
+/* V117.9 — the drawer's Ac Manager is the same person menu as the row:
+   a field-shaped button, the search-first list under it. Only this
+   field redraws on a keystroke or a pick; the rest of the form keeps
+   whatever is half-typed in it. */
+let BT_OWOPEN=false;
+function brDrawerOwnerHtml(){
+  const p=BT.owner_id?(PEOPLE||[]).find(x=>x.id===BT.owner_id):null;
+  const em=p?(p.emoji||emojiFor(p.name||p.email)||""):"";
+  const nm=p?(p.name||p.email||"").split("@")[0]:"— unassigned —";
+  return `<button type="button" class="bt-own${BT.owner_id?"":" none"}" onclick="brDrawerOwnerOpen(event)">${em?`<span class="brl-owem">${escHtml(em)}</span>`:""}<span class="nm">${escHtml(nm)}</span><i class="ti ti-chevron-down"></i></button>${
+    BT_OWOPEN?brPersonMenuHtml(BT.owner_id,"brDrawerPickOwner",brDrawerOwnerDraw):""}`;
+}
+function brDrawerOwnerDraw(){
+  const el=document.getElementById("bt-own"); if(!el) return;
+  const box=document.getElementById("brl-owq"), at=box?box.selectionStart:null;
+  el.innerHTML=brDrawerOwnerHtml();
+  const b2=document.getElementById("brl-owq");
+  if(b2&&BT_OWOPEN){ b2.focus(); try{ if(at!==null) b2.setSelectionRange(at,at); }catch(e){} }
+}
+function brDrawerOwnerOpen(e){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  const was=BT_OWOPEN; closeAllPops(); BT_OWOPEN=!was; BR_OWQ=""; brDrawerOwnerDraw();
+}
+function brDrawerPickOwner(e,who){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  BT.owner_id=who||null; BT_OWOPEN=false; BR_OWQ=""; brDrawerOwnerDraw();
+}
 function brRenderEditor(){
   const canE=canEdit();
   const pjOpts=`<option value=""${BT.project_id?"":" selected"}>— no project —</option>`+
@@ -11349,7 +11301,7 @@ function brRenderEditor(){
         <div class="fld"><label>Project <em>optional</em></label>
           <select onchange="brPickProject(this)">${pjOpts}</select></div>
         <div class="fld"><label>Ac Manager</label>
-          <select onchange="brSet('owner_id',uuidOrNull(this.value))">${amOpts}</select></div>
+          <div class="bt-ownw" id="bt-own">${brDrawerOwnerHtml()}</div></div>
       </div>
       <div class="brf">
         <div class="fld"><label>Delivery to client</label>
@@ -13001,7 +12953,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V117.8 Tbilisi";
+const TOOL_VERSION="V118.0 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -23413,6 +23365,7 @@ function closeAllPops(){
      the bug V106.2 fixed for the View panel. */
   BR_MENU=null; BR_STMENU=null; BR_FPOP=null; BR_MSMENU=null;
   if(typeof BR_OWMENU!=="undefined") BR_OWMENU=null;
+  if(typeof BT_OWOPEN!=="undefined"&&BT_OWOPEN){ BT_OWOPEN=false; try{ brDrawerOwnerDraw(); }catch(e){} }
   if(typeof FLT_UI!=="undefined") FLT_UI={id:null,open:null,term:""};
   ["brand-panel","export-panel","notif-panel","acct-menu","brk-cols-panel"].forEach(id=>{
     const el=document.getElementById(id); if(el) el.classList.remove("open");
@@ -27202,6 +27155,7 @@ renderBnTabs=function(){
 const PR={key:null,loading:false,err:null,list:[],objs:[],bobjs:[],segs:[],bsegs:[],chans:[],sways:[],
   streams:{},auds:{},months:{},cr:[],crc:{},
   open:null,seg:"running",obj:"",sg:"",sort:"updated",q:"",cols:null,edit:null,prog:null,aud:null,
+  f:null,   /* V117.9 — the kit's filters; null until the page is first drawn */
   creative:null,th:{id:null,msgs:[],acts:[],loading:false,err:""},staged:[],draft:""};
 
 const PR_CST={drafting:["Drafting","#EF9F27"],review:["Review","#378ADD"],approved:["Approved","#639922"],
@@ -27514,6 +27468,35 @@ function prSetQ(v){
   if(b2){ b2.focus(); try{ b2.setSelectionRange(at,at); }catch(err){} }
 }
 const PR_FIELD={seg:"Status",obj:"Objective",sg:"Target group"};
+/* ── V117.9 — THE KIT'S FILTER, as on Tasks ───────────────────────────
+   Three fields, the same chips, the same four comparisons, the same
+   flat offers. The page opens as it always did, without ended
+   promotions — now spelled as the chip Status · is not · Ended already
+   on the bar; Reset takes it off and shows everything. */
+const PR_FIELDS=[
+  {k:"status",label:"Status",      icon:"circle-dot"},
+  {k:"obj",   label:"Objective",   icon:"target"},
+  {k:"sg",    label:"Target group",icon:"users"},
+];
+function prValsOf(p,k){
+  if(k==="status") return prStatus(p);   /* running · upcoming · undated · ended */
+  if(k==="obj")    return p.objective_key||null;
+  if(k==="sg")     return p.brand_segment_id||null;
+  return null;
+}
+function prOptionsFor(k){
+  const base=PR.list;
+  if(k==="status") return fltCounts(base,k,prValsOf,[["running","Running"],["upcoming","Upcoming"],["undated","Undated"],["ended","Ended"]]);
+  if(k==="obj")    return fltCounts(base,k,prValsOf,PR.objs.filter(o=>PR.bobjs.indexOf(o.key)>-1).map(o=>[o.key,prObjLabel(o.key)]));
+  return fltCounts(base,k,prValsOf,(PR.bsegs||[]).map(o=>[o.id,prSegLabel(o)]));
+}
+function prFilters(){ if(!PR.f) PR.f=[{k:"status",op:"is not",vals:new Set(["ended"])}]; return PR.f; }
+FLT_HOSTS.promotions={
+  fields:PR_FIELDS, optionsFor:prOptionsFor,
+  get:()=>prFilters(), set:fs=>{ PR.f=fs; },
+  render:()=>render(),
+};
+function prPickSortK(k){ PR.sort=k; render(); }
 const PR_SEGS={running:"Running",ended:"Ended",all:"All promotions"};
 function prFieldOpts(k){
   if(k==="seg") return Object.keys(PR_SEGS).map(v=>({v,label:PR_SEGS[v],
@@ -27629,10 +27612,7 @@ function prVisible(){
   return PR.list.filter(p=>{
     const st=prStatus(p);
     if(q && String(p.name||"").toLowerCase().indexOf(q)<0) return false;
-    if(PR.seg==="running" && st==="ended") return false;
-    if(PR.seg==="ended" && st!=="ended") return false;
-    if(PR.obj && p.objective_key!==PR.obj) return false;
-    if(PR.sg && p.brand_segment_id!==PR.sg) return false;   /* V110.9 — the row, not the kind */
+    if(!fltKeep(p,prFilters(),prValsOf)) return false;   /* V117.9 — the kit's filters */
     return true;
   }).sort(prSortCmp);
 }
@@ -27675,12 +27655,7 @@ function prListHtml(){
      buys the room back, so the switch can come up beside it. */
   const nsw=(typeof prNumSwitchHtml==="function")?prNumSwitchHtml("promotions"):"";
   const PR_SORT={updated:"updated",name:"name",result:"result",spend:"spend",start:"start"};
-  const sortChip=`<span class="brfb-w prsortw"><span class="brfb-chip${PR_FPOP==="sort"?" open":""}" onclick="prFPop(event,'sort')">
-      <i class="ti ti-arrows-sort"></i><span class="lbl">Sort</span><span class="op">by</span>
-      <span class="val">${escHtml(PR_SORT[PR.sort]||"updated")}</span></span>${
-    PR_FPOP==="sort"?`<div class="brfb-pop">${Object.keys(PR_SORT).map(k=>
-      `<div class="brfb-opt${PR.sort===k?" on":""}" onclick="prPickSort(event,'${k}')">
-         <span class="bx">${PR.sort===k?"✓":""}</span><span class="nm">${escHtml(PR_SORT[k])}</span></div>`).join("")}</div>`:""}</span>`;
+  const sortChip=fltSortHtml("promotions",Object.entries(PR_SORT),PR.sort||"updated","updated","prPickSortK");
   /* THE ORDER IS THE SUITE'S ORDER: the switch, search, the filter
      chips, + Filter — then the one action this page owns, the Columns
      button, and Sort by at the very end with nothing after it. */
@@ -27688,13 +27663,11 @@ function prListHtml(){
      its own `padding:0 0 16px`, which would both drop the page gutter
      this bar shares with the list under it and add 16px of height.
      The chip classes stand on their own, so only they are borrowed. */
-  const bar=`<div class="pgbar prfb">
+  const bar=`<div class="pgbar prfb fb">
       ${nsw}
       <input class="fi brfb-q prfb-q" placeholder="Search promotions…" value="${escAttr(PR.q||"")}"
         oninput="prSetQ(this.value)" onclick="event.stopPropagation()">
-      ${prChipsHtml()}
-      <span class="brfb-w"><button class="brfb-add" onclick="prFPop(event,'add')"><i class="ti ti-plus"></i> Filter</button>${
-        PR_FPOP==="add"?prAddPopHtml():""}</span>
+      ${fltChipsHtml("promotions")}
       <span style="flex:1"></span>
       ${canEditP?`<button class="btn btn-s" style="background:var(--surface);" onclick="priOpen()" aria-label="Import campaigns" title="Download these campaigns or a blank template, and put a filled sheet back"><i class="ti ti-upload"></i></button>`:""}
       ${canEditP?`<button class="btn btn-p" onclick="prEditOpen(null)"><i class="ti ti-plus"></i> New promotion</button>`:""}
@@ -36297,7 +36270,7 @@ async function mdbLoad(bid){
     if(MDB.pendingTag){
       const tg=mdbTag(MDB.pendingTag); MDB.pendingTag=null;
       MDB.f=MDB.f.filter(f=>f.k!=="tag");
-      if(tg) MDB.f.push({k:"tag",op:"is",vals:[tg.id]});
+      if(tg) MDB.f.push(fltNew("tag",[tg.id]));
       else toast("That tag is no longer on this board. Showing every reference.","err");
     }
   }catch(e){ MDB.err=String(e&&e.message||e); }
@@ -36317,7 +36290,27 @@ const MDB_FIELDS={
   src: {label:"Source",   of:x=>[mdbSrcName(x)],       name:v=>v},
   type:{label:"Type",     of:x=>[x.kind==="video"?"video":"image"], name:v=>v==="video"?"Video":"Picture"}
 };
-function mdbTagSel(){ const f=MDB.f.find(f=>f.k==="tag"&&f.op==="is"); return f?f.vals:[]; }
+function mdbTagSel(){ const f=MDB.f.find(f=>f.k==="tag"&&f.op==="is"); return f?[...f.vals]:[]; }
+/* V117.9 — the kit's filter: MDB.f holds {k, op, vals:Set} like every
+   other host, MDB_FIELDS stays the one answer to "what does a picture
+   hold for this field". */
+const MDB_KIT_FIELDS=[
+  {k:"tag", label:"Tag",     icon:"tag"},
+  {k:"by",  label:"Added by",icon:"user"},
+  {k:"src", label:"Source",  icon:"world"},
+  {k:"type",label:"Type",    icon:"photo"},
+];
+function mdbValsOf(x,k){ return MDB_FIELDS[k].of(x).filter(v=>v!==""&&v!==null&&v!==undefined); }
+function mdbOptionsFor(k){
+  const choices=k==="tag"?MDB.tags.map(t=>[t.id,t.name]):[];
+  return fltCounts(MDB.items,k,mdbValsOf,choices,v=>MDB_FIELDS[k].name(v)).sort((a,b)=>(b[2]-a[2])||String(a[1]).localeCompare(String(b[1])));
+}
+FLT_HOSTS.mood={
+  fields:MDB_KIT_FIELDS, optionsFor:mdbOptionsFor,
+  get:()=>MDB.f, set:fs=>{ MDB.f=fs; },
+  render:()=>mdbRefresh(),
+};
+function mdbPickSort(k){ MDB.sort=k; mdbBar(); mdbGrid(); }
 function mdbVisible(){
   const q=MDB.q.trim().toLowerCase();
   const r=MDB.items.filter(x=>{
@@ -36325,8 +36318,7 @@ function mdbVisible(){
       const hay=[x.title,x.note,x.domain,...mdbTagIds(x).map(id=>(mdbTag(id)||{}).name)].join(" ").toLowerCase();
       if(hay.indexOf(q)<0) return false;
     }
-    return MDB.f.every(f=>{ if(!f.vals.length) return true;
-      const hit=MDB_FIELDS[f.k].of(x).some(v=>f.vals.includes(v)); return f.op==="is"?hit:!hit; });
+    return fltKeep(x,MDB.f,mdbValsOf);   /* V117.9 — the kit's filters */
   });
   return r.sort((a,b)=>{ const c=String(b.created_at||"").localeCompare(String(a.created_at||"")); return MDB.sort==="oldest"?-c:c; });
 }
@@ -36475,9 +36467,9 @@ function mdbTMenu(e,id){ e.stopPropagation(); MDB.tmenu=MDB.tmenu===id?null:id; 
 function mdbTagClick(e,id){
   if(e) e.stopPropagation();
   if(view!=="mood"){ mdbGo(); }
-  let f=MDB.f.find(f=>f.k==="tag"&&f.op==="is"); if(!f){ f={k:"tag",op:"is",vals:[]}; MDB.f.push(f); }
-  f.vals=f.vals.includes(id)?f.vals.filter(x=>x!==id):f.vals.concat(id);
-  if(!f.vals.length) MDB.f=MDB.f.filter(x=>x!==f);
+  let f=MDB.f.find(f=>f.k==="tag"&&f.op==="is"); if(!f){ f=fltNew("tag"); MDB.f.push(f); }
+  f.vals.has(id)?f.vals.delete(id):f.vals.add(id);
+  if(!f.vals.size) MDB.f=MDB.f.filter(x=>x!==f);
   MDB.pop=null; MDB.tmenu=null; if(MDB.open) mdbClose(true);
   mdbRefresh();
 }
@@ -36548,7 +36540,7 @@ async function mdbMerge(from,into){
   if(fail){ toast("Some references were not changed — "+escHtml(fail),"err"); await mdbLoad(MDB.bid); return; }
   const r=await sb.from("mood_tags").update({deleted_at:new Date().toISOString()}).eq("id",from).select("id");
   if(!r.error) MDB.tags=MDB.tags.filter(t=>t.id!==from);
-  MDB.f.forEach(f=>{ if(f.k==="tag") f.vals=[...new Set(f.vals.map(v=>v===from?into:v))]; });
+  MDB.f.forEach(f=>{ if(f.k==="tag") f.vals=new Set([...f.vals].map(v=>v===from?into:v)); });
   mdbRefresh();
   mdbUndoToast(`Merged “${escHtml(a.name)}” into “${escHtml(b.name)}” on ${hit.length} reference${hit.length===1?"":"s"}`,snap);
 }
@@ -36565,7 +36557,7 @@ function mdbAskDelete(id,c){
       const r=await sb.from("mood_tags").update({deleted_at:new Date().toISOString()}).eq("id",id).select("id");
       if(r.error){ toast("The tag was not deleted — "+escHtml(r.error.message),"err"); return; }
       MDB.tags=MDB.tags.filter(x=>x.id!==id);
-      MDB.f.forEach(f=>{ if(f.k==="tag") f.vals=f.vals.filter(v=>v!==id); }); MDB.f=MDB.f.filter(f=>f.k!=="tag"||f.vals.length);
+      MDB.f.forEach(f=>{ if(f.k==="tag") f.vals.delete(id); }); MDB.f=MDB.f.filter(f=>f.k!=="tag"||f.vals.size);
       mdbRefresh();
       mdbUndoToast(`Deleted “${escHtml(t.name)}” from ${c} reference${c===1?"":"s"}`,snap);
     });
@@ -36593,7 +36585,7 @@ function renderMood(){
   mdbEnsure();
   const mc=document.getElementById("main");
   mc.innerHTML=`<div style="padding:0 32px 20px;">
-      <div class="brfb" id="mdb-bar"></div>
+      <div class="fb" id="mdb-bar"></div>
       <div class="mdb-card"><div class="mdb-grid" id="mdb-grid"></div></div>
       <input type="file" id="mdb-files" multiple style="display:none;" onchange="mdbStage(this.files);this.value=''">
     </div>`;
@@ -36603,25 +36595,18 @@ function mdbBar(){
   const bar=document.getElementById("mdb-bar"); if(!bar) return;
   if(MDB.sel){ bar.innerHTML=mdbSelBar(); return; }
   const n=mdbVisible().length;
-  const chips=MDB.f.map((f,i)=>`<span class="brfb-w"><span class="brfb-chip${MDB.pop==="f"+i?" open":""}" onclick="mdbPop(event,'f${i}')">
-      ${MDB_FIELDS[f.k].label} <span class="op">${f.op}</span> <span class="val">${f.vals.length?escHtml(f.vals.map(MDB_FIELDS[f.k].name).join(", ")):"…"}</span>
-      <i class="ti ti-x kill" onclick="mdbKill(event,${i})"></i>${f.vals.length?'<span class="dot"></span>':""}</span>
-      ${MDB.pop==="f"+i?mdbValPop(i):""}</span>`).join("");
+  /* V117.9 — the kit's row: search · chips · + Filter · Reset ···· Select · count · Sort */
   bar.innerHTML=`
-    <input class="fi brfb-q" placeholder="Search the board…" value="${escAttr(MDB.q)}"
+    <input class="fi fb-q" placeholder="Search the board…" value="${escAttr(MDB.q)}"
       oninput="MDB.q=this.value;mdbGrid();mdbCnt()" onclick="event.stopPropagation()">
-    ${chips}
-    <span class="brfb-w"><button class="brfb-add" onclick="mdbPop(event,'add')">+ Filter</button>${MDB.pop==="add"?`<div class="brfb-pop"><div class="brfb-top">Filter by</div>${
-      Object.keys(MDB_FIELDS).map(k=>`<div class="brfb-opt" onclick="mdbAddF(event,'${k}')"><span class="nm">${MDB_FIELDS[k].label}</span></div>`).join("")}</div>`:""}</span>
-    <span class="brfb-end">
-      ${MDB.ok&&MDB.items.length?`<span class="brfb-chip" onclick="mdbSelect(true)" title="Select several pictures"><i class="ti ti-checkbox"></i>Select</span>`:""}
-      <span class="brfb-cnt" id="mdb-cnt">${mdbCntHtml(n)}</span>
-      <span class="brfb-w"><span class="brfb-chip${MDB.pop==="sort"?" open":""}" onclick="mdbPop(event,'sort')">Sort <span class="op">by</span><span class="val">${MDB.sort}</span></span>${
-        MDB.pop==="sort"?`<div class="brfb-pop" style="left:auto;right:0">${["newest","oldest"].map(k=>
-          `<div class="brfb-opt${MDB.sort===k?" on":""}" onclick="event.stopPropagation();MDB.sort='${k}';MDB.pop=null;mdbBar();mdbGrid()"><span class="bx">${MDB.sort===k?"✓":""}</span><span class="nm">${k}</span></div>`).join("")}</div>`:""}</span>
+    ${fltChipsHtml("mood")}
+    <span class="fb-end">
+      ${MDB.ok&&MDB.items.length?`<button class="fb-add" onclick="mdbSelect(true)" title="Select several pictures"><i class="ti ti-checkbox"></i>Select</button>`:""}
+      <span id="mdb-cnt">${mdbCntHtml(n)}</span>
+      ${fltSortHtml("mood",[["newest","Newest first"],["oldest","Oldest first"]],MDB.sort,"newest","mdbPickSort")}
     </span>`;
 }
-function mdbCntHtml(n){ return `<b>${n}</b>${n!==MDB.items.length?`<span>of ${MDB.items.length}</span>`:`<span>reference${n===1?"":"s"}</span>`}`; }
+function mdbCntHtml(n){ return fltCountHtml(n,MDB.items.length,"reference"); }
 function mdbCnt(){ const c=document.getElementById("mdb-cnt"); if(c) c.innerHTML=mdbCntHtml(mdbVisible().length); }
 function mdbValPop(i){
   const f=MDB.f[i], F=MDB_FIELDS[f.k];
@@ -36639,7 +36624,7 @@ function mdbFlip(e,i){ e.stopPropagation(); MDB.f[i].op=MDB.f[i].op==="is"?"is n
 function mdbKill(e,i){ e.stopPropagation(); MDB.f.splice(i,1); MDB.pop=null; mdbRefresh(); }
 document.addEventListener("click",e=>{
   if(view!=="mood") return;
-  if(MDB.pop&&!(e.target.closest&&e.target.closest("#mdb-bar .brfb-pop"))){ MDB.pop=null; mdbBar(); }
+  if(MDB.pop&&!(e.target.closest&&e.target.closest("#mdb-bar .fb-pop"))){ MDB.pop=null; mdbBar(); }
   if((MDB.tmenu||MDB.tmerge)&&!(e.target.closest&&e.target.closest(".mdb-menu"))){ MDB.tmenu=null; MDB.tmerge=false; buildMoodSidebar(); }
 });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&MDB.open) mdbClose(); });
