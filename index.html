@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V117.7 Tbilisi"/>
+<meta name="cc-tool-version" content="V117.8 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -5084,6 +5084,39 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
   #main .mc-grid.xm-slide-l{animation:xmL .22s ease;} #main .mc-grid.xm-slide-r{animation:xmR .22s ease;}
   @keyframes xmL{from{transform:translateX(28px);opacity:.3}to{transform:none;opacity:1}}
   @keyframes xmR{from{transform:translateX(-28px);opacity:.3}to{transform:none;opacity:1}}
+}
+</style>
+<style>
+/* ══ V117.8 TBILISI · THE BARS, SMOOTHER; THE +, QUIETER ═══════════════
+   Chirag, 15 Oct: "the appearance and the disappearance of the top and the
+   bottom bar is too jerky"; the + "should be 20% smaller ... bold and
+   properly centralised ... treated slightly differently"; Promotions shrank
+   to fit its tab.
+   · The page used to jump the moment the tile bar started to fold, because
+     the space it held was taken back in one frame while the bar itself
+     took 0.18s. The space is now animated too (a registered length), so
+     bar and page move together, over the same 0.32s, on the same curve,
+     as do the bottom tabs.
+   · The + is 45px (was 56), drawn as two bold bars so it sits exactly in
+     the middle, and it does not slide with the tabs: it shrinks and fades
+     in place, and comes back with a small spring, a beat after the bars. */
+@property --mf-sub{syntax:'<length>';inherits:true;initial-value:0px;}
+@media(max-width:768px){
+  :root{transition:--mf-sub .32s cubic-bezier(.22,.8,.24,1);}
+  :root.mfsub .mf-sub{transition:height .32s cubic-bezier(.22,.8,.24,1),padding .32s cubic-bezier(.22,.8,.24,1),border-bottom-width .32s;}
+  :root.mfsub .mf-sub > *{transition:opacity .2s ease,transform .32s cubic-bezier(.22,.8,.24,1);}
+  :root.mfsub.mfhid .mf-sub > *{opacity:0;transform:translateY(-10px);}
+  .mf-tabs{transition:transform .32s cubic-bezier(.22,.8,.24,1)!important;}
+  :root.mfhid .mf-tabs{transform:translateY(105%)!important;}
+
+  .mf-fab{width:45px!important;height:45px!important;right:18px!important;bottom:calc(var(--mf-tabs) + var(--mf-safe) + 18px)!important;
+       box-shadow:0 5px 14px rgba(215,38,61,.32)!important;
+       transition:transform .26s cubic-bezier(.34,1.56,.64,1) .08s,opacity .2s ease .08s!important;}
+  .mf-fab .ti{display:none!important;}
+  .mf-fab::before,.mf-fab::after{content:"";position:absolute;left:50%;top:50%;width:18px;height:3px;border-radius:2px;background:#fff;transform:translate(-50%,-50%);}
+  .mf-fab::after{width:3px;height:18px;}
+  :root.mfhid .mf-fab{transform:scale(.4)!important;opacity:0!important;pointer-events:none;
+       transition:transform .18s ease-in,opacity .14s ease-in!important;}
 }
 </style>
 </head>
@@ -12968,7 +13001,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V117.7 Tbilisi";
+const TOOL_VERSION="V117.8 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -35403,7 +35436,7 @@ function mfTilesPaint(){
   mfPageGo=function(){ mfSheetClose(); const s=document.getElementById("mf-sub"); if(s) s.classList.remove("searching"); showBar(); return baseGo.apply(this,arguments); };
 
   /* ── the bar slides away on the way down, and back on a small pull ── */
-  let last=0;
+  let last=0, MF_ACC=0;
   function showBar(){ document.documentElement.classList.remove("mfhid"); }
   document.addEventListener("scroll",e=>{
     if(!mfNarrow()) return;
@@ -35411,9 +35444,15 @@ function mfTilesPaint(){
     if(!el||!(el.id==="main"||(el.classList&&el.classList.contains("main"))||el===document.scrollingElement)) return;
     if(MF_SHEET||document.getElementById("mf-sub").classList.contains("searching")) return;
     const st=el.scrollTop, d=st-last; last=st;
-    if(st<24){ showBar(); return; }
-    if(d>8) document.documentElement.classList.add("mfhid");
-    else if(d<-6) showBar();
+    if(st<24){ MF_ACC=0; showBar(); return; }
+    /* V117.8 — distance travelled one way, not the size of one scroll
+       event: 40px down hides, 30px up shows, and a change of direction
+       starts the count again. A thumb resting on the glass no longer
+       makes the bars flicker. */
+    if(!d) return;
+    MF_ACC=(Math.sign(d)===Math.sign(MF_ACC))?MF_ACC+d:d;
+    if(MF_ACC>40) document.documentElement.classList.add("mfhid");
+    else if(MF_ACC<-30) showBar();
   },true);
   /* a pull down at the very top (nothing left to scroll) still brings it back */
   let y0=null;
@@ -37345,6 +37384,20 @@ function xmDress(){
     xmStep(dx<0?1:-1);
     const g=document.querySelector("#main .mc-grid"); if(g) g.classList.add(dx<0?"xm-slide-l":"xm-slide-r");
   },{passive:true});
+})();
+</script>
+<script>
+/* V117.8 — "Promotions" is too long for a phone tab and was shrinking to
+   fit. The tab reads "Promos"; the page keeps its name. */
+(function(){
+  const base=mfTabsFill;
+  mfTabsFill=function(){
+    const r=base.apply(this,arguments);
+    const t=document.querySelector('#mf-tabs .mf-tab[data-mf="promotions"] span');
+    if(t&&t.textContent!=="Promos") t.textContent="Promos";
+    return r;
+  };
+  try{ mfTabsFill(); }catch(e){}
 })();
 </script>
 </body>
