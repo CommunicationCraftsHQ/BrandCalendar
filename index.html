@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V116.9 Tbilisi"/>
+<meta name="cc-tool-version" content="V117.0 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -6901,7 +6901,7 @@ function stSelect(id,val){return `<select class="fi" style="height:30px;font-siz
 function variantFields(p,platform){
   const v=p.content[platform]||emptyVariant();
   return `<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Caption</div>
-    <textarea class="fi ta ta-grow" style="min-height:44px;font-size:12px;margin-bottom:8px;" placeholder="Write a caption…" oninput="socialFieldEdit('${p.id}','caption',this.value,'${platform}');taGrow(this)">${seEsc(v.caption)}</textarea>
+    <div class="fi ta rt capx" contenteditable="true" data-nodraft="1" data-ph="Write a caption…" style="min-height:44px;font-size:12px;margin-bottom:8px;" onfocus="rtFocus(this)" onblur="mpBarHide()" oninput="capSave('${p.id}',this,'${platform}')">${capShow(v)}</div>
     <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Hashtags</div>
     <input class="fi" style="height:30px;font-size:12px;color:#185FA5;margin-bottom:8px;" placeholder="#hashtags" value="${escAttr(v.hashtags)}" oninput="socialFieldEdit('${p.id}','hashtags',this.value,'${platform}')"/>
     <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Design</div>
@@ -6994,7 +6994,7 @@ function socialEditForm(p){
   if(synced){
     const v=p.content.instagram;
     body=`${conceptField}<div class="fl2">Caption</div>
-      <textarea class="fi ta ta-grow" style="min-height:52px;font-size:12px;margin-bottom:11px;" placeholder="Write a caption…" oninput="socialFieldEdit('${p.id}','caption',this.value);taGrow(this)">${seEsc(v.caption)}</textarea>
+      <div class="fi ta rt capx" contenteditable="true" data-nodraft="1" data-ph="Write a caption…" style="min-height:52px;font-size:12px;margin-bottom:11px;" onfocus="rtFocus(this)" onblur="mpBarHide()" oninput="capSave('${p.id}',this)">${capShow(v)}</div>
       <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:9px;">
         <div><div class="fl2">Hashtags</div><input class="fi" style="height:32px;font-size:12px;color:#185FA5;" placeholder="#hashtags" value="${escAttr(v.hashtags)}" oninput="socialFieldEdit('${p.id}','hashtags',this.value)"/></div>
         <div><div class="fl2">Format</div>${fmtSelect(p.id,p.format)}</div>
@@ -12398,7 +12398,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V116.9 Tbilisi";
+const TOOL_VERSION="V117.0 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -20027,7 +20027,7 @@ function socialViewCard(p){
   const capHtml=(cap||canCap)
     ? `<div id="pcap-${p.id}" class="pccap${canCap?" can":""}${cap?"":" none"}"
          data-ph="${escAttr(canCap?"Write the caption…":"")}"
-         ${canCap?'contenteditable="true" spellcheck="true" oninput="fbCaptionInput(\''+p.id+'\')"':""}>${cap?escAttr(cap):""}</div>`
+         ${canCap?'contenteditable="true" spellcheck="true" onfocus="rtFocus(this)" onblur="mpBarHide()" oninput="fbCaptionInput(\''+p.id+'\')"':""}>${cap?capShow(capVariant(p)):""}</div>`
     : `<div class="pccap" style="color:var(--muted);">${idea?escAttr(idea):`<span style="color:var(--subtle);">Nothing written yet</span>`}</div>`;
 
   return `<div class="pc pc46${isOpen?" thopen":""}">
@@ -36441,5 +36441,82 @@ async function mdbImport(){
 }
 </script>
 
+<script>
+/* ══ V117.0 TBILISI · TWO FIXES FROM CHIRAG, 15 OCT ══════════════════════
+
+   1 · "When you switch between brands … if you are on Posts and move to a
+   different brand, you also change from Posts to Plan. That should not
+   happen." pickBrand sent every brand change to the Plan page. Now the
+   page you were on comes with you, through that page's own door (so
+   Posts still switches the social layer on, Promotions still checks
+   access). Coming from All brands, or from a page that belongs to no
+   brand, the Plan page is still where you land. */
+(function(){
+  const DOORS={content:"navPosts",branding:"navTasks",promotions:"navPromotions",numbers:"navNumbers",brief:"openBrief"};
+  const basePick=pickBrand;
+  pickBrand=function(k){
+    const was=view, hadBrand=!!(activeBrand&&brands[activeBrand]);
+    const onTab=hadBrand&&BN_TABS.some(t=>(t.on||[]).indexOf(was)>-1);
+    const r=basePick.apply(this,arguments);
+    try{
+      if(onTab&&was!=="mplan"&&view==="mplan"&&k&&activeBrand===k&&brands[k]){
+        const d=DOORS[was];
+        if(d&&typeof window[d]==="function") window[d]();
+        else setView(was);
+      }
+    }catch(e){}
+    return r;
+  };
+})();
+
+/* 2 · "While writing the caption there are no formatting options … the
+   text box should be the same that we are using everywhere." The caption
+   is now the suite's writing box: bold, italic, bullets and links from
+   the same black bar the design brief and the plan use.
+
+   WHAT IS STORED. Instagram and Facebook take plain words, and twenty-odd
+   readers (the deck, the Word file, the sheets, the import, WhatsApp
+   share, the preview) read `caption` as plain words. So `caption` stays
+   plain, always; the formatted version rides next to it in the same
+   content object as `caption_rich`. No migration — the object is saved
+   whole. A rich copy is only used while it still says the same words as
+   `caption`; if anything else rewrites the caption (an import, a
+   suggestion kept), the plain words win and nothing stale is shown. */
+function capSame(a,b){ return String(a||"").replace(/\s+/g," ").trim()===String(b||"").replace(/\s+/g," ").trim(); }
+function capShow(v){
+  v=v||{};
+  if(v.caption_rich&&wIsRich(v.caption_rich)&&capSame(wPlain(v.caption_rich),v.caption)) return wClean(v.caption_rich);
+  return wEsc(String(v.caption||"")).replace(/\n/g,"<br>");
+}
+function capVariant(p){
+  const ig=(p.content&&p.content.instagram)||{}, fb=(p.content&&p.content.facebook)||{};
+  return String(ig.caption||"").trim()?ig:fb;
+}
+function capSave(id,el,platform){
+  const b=brands[activeBrand]; if(!b) return;
+  const p=(b.social||[]).find(x=>x.id===id); if(!p) return;
+  const html=wValue(el), plain=wPlain(html), rich=wIsRich(html)?html:"";
+  const vs=p.synced?[p.content.facebook,p.content.instagram]:[p.content[platform||"instagram"]];
+  vs.forEach(v=>{ if(v) v.caption_rich=rich; });
+  socialFieldEdit(id,"caption",plain,platform);
+}
+(function(){
+  /* the card's own caption saves through the same door */
+  fbCaptionInput=function(postId){
+    if(!canEditCaption()) return;
+    const box=document.getElementById("pcap-"+postId); if(!box) return;
+    box.classList.remove("flash");
+    box.classList.toggle("none",capRead(box)==="");
+    const b=brands[activeBrand], p=b&&(b.social||[]).find(x=>x.id===postId);
+    const ig=(p&&p.content&&p.content.instagram)||{}, fb=(p&&p.content&&p.content.facebook)||{};
+    /* the variant the card is showing is the one being edited */
+    capSave(postId,box,(p&&!p.synced&&!String(ig.caption||"").trim()&&String(fb.caption||"").trim())?"facebook":"instagram");
+  };
+  const st=document.createElement("style");
+  st.textContent=`.fi.ta.rt.capx{white-space:pre-wrap;line-height:1.5;}
+    .pccap.can b,.pccap.can strong,.fi.capx b{font-weight:700;} .pccap ul,.fi.capx ul{margin:2px 0 2px 18px;padding:0;}`;
+  document.head.appendChild(st);
+})();
+</script>
 </body>
 </html>
