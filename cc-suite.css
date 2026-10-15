@@ -35,7 +35,7 @@
    Bump this with every batch that changes this file, the way every tool's
    TOOL_VERSION carries its batch name.
 
-   name="cc-tool-version" content="V70.2 Salzburg"
+   name="cc-tool-version" content="V70.3 Salzburg"
 
    Source : webapp/site/index.html (v57.5 — Oslo: the sidebar counts formats, not the total twice)
             — where these rules were extracted from, the last time this
@@ -780,3 +780,251 @@ body .em2-page{height:calc(100vh - 60px - var(--cc-alarm-h,0px));}
   .mf-more{display:block;margin:0 0 14px;padding-bottom:12px;border-bottom:1px solid var(--div);}
   .mf-more .brow{padding:11px 10px;font-size:14.5px;gap:11px;}
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   THE FILTER ROW — IN THE KIT, V70.3 Salzburg · 15 October 2026
+
+   Chirag: "across the entire CC Suite same filter functionality should
+   be used." These are the Portfolio's filterbar.css rules, moved here
+   unchanged, so Portfolio, CC Platform, the Proposal Bank, Roster AND
+   the Marketing Calendar draw one row from one place. The components
+   are cc-suite/ui/FilterBar.jsx (React) and cc-suite/ui/filter-bar.js
+   (the Calendar's copy); the comparison is cc-suite/ui/filter-core.js.
+   ═══════════════════════════════════════════════════════════════════ */
+.fb{display:flex;align-items:center;gap:8px;row-gap:8px;flex-wrap:wrap;
+    padding:20px 0 16px;}
+
+/* SALZBURG V7.5 — `.pf-sub` is gone and so is the offset it needed.
+   The section switch rides inside this row now, so the first thing
+   under the bar is this row, at 20px, on all eleven screens. */
+
+/* EVERY CONTROL IN THIS ROW IS 32px. A switch that is 34 makes the row
+   taller and staggers its neighbours by one pixel — invisible to a
+   left-edge check and obvious to the eye. */
+.fb .brl-lens{height:32px;box-sizing:border-box;}
+.fb .brl-lens > span{display:inline-flex;align-items:center;white-space:nowrap;}
+
+/* ── SALZBURG V7.5 · ONE ROW, AND ONE CLUSTER AT ITS RIGHT END ──────
+   Chirag, 20 September: the search box flush left, and the count
+   "immediately before the sort option — otherwise, as more buttons
+   appear beside sort, the count drifts toward the centre."
+
+   He is describing what three competing auto margins do. V6.7 gave the
+   right edge to `.fb-sortw`, then to `.fb-trail` when a screen had
+   one, and undid the first with a sibling selector; the count mean-
+   while sat at the head of the row with a hairline after it. Every
+   control that wanted the edge had its own rule, so the arrangement
+   depended on which of them happened to be present.
+
+   There is ONE auto margin in this row now and it belongs to `.fb-end`,
+   which holds the view switch, the count and sort in that order. The
+   count cannot drift, because it is not positioned at all — it is the
+   middle child of a box that is itself pinned. */
+.fb-end{margin-left:auto;display:inline-flex;align-items:center;gap:8px;}
+.fb-end .fb-trail,.fb-end .fb-sortw{margin-left:0;}
+.fb-trail{display:inline-flex;align-items:center;gap:8px;}
+
+/* THE COUNT, now sitting between the switch and sort. The hairline
+   that used to separate it from the search box moves to its LEFT, so
+   it still reads as its own thing rather than as part of the switch. */
+/* V8.0 — the count leads the cluster, so its hairline divides it from
+   what follows rather than from what precedes it. */
+.fb-end .lc{margin:0;padding-right:12px;border-right:1px solid var(--div);
+  height:32px;display:inline-flex;align-items:center;white-space:nowrap;
+  font:500 13px/1 'Inter',system-ui,sans-serif;color:var(--muted);}
+/* First child of the cluster — no switch before it — needs no rule to
+   divide it from. */
+/* Alone in the cluster — nothing after it — there is nothing to
+   divide from. */
+.fb-end > .lc:only-child{padding-right:0;border-right:0;}
+.fb-end .lc b{font-weight:700;color:var(--text);font-size:14px;margin-right:3px;}
+.fb-end .lc .sub{color:var(--muted);}
+@media(max-width:900px){
+  /* Wrapped, an auto margin would push the cluster onto a line of its
+     own with the whole width empty beside it. Below this width the row
+     is allowed to be a row and a half, in reading order. */
+  .fb-end{margin-left:0;flex-wrap:wrap;}
+  .fb-end .lc{border-right:0;padding-right:0;}}
+/* Search sits IN the filter row — three rows became one, which is what
+   Chirag asked for. 32px to match the chips exactly; a 34px field
+   beside a 32px chip reads as a mistake rather than as a difference. */
+.fb-q{width:216px;height:32px;font-size:12.5px;flex:none;}
+/* THE CLIENTS ROW IS THE TEST CASE: count, search, two chips, + Filter,
+   Reset, a four-way switch and sort. At 1024 that came to two lines.
+   The search box gives up the width first — it is the one control that
+   still works at two thirds the size. */
+@media(max-width:1200px){.fb-q{width:150px;}}
+@media(max-width:900px){.fb-q{width:120px;}}
+.fb-w{position:relative;display:inline-flex;}
+.fb-chip{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 11px;
+  border:1px solid var(--div);border-radius:9px;background:var(--surface);cursor:pointer;
+  font:600 12.5px/1 'Inter',system-ui,sans-serif;color:var(--text);white-space:nowrap;position:relative;}
+.fb-chip:hover{border-color:rgba(13,13,13,.2);}
+.fb-chip.open{border-color:var(--text);}
+.fb-chip .fb-op{color:var(--muted);font-weight:500;}
+.fb-chip .fb-val{color:var(--acc);font-weight:700;}
+.fb-chip i{font-size:14px;color:var(--subtle);}
+/* The amber dot is the ONLY thing that says "this one is doing
+   something". It reads at a glance across a whole row of chips. */
+.fb-chip .fb-dot{position:absolute;top:-3px;right:-3px;width:8px;height:8px;border-radius:50%;
+  background:#E0A526;border:1.5px solid var(--surface);}
+.fb-kill{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;
+  border-radius:4px;margin:0 -3px 0 1px;color:var(--subtle);flex:none;}
+.fb-kill i{font-size:13px;color:inherit;}
+.fb-kill:hover{background:rgba(13,13,13,.10);color:var(--acc);}
+.fb-add{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 11px;border:0;
+  background:transparent;color:var(--muted);cursor:pointer;border-radius:9px;
+  font:600 12.5px/1 'Inter',system-ui,sans-serif;}
+.fb-add:hover{background:rgba(13,13,13,.05);color:var(--text);}
+
+/* Anchored to its own chip rather than positioned by script. A popover
+   placed with getBoundingClientRect has to be re-placed on every scroll
+   and resize, and is wrong on the frame after each one. */
+.fb-pop{position:absolute;top:calc(100% + 6px);left:0;z-index:800;
+  min-width:264px;max-width:320px;background:var(--surface);
+  border:1px solid var(--div);border-radius:13px;box-shadow:0 18px 46px rgba(13,13,13,.18);
+  padding:8px;display:none;}
+.fb-pop.open{display:block;}
+/* BEIJING V5.5 — the sort chip used to be the rightmost thing that
+   opened a popover, so its popover opened LEFTWARD to stay on screen.
+   It sits third from the left now, ahead of the chips, and the override
+   is gone with the reason for it: from there the popover opens the same
+   way every other one does. Left in place it would have hung off the
+   chip's right edge, which is a thing nobody would have looked for.
+
+   The class stays as a hook. An earlier `:nth-last-child(-n+3)` rule
+   here matched NOTHING — the spacer and the count are always the last
+   children — which is the same positional-selector trap the gate hit,
+   and the reason position is never what anything reaches for. */
+.fb-pop-top{display:flex;align-items:center;gap:6px;padding:4px 6px 8px;
+  font:600 12.5px/1 'Inter',system-ui,sans-serif;}
+.fb-pop-top .nm{color:var(--text);}
+.fb-pop-top .op{color:var(--muted);cursor:pointer;}
+.fb-pop-top .sp{flex:1;}
+/* ── BEIJING V5.4 · THE FOUR OPERATORS ─────────────────────────────
+   A wrapping row, not a scrolling one: "is not empty" is twelve
+   characters and at 260px the four of them need two lines. Two lines of
+   words you can read beats one line with the last one cut off, which is
+   the same defect as the truncated column and in a smaller place. */
+.fb-ops{display:flex;flex-wrap:wrap;gap:4px;padding:0 4px 8px;}
+.fb-opb{font-size:11.5px;line-height:1;padding:6px 9px;border-radius:7px;cursor:pointer;
+  color:var(--muted);background:rgba(13,13,13,.04);white-space:nowrap;}
+.fb-opb:hover{background:rgba(13,13,13,.09);color:var(--text);}
+.fb-opb.on{background:var(--text);color:#fff;}
+.fb-x{width:24px;height:24px;border-radius:6px;border:0;background:transparent;color:var(--subtle);
+  cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:15px;}
+.fb-x:hover{background:rgba(13,13,13,.06);color:var(--text);}
+.fb-pop .fi{height:32px;font-size:12.5px;margin-bottom:6px;}
+.fb-opts{max-height:242px;overflow-y:auto;}
+.fb-opt{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:8px;cursor:pointer;
+  font-size:12.5px;}
+.fb-opt:hover{background:rgba(13,13,13,.05);}
+.fb-box{width:15px;height:15px;border-radius:4px;border:1.5px solid var(--div);flex:none;
+  display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:#fff;}
+.fb-opt.on .fb-box{background:var(--text);border-color:var(--text);}
+.fb-opt .nm{flex:1;min-width:0;}
+.fb-opt .ct{font-size:11px;color:var(--subtle);}
+.fb-none{padding:14px 8px;font-size:12px;color:var(--subtle);text-align:center;}
+/* Single-choice rows carry a tick, not a checkbox — a checkbox promises
+   you can pick several, and sorting by two fields at once is not a
+   thing this does. */
+.fb-opt.one .tick{color:var(--acc);font-size:15px;}
+.fb-opt.one.on .nm{font-weight:700;}
+
+
+/* ── LASA v4.2 · WHERE A FILTER COMES FROM, ON THE CHIP ───────────
+   One word. Brand, client and industry are resolved through
+   `brand_id` and are not stored on the work sample; everything else
+   it owns. The distinction is the architecture, so it rides on the
+   control rather than living only in a comment. */
+.fb-from{font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--acc);background:#FDF4F4;border-radius:999px;padding:1px 5px;margin-left:5px;}
+/* A filter this bar cannot draw is SHOWN and removable, never
+   dereferenced — the shape that blanked the screen in v4.1. */
+.fb-chip.fb-unknown{border-color:#F0C9C9;color:#8A2626;background:#FDF4F4;}
+
+/* KANPUR V5.44 — a heading inside the "Filter by…" menu. Small caps,
+   muted, with air above; the first one sits flush under the title. */
+.fb-grp{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--subtle);padding:10px 8px 3px;}
+.fb-pop-top + .fb-grp{padding-top:2px;}
+
+/* KANPUR V5.45 — the tree picker: a sector line in bold, its industries
+   indented beneath.
+
+   SALZBURG V10.5 — the sectors now CLOSE, so the row carries a twist
+   before the box and the row itself stops being the click target: the
+   twist opens, `.fb-pick` ticks. The padding moved onto `.fb-pick` with
+   it, or the hover band would stop short of the row's edge. */
+.fb-opt.fb-sec .nm{font-weight:700;}
+.fb-opt.fb-sec{margin-top:4px;}
+/* ⚠️ V10.6 — THESE TWO SELECTORS MUST STAY SCOPED. V10.5 wrote
+   `.fb-opt{padding:0;gap:0;}` to make room for the twist, and `.fb-opt`
+   is the row class EVERY popover in this bar draws with: "Filter by…",
+   the sort menu and every flat option list. All of them lost their
+   padding and their icon gap in one line. The rule is the one already
+   written down — extend a shared class, never replace one. */
+.fb-opt.fb-sec, .fb-opt.fb-sub{padding:0;gap:0;}
+.fb-opt.fb-sub .fb-pick{padding-left:22px;}
+.fb-pick{flex:1;min-width:0;display:flex;align-items:center;gap:9px;
+  padding:7px 8px 7px 0;cursor:pointer;}
+.fb-twist{flex:none;width:20px;height:28px;display:inline-flex;align-items:center;
+  justify-content:center;color:var(--subtle);font-size:12px;cursor:pointer;
+  border-radius:6px;}
+.fb-twist i{transition:transform .14s ease;}
+.fb-twist.open i{transform:rotate(90deg);}
+.fb-twist:hover{color:var(--text);background:rgba(13,13,13,.07);}
+.fb-twist.empty{cursor:default;}
+.fb-twist.empty:hover{background:transparent;}
+/* A 320px popover cannot hold "Marketing, Media, Sports & Entertainment"
+   in bold without wrapping it, and a wrapped sector line undoes the
+   whole point of closing them. The tree picker gets the width; every
+   other popover keeps the one it had. */
+.fb-pop.wide{min-width:338px;max-width:386px;}
+/* Closing the sectors is only worth anything if the closed list FITS.
+   At the shared 242px the 15 sectors still scrolled, which is the fault
+   in a smaller coat. MEASURED, not guessed: the 15 closed sectors come
+   to 533px, so 548 is that with room and nothing cut. The viewport cap
+   is there for a short window, where scrolling is the right answer. */
+.fb-pop.wide .fb-opts{max-height:min(548px, 68vh);}
+.fb-pop-foot{display:flex;align-items:center;gap:8px;margin-top:6px;padding:7px 4px 1px;
+  border-top:1px solid var(--div);font-size:11.5px;color:var(--muted);}
+.fb-pop-foot .sp{flex:1;}
+.fb-toggle{display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;}
+.fb-sw{width:24px;height:14px;border-radius:999px;background:var(--div);position:relative;
+  transition:background .15s;flex:none;}
+.fb-sw::after{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;
+  border-radius:50%;background:#fff;transition:left .15s;}
+.fb-toggle.on{color:var(--text);}
+.fb-toggle.on .fb-sw{background:var(--text);}
+.fb-toggle.on .fb-sw::after{left:12px;}
+
+/* ── SALZBURG V6.7 · THE COLUMNS BUTTON, IN THE BLACK BAR ───────────
+   Lifted with the component from Roster, where these three lines are
+   `.rs-navcols`. The popover is anchored to the RIGHT of the button
+   because the button is near the right edge of a 1440px bar and a
+   left-anchored panel would hang off the screen. */
+.pf-navcols{position:relative;display:inline-flex;}
+.pf-navcols .fb-pop{top:calc(100% + 8px);left:auto;right:0;}
+.pf-navcols .nav-btn .n{color:#fff;font-weight:700;}
+.pf-navcols .nav-btn .of{color:rgba(255,255,255,.5);font-weight:500;margin:0 2px 0 3px;}
+.fb-pop-top .pf-reset{color:var(--acc);cursor:pointer;font-weight:700;font-size:11.5px;}
+.fb-opt.lock{opacity:.6;cursor:default;}
+
+/* ── SALZBURG V7.5 · THE RECORD ROW IS THIS ROW ─────────────────────
+   `.fb-rec` adds no geometry. It takes `.fb` whole — 20px above, 16px
+   below, the 32px rhythm — and only says what its three children look
+   like. Anything that changes the listing row's height changes this
+   one by the same amount, which is the entire point. */
+.fb-recw{padding-bottom:0 !important;}
+.fb-rec .btn{height:32px;}
+.fb-back{flex:none;}
+.fb-rec-t{font-size:15px;font-weight:700;color:var(--text);
+  display:inline-flex;align-items:center;height:32px;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fb-rec-t .sub{font-weight:400;color:var(--subtle);font-size:13px;margin-left:8px;}
+@media(max-width:768px){.fb-rec-t .sub{display:none;}}
+
+/* A chip at the right-hand end opens its popover leftward, so it
+   stays on the screen. The Calendar's row had this rule; now all do. */
+.fb-end .fb-pop{left:auto;right:0;}

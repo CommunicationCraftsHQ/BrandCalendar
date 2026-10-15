@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V117.0 Tbilisi"/>
+<meta name="cc-tool-version" content="V117.3 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2796,7 +2796,11 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
   border-bottom:1px solid var(--div)}
 .brl-ph .pl{padding:8px 15px 8px 4px;font-size:11.5px;font-weight:700;display:flex;align-items:center;gap:9px}
 .brl-ph .pl small{font-weight:400;color:var(--subtle)}
-.brl-tr.dim .brl-pill,.brl-tr.dim .brl-sg,.brl-tr.dim .c{opacity:.55}
+/* V117.2 — A DONE ROW IS DIMMED, ITS MENUS ARE NOT. Opacity on the cell
+   reached the steps popover drawn inside it (Chirag, 15 Oct: "the
+   information that opens in a pop-up is transparent"). The pill, the bar
+   and the text are dimmed by name; a .brl-menu inside any of them is not. */
+.brl-tr.dim .brl-pill,.brl-tr.dim .brl-sg>.brl-seg,.brl-tr.dim .brl-sg>.brl-sgadd,.brl-tr.dim .brl-sg>.brl-sgcar,.brl-tr.dim .c>.brl-own,.brl-tr.dim .c:not(.c-own){opacity:.55}
 .brl-empty{padding:52px 20px;text-align:center;color:var(--muted)}
 /* NAPLES - a hand-ordered list. The grip replaces the caret in place, so
    nothing about the grid changes; only the ink in that cell does. */
@@ -2850,7 +2854,7 @@ body.brcv .brl-lens span.cv.on{background:#378ADD;color:#fff;}
    the owner's initials and the Owner column carries the owner's name, so
    every row said who owned it twice — and on a task with no owner the
    circle fell back to "··", two dots beside the menu's three. */
-.brl-hd,.brl-tr{grid-template-columns:3px 20px minmax(0,1fr) 140px 150px 104px 112px 100px 30px;}
+.brl-hd,.brl-tr{grid-template-columns:3px 20px minmax(0,1fr) 140px 150px 104px 112px 100px 44px 30px;}
 .brl-stw{position:relative;}
 /* V108.6 — WITHOUT THIS THE MENU WENT TO THE TOP OF THE PAGE. An
    absolutely positioned child is placed against the nearest POSITIONED
@@ -2897,6 +2901,12 @@ body.brcv .brl-lens span.cv.on{background:#378ADD;color:#fff;}
    left to scroll to. It flips above its row when there is no room under
    it; the class goes on after the draw, by measurement, because how much
    room there is depends on where the row happens to be. */
+/* V117.2 — THE CARD CLIPS ITS OWN MENUS. .brl is overflow:hidden for its
+   rounded corners, so a status, steps or owner menu on the last row of a
+   short list was cut off at the card's edge (the window flip above never
+   fired: there was room in the window, just not in the card). While a
+   menu is open the card lets it out; the corners come back when it closes. */
+.brl:has(.brl-tr .brl-menu){overflow:visible;}
 .brl-menu.up{top:auto;bottom:42px;}
 .brl-menu.stm.up{top:auto;bottom:30px;}
 .brl-menu div{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13px;cursor:pointer;}
@@ -3218,20 +3228,34 @@ body.brcv .brl-lens span.cv.on{background:#378ADD;color:#fff;}
 .brk-reset{font-size:12px;font-weight:600;color:var(--muted);padding:8px 10px 4px;border-top:1px solid var(--div);margin-top:4px;cursor:pointer;}
 .brk-reset:hover{color:var(--text);}
 .brl.h-st .h-st,.brl.h-st .brl-stw,.brl.h-ms .h-ms,.brl.h-ms .brl-sg,
-.brl.h-own .c-own,.brl.h-due .c-due,.brl.h-del .c-del{display:none;}
+.brl.h-own .c-own,.brl.h-due .c-due,.brl.h-del .c-del,.brl.h-lnk .c-lnk{display:none;}
+/* V117.2 — the owner cell is a control; the link cell is one icon. */
+.brl-tr .c-own{position:relative;overflow:visible;}
+.brl-tr .c-own.may{cursor:pointer;}
+.brl-tr .c-own.may:hover .brl-own{color:var(--text);}
+.brl-tr .c-own .brl-sgcar{margin-left:3px;opacity:.5;font-size:10px;}
+.brl-menu.stm.brl-owners{left:auto;right:0;width:200px;max-height:272px;overflow:auto;}
+.brl-menu.brl-owners .ic{font-size:10px;font-weight:700;}
+.brl-tr .c-lnk,.brl-hd .c-lnk{text-align:center;}
+.brl-lnk{cursor:pointer;color:var(--subtle);font-size:15px;padding:4px;border-radius:6px;}
+.brl-lnk:hover{color:var(--acc);background:rgba(13,13,13,.05);}
 @media(min-width:1101px){ .brl.cx>.brl-hd,.brl.cx>.brl-tr{grid-template-columns:var(--brg1);} }
-@media(min-width:769px){ #main .brfb .brfb-end .brfb-mnew{display:none;} }
-.brfb .brfb-view{display:none;}
+@media(min-width:769px){ #main .brfb .brfb-end .brfb-mnew,#main .fb .fb-end .fb-mnew{display:none;} }
+.brfb .brfb-view,.fb .fb-view{display:none;}
 .brfb{flex-wrap:nowrap;}
+/* V117.1 — the Tasks row is the kit's .fb. The frame above it (.ph) owns
+   the gap, so the kit's 20px top padding is not wanted here, and the
+   count is the kit's .lc in its bare form. */
+#main .fb{padding-top:0;flex-wrap:nowrap;}
 @media(min-width:769px) and (max-width:1360px){
-  #main .brfb .brfb-end .brl-lens{display:none;}
-  #main .brfb .brfb-end .brfb-view{display:inline-flex;}
-  #main .brfb .brfb-q{width:auto;flex:0 1 200px;min-width:34px;}
+  #main .brfb .brfb-end .brl-lens,#main .fb .fb-end .brl-lens{display:none;}
+  #main .brfb .brfb-end .brfb-view,#main .fb .fb-end .fb-view{display:inline-flex;}
+  #main .brfb .brfb-q,#main .fb .fb-q{width:auto;flex:0 1 200px;min-width:34px;}
 }
 @media(max-width:1100px){
   .brl.cx>.brl-hd,.brl.cx>.brl-tr{grid-template-columns:var(--brg2);}
-  .brl-hd,.brl-tr{grid-template-columns:3px 20px minmax(0,1fr) 130px 120px 92px 100px 30px;}
-  .brl-hd .c:last-of-type,.brl-tr .c:nth-of-type(3){display:none;}
+  .brl-hd,.brl-tr{grid-template-columns:3px 20px minmax(0,1fr) 130px 120px 92px 100px 40px 30px;}
+  .brl-hd .c-del,.brl-tr .c-del{display:none;}
 }
 
 /* LYON — the sort control sits in the same 34px row as the two lens
@@ -4493,15 +4517,15 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
   #content-plancard .mp-g{grid-template-columns:minmax(0,1fr);}
 
   /* ── Tasks — one card a row, Today first ─────────────────────── */
-  #main .brfb{flex-wrap:wrap;row-gap:8px;}
-  #main .brfb .brfb-q{flex:1 1 100%;min-width:0;}
-  #main div:has(> .brfb){padding:0 12px 20px!important;}
-  #main .brfb .brfb-end{flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-left:0;}
-  #main .brfb .brfb-end .brfb-w{min-width:0;max-width:100%;}
-  #main .brfb .brfb-end .brfb-chip{max-width:100%;overflow:hidden;}
-  #main .brfb .brfb-end .brfb-chip .val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  #main .brfb,#main .fb{flex-wrap:wrap;row-gap:8px;}
+  #main .brfb .brfb-q,#main .fb .fb-q{flex:1 1 100%;min-width:0;}
+  #main div:has(> .brfb),#main div:has(> .fb){padding:0 12px 20px!important;}
+  #main .brfb .brfb-end,#main .fb .fb-end{flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-left:0;}
+  #main .brfb .brfb-end .brfb-w,#main .fb .fb-end .fb-w{min-width:0;max-width:100%;}
+  #main .brfb .brfb-end .brfb-chip,#main .fb .fb-end .fb-chip{max-width:100%;overflow:hidden;}
+  #main .brfb .brfb-end .brfb-chip .val,#main .fb .fb-end .fb-chip .fb-val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
   #main .brfb .brfb-end button[onclick="tkOpen()"]{display:none;}
-  #main .brfb .brfb-end .btn-p{flex:1 0 auto;justify-content:center;}
+  #main .brfb .brfb-end .btn-p,#main .fb .fb-end .btn-p{flex:1 0 auto;justify-content:center;}
   #main .brl{display:flex;flex-direction:column;gap:8px;background:none;border:0;border-radius:0;overflow:visible;}
   #main .brl > .brl-hd{display:none;}
   #main .brl > .brl-ph{order:2;background:none;border:0;padding:8px 2px 0;}
@@ -4548,16 +4572,18 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
   .wa-list .brl-hd,.wa-list .brl-ph,.wa-list .mf-tdh,.wa-list .mf-tdnone{display:none!important;}
   #main:has(.wa-list) .brfb > :not(.brfb-q):not(.brfb-end),
   #main:has(.wa-list) .brfb .brfb-end > :not(.btn-p),
+  #main:has(.wa-list) .fb > :not(.fb-q):not(.fb-end),
+  #main:has(.wa-list) .fb .fb-end > :not(.btn-p),
   #main:has(.wa-list) .pgbar,#main:has(.wa-list) .brl-lens{display:none!important;}
-  #main:has(.wa-list) div:has(> .brfb){padding:0 0 110px!important;background:#fff;min-height:100%;}
+  #main:has(.wa-list) div:has(> .brfb),#main:has(.wa-list) div:has(> .fb){padding:0 0 110px!important;background:#fff;min-height:100%;}
   #main:has(.wa-list){background:#fff;}
-  #main:has(.wa-list) .brfb{padding:10px 12px 0;margin:0;}
-  #main:has(.wa-list) .brfb .brfb-q{border-radius:22px;background:#F2F1EE;border-color:transparent;}
-  #main:has(.wa-list) .brfb .brfb-end{flex:0 0 0!important;}
-  #main:has(.wa-list) .brfb .brfb-end .btn-p{position:fixed;right:16px;bottom:calc(var(--mf-tabs) + var(--mf-safe) + 16px);
+  #main:has(.wa-list) .brfb,#main:has(.wa-list) .fb{padding:10px 12px 0;margin:0;}
+  #main:has(.wa-list) .brfb .brfb-q,#main:has(.wa-list) .fb .fb-q{border-radius:22px;background:#F2F1EE;border-color:transparent;}
+  #main:has(.wa-list) .brfb .brfb-end,#main:has(.wa-list) .fb .fb-end{flex:0 0 0!important;}
+  #main:has(.wa-list) .brfb .brfb-end .btn-p,#main:has(.wa-list) .fb .fb-end .btn-p{position:fixed;right:16px;bottom:calc(var(--mf-tabs) + var(--mf-safe) + 16px);
         width:56px;height:56px;border-radius:16px;padding:0;justify-content:center;font-size:0;z-index:40;
         box-shadow:0 6px 18px rgba(0,0,0,.2);}
-  #main:has(.wa-list) .brfb .brfb-end .btn-p i{font-size:24px;margin:0;}
+  #main:has(.wa-list) .brfb .brfb-end .btn-p i,#main:has(.wa-list) .fb .fb-end .btn-p i{font-size:24px;margin:0;}
   .wa-chips{display:flex;gap:8px;overflow-x:auto;padding:10px 12px 6px;}
   .wa-chips::-webkit-scrollbar{display:none;}
   .wa-chips span{flex:none;padding:6px 13px;border-radius:16px;background:#F2F1EE;font-size:13.5px;font-weight:600;color:#55554F;cursor:pointer;}
@@ -4677,10 +4703,10 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
   .mf-sub > *,.mf-sub .mf-g > *{flex:none;}
   .mf-sub .mf-g{display:contents;}
   /* whatever the page brought, made to sit in one line */
-  .mf-sub .pgbar,.mf-sub .ph,.mf-sub .ph-acts,.mf-sub .calstrip,.mf-sub .brfb,.mf-sub .wa-chips,.mf-sub .pgbar:not(.calstrip) > div:not(.pl-tc):not(.tab-pill):not(.laygrp):not(.ystep),.mf-sub .pgbar:not(.calstrip) > div > div{
+  .mf-sub .pgbar,.mf-sub .ph,.mf-sub .ph-acts,.mf-sub .calstrip,.mf-sub .brfb,.mf-sub .fb,.mf-sub .wa-chips,.mf-sub .pgbar:not(.calstrip) > div:not(.pl-tc):not(.tab-pill):not(.laygrp):not(.ystep),.mf-sub .pgbar:not(.calstrip) > div > div{
        display:contents!important;}
   .mf-sub .nav-sep,.mf-sub .ph-acts-only:empty{display:none!important;}
-  .mf-sub button,.mf-sub .tab-pill,.mf-sub .bh-seg,.mf-sub .brfb-chip,.mf-sub .wa-chips span,.mf-sub .pl-tc{
+  .mf-sub button,.mf-sub .tab-pill,.mf-sub .bh-seg,.mf-sub .brfb-chip,.mf-sub .fb-chip,.mf-sub .wa-chips span,.mf-sub .pl-tc{
        margin:0!important;white-space:nowrap;}
   .mf-sub .btn,.mf-sub .btn-sm{height:32px;padding:0 12px;font-size:13px;border-radius:999px;}
   .mf-sub .wa-chips span{height:32px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;font-size:13px;}
@@ -4690,11 +4716,11 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
   .mf-sub .mf-srch{width:36px;height:36px;border-radius:50%;border:1px solid var(--div);background:var(--surface,#fff);
        display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--text);padding:0;cursor:pointer;}
   .mf-sub .mf-srch.has{border-color:var(--text);}
-  .mf-sub input.brfb-q{display:none!important;}
+  .mf-sub input.brfb-q,.mf-sub input.fb-q{display:none!important;}
   .mf-sub.searching > *:not(.mf-sclose):not(.mf-g){display:none!important;}
-  .mf-sub.searching .mf-g > *:not(:has(input.brfb-q)):not(input.brfb-q),
-  .mf-sub.searching .mf-g > * > *:not(input.brfb-q){display:none!important;}
-  .mf-sub.searching input.brfb-q{display:block!important;flex:1 1 auto!important;width:auto!important;min-width:0;height:36px;
+  .mf-sub.searching .mf-g > *:not(:has(input.brfb-q,input.fb-q)):not(input.brfb-q):not(input.fb-q),
+  .mf-sub.searching .mf-g > * > *:not(input.brfb-q):not(input.fb-q){display:none!important;}
+  .mf-sub.searching input.brfb-q,.mf-sub.searching input.fb-q{display:block!important;flex:1 1 auto!important;width:auto!important;min-width:0;height:36px;
        border-radius:999px;margin:0!important;}
   .mf-sub .mf-sclose{display:none;}
   .mf-sub.searching .mf-sclose{display:flex;width:36px;height:36px;border:0;background:none;font-size:20px;
@@ -4709,13 +4735,13 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
   /* order in the bar: search, the quick chips, then the page's filters */
   .mf-sub .mf-srch,.mf-sub .mf-sclose{order:0;}
   .mf-sub .wa-chips span{order:1;}
-  .mf-sub .brfb > *,.mf-sub .brfb-end > *{order:2;}
+  .mf-sub .brfb > *,.mf-sub .brfb-end > *,.mf-sub .fb > *,.mf-sub .fb-end > *{order:2;}
   /* Tasks: what the phone list does not use stays off the bar, as before */
   .mf-sub[data-v="branding"] .pgbar,.mf-sub[data-v="branding"] .pgbar *,.mf-sub .brl-lens,
-  .mf-sub[data-v="branding"] .brfb-end > .btn-s{display:none!important;}
+  .mf-sub[data-v="branding"] .brfb-end > .btn-s,.mf-sub[data-v="branding"] .fb-end > .btn-s{display:none!important;}
   /* a filter's or sort's list rises from the bottom — inside a sideways
      bar it would be cut off */
-  .mf-sub .brfb-pop,.mf-sub .pl-pick{position:fixed!important;width:auto!important;left:0!important;right:0!important;top:auto!important;bottom:0!important;
+  .mf-sub .brfb-pop,.mf-sub .fb-pop,.mf-sub .pl-pick{position:fixed!important;width:auto!important;left:0!important;right:0!important;top:auto!important;bottom:0!important;
        max-width:none!important;min-width:0!important;max-height:70vh;overflow-y:auto;border-radius:16px 16px 0 0!important;
        padding:6px 8px calc(12px + var(--mf-safe))!important;z-index:700!important;box-shadow:0 -14px 44px rgba(13,13,13,.22)!important;}
   /* five pages along the bottom */
@@ -4763,7 +4789,7 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
        padding:0 16px;font:inherit;font-size:15px;}
   #mf-sw button{width:40px;height:40px;border:0;background:none;font-size:21px;display:flex;align-items:center;justify-content:center;padding:0;color:var(--text);}
   /* the page's own bars stay off the page on these two screens */
-  :root.mftiles #main .pgbar,:root.mftiles #main .brfb,:root.mftiles #main .wa-chips{display:none!important;}
+  :root.mftiles #main .pgbar,:root.mftiles #main .brfb,:root.mftiles #main .fb,:root.mftiles #main .wa-chips{display:none!important;}
   /* Tasks in any order but newest-message, and grouped by project */
   :root.mfdom .wa-list > *{order:0!important;}
   :root.mfgrp .wa-list .brl-ph{display:flex!important;}
@@ -5016,7 +5042,7 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
          Export · New task · bell. brNavSync shows them on Tasks only. -->
     <div class="bsw mf-hide" id="brk-cols" style="display:none;">
       <button class="nav-btn brk-colsbtn" id="brk-cols-btn" onclick="brColsOpen(event)" title="Columns" aria-label="Columns">
-        <i class="ti ti-columns-3"></i><span id="brk-cn">6/6</span></button>
+        <i class="ti ti-columns-3"></i><span id="brk-cn">7/7</span></button>
       <div class="bpanel right" id="brk-cols-panel"></div>
     </div>
     <div class="bsw mf-hide">
@@ -8961,7 +8987,7 @@ let POP_CLICK_INSIDE=false;
 document.addEventListener("click",e=>{
   const t=e.target;
   POP_CLICK_INSIDE=!!(t&&t.closest&&
-    t.closest("#brand-panel,#export-panel,#notif-panel,#acct-menu,.brl-menu,.brfb-pop"))||!!(t&&t.closest&&t.closest("#brk-cols-panel"));
+    t.closest("#brand-panel,#export-panel,#notif-panel,#acct-menu,.brl-menu,.brfb-pop,.fb-pop"))||!!(t&&t.closest&&t.closest("#brk-cols-panel"));
 },true);
 document.addEventListener("click",()=>{
   if(POP_CLICK_INSIDE) return;
@@ -8969,7 +8995,7 @@ document.addEventListener("click",()=>{
      so dismissing them means a redraw as well as a close. Without it a
      click on the page left the menu on screen until something else
      happened to render. */
-  const had=BR_MENU||BR_STMENU||BR_FPOP||(typeof BR_MSMENU!=="undefined"&&BR_MSMENU);
+  const had=BR_MENU||BR_STMENU||BR_FPOP||(typeof BR_MSMENU!=="undefined"&&BR_MSMENU)||(typeof BR_OWMENU!=="undefined"&&BR_OWMENU)||(typeof FLT_UI!=="undefined"&&FLT_UI.open!==null);
   closeAllPops();
   if(had&&typeof render==="function") render();
 });
@@ -9667,7 +9693,325 @@ function brSync(){
     else brSync();                              // they switched again mid-flight
   });
 }
-let brFilter={status:"",project:"",owner:"",overdue:false,unread:false,archived:false,hideClosed:false,q:""};
+/* ══ V117.1 · THE FILTER IS THE KIT'S ════════════════════════════════
+   Chirag, 15 Oct: "across the entire CC Suite same filter functionality
+   should be used." The two blocks below are COPIES of
+   cc-suite/ui/filter-core.js and cc-suite/ui/filter-bar.js, kept in step
+   by cc-suite/ui/sync-writer.js — the Calendar cannot import. The Tasks
+   row is drawn by them: the four comparisons, the search box in the
+   picker, counts, multi-select, the amber dot, Reset.
+
+   WHAT CHANGED IN THE MODEL. `brFilter` used to hold one value per field
+   and four switches. It now holds `f`, a list of {k, op, vals:Set} like
+   every other tool, plus the search text. "Late", "Unread" and
+   "Archived" are fields with Yes / No, so they live in the same picker
+   as Status; "Hide closed" is gone, because "Status · is not · Done" is
+   the same filter spelled the way every other one is spelled. */
+/* ==CC-FILTER-CORE:BEGIN== */
+
+/* THE FOUR COMPARISONS. Adding one is one entry here — not a branch in
+   a matcher AND a string in a bar, which is how the Portfolio's "is not"
+   once meant "is" for three weeks. `needsValues: false` means the
+   comparison asks about the ABSENCE of anything, so a list of values to
+   pick would be a question with no answer. */
+const FLT_OPS = [
+  { op: "is",           needsValues: true  },
+  { op: "is not",       needsValues: true  },
+  { op: "is empty",     needsValues: false },
+  { op: "is not empty", needsValues: false },
+];
+const FLT_DEFAULT_OP = "is";
+const FLT_OP_SET = new Set(FLT_OPS.map(o => o.op));
+
+/* A comparison nothing recognises falls back to the default rather than
+   quietly filtering nothing. */
+function fltOpOf(f){ return (f && FLT_OP_SET.has(f.op)) ? f.op : FLT_DEFAULT_OP; }
+function fltOpNeedsValues(op){ const d = FLT_OPS.find(o => o.op === op); return d ? d.needsValues : true; }
+
+/* IS THIS CHIP DOING ANYTHING? Not the same as "does it have values":
+   "is empty" narrows the list with nothing chosen at all. The amber dot,
+   Reset and the empty-state wording all turn on this, answered once. */
+function fltActive(f){
+  return fltOpNeedsValues(fltOpOf(f)) ? !!(f && f.vals && f.vals.size) : true;
+}
+
+/* THE ONE PLACE A COMPARISON IS DECIDED.
+     present  does this row hold anything at all for the field
+     chosen   has the person picked any values yet
+     hit      do the row's values include one of the picked ones
+   "is" with nothing picked yet filters nothing: the chip is on the bar
+   and open, mid-choice; blanking the list under somebody still deciding
+   is not a filter, it is a flinch. */
+function fltApplyOp(op, present, chosen, hit){
+  if (op === "is empty")     return !present;
+  if (op === "is not empty") return present;
+  if (!chosen) return true;
+  return op === "is not" ? !hit : hit;
+}
+
+/* A row's values for a field, always as an array. Null, undefined and
+   the empty string are "nothing"; 0 and false are values. */
+function fltValues(raw){
+  if (Array.isArray(raw)) return raw.filter(x => x !== null && x !== undefined && x !== "");
+  return (raw === null || raw === undefined || raw === "") ? [] : [raw];
+}
+
+/* Does one row pass one filter? `vals` are the row's values for f.k. */
+function fltMatch(vals, f){
+  const v = fltValues(vals);
+  return fltApplyOp(fltOpOf(f), v.length > 0, !!(f.vals && f.vals.size), v.some(x => f.vals.has(x)));
+}
+
+/* Does one row pass every filter? `valsOf(row, k)` is the screen's own
+   answer to "what does this row hold for field k". */
+function fltKeep(row, filters, valsOf){
+  return (filters || []).every(f => fltMatch(valsOf(row, f.k), f));
+}
+
+/* The value picker's options with their counts: [[value, label, n]].
+   Counted over the WHOLE list, so a value never reads 0 because another
+   chip happens to be hiding its rows. `choices` is [[value, label]] in
+   the order the picker should show them; a value the rows hold that is
+   not in `choices` is appended, so nothing a row carries is unpickable. */
+function fltCounts(rows, k, valsOf, choices, labelOf){
+  const n = new Map();
+  (rows || []).forEach(r => fltValues(valsOf(r, k)).forEach(v => n.set(v, (n.get(v) || 0) + 1)));
+  const out = (choices || []).map(([v, label]) => [v, label, n.get(v) || 0]);
+  const seen = new Set(out.map(o => o[0]));
+  const name = v => String(labelOf ? labelOf(v) : v);
+  [...n.keys()].filter(v => !seen.has(v)).sort((a, b) => name(a).localeCompare(name(b)))
+    .forEach(v => out.push([v, name(v), n.get(v)]));
+  return out;
+}
+
+/* A fresh filter for a field. */
+function fltNew(k, vals){ return { k, op: FLT_DEFAULT_OP, vals: new Set(vals || []) }; }
+
+/* ORDER. `sorts` is [{k, label, cmp}]; ascending is what `cmp` says. */
+function fltSortRows(rows, sorts, sortBy, sortDir){
+  const s = (sorts || []).find(x => x.k === sortBy) || (sorts || [])[0];
+  if (!s) return [...rows];
+  return [...rows].sort((a, b) => (sortDir || 1) * s.cmp(a, b) || 0);
+}
+function fltByText(f){ return (a, b) => String(f(a) || "").localeCompare(String(f(b) || ""), undefined, { sensitivity: "base" }); }
+function fltByNum(f){ return (a, b) => ((f(a) ?? Infinity) - (f(b) ?? Infinity)); }
+
+/* ==CC-FILTER-CORE:END== */
+
+/* ==CC-FILTER-BAR:BEGIN== */
+
+const FLT_HOSTS = {};
+/* One thing open at a time, across every host on the page: an index, "new"
+   or "sort". The search term inside the open picker. */
+let FLT_UI = { id: null, open: null, term: "" };
+
+function fltEsc(s){ return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+function fltHost(id){ const h = FLT_HOSTS[id]; if (!h) throw new Error("No filter host called " + id); return h; }
+function fltIsOpen(id, key){ return FLT_UI.id === id && FLT_UI.open === key; }
+
+/* Open, close or switch the one open popover, then redraw the host. */
+function fltOpen(e, id, key){
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  const same = fltIsOpen(id, key);
+  if (typeof closeAllPops === "function") closeAllPops();
+  FLT_UI = same ? { id: null, open: null, term: "" } : { id, open: key, term: "" };
+  fltHost(id).render(); fltFocusTerm();
+}
+/* A picker that has just opened puts the hand in its search box. */
+function fltFocusTerm(){ const b = document.querySelector(".fb-pop.open .fb-term"); if (b) { try { b.focus(); } catch (e) {} } }
+function fltCloseAll(){
+  if (FLT_UI.id === null) return false;
+  const id = FLT_UI.id; FLT_UI = { id: null, open: null, term: "" };
+  fltHost(id).render(); return true;
+}
+/* Typing in the picker's search box: the list under it is redrawn and
+   the box keeps its caret. */
+function fltTerm(id, v){
+  FLT_UI.term = v;
+  const box = document.querySelector(".fb-pop .fb-term"), at = box ? box.selectionStart : null;
+  fltHost(id).render();
+  const b2 = document.querySelector(".fb-pop .fb-term");
+  if (b2) { b2.focus(); try { b2.setSelectionRange(at, at); } catch (err) {} }
+}
+function fltPut(id, i, next){
+  const h = fltHost(id); h.set(h.get().map((f, n) => (n === i ? next : f))); h.render();
+}
+function fltPickOp(e, id, i, op){
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  const f = fltHost(id).get()[i]; if (!f) return;
+  fltPut(id, i, { k: f.k, op, vals: new Set(f.vals) });
+}
+/* Values are addressed by their position in the picker's list, never by
+   the value itself — a value can be anything, an attribute cannot. */
+function fltToggleVal(e, id, i, at){
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  const h = fltHost(id), f = h.get()[i]; if (!f) return;
+  const opt = h.optionsFor(f.k)[at]; if (!opt) return;
+  const vals = new Set(f.vals); vals.has(opt[0]) ? vals.delete(opt[0]) : vals.add(opt[0]);
+  fltPut(id, i, { k: f.k, op: f.op, vals });
+}
+function fltKill(e, id, i){
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  const h = fltHost(id); h.set(h.get().filter((_, m) => m !== i));
+  if (fltIsOpen(id, i)) FLT_UI = { id: null, open: null, term: "" };
+  else if (FLT_UI.id === id && typeof FLT_UI.open === "number" && FLT_UI.open > i) FLT_UI.open -= 1;
+  h.render();
+}
+/* + Filter → a field: added, and its picker opened at once. */
+function fltAddField(e, id, k){
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  const h = fltHost(id), fs = h.get();
+  const at = fs.findIndex(f => f.k === k);
+  if (at >= 0) { FLT_UI = { id, open: at, term: "" }; h.render(); fltFocusTerm(); return; }
+  h.set(fs.concat([fltNew(k)]));
+  FLT_UI = { id, open: fs.length, term: "" }; h.render(); fltFocusTerm();
+}
+function fltReset(e, id){
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  const h = fltHost(id); h.set([]); FLT_UI = { id: null, open: null, term: "" }; h.render();
+}
+function fltDirty(filters){ return (filters || []).some(fltActive); }
+
+/* ── drawing ── */
+function fltOpsHtml(id, i, op){
+  return `<div class="fb-ops">` + FLT_OPS.map(o =>
+    `<span class="fb-opb${o.op === op ? " on" : ""}" onclick="fltPickOp(event,'${id}',${i},'${o.op}')">${o.op}</span>`).join("") + `</div>`;
+}
+function fltPickerHtml(id, i, f, fd){
+  const h = fltHost(id), op = fltOpOf(f), t = FLT_UI.term.trim().toLowerCase();
+  let body;
+  if (!fltOpNeedsValues(op)) {
+    body = `<div class="fb-none">“${fltEsc(fd.label)} ${op}” asks whether the field has anything in it. There is nothing to choose.</div>`;
+  } else {
+    const all = h.optionsFor(f.k);
+    const rows = all.map((o, at) => [o, at]).filter(([o]) => !t || String(o[1]).toLowerCase().includes(t));
+    body = `<input class="fi fb-term" placeholder="Select one or more options…" value="${fltEsc(FLT_UI.term)}" oninput="fltTerm('${id}',this.value)" onclick="event.stopPropagation()">
+      <div class="fb-opts">` + (rows.length ? rows.map(([o, at]) =>
+        `<div class="fb-opt${f.vals.has(o[0]) ? " on" : ""}" onclick="fltToggleVal(event,'${id}',${i},${at})">
+           <span class="fb-box">${f.vals.has(o[0]) ? `<i class="ti ti-check"></i>` : ""}</span>
+           <span class="nm">${fltEsc(o[1])}</span><span class="ct">${o[2] == null ? "" : o[2]}</span></div>`).join("")
+        : `<div class="fb-none">No option matches “${fltEsc(FLT_UI.term)}”.</div>`) + `</div>`;
+  }
+  return `<div class="fb-pop open" onclick="event.stopPropagation()">
+    <div class="fb-pop-top"><span class="nm">${fltEsc(fd.label)}</span><span class="sp"></span></div>
+    ${fltOpsHtml(id, i, op)}${body}</div>`;
+}
+function fltChipHtml(id, f, i){
+  const h = fltHost(id), fd = h.fields.find(x => x.k === f.k);
+  const open = fltIsOpen(id, i);
+  if (!fd) return `<span class="fb-w"><button class="fb-chip fb-unknown" title="This bar does not know this filter — remove it">
+      <i class="ti ti-alert-triangle"></i> Unknown filter “${fltEsc(f.k)}”
+      <span class="fb-kill" onclick="fltKill(event,'${id}',${i})"><i class="ti ti-x"></i></span></button></span>`;
+  const op = fltOpOf(f), n = f.vals.size, active = fltActive(f);
+  const labelOf = v => { const hit = h.optionsFor(f.k).find(o => o[0] === v); return hit ? hit[1] : v; };
+  const val = !fltOpNeedsValues(op) ? ""
+    : n === 0 ? `<span class="fb-op">any</span>`
+    : n === 1 ? `<span class="fb-val">${fltEsc(labelOf([...f.vals][0]))}</span>`
+    : `<span class="fb-val">${n} selected</span>`;
+  return `<span class="fb-w"><button class="fb-chip${open ? " open" : ""}" data-fb-chip="${fltEsc(f.k)}" onclick="fltOpen(event,'${id}',${i})">
+      <i class="ti ti-${fltEsc(fd.icon || "filter")}"></i>${fltEsc(fd.label)}${op === FLT_DEFAULT_OP ? " " : ` <span class="fb-op">${op}</span> `}${val}
+      <i class="ti ti-chevron-down"></i>
+      <span class="fb-kill" title="Remove this filter" onclick="fltKill(event,'${id}',${i})"><i class="ti ti-x"></i></span>
+      ${active ? `<span class="fb-dot"></span>` : ""}</button>${open ? fltPickerHtml(id, i, f, fd) : ""}</span>`;
+}
+function fltAddHtml(id){
+  const h = fltHost(id), fs = h.get(), open = fltIsOpen(id, "new");
+  const offer = h.fields.filter(fd => !fs.some(f => f.k === fd.k));
+  const line = fd => `<div class="fb-opt" data-fb-field="${fltEsc(fd.k)}" onclick="fltAddField(event,'${id}','${fltEsc(fd.k)}')">
+      <i class="ti ti-${fltEsc(fd.icon || "filter")}" style="color:var(--subtle);font-size:15px"></i>
+      <span class="nm">${fltEsc(fd.label)}</span><span class="ct">${h.optionsFor(fd.k).length}</span></div>`;
+  let rows;
+  if (!h.groups) rows = offer.map(line).join("");
+  else {
+    const seen = new Set(); rows = "";
+    h.groups.forEach(([g, label]) => {
+      const mine = offer.filter(fd => fd.group === g); if (!mine.length) return;
+      mine.forEach(fd => seen.add(fd.k));
+      rows += `<div class="fb-grp">${fltEsc(label)}</div>` + mine.map(line).join("");
+    });
+    rows += offer.filter(fd => !seen.has(fd.k)).map(line).join("");
+  }
+  return `<span class="fb-w"><button class="fb-add" data-fb-add onclick="fltOpen(event,'${id}','new')"><i class="ti ti-plus"></i> Filter</button>${
+    open ? `<div class="fb-pop open" onclick="event.stopPropagation()"><div class="fb-pop-top"><span class="nm">Filter by…</span><span class="sp"></span></div>${
+      rows || `<div class="fb-none">Every filter with something in it is already on the bar.</div>`}</div>` : ""}</span>`;
+}
+/* The chips, then + Filter, then Reset when anything is doing something. */
+function fltChipsHtml(id){
+  const h = fltHost(id), fs = h.get();
+  return fs.map((f, i) => fltChipHtml(id, f, i)).join("") + fltAddHtml(id) +
+    (fltDirty(fs) ? `<button class="fb-add" data-reset style="color:var(--acc)" onclick="fltReset(event,'${id}')">Reset</button>` : "");
+}
+/* THE ONE COUNT, the kit's ListCount in its bare form: "412 of 1,938" —
+   the count of what you are looking at in bold, the total as context;
+   "No tasks yet" / "No tasks match of 17" for the two empty cases. */
+function fltCountHtml(shown, total, noun, plural){
+  const many = plural || noun + "s", fmt = x => Number(x || 0).toLocaleString("en-US");
+  const n = Number(shown) || 0, all = (total === null || total === undefined) ? n : Number(total);
+  const narrowed = n < all, empty = narrowed && n === 0;
+  const lead = all === 0 ? `No ${fltEsc(many)} yet`
+    : empty ? `No ${fltEsc(many)} match <span class="sub">of ${fmt(all)}</span>`
+    : narrowed ? `<b>${fmt(n)}</b> <span class="sub">of ${fmt(all)}</span>`
+    : `<b>${fmt(all)}</b> <span class="sub">${fltEsc(all === 1 ? noun : many)}</span>`;
+  return `<div class="lc">${lead}</div>`;
+}
+/* The sort chip, drawn the same way: `sorts` is [[k, label]], `cur` the
+   current key, `dflt` the default; `pick` is the global the host names. */
+function fltSortHtml(id, sorts, cur, dflt, pick){
+  const open = fltIsOpen(id, "sort"), label = (sorts.find(([k]) => k === cur) || [, ""])[1], dirty = cur !== dflt;
+  return `<span class="fb-w fb-sortw"><button class="fb-chip${open ? " open" : ""}" data-sort onclick="fltOpen(event,'${id}','sort')">
+      <i class="ti ti-arrows-sort"></i>Sort <span class="fb-op">by</span> <span class="fb-val">${fltEsc(label)}</span>
+      ${dirty ? `<span class="fb-kill" title="Back to the default sort" onclick="event.stopPropagation();FLT_UI={id:null,open:null,term:''};${pick}('${fltEsc(dflt)}')"><i class="ti ti-x"></i></span><span class="fb-dot"></span>`
+              : `<i class="ti ti-chevron-down"></i>`}</button>${
+    open ? `<div class="fb-pop open" onclick="event.stopPropagation()"><div class="fb-pop-top"><span class="nm">Sort by</span><span class="sp"></span></div>` +
+      sorts.map(([k, l]) => `<div class="fb-opt one${k === cur ? " on" : ""}" onclick="event.stopPropagation();FLT_UI={id:null,open:null,term:''};${pick}('${fltEsc(k)}')">
+        <span class="nm">${fltEsc(l)}</span>${k === cur ? `<i class="ti ti-check tick"></i>` : ""}</div>`).join("") + `</div>` : ""}</span>`;
+}
+
+/* ==CC-FILTER-BAR:END== */
+
+let brFilter={f:[],q:""};
+/* THE TASK FIELDS. `valsOf` is the one answer to "what does this task
+   hold for this field"; the chips, the counts and the matcher all read it. */
+const BR_FIELDS=[
+  {k:"status",  label:"Status",     icon:"circle-dot"},
+  {k:"owner",   label:"Ac Manager", icon:"user"},
+  {k:"project", label:"Project",    icon:"folder"},
+  {k:"late",    label:"Late",       icon:"alarm"},
+  {k:"unread",  label:"Unread",     icon:"mail"},
+  {k:"archived",label:"Archived",   icon:"archive"},
+];
+const BR_YESNO=[["yes","Yes"],["no","No"]];
+function brValsOf(t,k){
+  if(k==="status")   return brStatusOf(t);
+  if(k==="owner")    return t.owner_id||null;
+  if(k==="project")  return t.project_id||null;
+  if(k==="late")     return brIsLate(t)?"yes":"no";
+  if(k==="unread")   return brUnreadFor(t.id)>0?"yes":"no";
+  if(k==="archived") return t.archived_at?"yes":"no";
+  return null;
+}
+/* The archive is a separate list: it is only in view when an Archived
+   filter says so. Without one, the working list is what you see. */
+function brArchivedFilter(){ return (brFilter.f||[]).find(f=>f.k==="archived"&&fltActive(f))||null; }
+function brArchivedOnly(){ const f=brArchivedFilter(); return !!f&&fltMatch(["yes"],f)&&!fltMatch(["no"],f); }
+function brBaseRows(){
+  const af=brArchivedFilter();
+  return BR.tasks.filter(t=>af?true:!t.archived_at);
+}
+/* The value picker's options: every value the tasks on screen hold, with
+   its count over the whole base list, in the order the field prefers. */
+function brOptionsFor(k){
+  const base=brBaseRows();
+  if(k==="status") return fltCounts(base,k,brValsOf,BR_ORDER.map(x=>[x,BR_STATUS[x]]));
+  if(k==="owner")  return fltCounts(base,k,brValsOf,[],v=>brPersonName(v)).sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
+  if(k==="project")return fltCounts(base,k,brValsOf,[],v=>((brProject(v)||{}).name||"(a project)")).sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
+  return fltCounts(base,k,brValsOf,BR_YESNO);
+}
+FLT_HOSTS.tasks={
+  fields:BR_FIELDS, optionsFor:brOptionsFor,
+  get:()=>brFilter.f, set:fs=>{ brFilter.f=fs; },
+  render:()=>render(),
+};
 
 async function loadBranding(brandId){
   if(!brandId){ BR={brand:null,tasks:[],ms:[],projects:[],types:[],ok:false,err:"",loading:false}; return; }
@@ -9752,16 +10096,17 @@ const BR_PILL={not_started:'p-plan',drafting:'p-draft',
    when it is delivered. Messages became the count on the task name and
    Stage became the trail inside the open task, so nothing it showed is
    lost by fixing the columns. */
-const BR_COLS=['Owner','Next due','Delivery'];
+const BR_COLS=['Owner','Next due','Delivery','Link'];
 /* V116.8 — THE COLUMNS BUTTON. Task is locked; the five beside it can be
    switched off, per person, in this browser. 6/6 counts Task. */
-const BRK_COLS=[['st','Status'],['ms','Milestones'],['own','Owner'],['due','Next due'],['del','Delivery']];
+const BRK_COLS=[['st','Status'],['ms','Milestones'],['own','Owner'],['due','Next due'],['del','Delivery'],['lnk','Link']];
 let BRK_HIDE=(()=>{ try{ return new Set(JSON.parse(localStorage.getItem("cc-br-cols")||"[]")); }catch(e){ return new Set(); } })();
 /* ONE TASK OPEN AT A TIME, and that is Chirag's rule from 22 Sep: "you
    could only have one task open at a time, so the length remains
    controlled, but you don't have to go to a separate page." A single id
    rather than a set is what makes that true by construction. */
 let BR_OPEN=null, BR_MENU=null, BR_STMENU=null, BR_TAB='talk';
+let BR_OWMENU=null;   /* V117.2 — the row's owner menu, like the status menu */
 let brGroup=false;   /* flat, by default */
 function brSetGroup(v){ brGroup=!!v; closeAllPops(); render(); }
 /* NAPLES - ONE ORDER CANNOT ALSO BE SEVEN. Group by project draws the
@@ -9896,9 +10241,47 @@ function brNextDue(t){
 }
 function brCells(t){
   const nd=brNextDue(t);
-  return [ `<span class="c c-own">${escHtml(brPersonName(t.owner_id))}</span>`,
+  return [ brOwnerCell(t),
            `<span class="c c-due${nd.late?' late':''}">${escHtml(nd.txt)}</span>`,
-           `<span class="c c-del">${t.delivery_date?fmtShort(t.delivery_date):'—'}</span>` ];
+           `<span class="c c-del">${t.delivery_date?fmtShort(t.delivery_date):'—'}</span>`,
+           /* V117.2 — the link is a column. Chirag, 15 Oct: "move this to
+              the main task listing page as one of the columns, so you can
+              click it and directly share a task from there." One click
+              copies the same ?task= link the row menu makes. */
+           `<span class="c c-lnk"><i class="ti ti-link brl-lnk" title="Copy a link to this task" onclick="event.stopPropagation();taskCopyLink('${t.id}')"></i></span>` ];
+}
+/* ══ V117.2 · THE OWNER IS THE CONTROL ═══════════════════════════════
+   Chirag, 15 Oct: "just like you can update the status and milestones
+   directly from the listing rows, you should also be able to update the
+   owner from the same row." The name opens a menu of the staff — the
+   same list the editor offers — and a pick writes owner_id and logs it. */
+function brOwnerCell(t){
+  const may=brMayRow(t), open=(BR_OWMENU===t.id);
+  const people=(PEOPLE||[]).filter(p=>p.role!=="client")
+    .map(p=>({id:p.id,nm:(p.name||p.email||"").split("@")[0]}))
+    .sort((a,b)=>a.nm.localeCompare(b.nm));
+  const menu=open?`<div class="brl-menu stm brl-owners" onclick="event.stopPropagation()">
+      <div class="${t.owner_id?'':'on'}" onclick="brPickOwner(event,'${t.id}','')"><span class="ic">—</span>unassigned${t.owner_id?'':' ✓'}</div>${
+      people.map(p=>`<div class="${p.id===t.owner_id?'on':''}" onclick="brPickOwner(event,'${t.id}','${escAttr(p.id)}')"><span class="ic">${escHtml(brInitials(p.id))}</span>${escHtml(p.nm)}${p.id===t.owner_id?' ✓':''}</div>`).join('')}</div>`:'';
+  return `<span class="c c-own${may?' may':''}" ${may?`onclick="brOpenOwner(event,'${t.id}')" title="Change the owner"`:''}>
+    <span class="brl-own">${escHtml(brPersonName(t.owner_id))}${may?'<b class="brl-sgcar">▾</b>':''}</span>${menu}</span>`;
+}
+function brOpenOwner(e,id){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  const was=BR_OWMENU; closeAllPops(); BR_OWMENU=(was===id?null:id); render();
+}
+async function brPickOwner(e,id,who){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  BR_OWMENU=null;
+  const t=BR.tasks.find(x=>x.id===id); if(!t) return render();
+  if(!brMayRow(t)){ toast("Your role may not change the owner","err"); return render(); }
+  const next=who||null; if((t.owner_id||null)===next) return render();
+  const was=t.owner_id; t.owner_id=next; render();
+  const r=await sb.from("branding_tasks").update({owner_id:next}).eq("id",id);
+  if(r.error){ t.owner_id=was; render(); dbErr(r); return; }
+  await logTask(id, next?`assigned the task to ${brPersonName(next)}`:"cleared the owner");
+  toast(next?`${t.title} → ${brPersonName(next)}`:"Owner cleared");
+  if(TASK&&TASK.id===id){ await loadThread(id); render(); }
 }
 function fmtShort(iso){
   const d=new Date(String(iso).slice(0,10));
@@ -9909,8 +10292,8 @@ function brColsClass(){
 }
 function brColsGrid(){
   if(!BRK_HIDE.size) return "";
-  const W1={st:"140px",ms:"150px",own:"104px",due:"112px",del:"100px"};
-  const W2={st:"130px",ms:"120px",own:"92px",due:"100px"};
+  const W1={st:"140px",ms:"150px",own:"104px",due:"112px",del:"100px",lnk:"44px"};
+  const W2={st:"130px",ms:"120px",own:"92px",due:"100px",lnk:"40px"};
   const g=(W)=>["3px","20px","minmax(0,1fr)"].concat(BRK_COLS.map(([k])=>k).filter(k=>W[k]&&!BRK_HIDE.has(k)).map(k=>W[k])).concat(["30px"]).join(" ");
   return `--brg1:${g(W1)};--brg2:${g(W2)};`;
 }
@@ -9988,7 +10371,7 @@ function brRowHtml(t,showTag){
       ${t.client_hidden&&!brCV()?'<i class="ti ti-eye-off brl-cvh" title="Hidden from client"></i>':''}
       ${unread&&!brCV()?`<span class="brl-un" title="${unread} new message${unread===1?'':'s'}">${unread}</span>`:''}
       ${brNeedsClosing(t)&&!brCV()?`<span class="brl-flag" title="Every step is approved and the task is not Done">approved · close it</span>`:''}
-      ${!ms.length&&!brIsAM(t)&&!brCV()?'<small>no steps</small>':''}</div>
+      ${!ms.length&&!brMayRow(t)&&!brCV()?'<small>no steps</small>':''}</div>
     ${brStatusCell(t)}
     ${brStepCell(t,segs,tip)}
     ${brCells(t).join('')}
@@ -10011,7 +10394,7 @@ function brRowHtml(t,showTag){
    Removing a step stays in Edit details, where its confirm lives. */
 let BR_MSMENU=null;
 function brStepCell(t,segs,tip){
-  const ms=brMsFor(t.id), may=brIsAM(t), open=(BR_MSMENU===t.id);
+  const ms=brMsFor(t.id), may=brMayRow(t), open=(BR_MSMENU===t.id);
   const menu=open?brStepMenu(t):"";
   if(!ms.length) return may
     ? `<div class="brl-sg"><span class="brl-sgadd" onclick="brOpenSteps(event,'${t.id}')">+ Add a step</span>${menu}</div>`
@@ -10046,7 +10429,7 @@ function brOpenSteps(e,id){
 async function brStepTick(e,tid,id,on){
   if(e){ e.preventDefault(); e.stopPropagation(); }
   const t=BR.tasks.find(x=>x.id===tid); if(!t) return;
-  if(!brIsAM(t)){ toast("Only the Ac Manager approves a step","err"); return; }
+  if(!brMayRow(t)){ toast("Your role may not approve a step","err"); return; }
   const m=brMsFor(tid).find(x=>x.id===id); if(!m) return;
   const was={status:m.status,approved_at:m.approved_at};
   const patch=on?{status:"approved",approved_at:new Date().toISOString()}:{status:"not_started",approved_at:null};
@@ -10057,7 +10440,7 @@ async function brStepTick(e,tid,id,on){
   if(TASK&&TASK.id===tid){ await loadThread(tid); render(); }
 }
 async function brStepSet(tid,id,k,v){
-  const t=BR.tasks.find(x=>x.id===tid); if(!t||!brIsAM(t)) return;
+  const t=BR.tasks.find(x=>x.id===tid); if(!t||!brMayRow(t)) return;
   const m=brMsFor(tid).find(x=>x.id===id); if(!m) return;
   const val=k==="name"?String(v||"").trim():(String(v||"").slice(0,10)||null);
   if(k==="name"&&!val){ render(); return; }
@@ -10068,7 +10451,7 @@ async function brStepSet(tid,id,k,v){
   await logTask(tid,k==="name"?`renamed a step to "${val}"`:`moved "${m.name}" to ${val?fmtShort(val):"no date"}`);
 }
 async function brStepAdd(tid){
-  const t=BR.tasks.find(x=>x.id===tid); if(!t||!brIsAM(t)) return;
+  const t=BR.tasks.find(x=>x.id===tid); if(!t||!brMayRow(t)) return;
   const nm=document.getElementById("brms-new"), dd=document.getElementById("brms-newd");
   const name=String(nm&&nm.value||"").trim(); if(!name){ if(nm) nm.focus(); return; }
   const due=String(dd&&dd.value||"").slice(0,10)||null;
@@ -10083,7 +10466,7 @@ async function brStepAdd(tid){
 }
 
 function brStatusCell(t){
-  const st=brStatusOf(t), may=brIsAM(t), open=(BR_STMENU===t.id);
+  const st=brStatusOf(t), may=brMayRow(t), open=(BR_STMENU===t.id);
   const menu=open?`<div class="brl-menu stm">${BR_ORDER.map(k=>
       `<div class="${k===st?'on':''}" onclick="brPickStatus(event,'${t.id}','${k}')">
          <i class="d ${BR_PILL[k]}"></i>${escHtml(BR_STATUS[k])}${k===st?' ✓':''}</div>`).join('')}</div>`:'';
@@ -10098,7 +10481,7 @@ async function brPickStatus(e,id,k){
   if(e){ e.preventDefault(); e.stopPropagation(); }
   BR_STMENU=null;
   const t=BR.tasks.find(x=>x.id===id); if(!t) return render();
-  if(!brIsAM(t)){ toast("Only the Ac Manager moves a task on","err"); return render(); }
+  if(!brMayRow(t)){ toast("Your role may not move a task on","err"); return render(); }
   const was=t.status;
   if(brStatusOf(t)===k) return render();
   t.status=k; render();
@@ -10195,83 +10578,31 @@ function brMenuDo(e,what,id){
    SEARCH AND FILTERS ARE NOT SORT. Sort returns the same rows in a
    different order and can never hide one; these can, which is why they
    live in brFilter and sort does not. */
-let BR_FPOP=null;
-function brFPop(e,k){
-  if(e){ e.preventDefault(); e.stopPropagation(); }
-  const was=BR_FPOP; closeAllPops(); BR_FPOP=(was===k?null:k); render();
-}
+let BR_FPOP=null;   /* kept for closeAllPops; the row's popovers live in FLT_UI now */
 function brSetQ(v){
   brFilter.q=v;
   /* Redrawing the whole list on every keystroke would take the caret
      with it, so the rows are redrawn and the box is left alone. */
-  const box=document.querySelector(".brfb-q"), at=box?box.selectionStart:null;
+  const box=document.querySelector(".fb-q"), at=box?box.selectionStart:null;
   render();
-  const b2=document.querySelector(".brfb-q");
+  const b2=document.querySelector(".fb-q");
   if(b2){ b2.focus(); try{ b2.setSelectionRange(at,at); }catch(err){} }
 }
-function brClearFilter(e,k){
-  if(e){ e.preventDefault(); e.stopPropagation(); }
-  if(k==="overdue"||k==="unread"||k==="hideClosed"||k==="archived") brFilter[k]=false;
-  else brFilter[k]="";
-  BR_FPOP=null; render();
+function brPickSort(e,k){ if(e){ e.preventDefault(); e.stopPropagation(); } FLT_UI={id:null,open:null,term:""}; brSetSort(k); }
+/* The phone sheet and the archive door set a filter by hand. */
+function brFilterSet(k,vals){
+  const fs=brFilter.f.filter(f=>f.k!==k);
+  if(vals&&vals.length) fs.push(fltNew(k,vals));
+  brFilter.f=fs; render();
 }
-function brPickValue(e,k,v){
-  if(e){ e.preventDefault(); e.stopPropagation(); }
-  brFilter.archived=false;
-  brFilter[k]=(brFilter[k]===v?"":v);
-  BR_FPOP=null; render();
+function brFilterHas(k,v){ const f=brFilter.f.find(x=>x.k===k); return !!f&&fltOpOf(f)==="is"&&f.vals.has(v); }
+function brFilterToggle(k,v){
+  const f=brFilter.f.find(x=>x.k===k);
+  if(!f||fltOpOf(f)!=="is"){ brFilterSet(k,[v]); return; }
+  const vals=new Set(f.vals); vals.has(v)?vals.delete(v):vals.add(v);
+  brFilterSet(k,[...vals]);
 }
-function brPickSort(e,k){ if(e){ e.preventDefault(); e.stopPropagation(); } BR_FPOP=null; brSetSort(k); }
-function brAddToggle(e,k){
-  if(e){ e.preventDefault(); e.stopPropagation(); }
-  if(k==="archived"){ BR_FPOP=null; return brShowArchived(); }
-  brFilter[k]=!brFilter[k]; BR_FPOP=null; render();
-}
-/* The values a chip offers come from the tasks on screen, with their
-   counts, so a filter can never offer a value that returns nothing. */
-function brFieldOpts(k){
-  const base=BR.tasks.filter(t=>brFilter.archived?t.archived_at:!t.archived_at);
-  const n={};
-  if(k==="status"){ BR_ORDER.forEach(x=>n[x]=0); base.forEach(t=>{ const st=brStatusOf(t); n[st]=(n[st]||0)+1; });
-    return BR_ORDER.map(x=>({v:x,label:BR_STATUS[x],n:n[x]||0})); }
-  if(k==="owner"){ base.forEach(t=>{ const o=t.owner_id||""; n[o]=(n[o]||0)+1; });
-    return Object.keys(n).sort((a,b)=>brPersonName(a).localeCompare(brPersonName(b)))
-      .map(o=>({v:o,label:o?brPersonName(o):"— unassigned —",n:n[o]})); }
-  base.forEach(t=>{ const pj=t.project_id||""; n[pj]=(n[pj]||0)+1; });
-  return Object.keys(n).sort((a,b)=>{
-      const A=a?((brProject(a)||{}).name||""):"zzz", B=b?((brProject(b)||{}).name||""):"zzz";
-      return A.localeCompare(B); })
-    .map(pj=>({v:pj,label:pj?((brProject(pj)||{}).name||"(a project)"):"— no project —",n:n[pj]}));
-}
-const BR_FIELD={status:"Status",owner:"Ac Manager",project:"Project"};
-function brChipHtml(k){
-  const on=!!brFilter[k], opts=brFieldOpts(k);
-  const cur=on?(opts.find(o=>o.v===brFilter[k])||{label:"1"}).label:"";
-  const open=(BR_FPOP===k);
-  return `<span class="brfb-w"><span class="brfb-chip${open?" open":""}" onclick="brFPop(event,'${k}')">${escHtml(BR_FIELD[k])}
-      <span class="op">is</span>${on?`<span class="val">${escHtml(cur)}</span>
-      <span class="kill" onclick="brClearFilter(event,'${k}')">×</span><span class="dot"></span>`:""}</span>${
-    open?`<div class="brfb-pop">${opts.map(o=>
-      `<div class="brfb-opt${brFilter[k]===o.v?" on":""}" onclick="brPickValue(event,'${k}','${escAttr(o.v)}')">
-         <span class="bx">${brFilter[k]===o.v?"✓":""}</span><span class="nm">${escHtml(o.label)}</span><span class="ct">${o.n}</span></div>`).join("")||
-      `<div class="brfb-none">Nothing to filter on yet.</div>`}</div>`:""}</span>`;
-}
-const BR_TOGGLES=[["overdue","Late"],["unread","Unread"],["hideClosed","Hide closed"],["archived","Archived"]];
-function brChipsHtml(){
-  if(!BR.ok) return "";
-  const out=[];
-  Object.keys(BR_FIELD).forEach(k=>{ if(brFilter[k]||BR_FPOP===k) out.push(brChipHtml(k)); });
-  BR_TOGGLES.forEach(([k,label])=>{ if(brFilter[k])
-    out.push(`<span class="brfb-chip on">${escHtml(label)}<span class="kill" onclick="brClearFilter(event,'${k}')">×</span><span class="dot"></span></span>`); });
-  return out.join("");
-}
-function brAddPopHtml(){
-  const rows=Object.keys(BR_FIELD).filter(k=>!brFilter[k])
-    .map(k=>`<div class="brfb-opt" onclick="brFPop(event,'${k}')"><span class="bx"></span><span class="nm">${escHtml(BR_FIELD[k])}</span></div>`);
-  BR_TOGGLES.forEach(([k,label])=>{ if(!brFilter[k])
-    rows.push(`<div class="brfb-opt" onclick="brAddToggle(event,'${k}')"><span class="bx"></span><span class="nm">${escHtml(label)}</span></div>`); });
-  return `<div class="brfb-pop">${rows.join("")||`<div class="brfb-none">Every filter is already on.</div>`}</div>`;
-}
+const BR_FIELD={status:"Status",owner:"Ac Manager",project:"Project"};   /* the phone sheet's three */
 
 /* ══ V108.5 · THE TASK, DRAWN UNDER ITS OWN ROW ═══════════════════
    The same parts the separate screen had, in the order Chirag approved
@@ -10498,20 +10829,14 @@ function brOpenPanelHtml(t){
    away" is the only one, and a status filter silently narrowing that
    list is how a restored task goes missing twice. */
 function brVisible(){
-  let out=brFilter.archived
-    ? BR.tasks.filter(t=>t.archived_at)
-    /* V108.5 — CLOSED WORK STAYS IN THE LIST. Chirag, 22 Sep: "the
-       closed tasks should remain in the listing. If somebody wants to
-       remove them, it can be done with filters." So the only thing this
-       hides is the archive, and "Hide closed" is a filter people choose
-       rather than a rule the screen applies to them. */
-    : BR.tasks.filter(t=>!t.archived_at&&(!brFilter.hideClosed||brStatusOf(t)!=="closed"));
+  /* V108.5 — CLOSED WORK STAYS IN THE LIST. Chirag, 22 Sep: "the closed
+     tasks should remain in the listing. If somebody wants to remove
+     them, it can be done with filters." V117.1 — and the filter that
+     removes them is "Status · is not · Done", like any other. The only
+     thing this hides on its own is the archive. */
+  let out=brBaseRows();
   if(brCV()) out=out.filter(t=>!t.client_hidden);
-  if(brFilter.status&&!brFilter.archived) out=out.filter(t=>brStatusOf(t)===brFilter.status);
-  if(brFilter.project) out=out.filter(t=>(t.project_id||"")===brFilter.project);
-  if(brFilter.owner) out=out.filter(t=>(t.owner_id||"")===brFilter.owner);
-  if(brFilter.overdue&&!brFilter.archived) out=out.filter(brIsLate);
-  if(brFilter.unread) out=out.filter(t=>brUnreadFor(t.id)>0);
+  out=out.filter(t=>fltKeep(t,brFilter.f,brValsOf));
   if((brFilter.q||"").trim()){
     /* The task name, the project it belongs to and the brief — the three
        things somebody would type looking for a job they half remember. */
@@ -10591,11 +10916,13 @@ function brDueText(t){
 /* Picking any working filter LEAVES the archive. The two are different
    questions and a status filter that quietly persisted into the archived
    list is how "Restore" appears to do nothing. */
-function brSetFilter(k,v){ brFilter.archived=false; brFilter[k]=(brFilter[k]===v?"":v); render(); }
-function brToggleOverdue(){ brFilter.archived=false; brFilter.overdue=!brFilter.overdue; render(); }
+function brSetFilter(k,v){ brFilterToggle(k,v); }
+function brToggleOverdue(){ brFilterToggle("late","yes"); }
+/* The archive door: on, the list is the archive and nothing else is
+   filtering it — "what did I put away" is the only question asked there. */
 function brShowArchived(){
-  const on=!brFilter.archived;
-  brFilter={status:"",project:"",overdue:false,archived:on};
+  if(brArchivedOnly()){ brFilter.f=brFilter.f.filter(f=>f.k!=="archived"); }
+  else brFilter.f=[fltNew("archived",["yes"])];
   render();
 }
 
@@ -10881,6 +11208,14 @@ let TASK={id:null,msgs:[],acts:[],loading:false,err:"",asClient:false,draft:""};
    is what makes the separation real, and it does it without this line
    moving again. Same shape for archiving and for brand people below. */
 function brIsAM(t){ return !!t && !brCV() && can("task_advance") && (ME.role==="admin" || t.owner_id===ME.id); }
+/* V117.2 — WHO MAY MOVE A TASK ON FROM THE ROW. Chirag, 15 Oct: "team
+   members are not able to set milestones directly from the listing
+   page" — they could not, because the row obeyed the Bologna rule (the
+   Ac Manager or an admin). His pick: anyone with a staff role on the
+   Calendar may change the status, the steps and the owner, and the log
+   says who did. Archive, reopen, delete and what the client sees stay
+   with the Ac Manager or an admin (brIsAM). */
+function brMayRow(t){ return !!t && !brCV() && can("task_advance"); }
 function brCanArchive(t){ return !!t && !brCV() && can("task_archive") && (ME.role==="admin" || t.owner_id===ME.id); }
 
 /* ══ JSR · ONE SCREEN, TWO AUDIENCES — 10 October 2026 ═════════════════
@@ -11397,7 +11732,7 @@ function railHtml(t){
    messages under it stay where they are. Nothing moves but the line. */
 async function msSetApproved(id,on){
   const t=brTask(); if(!t) return;
-  if(!brIsAM(t)){ toast("Only the Ac Manager approves a milestone","err"); return; }
+  if(!brMayRow(t)){ toast("Your role may not approve a milestone","err"); return; }
   const m=brMsFor(t.id).find(x=>x.id===id); if(!m) return;
   const r=await sb.from("branding_milestones")
     .update(on?{status:"approved",approved_at:new Date().toISOString()}
@@ -11413,7 +11748,7 @@ async function msSetApproved(id,on){
 async function taskSetStatus(sel){
   const t=brTask(); if(!t) return;
   const next=sel.value;
-  if(!brIsAM(t)){ toast("Only the Ac Manager moves a task on","err"); sel.value=t.status; return; }
+  if(!brMayRow(t)){ toast("Your role may not move a task on","err"); sel.value=t.status; return; }
   /* NAPLES - THIS CONTROL NO LONGER APPROVES ANYTHING. It approved the
      milestone you were leaving, one per forward move, which is why a
      task with more milestones than statuses could never finish its
@@ -11557,9 +11892,10 @@ function renderBranding(){
   document.body.classList.toggle("brcv",brCV());
   const canE=canEdit()&&!brCV();
   const rows=(BR.ok&&brInSync())?brVisible():[];
-  const total=BR.ok?BR.tasks.filter(t=>!t.archived_at&&t.status!=="closed"&&!(brCV()&&t.client_hidden)).length:0;
-  const filtered=!!(brFilter.status||brFilter.project||brFilter.owner||brFilter.overdue
-                    ||brFilter.unread||brFilter.archived||brFilter.hideClosed||(brFilter.q||"").trim());
+  /* V117.1 — the total is the list the filters narrow: the working list
+     (or the archive, through its door), Done included, since Done stays. */
+  const total=BR.ok?brBaseRows().filter(t=>!(brCV()&&t.client_hidden)).length:0;
+  const filtered=fltDirty(brFilter.f)||!!(brFilter.q||"").trim();
 
   let body;
   /* THREE STATES, NOT TWO. "still fetching", "nothing here" and "I could
@@ -11579,12 +11915,12 @@ function renderBranding(){
     body=`<div class="brl-empty">
       <div style="font-size:26px;margin-bottom:9px;color:var(--subtle);"><i class="ti ti-clipboard-text"></i></div>
       <div style="font-size:14px;font-weight:600;color:var(--text);">${
-        brFilter.archived?"Nothing has been archived":(filtered?"No tasks match these filters":"No branding tasks yet")}</div>
+        brArchivedOnly()?"Nothing has been archived":(filtered?"No tasks match these filters":"No branding tasks yet")}</div>
       <div style="font-size:12.5px;margin-top:6px;">${
-        brFilter.archived?"Archiving a task puts it here and leaves its status alone."
+        brArchivedOnly()?"Archiving a task puts it here and leaves its status alone."
         :(filtered?"Clear them in the panel on the left.":(canE?"Add the first one with the button above.":""))}</div></div>`;
   } else {
-    const BRKC=["c-own","c-due","c-del"];
+    const BRKC=["c-own","c-due","c-del","c-lnk"];
     const head=`<div class="brl-hd"><span></span><span></span><span>Task</span><span class="h-st">Status</span>
       <span class="h-ms">Milestones</span>${BR_COLS.map((x,i)=>`<span class="c ${BRKC[i]}">${x}</span>`).join("")}<span></span></div>`;
     let rowsHtml="";
@@ -11629,34 +11965,27 @@ function renderBranding(){
         Show; Show is retired, and one switch does not need a panel
         over it. The sidebar's status list is gone too — the Status
         chip is that list, with the same counts inside it. -->
-   <div class="brfb">
-     <input class="fi brfb-q" placeholder="Search tasks…" value="${escAttr(brFilter.q||"")}"
+   <div class="fb">
+     <input class="fi fb-q" placeholder="Search tasks…" value="${escAttr(brFilter.q||"")}"
         oninput="brSetQ(this.value)" onclick="event.stopPropagation()">
-     ${brChipsHtml()}
-     ${BR.ok?`<span class="brfb-w"><button class="brfb-add" onclick="brFPop(event,'add')">+ Filter</button>${
-        BR_FPOP==="add"?brAddPopHtml():""}</span>`:""}
-     <span class="brfb-end">
-       ${BR.ok?`<span class="brfb-cnt" data-gate="br-count"><b>${rows.length} ${brFilter.archived?"Archived":(brFilter.status==="closed"?"Closed":`Branding task${rows.length===1?"":"s"}`)}</b>${
-          filtered&&rows.length!==total?`<span> of ${total}</span>`:""}</span>`:""}
+     ${BR.ok?fltChipsHtml("tasks"):""}
+     <span class="fb-end">
+       ${BR.ok?`<span data-gate="br-count">${fltCountHtml(rows.length,filtered&&rows.length!==total?total:rows.length,
+          brArchivedOnly()?"Archived task":"Branding task")}</span>`:""}
        ${BR.ok&&!brIsClient()?`<span class="brl-lens">
      <span class="${BR_CV?"":"on"}" onclick="brSetCV(0)">Team</span>
      <span class="cv${BR_CV?" on":""}" onclick="brSetCV(1)"><i class="ti ti-eye"></i>Client view</span></span>`:""}
        ${BR.ok?`<span class="brl-lens">
      <span class="${brGroup?"":"on"}" onclick="brSetGroup(0)">Flat</span>
      <span class="${brGroup?"on":""}" onclick="brSetGroup(1)">By project</span></span>`:""}
-       ${BR.ok?`<span class="brfb-w brfb-view"><span class="brfb-chip${BR_FPOP==="view"?" open":""}" onclick="brFPop(event,'view')" data-gate="br-view">View
-     <span class="val">${brIsClient()?"":(BR_CV?"Client view":"Team")+" · "}${brGroup?"By project":"Flat"}</span></span>${
-     BR_FPOP==="view"?`<div class="brfb-pop">${brIsClient()?"":[["0","Team"],["1","Client view"]].map(([k,l])=>
-       `<div class="brfb-opt${(BR_CV?"1":"0")===k?" on":""}" onclick="event.stopPropagation();BR_FPOP=null;brSetCV(${k})"><span class="bx">${(BR_CV?"1":"0")===k?"✓":""}</span><span class="nm">${l}</span></div>`).join("")+'<div class="brk-iosep"></div>'}${
+       ${BR.ok?`<span class="fb-w fb-view"><button class="fb-chip${fltIsOpen("tasks","view")?" open":""}" onclick="fltOpen(event,'tasks','view')" data-gate="br-view"><i class="ti ti-eye"></i>View
+     <span class="fb-val">${brIsClient()?"":(BR_CV?"Client view":"Team")+" · "}${brGroup?"By project":"Flat"}</span><i class="ti ti-chevron-down"></i></button>${
+     fltIsOpen("tasks","view")?`<div class="fb-pop open" onclick="event.stopPropagation()">${brIsClient()?"":[["0","Team"],["1","Client view"]].map(([k,l])=>
+       `<div class="fb-opt one${(BR_CV?"1":"0")===k?" on":""}" onclick="event.stopPropagation();FLT_UI={id:null,open:null,term:''};brSetCV(${k})"><span class="nm">${l}</span>${(BR_CV?"1":"0")===k?`<i class="ti ti-check tick"></i>`:""}</div>`).join("")+'<div class="brk-iosep"></div>'}${
        [["0","Flat"],["1","By project"]].map(([k,l])=>
-       `<div class="brfb-opt${(brGroup?"1":"0")===k?" on":""}" onclick="event.stopPropagation();BR_FPOP=null;brSetGroup(${k})"><span class="bx">${(brGroup?"1":"0")===k?"✓":""}</span><span class="nm">${l}</span></div>`).join("")}</div>`:""}</span>`:""}
-       ${BR.ok?`<span class="brfb-w"><span class="brfb-chip${BR_FPOP==="sort"?" open":""}" onclick="brFPop(event,'sort')">Sort
-     <span class="op">by</span><span class="val">${escHtml(BR_SORT[brSort]||"")}</span></span>${
-     BR_FPOP==="sort"?`<div class="brfb-pop">${Object.entries(BR_SORT).map(([k,v])=>
-       `<div class="brfb-opt${brSort===k?" on":""}" onclick="brPickSort(event,'${k}')"><span class="bx">${brSort===k?"✓":""}</span><span class="nm">${escHtml(v)}</span></div>`).join("")}</div>`:""}</span>`:""}
-       ${/* V116.8 — New task lives in the black bar. This copy stays for
-            the phone, which lifts it into the round + button. */""}
-       ${canE&&BR.ok?`<button class="btn btn-p brfb-mnew" style="white-space:nowrap;" onclick="brNewTask()"><i class="ti ti-plus"></i> New task</button>`:""}
+       `<div class="fb-opt one${(brGroup?"1":"0")===k?" on":""}" onclick="event.stopPropagation();FLT_UI={id:null,open:null,term:''};brSetGroup(${k})"><span class="nm">${l}</span>${(brGroup?"1":"0")===k?`<i class="ti ti-check tick"></i>`:""}</div>`).join("")}</div>`:""}</span>`:""}
+       ${BR.ok?fltSortHtml("tasks",Object.entries(BR_SORT),brSort,"due","brPickSort"):""}
+       ${canE&&BR.ok?`<button class="btn btn-p fb-mnew" style="white-space:nowrap;" onclick="brNewTask()"><i class="ti ti-plus"></i> New task</button>`:""}
      </span>
    </div>
      ${body}
@@ -12398,7 +12727,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V117.0 Tbilisi";
+const TOOL_VERSION="V117.3 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -12641,6 +12970,32 @@ function checkSharedStylesheet(){
   }
 }
 
+/* ══ V117.3 — A TAB THAT COMES BACK CATCHES UP ═══════════════════════
+   15 Oct: two brand events added on the phone at 11:20 were still
+   missing from a desktop tab at 16:41. The row was in the database all
+   along; the tab had been asleep. Live updates only reach a tab whose
+   socket is awake — after the Mac sleeps, or Chrome parks the tab, the
+   channel rejoins but nothing that happened in between is replayed.
+
+   So: a heartbeat marks the last moment the tab was known to be
+   running. When the tab is seen again (visible, focused, back online)
+   and the heartbeat is older than a minute, the calendar re-reads what
+   the live handler would have re-read — events, brand events, brands,
+   prefs — through the same function. Short tab switches cost nothing. */
+const CATCHUP_AFTER_MS=60*1000;
+let CATCHUP_LAST=Date.now();
+function catchUpIfAway(){
+  const away=Date.now()-CATCHUP_LAST; CATCHUP_LAST=Date.now();
+  if(away<CATCHUP_AFTER_MS||document.hidden||!G) return false;
+  try{ rtRefetchCalendar(); }catch(e){}
+  return true;
+}
+function startCatchUp(){
+  setInterval(()=>{ if(!document.hidden) CATCHUP_LAST=Date.now(); },15*1000);
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden) catchUpIfAway(); });
+  window.addEventListener("focus",catchUpIfAway);
+  window.addEventListener("online",catchUpIfAway);
+}
 function startVersionWatch(){
   checkVersion();
   setInterval(checkVersion,VERSION_EVERY_MS);
@@ -19729,6 +20084,7 @@ async function boot(){
   /* v57.4 — start watching the published version. After loadAll, never
      awaited: a version check must not delay the calendar appearing. */
   try{ startVersionWatch(); }catch(e){}
+  try{ startCatchUp(); }catch(e){}
   /* LYON — and last of all, the link somebody followed to get here. It
      runs AFTER loadAll because it navigates, and there is nothing to
      navigate to before the brands exist. */
@@ -22782,6 +23138,8 @@ function closeAllPops(){
      without the id would come back on the very next render, which is
      the bug V106.2 fixed for the View panel. */
   BR_MENU=null; BR_STMENU=null; BR_FPOP=null; BR_MSMENU=null;
+  if(typeof BR_OWMENU!=="undefined") BR_OWMENU=null;
+  if(typeof FLT_UI!=="undefined") FLT_UI={id:null,open:null,term:""};
   ["brand-panel","export-panel","notif-panel","acct-menu","brk-cols-panel"].forEach(id=>{
     const el=document.getElementById(id); if(el) el.classList.remove("open");
   });
@@ -23154,7 +23512,11 @@ window.addEventListener("resize",()=>{
   const m=document.getElementById("acct-menu");
   if(m&&m.classList.contains("open")) acctPlace();
 });
-document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeAllPops(); });
+document.addEventListener("keydown",e=>{ if(e.key!=="Escape") return;
+  /* V117.1 — the kit's popovers are drawn from state, so closing one on
+     Escape means a redraw as well, exactly as a click away does. */
+  const had=(typeof FLT_UI!=="undefined"&&FLT_UI.open!==null);
+  closeAllPops(); if(had&&typeof render==="function") render(); });
 
 
 /* ══ DUBAI D1 · EVENT MANAGER ═════════════════════════════════════════
@@ -25570,7 +25932,7 @@ function mountFrameRow(){
   /* V116.8 — Tasks' filter row is its first row now that the title
      line has gone, so it takes the band's place rather than sitting
      under an empty one. */
-  if(host.querySelector(":scope > .pgbar, :scope > .ph-acts-only, :scope > div > .brfb")) return;
+  if(host.querySelector(":scope > .pgbar, :scope > .ph-acts-only, :scope > div > .brfb, :scope > div > .fb")) return;
   const row=document.createElement("div");
   row.className="pgbar pgbar-empty";
   row.setAttribute("aria-hidden","true");
@@ -34456,19 +34818,19 @@ function mfSubFill(){
   if(!on){ if(sub.childNodes.length){ MF_SUB_BUSY=true; sub.innerHTML=""; MF_SUB_BUSY=false; } return; }
   const main=document.getElementById("main");
   /* the page's bars, in the order a person reads them */
-  const sel=["#main > .ph.ph-acts-only","#main > #calstrip","#main > .pgbar","#main > div > .brfb","#main > div > .wa-chips","#main .brfb:not(.mf-moved)","#main .wa-chips"];
+  const sel=["#main > .ph.ph-acts-only","#main > #calstrip","#main > .pgbar","#main > div > .brfb","#main > div > .fb","#main > div > .wa-chips","#main .brfb:not(.mf-moved)","#main .fb:not(.mf-moved)","#main .wa-chips"];
   const found=[];
   for(const s of sel) document.querySelectorAll(s).forEach(n=>{ if(!found.includes(n)&&main.contains(n)) found.push(n); });
   if(!found.length && sub.dataset.v===view) return;      // nothing new drawn
   MF_SUB_BUSY=true;
   /* moving a box takes the caret with it — put it back */
-  const ae=document.activeElement, keep=(ae&&ae.matches&&ae.matches("input.brfb-q"))?
+  const ae=document.activeElement, keep=(ae&&ae.matches&&ae.matches("input.brfb-q,input.fb-q"))?
         {s:ae.selectionStart,e:ae.selectionEnd}:null;
   try{
     const searching=sub.classList.contains("searching")||!!keep;
     sub.innerHTML="";
     document.querySelectorAll(".mf-fab").forEach(b=>{ if(!sub.contains(b)&&!main.contains(b)) b.remove(); });
-    const q=found.map(n=>n.querySelector("input.brfb-q")).find(Boolean);
+    const q=found.map(n=>n.querySelector("input.brfb-q,input.fb-q")).find(Boolean);
     if(q){
       const b=document.createElement("button");
       b.className="mf-srch"+(q.value?" has":""); b.setAttribute("aria-label","Search");
@@ -34608,8 +34970,7 @@ function mfShownCount(){
 function mfFiltersOn(){
   if(view==="content") return (contentStatusFilter?1:0)+(contentFormatFilter?1:0)+(MF_PQK!=="all"?1:0);
   let n=(typeof WA_CHIP!=="undefined"&&WA_CHIP&&WA_CHIP!=="all")?1:0;
-  Object.keys(BR_FIELD).forEach(k=>{ if(brFilter[k]) n++; });
-  ["overdue","hideClosed","archived"].forEach(k=>{ if(brFilter[k]) n++; });
+  n+=(brFilter.f||[]).filter(fltActive).length;
   return n;
 }
 const MF_TSORT_LBL={latest:"Latest",due:"Due date",overdue:"Overdue",updated:"Updated",status:"Status",owner:"Owner",title:"A–Z",manual:"Custom"};
@@ -34717,14 +35078,17 @@ function mfSheetPaint(){
       const client=(typeof brIsClient==="function"&&brIsClient());
       const quick=[["all","All"],["unread","Unread"],["week","Due this week"]].concat(client?[]:[["client","With client"],["mine","Mine"]]);
       h+=`<h4>Quick</h4><div class="row">`+quick.map(([k,l])=>ch((WA_CHIP||"all")===k,l,`mfTQuick('${k}')`)).join("")+`</div>`;
+      /* V117.1 — the same fields and values the desktop row offers, drawn
+         as chips; a chip ticks a value into the field's filter, so several
+         can be on at once, exactly as in the picker. */
       if(BR&&BR.ok) Object.keys(BR_FIELD).forEach(k=>{
-        const opts=brFieldOpts(k).filter(o=>o.v&&o.n);
+        const opts=brOptionsFor(k).filter(o=>o[0]&&o[2]);
         if(!opts.length) return;
         h+=`<h4>${escHtml(BR_FIELD[k])}</h4><div class="row">`+
-          opts.map(o=>ch(brFilter[k]===o.v,o.label,`mfTField('${k}','${escAttr(o.v)}')`,o.n)).join("")+`</div>`;
+          opts.map((o,at)=>ch(brFilterHas(k,o[0]),o[1],`mfTField('${k}',${at})`,o[2])).join("")+`</div>`;
       });
-      h+=`<h4>Also</h4><div class="row">`+[["overdue","Late"],["hideClosed","Hide closed"],["archived","Archived"]]
-        .map(([k,l])=>ch(!!brFilter[k],l,`mfTToggle('${k}')`)).join("")+`</div>`;
+      h+=`<h4>Also</h4><div class="row">`+[["late","Late"],["unread","Unread"],["archived","Archived"]]
+        .map(([k,l])=>ch(brFilterHas(k,"yes"),l,`mfTToggle('${k}')`)).join("")+`</div>`;
     }
     h+=`<div class="ft"><button class="b1" onclick="mfFilterClear()">Clear</button><button class="b2" onclick="mfSheetClose()">Show ${n} ${word}${n===1?"":"s"}</button></div>`;
   }else if(MF_SHEET==="sort"){
@@ -34745,8 +35109,8 @@ function mfPStatus(k){ contentStatusFilter=(contentStatusFilter===k)?"":k; rende
 function mfPFormat(f){ contentFormatFilter=(contentFormatFilter===f)?"":f; renderSocial(); }
 function mfPSort(k){ MF_PSORT=k; mfSheetClose(); renderSocial(); }
 function mfTQuick(k){ WA_CHIP=k; render(); }
-function mfTField(k,v){ brFilter.archived=false; brFilter[k]=(brFilter[k]===v?"":v); render(); }
-function mfTToggle(k){ if(k==="archived"&&!brFilter.archived){ mfSheetClose(); return brShowArchived(); } brFilter[k]=!brFilter[k]; render(); }
+function mfTField(k,at){ const o=brOptionsFor(k)[at]; if(o) brFilterToggle(k,o[0]); }
+function mfTToggle(k){ if(k==="archived"&&!brArchivedOnly()){ mfSheetClose(); return brShowArchived(); } brFilterToggle(k,"yes"); }
 function mfTSort(k){
   MF_TSORT=(k==="latest")?"latest":k;
   try{ localStorage.setItem("cc_mf_tsort",MF_TSORT); }catch(e){}
@@ -34756,9 +35120,7 @@ function mfTSort(k){
 function mfFilterClear(){
   if(view==="content"){ contentStatusFilter=""; contentFormatFilter=""; MF_PQK="all"; renderSocial(); return; }
   WA_CHIP="all";
-  Object.keys(BR_FIELD).forEach(k=>brFilter[k]="");
-  brFilter.overdue=false; brFilter.hideClosed=false;
-  if(brFilter.archived){ brFilter.archived=false; }
+  brFilter.f=[];
   render();
 }
 
@@ -34788,7 +35150,7 @@ function mfTilesPaint(){
       /* the page's "add" is still the round + */
       document.querySelectorAll(".mf-fab").forEach(b=>{ if(!document.getElementById("main").contains(b)) b.remove(); });
       const add=document.querySelector(view==="content"
-        ? "#main .pgbar button.btn-p" : "#main .brfb .brfb-end .btn-p");
+        ? "#main .pgbar button.btn-p" : "#main :is(.brfb,.fb) :is(.brfb-end,.fb-end) .btn-p");
       if(add&&add.querySelector(".ti-plus")){ add.classList.add("mf-fab"); sub.appendChild(add); }
       sub.dataset.v=view;
       mfTilesPaint();
