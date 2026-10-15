@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V117.3 Tbilisi"/>
+<meta name="cc-tool-version" content="V117.5 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2909,9 +2909,11 @@ body.brcv .brl-lens span.cv.on{background:#378ADD;color:#fff;}
 .brl:has(.brl-tr .brl-menu){overflow:visible;}
 .brl-menu.up{top:auto;bottom:42px;}
 .brl-menu.stm.up{top:auto;bottom:30px;}
-.brl-menu div{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13px;cursor:pointer;}
-.brl-menu div:hover{background:rgba(13,13,13,.05);}
-.brl-menu div.on{font-weight:700;}
+/* V117.5 — `> div`, not `div`: the owner menu holds a search box and a
+   list of its own, and a rule on every div inside turned them into rows. */
+.brl-menu > div{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13px;cursor:pointer;}
+.brl-menu > div:hover{background:rgba(13,13,13,.05);}
+.brl-menu > div.on{font-weight:700;}
 .brl-menu div.sep{border-top:1px solid var(--div);margin-top:5px;padding-top:11px;}
 .brl-menu div.warn{color:var(--acc);}
 .brl-menu .ic{width:16px;text-align:center;color:var(--subtle);}
@@ -3234,7 +3236,20 @@ body.brcv .brl-lens span.cv.on{background:#378ADD;color:#fff;}
 .brl-tr .c-own.may{cursor:pointer;}
 .brl-tr .c-own.may:hover .brl-own{color:var(--text);}
 .brl-tr .c-own .brl-sgcar{margin-left:3px;opacity:.5;font-size:10px;}
-.brl-menu.stm.brl-owners{left:auto;right:0;width:200px;max-height:272px;overflow:auto;}
+.brl-menu.stm.brl-owners{left:auto;right:0;width:250px;padding:6px;text-align:left;}
+.brl-owners > .bp-q{display:flex;padding:0 10px;margin:0 0 4px;border-radius:9px;cursor:text;position:static;}
+.brl-owners > .bp-q:hover{background:var(--surface);}
+.brl-owners > .brl-pls{display:block;padding:0;max-height:300px;overflow:auto;cursor:default;}
+.brl-owners > .brl-pls:hover{background:none;}
+.brl-pl{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;font-size:13px;cursor:pointer;}
+.brl-pl:hover{background:rgba(13,13,13,.05);}
+.brl-pl.on .nm{font-weight:700;}
+.brl-pl .em{width:22px;text-align:center;font-size:15px;flex:none;}
+.brl-pl .em .ic{font-size:10px;font-weight:700;color:var(--subtle);}
+.brl-pl .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.brl-pl .k{color:var(--subtle);font-size:12px;}
+.brl-pl mark{background:#FFF3B0;color:inherit;border-radius:2px;padding:0 1px;}
+.brl-owem{margin-right:5px;}
 .brl-menu.brl-owners .ic{font-size:10px;font-weight:700;}
 .brl-tr .c-lnk,.brl-hd .c-lnk{text-align:center;}
 .brl-lnk{cursor:pointer;color:var(--subtle);font-size:15px;padding:4px;border-radius:6px;}
@@ -4974,6 +4989,84 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
   .br-open.wa .wa-seg > span.on{flex:3;background:var(--text);color:#fff!important;font-size:14px;}
   .br-open.wa .wa-seg > span.cl.on{background:#378ADD;}
 }
+</style>
+<style>
+/* ══ V117.4 TBILISI · PHONE, CHIRAG 15 OCT (mockup "01 - Phone bars and notifications") ══
+   1 · Scrolling down takes EVERYTHING away (his pick, A): the tile bar,
+       the bottom tabs and the round +. A small scroll up, or the top of
+       the page, brings all three back. The black header stays.
+   2 · The header is one row, always. A long brand name is cut with "…".
+   3 · The bell is a page of its own: its own tile bar, one row per
+       message, grouped by day. */
+@media(max-width:768px){
+  .mf-tabs{transition:transform .2s ease;}
+  .mf-fab{transition:transform .2s ease,opacity .2s ease;}
+  :root.mfhid .mf-tabs{transform:translateY(110%);}
+  :root.mfhid .mf-fab{transform:translateY(180px);opacity:0;pointer-events:none;}
+
+  .nav.mf{flex-wrap:nowrap!important;}
+  .nav.mf #brand-sw{flex:1 1 auto!important;min-width:0!important;width:auto!important;}
+  .nav.mf #brand-trig{max-width:100%!important;min-width:0!important;}
+  .nav.mf #brand-trig-nm{display:block;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;min-width:0;}
+  .nav.mf .nav-right{flex:none!important;}
+
+  .nav.mf #notif-panel.open.xn{top:calc(var(--mf-top) - var(--mf-sub))!important;padding:0!important;background:#fff!important;z-index:900;}
+  :root.mfnotif .mf-fab{display:none!important;}
+  :root.mfnotif .mf-tabs .mf-tab.on{color:var(--muted)!important;font-weight:500!important;}
+  :root.mfnotif .mf-tabs .mf-tab.on .ti{color:var(--muted)!important;}
+  .xn-tl{position:sticky;top:0;z-index:2;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;padding:8px 12px;background:#F6F5F2;border-bottom:1px solid #E6E4DE;}
+  .xn-tl .mft{height:55px;padding:0 1px;min-width:0;font-size:11.5px;letter-spacing:-.01em;}
+  .xn-tl .mft > span{max-width:100%;overflow:hidden;text-overflow:ellipsis;}
+  .xn-tl .xn-n{position:absolute;top:5px;right:6px;font-style:normal;font-size:10.5px;font-weight:800;line-height:16px;min-width:16px;padding:0 4px;border-radius:99px;background:#D7262B;color:#fff;}
+  .xn-tl.srch{display:flex;align-items:center;}
+  .xn-tl.srch input{flex:1;height:44px;border-radius:12px;border:1px solid rgba(13,13,13,.12);padding:0 14px;font:inherit;font-size:15px;background:#fff;min-width:0;}
+  .xn-tl.srch button{width:44px;height:44px;border:0;background:none;font-size:22px;color:var(--text);}
+  .xn-sec{padding:14px 14px 6px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#8A8A8A;background:#F6F5F2;}
+  .xn-r{display:grid;grid-template-columns:4px minmax(0,1fr) auto;column-gap:10px;row-gap:3px;padding:12px 12px 12px 0;border-bottom:1px solid #EFEDE8;cursor:pointer;}
+  .xn-r .sp{grid-row:1/3;border-radius:0 3px 3px 0;}
+  .xn-r.men .sp{background:#D7262B;}
+  .xn-r .t1{font-size:15.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;color:var(--text);}
+  .xn-r .t1 em{font-style:normal;font-weight:600;color:var(--muted);}
+  .xn-r .tm{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap;}
+  .xn-r.un .tm{color:#D7262B;font-weight:700;}
+  .xn-r .tm i{width:8px;height:8px;border-radius:50%;background:#D7262B;display:inline-block;}
+  .xn-r .p{grid-column:2/4;font-size:14px;color:#55554F;white-space:nowrap;overflow:hidden;display:flex;gap:6px;align-items:center;min-width:0;}
+  .xn-r .p b{color:var(--text);flex:none;} .xn-r .p span.q{overflow:hidden;text-overflow:ellipsis;min-width:0;}
+  .xn-r .p span.q.dim{color:var(--subtle);font-style:italic;}
+  .xn-r .p .at{flex:none;font-size:11.5px;font-weight:800;color:#D7262B;background:#FDECEC;border-radius:99px;padding:1px 7px;margin-left:auto;}
+  .xn-r.seen{opacity:.55;}
+  .xn-empty{padding:40px 16px;text-align:center;color:var(--muted);font-size:14px;}
+  #notif-panel.xn .nptrunc,#notif-panel.xn .npmore{margin:12px;}
+  .xn-sh{position:fixed;left:0;right:0;bottom:0;z-index:2010;background:#fff;border-radius:18px 18px 0 0;padding:16px 16px calc(22px + var(--mf-safe,0px));box-shadow:0 -14px 44px rgba(13,13,13,.25);max-height:80vh;overflow:auto;}
+  .xn-scrim{position:fixed;inset:0;background:rgba(13,13,13,.38);z-index:2000;}
+  .xn-sh .li{display:flex;align-items:center;gap:10px;width:100%;padding:14px 4px;border:0;border-bottom:1px solid #EFEDE8;background:none;font:inherit;font-size:15px;font-weight:600;text-align:left;color:var(--text);cursor:pointer;}
+  .xn-sh .li .ti{font-size:20px;}
+  .xn-sh .src{display:none;}
+}
+
+/* 4 · the month on a phone: ‹ August ▾ › in the month card's own head */
+@media(max-width:768px){
+  #main .mc-head .xm{display:flex;align-items:center;gap:2px;min-width:0;}
+  #main .mc-head .xm button{border:0;background:none;font:inherit;color:var(--text);cursor:pointer;}
+  #main .mc-head .xm .st{width:34px;height:34px;border-radius:10px;font-size:20px;display:flex;align-items:center;justify-content:center;}
+  #main .mc-head .xm .st:disabled{opacity:.25;}
+  #main .mc-head .xm .nm{display:flex;align-items:center;gap:4px;font-size:16px;font-weight:800;padding:4px 6px;border-radius:10px;white-space:nowrap;}
+  #main .mc-head .xm .nm small{font-size:12px;font-weight:600;color:var(--muted);}
+  #main .mc-head .xm .nm .ti{font-size:14px;color:var(--muted);}
+  #main .mc-head:has(.xm) > .mc-name{display:none!important;}
+  .xm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;}
+  .xm-grid button{height:54px;border-radius:12px;border:1px solid rgba(13,13,13,.1);background:#fff;font:inherit;font-size:14px;font-weight:700;color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;}
+  .xm-grid button small{font-size:11px;font-weight:600;color:var(--muted);}
+  .xm-grid button.on{background:var(--text);color:#fff;border-color:var(--text);} .xm-grid button.on small{color:rgba(255,255,255,.7);}
+  .xm-grid button.now:not(.on){border-color:#D7262B;}
+  .xm-yr{display:flex;align-items:center;justify-content:center;gap:14px;margin:6px 0 2px;font-size:16px;font-weight:800;}
+  .xm-yr button{width:40px;height:40px;border-radius:12px;border:1px solid rgba(13,13,13,.1);background:#fff;font-size:20px;cursor:pointer;}
+}
+/* the desk: "Mark all read" asks with or without @mentions */
+.nrd{position:absolute;right:12px;top:44px;z-index:30;background:#fff;border:1px solid var(--div);border-radius:12px;box-shadow:0 12px 30px rgba(13,13,13,.16);padding:6px;min-width:240px;}
+.nrd button{display:flex;width:100%;align-items:center;gap:8px;padding:9px 10px;border:0;background:none;border-radius:8px;font:inherit;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;text-align:left;}
+.nrd button:hover{background:#F2F1EE;}
+.nphead{position:relative;}
 </style>
 </head>
 <body class="mf-framed">
@@ -9796,6 +9889,36 @@ function fltSortRows(rows, sorts, sortBy, sortDir){
 function fltByText(f){ return (a, b) => String(f(a) || "").localeCompare(String(f(b) || ""), undefined, { sensitivity: "base" }); }
 function fltByNum(f){ return (a, b) => ((f(a) ?? Infinity) - (f(b) ?? Infinity)); }
 
+/* ── HOW + FILTER OFFERS A FIELD (Chirag, 15 Oct 2026) ──────────────
+   "A two-step filter is only worth it if the list to choose from is too
+   long." So the offer is shaped by the field's values, not by habit:
+     none   — nothing on screen holds a value: the field is not offered
+     yesno  — the values are yes and no: one line, one click, no picker
+     inline — up to FLT_INLINE_MAX values: the values sit under the field
+              name, one click each; a chip appears at once
+     door   — more than that: the field is a door to the picker, as before
+   The chip's own picker is unchanged, so is not / is empty / is not
+   empty are one click away whichever way the filter was added. */
+const FLT_INLINE_MAX = 6;
+function fltIsYesNo(opts){
+  const vs = (opts || []).map(o => String(o[0]).toLowerCase()).sort();
+  return vs.length === 2 && vs[0] === "no" && vs[1] === "yes";
+}
+function fltOfferKind(opts, fd){
+  const live = (opts || []).filter(o => (o[2] || 0) > 0);
+  if (!live.length) return "none";
+  if ((fd && fd.yesno) || fltIsYesNo(opts)) {
+    /* "Late · 0" is a line that narrows to nothing: not offered. */
+    const yes = (opts || []).find(o => String(o[0]).toLowerCase() === "yes");
+    return yes && (yes[2] || 0) > 0 ? "yesno" : "none";
+  }
+  return live.length <= FLT_INLINE_MAX ? "inline" : "door";
+}
+/* The rows that hold nothing for a field — the "empty" pill's count. */
+function fltEmptyCount(rows, k, valsOf){
+  return (rows || []).filter(r => fltValues(valsOf(r, k)).length === 0).length;
+}
+
 /* ==CC-FILTER-CORE:END== */
 
 /* ==CC-FILTER-BAR:BEGIN== */
@@ -9866,6 +9989,36 @@ function fltAddField(e, id, k){
   h.set(fs.concat([fltNew(k)]));
   FLT_UI = { id, open: fs.length, term: "" }; h.render(); fltFocusTerm();
 }
+/* ── ONE STEP WHEN THE LIST IS SHORT (15 Oct 2026) ──────────────────
+   A value drawn under its field in the + Filter menu: one click adds the
+   chip (or widens an existing "is" chip to the value), a second click
+   takes the value out again, and an emptied chip goes. The menu stays
+   open so two values cost two clicks, not four. */
+function fltPickInline(e, id, k, v){
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  const h = fltHost(id), fs = h.get(), at = fs.findIndex(f => f.k === k);
+  if (at < 0) { h.set(fs.concat([fltNew(k, [v])])); }
+  else {
+    const f = fs[at], vals = new Set(f.vals); vals.has(v) ? vals.delete(v) : vals.add(v);
+    h.set(vals.size ? fs.map((x, n) => (n === at ? { k, op: f.op, vals } : x)) : fs.filter((_, n) => n !== at));
+  }
+  FLT_UI = { id, open: "new", term: "" }; h.render();
+}
+/* A yes/no field is one line: on adds "is yes", off removes the chip. */
+function fltToggleYesNo(e, id, k){
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  const h = fltHost(id), fs = h.get(), at = fs.findIndex(f => f.k === k);
+  h.set(at < 0 ? fs.concat([fltNew(k, ["yes"])]) : fs.filter((_, n) => n !== at));
+  FLT_UI = { id, open: "new", term: "" }; h.render();
+}
+/* "empty" under a field: the rows with nothing in it. */
+function fltPickEmpty(e, id, k){
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  const h = fltHost(id), fs = h.get(), at = fs.findIndex(f => f.k === k);
+  const on = at >= 0 && fs[at].op === "is empty";
+  h.set(on ? fs.filter((_, n) => n !== at) : fs.filter((_, n) => n !== at).concat([{ k, op: "is empty", vals: new Set() }]));
+  FLT_UI = { id, open: "new", term: "" }; h.render();
+}
 function fltReset(e, id){
   if (e) { e.preventDefault(); e.stopPropagation(); }
   const h = fltHost(id); h.set([]); FLT_UI = { id: null, open: null, term: "" }; h.render();
@@ -9916,12 +10069,45 @@ function fltChipHtml(id, f, i){
 }
 function fltAddHtml(id){
   const h = fltHost(id), fs = h.get(), open = fltIsOpen(id, "new");
-  const offer = h.fields.filter(fd => !fs.some(f => f.k === fd.k));
-  const line = fd => `<div class="fb-opt" data-fb-field="${fltEsc(fd.k)}" onclick="fltAddField(event,'${id}','${fltEsc(fd.k)}')">
-      <i class="ti ti-${fltEsc(fd.icon || "filter")}" style="color:var(--subtle);font-size:15px"></i>
-      <span class="nm">${fltEsc(fd.label)}</span><span class="ct">${h.optionsFor(fd.k).length}</span></div>`;
+  const on = k => fs.find(f => f.k === k) || null;
+  /* A door field leaves the menu once it is on the bar (its chip is the
+     control now). An inline or yes/no field stays, showing its state, so
+     a second value is one more click. A field with nothing in it is not
+     offered at all. */
+  const kinds = new Map(h.fields.map(fd => [fd.k, fltOfferKind(h.optionsFor(fd.k), fd)]));
+  const offer = h.fields.filter(fd => kinds.get(fd.k) !== "none" && (kinds.get(fd.k) !== "door" || !on(fd.k)));
+  const icon = fd => `<i class="ti ti-${fltEsc(fd.icon || "filter")}" style="color:var(--subtle);font-size:15px"></i>`;
+  const line = fd => {
+    const kind = kinds.get(fd.k), f = on(fd.k), opts = h.optionsFor(fd.k);
+    if (kind === "yesno") {
+      const lit = !!f && f.op === "is" && f.vals.has("yes") && !f.vals.has("no");
+      const yes = opts.find(o => String(o[0]).toLowerCase() === "yes");
+      return `<div class="fb-opt fb-yn${lit ? " on" : ""}" data-fb-field="${fltEsc(fd.k)}" onclick="fltToggleYesNo(event,'${id}','${fltEsc(fd.k)}')">${icon(fd)}
+        <span class="nm">${fltEsc(fd.label)}</span><span class="ct">${yes ? yes[2] : ""}</span>${lit ? `<i class="ti ti-check fb-tick"></i>` : ""}</div>`;
+    }
+    if (kind === "inline") {
+      const lit = v => !!f && f.op === "is" && f.vals.has(v);
+      const empty = h.emptyFor ? h.emptyFor(fd.k) : 0;
+      const eLit = !!f && f.op === "is empty";
+      return `<div class="fb-fld" data-fb-field="${fltEsc(fd.k)}">${icon(fd)}<span class="nm">${fltEsc(fd.label)}</span></div>
+        <div class="fb-vals">` + opts.filter(o => (o[2] || 0) > 0).map(o =>
+          `<span class="fb-pill${lit(o[0]) ? " on" : ""}" data-fb-val="${fltEsc(o[0])}" onclick="fltPickInline(event,'${id}','${fltEsc(fd.k)}',${JSON.stringify(o[0]).replace(/"/g, "&quot;")})">${fltEsc(o[1])} <span class="ct">${o[2]}</span></span>`).join("")
+        + (empty ? `<span class="fb-pill fb-empty${eLit ? " on" : ""}" onclick="fltPickEmpty(event,'${id}','${fltEsc(fd.k)}')">— empty <span class="ct">${empty}</span></span>` : "") + `</div>`;
+    }
+    return `<div class="fb-opt fb-door" data-fb-field="${fltEsc(fd.k)}" onclick="fltAddField(event,'${id}','${fltEsc(fd.k)}')">${icon(fd)}
+        <span class="nm">${fltEsc(fd.label)}</span><span class="ct">${opts.filter(o => (o[2] || 0) > 0).length}</span><i class="ti ti-chevron-right fb-go"></i></div>`;
+  };
+  /* Inline fields first, then the one-click lines under "Only", then the
+     doors under "Pick from a list" — unless the host groups its fields,
+     in which case each group keeps its own heading and order. */
+  const section = (list) => {
+    const inl = list.filter(fd => kinds.get(fd.k) === "inline"), yn = list.filter(fd => kinds.get(fd.k) === "yesno"), dr = list.filter(fd => kinds.get(fd.k) === "door");
+    return inl.map(line).join("")
+      + (yn.length ? `<div class="fb-sec">Only</div>` + yn.map(line).join("") : "")
+      + (dr.length ? `<div class="fb-sec">Pick from a list</div>` + dr.map(line).join("") : "");
+  };
   let rows;
-  if (!h.groups) rows = offer.map(line).join("");
+  if (!h.groups) rows = section(offer);
   else {
     const seen = new Set(); rows = "";
     h.groups.forEach(([g, label]) => {
@@ -9932,7 +10118,7 @@ function fltAddHtml(id){
     rows += offer.filter(fd => !seen.has(fd.k)).map(line).join("");
   }
   return `<span class="fb-w"><button class="fb-add" data-fb-add onclick="fltOpen(event,'${id}','new')"><i class="ti ti-plus"></i> Filter</button>${
-    open ? `<div class="fb-pop open" onclick="event.stopPropagation()"><div class="fb-pop-top"><span class="nm">Filter by…</span><span class="sp"></span></div>${
+    open ? `<div class="fb-pop open fb-offer" onclick="event.stopPropagation()"><div class="fb-pop-top"><span class="nm">Filter by…</span><span class="sp"></span></div>${
       rows || `<div class="fb-none">Every filter with something in it is already on the bar.</div>`}</div>` : ""}</span>`;
 }
 /* The chips, then + Filter, then Reset when anything is doing something. */
@@ -10005,10 +10191,15 @@ function brOptionsFor(k){
   if(k==="status") return fltCounts(base,k,brValsOf,BR_ORDER.map(x=>[x,BR_STATUS[x]]));
   if(k==="owner")  return fltCounts(base,k,brValsOf,[],v=>brPersonName(v)).sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
   if(k==="project")return fltCounts(base,k,brValsOf,[],v=>((brProject(v)||{}).name||"(a project)")).sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
+  /* V117.5 — the archive counts over EVERY task. The base list leaves
+     archived tasks out until an Archived filter asks for them, so a count
+     over the base would always read 0, and a yes/no field that reads 0
+     is not offered: the archive would have had no door at all. */
+  if(k==="archived")return fltCounts(BR.tasks,k,brValsOf,BR_YESNO);
   return fltCounts(base,k,brValsOf,BR_YESNO);
 }
 FLT_HOSTS.tasks={
-  fields:BR_FIELDS, optionsFor:brOptionsFor,
+  fields:BR_FIELDS, optionsFor:brOptionsFor, emptyFor:k=>fltEmptyCount(brBaseRows(),k,brValsOf),
   get:()=>brFilter.f, set:fs=>{ brFilter.f=fs; },
   render:()=>render(),
 };
@@ -10255,20 +10446,52 @@ function brCells(t){
    directly from the listing rows, you should also be able to update the
    owner from the same row." The name opens a menu of the staff — the
    same list the editor offers — and a pick writes owner_id and logs it. */
+/* ── V117.5 — FIND A PERSON (Chirag, 15 Oct 2026) ───────────────────
+   "Not a very practical way of selecting somebody from a list of 50+
+   people." The owner menu is the brand switcher's shape now: a search
+   box on top with the hand already in it, each person with their emoji
+   (initials when they have none), the people assigned to this brand
+   first under "On this brand", everyone else under "Everyone". */
+let BR_OWQ="";   /* what is typed in the owner menu's search box */
+function brOwnerPeople(){
+  const here=new Set(ASSIGN[activeBrand]||[]);
+  return (PEOPLE||[]).filter(p=>p.role!=="client")
+    .map(p=>({id:p.id,nm:(p.name||p.email||"").split("@")[0],em:p.emoji||emojiFor(p.name||p.email)||"",on:here.has(p.id)}))
+    .sort((a,b)=>a.nm.localeCompare(b.nm));
+}
+function brOwnerMenuHtml(t){
+  const q=BR_OWQ.trim().toLowerCase();
+  const all=brOwnerPeople().filter(p=>!q||p.nm.toLowerCase().includes(q));
+  const mark=nm=>{ if(!q) return escHtml(nm); const i=nm.toLowerCase().indexOf(q); return i<0?escHtml(nm):escHtml(nm.slice(0,i))+"<mark>"+escHtml(nm.slice(i,i+q.length))+"</mark>"+escHtml(nm.slice(i+q.length)); };
+  const line=p=>`<div class="brl-pl${p.id===t.owner_id?' on':''}" onclick="brPickOwner(event,'${t.id}','${escAttr(p.id)}')">
+      <span class="em">${p.em?escHtml(p.em):`<span class="ic">${escHtml(brInitials(p.id))}</span>`}</span><span class="nm">${mark(p.nm)}</span>${p.id===t.owner_id?'<span class="k">✓</span>':''}</div>`;
+  const here=all.filter(p=>p.on), rest=all.filter(p=>!p.on);
+  let list="";
+  if(!q) list+=`<div class="brl-pl${t.owner_id?'':' on'}" onclick="brPickOwner(event,'${t.id}','')"><span class="em">—</span><span class="nm">unassigned</span>${t.owner_id?'':'<span class="k">✓</span>'}</div>`;
+  if(here.length&&rest.length) list+=`<div class="fb-sec">On this brand</div>`+here.map(line).join("")+`<div class="fb-sec">Everyone</div>`+rest.map(line).join("");
+  else list+=here.concat(rest).map(line).join("");
+  if(!all.length) list+=`<div class="fb-none">Nobody called “${escHtml(BR_OWQ.trim())}”.</div>`;
+  return `<div class="brl-menu stm brl-owners" onclick="event.stopPropagation()">
+    <div class="bp-q"><i class="ti ti-search"></i><input id="brl-owq" placeholder="Find a person…" value="${escAttr(BR_OWQ)}" oninput="brOwnerQ(this.value)" onclick="event.stopPropagation()"></div>
+    <div class="brl-pls">${list}</div></div>`;
+}
+function brOwnerQ(v){
+  BR_OWQ=v;
+  const box=document.getElementById("brl-owq"), at=box?box.selectionStart:null;
+  render();
+  const b2=document.getElementById("brl-owq");
+  if(b2){ b2.focus(); try{ b2.setSelectionRange(at,at); }catch(e){} }
+}
 function brOwnerCell(t){
   const may=brMayRow(t), open=(BR_OWMENU===t.id);
-  const people=(PEOPLE||[]).filter(p=>p.role!=="client")
-    .map(p=>({id:p.id,nm:(p.name||p.email||"").split("@")[0]}))
-    .sort((a,b)=>a.nm.localeCompare(b.nm));
-  const menu=open?`<div class="brl-menu stm brl-owners" onclick="event.stopPropagation()">
-      <div class="${t.owner_id?'':'on'}" onclick="brPickOwner(event,'${t.id}','')"><span class="ic">—</span>unassigned${t.owner_id?'':' ✓'}</div>${
-      people.map(p=>`<div class="${p.id===t.owner_id?'on':''}" onclick="brPickOwner(event,'${t.id}','${escAttr(p.id)}')"><span class="ic">${escHtml(brInitials(p.id))}</span>${escHtml(p.nm)}${p.id===t.owner_id?' ✓':''}</div>`).join('')}</div>`:'';
+  const em=t.owner_id?(((PEOPLE||[]).find(x=>x.id===t.owner_id)||{}).emoji||""):"";
   return `<span class="c c-own${may?' may':''}" ${may?`onclick="brOpenOwner(event,'${t.id}')" title="Change the owner"`:''}>
-    <span class="brl-own">${escHtml(brPersonName(t.owner_id))}${may?'<b class="brl-sgcar">▾</b>':''}</span>${menu}</span>`;
+    <span class="brl-own">${em?`<span class="brl-owem">${escHtml(em)}</span>`:''}${escHtml(brPersonName(t.owner_id))}${may?'<b class="brl-sgcar">▾</b>':''}</span>${open?brOwnerMenuHtml(t):''}</span>`;
 }
 function brOpenOwner(e,id){
   if(e){ e.preventDefault(); e.stopPropagation(); }
-  const was=BR_OWMENU; closeAllPops(); BR_OWMENU=(was===id?null:id); render();
+  const was=BR_OWMENU; closeAllPops(); BR_OWMENU=(was===id?null:id); BR_OWQ=""; render();
+  if(BR_OWMENU) setTimeout(()=>{ const el=document.getElementById("brl-owq"); if(el) el.focus(); },30);
 }
 async function brPickOwner(e,id,who){
   if(e){ e.preventDefault(); e.stopPropagation(); }
@@ -12727,7 +12950,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V117.3 Tbilisi";
+const TOOL_VERSION="V117.5 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -36878,6 +37101,212 @@ function capSave(id,el,platform){
   st.textContent=`.fi.ta.rt.capx{white-space:pre-wrap;line-height:1.5;}
     .pccap.can b,.pccap.can strong,.fi.capx b{font-weight:700;} .pccap ul,.fi.capx ul{margin:2px 0 2px 18px;padding:0;}`;
   document.head.appendChild(st);
+})();
+</script>
+<script>
+/* ══ V117.4 TBILISI · READ ALL, WITH OR WITHOUT @MENTIONS ════════════════
+   Chirag, 15 Oct: "on clicking give the option to read all with or without
+   @mentions. This change should reflect here as well as in desktop."
+   Seen is written per thread (a post, a task, a meeting, a creative), so
+   "keep my @mentions" keeps every thread that holds one. */
+async function notifMarkAllBut(keepMen){
+  let items=notifItems();
+  if(keepMen){
+    const key=i=>i.kind==="post"?"p"+(i.post&&i.post.id):i.kind==="task"?"t"+i.taskId:i.kind==="creative"?"c"+i.creativeId:i.kind==="meeting"?"m"+i.meetingId:"";
+    const hold=new Set(items.filter(i=>i.mention).map(key));
+    items=items.filter(i=>!hold.has(key(i)));
+  }
+  const posts=[...new Set(items.filter(i=>i.kind==="post").map(i=>i.post&&i.post.id).filter(Boolean))];
+  const tasks=[...new Set(items.filter(i=>i.kind==="task").map(i=>i.taskId).filter(Boolean))];
+  const crs=items.filter(i=>i.kind==="creative"&&i.creativeId);
+  const meets=items.filter(i=>i.kind==="meeting"&&i.meetingId);
+  xnSheetClose();
+  for(const pid of posts) await fbMarkSeen(pid);
+  for(const tid of tasks) await taskMarkSeen(tid);
+  for(const c of crs) await crMarkSeen(c.creativeId,c.brandId);
+  for(const m of meets) await meetMarkSeen(m.meetingId,m.brandId);
+  if(keepMen){ syncBell(); try{ buildNotifPanel(); }catch(e){} renderSocial(); }
+  else { closeAllPops(); syncBell(); renderSocial(); }
+}
+function notifReadAllAsk(e){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  if(xnPhone()){ xnSheet("read"); return; }
+  const head=document.querySelector("#notif-panel .nphead"); if(!head) return;
+  const was=head.querySelector(".nrd"); if(was){ was.remove(); return; }
+  const n=notifItems().filter(i=>i.mention).length;
+  head.insertAdjacentHTML("beforeend",`<div class="nrd" onclick="event.stopPropagation()">
+    <button onclick="notifMarkAllBut(false)"><i class="ti ti-checks"></i>Mark everything read</button>
+    <button onclick="notifMarkAllBut(true)"><i class="ti ti-at"></i>Mark read, keep my @mentions${n?` (${n})`:""}</button></div>`);
+}
+
+/* ══ V117.4 TBILISI · THE BELL AS A PHONE PAGE ═══════════════════════════
+   Its own tile bar — Search · @mentions · All · Read all · Alerts — and
+   one row per message, like the task list: where it is on top, "Name:
+   message" under it, unread in red, mentions with a red edge and "@ you".
+   The phone and email settings and the muted brands move into Alerts. */
+let XN_Q="", XN_SEARCH=false, XN_SHEET=null;
+function xnPhone(){ return typeof mfNarrow==="function"&&mfNarrow()&&!!document.querySelector(".nav.mf"); }
+function xnWhen(iso){
+  const d=new Date(iso); if(isNaN(d)) return "";
+  const t=new Date(); const day=x=>new Date(x.getFullYear(),x.getMonth(),x.getDate()).getTime();
+  const diff=(day(t)-day(d))/864e5;
+  if(diff<2) return d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
+  return d.toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+}
+function xnDay(iso){
+  const d=new Date(iso); const t=new Date(); const day=x=>new Date(x.getFullYear(),x.getMonth(),x.getDate()).getTime();
+  const diff=(day(t)-day(d))/864e5;
+  return diff<1?"Today":diff<2?"Yesterday":"Earlier";
+}
+function xnRow(it,seen){
+  const base=notifRowHtml(it,it.brandId,seen?{seen:true}:{});
+  const m=base.match(/onclick="(notifOpen\([^"]*\))"/); const go=m?m[1]:"";
+  const b=brands[it.brandId]||{};
+  const tmp=document.createElement("div"); tmp.innerHTML=notifDestHtml(it,it.brandId,true);
+  const where=(tmp.textContent||"").replace(/\s+/g," ").trim();
+  let who="", q={text:"",dim:false};
+  if(it.kind==="shoot"){ who=""; q={text:[it.head,it.line].filter(Boolean).join(" · "),dim:false}; }
+  else { who=nameShow(it.c.author_name,it.c.author_email,it.c.author_kind)||""; q=notifExcerpt(it); }
+  return `<div class="xn-r${seen?" seen":" un"}${it.mention?" men":""}" onclick="${go}">
+    <div class="sp"></div>
+    <div class="t1">${escHtml(b.name||it.brandName||"")}${where?` <em>· ${escHtml(where)}</em>`:""}</div>
+    <div class="tm">${seen?"":"<i></i>"}${escHtml(xnWhen(seen&&it.seenAt?it.seenAt:it.c.created_at))}</div>
+    <div class="p">${who?`<b>${escHtml(who)}:</b>`:""}<span class="q${q.dim?" dim":""}">${escHtml(q.text)}</span>${it.mention?'<span class="at">@ you</span>':""}</div></div>`;
+}
+function xnTiles(nAll,nMen){
+  if(XN_SEARCH) return `<div class="xn-tl srch"><input id="xn-q" type="search" placeholder="Search notifications" value="${escAttr(XN_Q)}" oninput="xnQ(this.value)"><button onclick="xnSearch(false)" aria-label="Close search"><i class="ti ti-x"></i></button></div>`;
+  return `<div class="xn-tl">
+    <button class="mft" onclick="xnSearch(true)"><i class="ti ti-search"></i><span>Search</span></button>
+    <button class="mft${NOTIF_TAB==="mention"?" on":""}" onclick="notifSetTab('mention')"><i class="ti ti-at"></i><span>Mentions</span>${nMen?`<em class="xn-n">${nMen}</em>`:""}</button>
+    <button class="mft${NOTIF_TAB!=="mention"?" on":""}" onclick="notifSetTab('all')"><i class="ti ti-bell"></i><span>All</span>${nAll?`<em class="xn-n">${nAll>99?"99+":nAll}</em>`:""}</button>
+    <button class="mft" onclick="notifReadAllAsk(event)"><i class="ti ti-checks"></i><span>Read all</span></button>
+    <button class="mft" onclick="xnSheet('alerts')"><i class="ti ti-settings"></i><span>Alerts</span></button></div>`;
+}
+function xnSearch(on){ XN_SEARCH=!!on; if(!on) XN_Q=""; buildNotifPanel(); if(on){ const i=document.getElementById("xn-q"); if(i) i.focus(); } }
+function xnQ(v){ XN_Q=v; xnFilter(); }
+function xnFilter(){
+  const q=String(XN_Q||"").trim().toLowerCase();
+  const el=document.getElementById("notif-panel"); if(!el) return;
+  el.querySelectorAll(".xn-r").forEach(r=>{ r.style.display=(!q||r.textContent.toLowerCase().includes(q))?"":"none"; });
+  el.querySelectorAll(".xn-sec").forEach(s=>{ let n=s.nextElementSibling, any=false;
+    while(n&&!n.classList.contains("xn-sec")){ if(n.classList.contains("xn-r")&&n.style.display!=="none") any=true; n=n.nextElementSibling; }
+    s.style.display=any?"":"none"; });
+}
+function xnSheetClose(){ XN_SHEET=null; document.querySelectorAll(".xn-sh,.xn-scrim").forEach(n=>n.remove()); }
+/* every select in the moved settings becomes the suite's chips; the select
+   stays underneath and is what actually saves */
+function xnChips(root){
+  root.querySelectorAll("select").forEach((s,k)=>{
+    s.classList.add("src"); s.dataset.xk=k;
+    const row=document.createElement("div"); row.className="row";
+    row.innerHTML=[...s.options].map(o=>`<button class="ch${o.value===s.value?" on":""}" data-v="${escAttr(o.value)}">${escHtml(o.textContent)}</button>`).join("");
+    row.addEventListener("click",ev=>{ const b=ev.target.closest(".ch"); if(!b) return; ev.stopPropagation();
+      s.value=b.dataset.v; s.dispatchEvent(new Event("change",{bubbles:true}));
+      row.querySelectorAll(".ch").forEach(c=>c.classList.toggle("on",c===b)); });
+    s.parentNode.insertBefore(row,s.nextSibling);
+  });
+}
+function xnSheet(which){
+  xnSheetClose(); XN_SHEET=which;
+  let h="";
+  if(which==="read"){
+    const n=notifItems().filter(i=>i.mention).length;
+    h=`<div class="hd">Read all<button onclick="xnSheetClose()">Cancel</button></div>
+      <button class="li" onclick="notifMarkAllBut(false)"><i class="ti ti-checks"></i>Mark everything read</button>
+      <button class="li" onclick="notifMarkAllBut(true)"><i class="ti ti-at"></i>Mark read, keep my @mentions${n?` (${n})`:""}</button>`;
+  } else {
+    const inBell=[...new Set(notifItems().map(i=>i.brandId))].filter(b=>brands[b]&&!brandMuted(b));
+    h=`<div class="hd">Alerts<button onclick="xnSheetClose()">Done</button></div>
+      <div class="xn-set">${notifMailBlock()}</div>
+      ${inBell.length?`<h4>Mute a brand · just for you</h4><div class="row">${inBell.map(b=>`<button class="ch" onclick="notifMute('${b}',1);xnSheetClose()"><i class="ti ti-bell-off"></i> ${escHtml(brands[b].name||"")}</button>`).join("")}</div>`:""}
+      ${notifMutedBlock()}`;
+  }
+  document.body.insertAdjacentHTML("beforeend",`<div class="xn-scrim" onclick="event.stopPropagation();xnSheetClose()"></div><div class="xn-sh mfs" onclick="event.stopPropagation()">${h}</div>`);
+  const sh=document.querySelector(".xn-sh");
+  if(which==="alerts"&&sh){
+    sh.querySelectorAll(".npmail").forEach(r=>{ const nm=r.querySelector(".nm"); const t=document.createElement("h4"); t.textContent=nm?nm.textContent:""; r.parentNode.insertBefore(t,r); if(nm) nm.remove(); const i=r.querySelector(":scope > .ti"); if(i) i.remove(); r.style.cssText="display:block;padding:0;border:0;background:none"; });
+    xnChips(sh);
+  }
+}
+
+/* ══ V117.4 TBILISI · CHANGING THE MONTH ON A PHONE ═════════════════════
+   Chirag, 15 Oct: "there is no way to change the month that appears for a
+   brand." The desk has its twelve-month column; the phone had none. The
+   month card's own head now carries it — no new row: ‹ steps back, ›
+   steps on (across the year end too), and the name opens a sheet with the
+   twelve months, their post counts, the year, and the way into that
+   month's plan (what tapping the name used to do). */
+function xmCount(m){ try{ return socialForBrandYear(activeBrand,YEAR).filter(p=>p.month===m).length; }catch(e){ return 0; } }
+function xmStep(d){
+  let m=(contentMonth||curMonth||1)+d;
+  if(m<1){ setYear(YEAR-1); m=12; } else if(m>12){ setYear(YEAR+1); m=1; }
+  contentMonth=m; renderSocial(); try{ buildContentSidebar(); }catch(e){}
+}
+function xmPick(m){ xnSheetClose(); setContentMonthTo(m); }
+function xmYear(d){ setYear(YEAR+d); xmSheet(); }
+function xmSheet(){
+  xnSheetClose(); XN_SHEET="month";
+  const t=new Date(), cur=contentMonth||curMonth||1;
+  const h=`<div class="hd">Month<button onclick="xnSheetClose()">Done</button></div>
+    <div class="xm-yr"><button onclick="xmYear(-1)" aria-label="Previous year"><i class="ti ti-chevron-left"></i></button>${YEAR}<button onclick="xmYear(1)" aria-label="Next year"><i class="ti ti-chevron-right"></i></button></div>
+    <div class="xm-grid">${MN.slice(1,13).map((n,i)=>{ const m=i+1, c=xmCount(m);
+      return `<button class="${m===cur?"on":""}${(YEAR===t.getFullYear()&&m===t.getMonth()+1)?" now":""}" onclick="xmPick(${m})">${n.slice(0,3)}<small>${c?c+" post"+(c===1?"":"s"):"—"}</small></button>`; }).join("")}</div>
+    ${canEdit()?`<button class="li" onclick="xnSheetClose();openMonthPlanView(${cur})"><i class="ti ti-calendar-stats"></i>Open ${MN[cur]}’s plan</button>`:""}`;
+  document.body.insertAdjacentHTML("beforeend",`<div class="xn-scrim" onclick="event.stopPropagation();xnSheetClose()"></div><div class="xn-sh mfs" onclick="event.stopPropagation()">${h}</div>`);
+}
+function xmDress(){
+  if(!(typeof mfNarrow==="function"&&mfNarrow())||view!=="content") return;
+  const head=document.querySelector("#main .mc-head"); if(!head||head.querySelector(".xm")) return;
+  const m=contentMonth||curMonth||1, t=new Date();
+  const yr=YEAR!==t.getFullYear()?` <small>${YEAR}</small>`:"";
+  head.insertAdjacentHTML("afterbegin",`<div class="xm">
+    <button class="st" onclick="event.stopPropagation();xmStep(-1)" aria-label="Previous month"><i class="ti ti-chevron-left"></i></button>
+    <button class="nm" onclick="event.stopPropagation();xmSheet()">${MN[m]}${yr}<i class="ti ti-chevron-down"></i></button>
+    <button class="st" onclick="event.stopPropagation();xmStep(1)" aria-label="Next month"><i class="ti ti-chevron-right"></i></button></div>`);
+}
+(function(){
+  const base=renderSocial;
+  renderSocial=function(){ const r=base.apply(this,arguments); try{ xmDress(); }catch(e){} return r; };
+  /* the month card is also redrawn on its own (after its data lands), so
+     the head is dressed whenever it appears without the switch */
+  const m=document.getElementById("main");
+  if(m&&window.MutationObserver) new MutationObserver(()=>{ try{ xmDress(); }catch(e){} }).observe(m,{childList:true,subtree:true});
+})();
+(function(){
+  const baseBuild=buildNotifPanel;
+  buildNotifPanel=function(){
+    const el=document.getElementById("notif-panel");
+    if(!el||!xnPhone()){
+      if(el) el.classList.remove("xn");
+      const r=baseBuild.apply(this,arguments);
+      /* the desk's link now asks first */
+      const mk=el&&el.querySelector(".nphead .mark");
+      if(mk) mk.setAttribute("onclick","notifReadAllAsk(event)");
+      return r;
+    }
+    el.classList.add("xn");
+    const all=notifItems(), men=all.filter(i=>i.mention), seenMen=notifSeenItems();
+    if(NOTIF_TAB!=="mention") NOTIF_TAB="all";
+    /* grouped by day, so newest first; a mention still shows itself by its red edge and "@ you" */
+    const list=(NOTIF_TAB==="mention"?men:all).slice().sort((a,b)=>new Date(b.c.created_at)-new Date(a.c.created_at));
+    let body="", last="";
+    list.forEach(it=>{ const d=xnDay(it.c.created_at); if(d!==last){ body+=`<div class="xn-sec">${d}</div>`; last=d; } body+=xnRow(it,false); });
+    if(NOTIF_TAB==="mention"&&seenMen.length) body+=`<div class="xn-sec">Seen · kept two days</div>`+seenMen.map(it=>xnRow(it,true)).join("");
+    if(!body) body=`<div class="xn-empty">${NOTIF_TAB==="mention"?"Nobody is waiting on you.":"Nothing waiting for you."}</div>`;
+    el.innerHTML=xnTiles(all.length,men.length)+body+notifTruncHtml();
+    xnFilter();
+    /* a setting saved (or refused by the phone) redraws the open sheet, so
+       the chips always show what is actually stored */
+    if(XN_SHEET==="alerts") xnSheet("alerts");
+  };
+  /* the page is "on" while the panel is open: no +, no lit tab, no hiding bars */
+  const np=document.getElementById("notif-panel");
+  if(np&&window.MutationObserver) new MutationObserver(()=>{
+    const on=np.classList.contains("open")&&xnPhone();
+    document.documentElement.classList.toggle("mfnotif",on);
+    if(on) document.documentElement.classList.remove("mfhid");
+    if(!on){ xnSheetClose(); if(XN_SEARCH){ XN_SEARCH=false; XN_Q=""; } }
+  }).observe(np,{attributes:true,attributeFilter:["class"]});
 })();
 </script>
 </body>
