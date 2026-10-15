@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V117.6 Tbilisi"/>
+<meta name="cc-tool-version" content="V117.7 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -5069,19 +5069,21 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
 .nphead{position:relative;}
 </style>
 <style>
-/* ══ V117.6 TBILISI · THE MONTH SWITCH, QUIET ═══════════════════════════
-   Chirag, 15 Oct: "the whole delicate look is lost. Right now, it looks too
-   loud." The switch now wears exactly the month card's own type — the name
-   at 13px/700, every arrow the same faint 12px grey the old › was — and the
-   tap areas stay finger-sized without drawing a box. */
+/* ══ V117.6 TBILISI · THE MONTH SWITCH, QUIET (Chirag's option A) ════════
+   Chirag, 15 Oct: "the whole delicate look is lost ... looks too loud",
+   then "the 3 arrows look odd" — he picked A. The card head is the month
+   name exactly as it always was, with one faint mark beside it: tap the
+   name for the twelve months, swipe the calendar for the next or previous
+   month. No arrows. */
 @media(max-width:768px){
-  #main .mc-head .xm{gap:0;margin-left:-8px;}
-  #main .mc-head .xm .st{width:28px;height:28px;border-radius:8px;font-size:12px;color:var(--subtle);opacity:.55;}
-  #main .mc-head .xm .st .ti{font-size:12px;}
-  #main .mc-head .xm .st:active{opacity:1;}
-  #main .mc-head .xm .nm{font-size:13px;font-weight:700;letter-spacing:-.01em;padding:4px 2px;gap:4px;color:var(--text);}
+  #main .mc-head .xm{gap:0;}
+  #main .mc-head .xm .st{display:none!important;}
+  #main .mc-head .xm .nm{font-size:13px;font-weight:700;letter-spacing:-.01em;padding:4px 0;gap:5px;color:var(--text);}
   #main .mc-head .xm .nm .ti{font-size:12px;color:var(--subtle);opacity:.55;}
   #main .mc-head .xm .nm small{font-size:12px;font-weight:600;color:var(--subtle);}
+  #main .mc-grid.xm-slide-l{animation:xmL .22s ease;} #main .mc-grid.xm-slide-r{animation:xmR .22s ease;}
+  @keyframes xmL{from{transform:translateX(28px);opacity:.3}to{transform:none;opacity:1}}
+  @keyframes xmR{from{transform:translateX(-28px);opacity:.3}to{transform:none;opacity:1}}
 }
 </style>
 </head>
@@ -12966,7 +12968,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V117.6 Tbilisi";
+const TOOL_VERSION="V117.7 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -37323,6 +37325,26 @@ function xmDress(){
     if(on) document.documentElement.classList.remove("mfhid");
     if(!on){ xnSheetClose(); if(XN_SEARCH){ XN_SEARCH=false; XN_Q=""; } }
   }).observe(np,{attributes:true,attributeFilter:["class"]});
+})();
+</script>
+<script>
+/* the swipe: a mostly-sideways move of 50px or more across the month card */
+(function(){
+  let x0=null,y0=null,on=false;
+  document.addEventListener("touchstart",e=>{
+    on=false; if(!(typeof mfNarrow==="function"&&mfNarrow())||view!=="content") return;
+    const t=e.target, head=document.querySelector("#main .mc-head"); if(!head||!t||!t.closest) return;
+    const card=head.parentNode; if(!card||!card.contains(t)) return;
+    const p=e.touches&&e.touches[0]; if(!p) return; x0=p.clientX; y0=p.clientY; on=true;
+  },{passive:true});
+  document.addEventListener("touchend",e=>{
+    if(!on) return; on=false;
+    const p=e.changedTouches&&e.changedTouches[0]; if(!p) return;
+    const dx=p.clientX-x0, dy=p.clientY-y0;
+    if(Math.abs(dx)<50||Math.abs(dx)<Math.abs(dy)*1.5) return;
+    xmStep(dx<0?1:-1);
+    const g=document.querySelector("#main .mc-grid"); if(g) g.classList.add(dx<0?"xm-slide-l":"xm-slide-r");
+  },{passive:true});
 })();
 </script>
 </body>
