@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V116.8 Tbilisi"/>
+<meta name="cc-tool-version" content="V116.9 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12398,7 +12398,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V116.8 Tbilisi";
+const TOOL_VERSION="V116.9 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -35466,5 +35466,980 @@ function xdActivity(t){
   };
 })();
 </script>
+<style>
+/* ══ V116.9 TBILISI — THE MOOD BOARD ═══════════════════════════════════
+   Every class is .mdb- on purpose: .mb- is already the phone's message
+   box row (mbDress, .mb-in, .mb-clip) and a board tile sharing its
+   prefix is how a later tidy-up deletes the wrong thing. */
+.mdb-up{display:flex;align-items:center;gap:6px;padding:6px 10px;margin-bottom:14px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;}
+.mdb-up:hover{background:var(--bg);color:var(--text);}
+.mdb-trow{position:relative;display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text);}
+.mdb-trow:hover{background:rgba(13,13,13,.05);}
+.mdb-trow .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mdb-trow .ct{font-size:11.5px;color:var(--subtle);font-weight:600;}
+.mdb-trow.on{background:var(--text);color:#fff;font-weight:600;}
+.mdb-trow.on .ct{color:rgba(255,255,255,.6);}
+.mdb-tmb{width:22px;height:22px;border-radius:6px;border:0;background:transparent;color:var(--muted);cursor:pointer;
+  display:none;align-items:center;justify-content:center;font-size:15px;margin:-3px -4px -3px 0;flex:none;}
+.mdb-trow:hover .mdb-tmb,.mdb-trow.menu .mdb-tmb{display:inline-flex;}
+.mdb-trow:hover .ct.hasm,.mdb-trow.menu .ct.hasm{display:none;}
+.mdb-tmb:hover{background:rgba(13,13,13,.08);color:var(--text);}
+.mdb-trow.on .mdb-tmb{color:#fff;}
+.mdb-menu{position:absolute;left:4px;right:4px;top:calc(100% + 4px);z-index:850;background:var(--surface);border:1px solid var(--div);
+  border-radius:12px;box-shadow:0 18px 46px rgba(13,13,13,.18);padding:6px;color:var(--text);font-weight:500;max-height:300px;overflow-y:auto;}
+.mdb-mi{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;font-size:13px;cursor:pointer;}
+.mdb-mi:hover{background:rgba(13,13,13,.05);}
+.mdb-mi i{font-size:15px;color:var(--muted);}
+.mdb-mi.red,.mdb-mi.red i{color:var(--acc);}
+.mdb-msep{height:1px;background:var(--div);margin:5px 4px;}
+.mdb-ren{flex:1;min-width:0;height:24px;border:1px solid var(--text);border-radius:6px;padding:0 7px;font:inherit;font-size:13px;}
+.mdb-card{background:var(--surface);border:1px solid var(--div);border-radius:var(--rc);padding:16px;}
+.mdb-grid{display:flex;gap:14px;align-items:flex-start;}
+.mdb-col{flex:1;min-width:0;}
+.mdb-tile{margin:0 0 14px;cursor:pointer;position:relative;border-radius:12px;overflow:hidden;background:var(--surface2);}
+.mdb-ph{position:relative;width:100%;min-height:60px;}
+.mdb-ph img{display:block;width:100%;height:100%;object-fit:cover;}
+.mdb-ph .none{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--subtle);font-size:22px;}
+.mdb-ov{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:8px;padding:10px;
+  background:linear-gradient(180deg,rgba(0,0,0,0) 30%,rgba(0,0,0,.72));opacity:0;transition:opacity 120ms;}
+.mdb-tile:hover .mdb-ov{opacity:1;}
+.mdb-ov .tg{display:flex;flex-wrap:wrap;gap:4px;}
+.mdb-ov .tg span{font-size:11px;font-weight:600;color:#fff;background:rgba(255,255,255,.18);border-radius:6px;padding:2px 7px;cursor:pointer;}
+.mdb-ov .tg span:hover{background:rgba(255,255,255,.34);}
+.mdb-ov .nt{font-size:12px;color:#fff;line-height:1.35;}
+.mdb-src{position:absolute;top:8px;right:8px;display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;max-width:calc(100% - 16px);
+  border-radius:999px;background:rgba(255,255,255,.94);color:var(--text);font-size:11.5px;font-weight:600;
+  text-decoration:none;opacity:0;transition:opacity 120ms;z-index:3;box-shadow:0 2px 8px rgba(0,0,0,.18);white-space:nowrap;overflow:hidden;}
+.mdb-tile:hover .mdb-src{opacity:1;}
+.mdb-src:hover{background:#fff;color:var(--acc);}
+.mdb-msg{position:absolute;left:8px;top:8px;display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;z-index:3;
+  border-radius:999px;background:rgba(13,13,13,.72);color:#fff;font-size:11px;font-weight:700;}
+.mdb-play{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;
+  background:rgba(13,13,13,.62);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;z-index:2;pointer-events:none;
+  box-shadow:0 0 0 2px rgba(255,255,255,.85);}
+.mdb-tile:hover .mdb-play{background:var(--acc);}
+.mdb-vid{position:absolute;left:8px;bottom:8px;display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 7px;border-radius:6px;
+  background:rgba(13,13,13,.72);color:#fff;font-size:10.5px;font-weight:700;letter-spacing:.03em;z-index:2;}
+.mdb-tile:hover .mdb-vid{display:none;}
+.mdb-tile .ck{position:absolute;left:8px;top:8px;width:24px;height:24px;border-radius:50%;border:2px solid #fff;
+  background:rgba(13,13,13,.25);display:none;align-items:center;justify-content:center;color:#fff;font-size:14px;z-index:4;}
+.mdb-sel .mdb-tile .ck{display:flex;}
+.mdb-sel .mdb-tile .mdb-msg,.mdb-sel .mdb-tile .mdb-src,.mdb-sel .mdb-tile .mdb-ov{display:none;}
+.mdb-tile.on{outline:3px solid var(--text);outline-offset:-3px;}
+.mdb-tile.on .ck{background:var(--text);border-color:var(--text);}
+.mdb-tile.on img{opacity:.82;}
+.mdb-empty{padding:60px 0;text-align:center;color:var(--muted);font-size:13px;flex:1;}
+.mdb-selcnt{font-size:14px;font-weight:700;white-space:nowrap;}
+.mdb-pin{display:flex;gap:6px;padding:6px 6px 8px;}
+.mdb-pin input{flex:1;height:30px;border:1px solid var(--div);border-radius:8px;padding:0 9px;font:inherit;font-size:12.5px;}
+/* the Strategy page's section 05 */
+.mdb-navct{float:right;font-size:12px;font-weight:600;color:var(--subtle);}
+.bd-navi.on .mdb-navct{color:var(--acc);}
+.mdb-strip{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;}
+.mdb-strip > div{aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--surface2);cursor:pointer;position:relative;}
+.mdb-strip img{width:100%;height:100%;object-fit:cover;display:block;}
+.mdb-open{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:13.5px;font-weight:600;color:var(--acc);cursor:pointer;}
+/* the opened reference — opaque, it overhangs content */
+.mdb-scrim{position:fixed;inset:0;background:rgba(13,13,13,.28);z-index:880;}
+.mdb-dw{position:fixed;top:0;right:0;bottom:0;width:min(900px,100vw);background:var(--surface);z-index:881;
+  display:grid;grid-template-columns:minmax(0,1fr) 360px;box-shadow:-20px 0 50px rgba(13,13,13,.18);}
+.mdb-dwimg{background:#161616;display:flex;align-items:center;justify-content:center;overflow:auto;min-width:0;}
+.mdb-dwimg img,.mdb-dwimg video{max-width:100%;max-height:100vh;display:block;}
+.mdb-dwimg iframe{width:100%;height:100%;border:0;background:#000;}
+.mdb-side{display:flex;flex-direction:column;border-left:1px solid var(--div);min-height:0;}
+.mdb-top{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--div);}
+.mdb-top .t{flex:1;font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mdb-ib{width:32px;height:32px;border-radius:8px;border:1px solid var(--div);background:var(--surface);cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;color:var(--text);font-size:16px;text-decoration:none;flex:none;}
+.mdb-ib:hover{border-color:rgba(13,13,13,.25);}
+.mdb-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:16px;}
+.mdb-l{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--subtle);margin-bottom:6px;}
+.mdb-tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.mdb-tag{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:7px;background:var(--surface2);
+  border:1px solid var(--div);font-size:12px;font-weight:600;}
+.mdb-tag i{color:var(--subtle);cursor:pointer;font-size:13px;}
+.mdb-tag i:hover{color:var(--acc);}
+.mdb-tag i.lk:hover{color:var(--text);}
+.mdb-addtag{height:26px;border:1px dashed var(--div);border-radius:7px;padding:0 9px;font:inherit;font-size:12px;width:130px;background:transparent;}
+.mdb-sl{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--div);border-radius:10px;text-decoration:none;color:var(--text);}
+.mdb-sl:hover{border-color:rgba(13,13,13,.25);}
+.mdb-sl .d{font-size:13px;font-weight:700;}
+.mdb-sl .u{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mdb-sl i{font-size:18px;color:var(--muted);}
+.mdb-meta{font-size:12.5px;color:var(--muted);line-height:1.6;}
+.mdb-meta a{color:var(--muted);}
+.mdb-note{width:100%;min-height:64px;border:1px solid var(--div);border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;resize:vertical;}
+.mdb-thread .ccm-wrap{margin-top:8px;}
+/* the Add box */
+.mdb-tabs{display:flex;gap:2px;padding:3px;background:#E7E6E1;border-radius:10px;margin-bottom:16px;}
+.mdb-tabs button{flex:1;height:30px;border:0;border-radius:8px;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+.mdb-tabs button.on{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.08);}
+.mdb-drop{border:1.5px dashed var(--div);border-radius:12px;padding:26px;text-align:center;color:var(--muted);font-size:13px;cursor:pointer;display:block;}
+.mdb-drop i{font-size:28px;display:block;margin-bottom:6px;color:var(--subtle);}
+.mdb-prev{display:flex;gap:12px;align-items:center;margin-top:12px;padding:10px;border:1px solid var(--div);border-radius:10px;}
+.mdb-prev .im{width:64px;height:64px;border-radius:8px;overflow:hidden;background:var(--surface2);flex:none;display:flex;align-items:center;justify-content:center;color:var(--subtle);}
+.mdb-prev .im img{width:100%;height:100%;object-fit:cover;display:block;}
+.mdb-prev .s{font-size:12px;color:var(--muted);}
+.mdb-err{margin-top:10px;font-size:12.5px;color:var(--acc);}
+.mdb-files{margin-top:10px;font-size:12.5px;color:var(--muted);line-height:1.6;}
+</style>
+<script>
+/* ══ V116.9 TBILISI — THE MOOD BOARD ═══════════════════════════════════
+   Chirag, 15 Oct: "whenever a new brand comes on board or there is a new
+   project, we create Pinterest mood boards and share them with the team
+   to follow… if we can build a similar functionality right inside the
+   marketing calendar, the life of everybody will become quite easy."
+
+   Settled over six mockups the same night (01–06 - Mood board mockup):
+   · ONE board per brand. Tags, many to a picture, do what project
+     boards did; the left panel is the tag list and nothing else.
+   · Reached from the Strategy page — "05 · Mood board" in its own left
+     panel, and a strip of the newest six at the foot of the page. The
+     black bar keeps its six tabs; Strategy stays lit.
+   · The board shows pictures only. Tags and the note appear on hover and
+     in the opened picture. The site name in the corner opens the
+     ORIGINAL site, never Pinterest, unless Pinterest is all there is.
+   · Videos (YouTube, Vimeo, Instagram) play inside the opened picture.
+   · A tag has a link that opens the board filtered to it — by the tag's
+     id, so renaming a tag does not break a link already shared.
+   · Rename, merge and delete a tag once, for every picture; select
+     several pictures and add or remove a tag on all of them. Undo.
+
+   Data: mood_items and mood_tags (01 - Mood board - migration.sql). A
+   reference carries tag IDS. Its conversation is post_comments with
+   mood_item_id — the suite's one thread, one message box. */
+const MDB_FN=SB_URL+"/functions/v1/mood-link";
+const MDB={bid:null,ok:false,loading:false,err:"",items:[],tags:[],counts:{},
+  q:"",f:[],sort:"newest",pop:null,tmenu:null,tmerge:false,ren:null,sel:null,
+  open:null,th:{id:null,msgs:[],loading:false,err:""},staged:[],posting:false,
+  add:null,pendingTag:null};
+PAGE_NAME.mood="Mood board";
+
+/* A shared tag link arrives as ?b=<brand>&p=mood&tag=<id>. urlRestore
+   consumes the stash and knows nothing of tags, so the tag is read here,
+   first, while the stash is still there. */
+try{
+  const raw=sessionStorage.getItem(URL_LS);
+  if(raw){ const q=new URLSearchParams(raw); if(q.get("p")==="mood"&&q.get("tag")) MDB.pendingTag=q.get("tag"); }
+}catch(e){}
+
+/* ── the data ─────────────────────────────────────────────────────── */
+function mdbTag(id){ return MDB.tags.find(t=>t.id===id)||null; }
+function mdbTagIds(x){ return (x.tag_ids||[]).filter(id=>!!mdbTag(id)); }
+function mdbCount(a){ const m=new Map(); a.forEach(x=>m.set(x,(m.get(x)||0)+1)); return [...m.entries()]; }
+function mdbWho(id){ const p=id?personById(id):null; return p?(p.name||p.email||"Someone"):"Someone"; }
+function mdbSrcName(x){ return x.provider==="upload"?"Uploaded":(x.domain||"web"); }
+function mdbIcon(x){
+  if(x.provider==="upload") return "ti-upload";
+  if(x.domain==="youtube.com") return "ti-brand-youtube";
+  if(x.domain==="vimeo.com") return "ti-brand-vimeo";
+  if(x.domain==="instagram.com") return "ti-brand-instagram";
+  if(x.domain==="pinterest.com"||(!x.source_url&&x.pin_url)) return "ti-brand-pinterest";
+  return "ti-world";
+}
+async function mdbLoad(bid){
+  MDB.bid=bid; MDB.loading=true; MDB.ok=false; MDB.err="";
+  try{
+    const [i,t,c]=await Promise.all([
+      sb.from("mood_items").select("*").eq("brand_id",bid).is("deleted_at",null).order("created_at",{ascending:false}),
+      sb.from("mood_tags").select("*").eq("brand_id",bid).is("deleted_at",null).order("name"),
+      sb.from("post_comments").select("id,mood_item_id,deleted_at").eq("brand_id",bid).not("mood_item_id","is",null)]);
+    const bad=[i,t].find(r=>r.error); if(bad) throw new Error(bad.error.message);
+    if(MDB.bid!==bid) return;
+    MDB.items=(i.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at);
+    MDB.tags=(t.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at);
+    MDB.counts={};
+    ((c&&!c.error&&c.data)||[]).forEach(x=>{ if(x.mood_item_id&&!x.deleted_at) MDB.counts[x.mood_item_id]=(MDB.counts[x.mood_item_id]||0)+1; });
+    MDB.ok=true;
+    if(MDB.pendingTag){
+      const tg=mdbTag(MDB.pendingTag); MDB.pendingTag=null;
+      MDB.f=MDB.f.filter(f=>f.k!=="tag");
+      if(tg) MDB.f.push({k:"tag",op:"is",vals:[tg.id]});
+      else toast("That tag is no longer on this board. Showing every reference.","err");
+    }
+  }catch(e){ MDB.err=String(e&&e.message||e); }
+  MDB.loading=false;
+  if(view==="mood"||view==="brief") render();
+}
+function mdbEnsure(){
+  if(!activeBrand||!brands[activeBrand]) return;
+  if(MDB.bid!==activeBrand){ MDB.f=[]; MDB.q=""; MDB.sel=null; MDB.open=null; mdbLoad(activeBrand); }
+}
+function mdbNewest(){ return MDB.items.slice().sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||""))); }
+
+/* ── filters, the same model as Tasks and Promotions ─────────────── */
+const MDB_FIELDS={
+  tag: {label:"Tag",      of:x=>mdbTagIds(x),         name:v=>(mdbTag(v)||{}).name||"(deleted tag)"},
+  by:  {label:"Added by", of:x=>[x.created_by||""],    name:v=>mdbWho(v)},
+  src: {label:"Source",   of:x=>[mdbSrcName(x)],       name:v=>v},
+  type:{label:"Type",     of:x=>[x.kind==="video"?"video":"image"], name:v=>v==="video"?"Video":"Picture"}
+};
+function mdbTagSel(){ const f=MDB.f.find(f=>f.k==="tag"&&f.op==="is"); return f?f.vals:[]; }
+function mdbVisible(){
+  const q=MDB.q.trim().toLowerCase();
+  const r=MDB.items.filter(x=>{
+    if(q){
+      const hay=[x.title,x.note,x.domain,...mdbTagIds(x).map(id=>(mdbTag(id)||{}).name)].join(" ").toLowerCase();
+      if(hay.indexOf(q)<0) return false;
+    }
+    return MDB.f.every(f=>{ if(!f.vals.length) return true;
+      const hit=MDB_FIELDS[f.k].of(x).some(v=>f.vals.includes(v)); return f.op==="is"?hit:!hit; });
+  });
+  return r.sort((a,b)=>{ const c=String(b.created_at||"").localeCompare(String(a.created_at||"")); return MDB.sort==="oldest"?-c:c; });
+}
+
+/* ── the route, the tab, the page's address ───────────────────────── */
+(function(){
+  const base=viewRoute;
+  viewRoute=function(v){
+    if(v==="mood") return {render:renderMood,sidebar:buildMoodSidebar,needs:"brand+edit"};
+    return base(v);
+  };
+  const st=BN_TABS.find(t=>t.k==="brief"); if(st&&st.on.indexOf("mood")<0) st.on.push("mood");
+  const baseState=urlState;
+  urlState=function(){
+    const q=baseState.apply(this,arguments);
+    if(view==="mood"){ const s=mdbTagSel(); if(s.length===1) q.set("tag",s[0]); }
+    return q;
+  };
+  /* a comment on a reference is not a post: the bell's realtime path
+     would draw it as one with no post behind it. The bell learns the
+     mood board in its own step; until then these stay off it. */
+  const baseIngest=notifIngest;
+  notifIngest=function(c){ if(c&&c.mood_item_id) return; return baseIngest.apply(this,arguments); };
+  /* the message box's clip, drop and phone camera know the board */
+  const baseAtt=mpAttachOpen;
+  mpAttachOpen=function(ev){
+    const f=wBarField();
+    if(f&&f.dataset&&f.dataset.att==="mood"){
+      if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+      const inp=document.getElementById("mdb-files"); if(inp) inp.click(); return false;
+    }
+    return baseAtt.apply(this,arguments);
+  };
+  const baseDz=dzRoute;
+  dzRoute=function(el,files){ if(String(el.dataset.drop||"").split(":")[0]==="mood") return mdbStage(files); return baseDz.apply(this,arguments); };
+  const baseIn=mbInputFor;
+  mbInputFor=function(f){ if(f&&f.dataset&&f.dataset.att==="mood") return document.getElementById("mdb-files"); return baseIn.apply(this,arguments); };
+  /* the Add button in the black bar, beside the bell, on this page only */
+  const baseRender=render;
+  render=function(){
+    if(view!=="mood"){ MDB.sel=null; if(MDB.open) mdbClose(true); }
+    const out=baseRender.apply(this,arguments);
+    let b=document.getElementById("mdb-new");
+    if(!b){
+      const nw=document.getElementById("brk-new");
+      if(nw){ nw.insertAdjacentHTML("afterend",`<button class="nav-btn red mf-hide" id="mdb-new" style="display:none;" onclick="mdbAddOpen()"><i class="ti ti-plus"></i> Add</button>`);
+              b=document.getElementById("mdb-new"); }
+    }
+    if(b) b.style.display=view==="mood"?"":"none";
+    return out;
+  };
+})();
+function mdbGo(){
+  if(!canEdit()){ toast("View-only account","err"); return; }
+  if(!activeBrand||!brands[activeBrand]){ toast("Pick a brand first — the mood board is per brand","err"); return; }
+  closeAllPops(); setView("mood"); const m=document.getElementById("main"); if(m) m.scrollTop=0;
+}
+
+/* ── the Strategy page: section 05 and its entry in the left panel ── */
+(function(){
+  const baseSide=buildBriefSidebar;
+  buildBriefSidebar=function(){
+    const out=baseSide.apply(this,arguments);
+    mdbEnsure();
+    const first=document.querySelector("#sb-months .bd-navi");
+    if(first&&!document.querySelector("#sb-months .mdb-navi")){
+      const n=(MDB.bid===activeBrand&&MDB.ok)?MDB.items.length:"";
+      first.parentElement.insertAdjacentHTML("beforeend",
+        `<div class="bd-navi mdb-navi" data-tgt="bd-s5" onclick="mdbGo()">05 · Mood board <span class="mdb-navct">${n}</span></div>`);
+    }
+    return out;
+  };
+  const baseBrief=renderBrief;
+  renderBrief=function(){
+    const out=baseBrief.apply(this,arguments);
+    if(!briefEdit){
+      const w=document.querySelector("#main .bd-wrap");
+      if(w&&!w.querySelector("#bd-s5")){
+        const ready=MDB.bid===activeBrand&&MDB.ok, list=ready?mdbNewest().slice(0,6):[];
+        w.insertAdjacentHTML("beforeend",`
+          <div class="bd-sec" id="bd-s5"><div class="bd-secnum">05</div><div class="bd-sectitle">Mood board</div><div class="bd-secrule"></div>
+            <div class="bd-secsub">${ready?`${MDB.items.length} reference${MDB.items.length===1?"":"s"}`:""}</div></div>
+          ${list.length?`<div class="mdb-strip">${list.map(x=>`<div onclick="mdbGo()">${mdbImgTag(x)}</div>`).join("")}</div>`
+            :`<div class="bd-card" style="padding:14px 18px"><div class="bd-note" style="margin:0">${ready?"No references yet.":"Loading…"}</div></div>`}
+          <div class="mdb-open" onclick="mdbGo()">Open the mood board <i class="ti ti-arrow-right"></i></div>`);
+        mdbSign(w);
+      }
+    }
+    return out;
+  };
+})();
+
+/* ── pictures: our own copy, signed; else the address it came from ── */
+function mdbImgTag(x){
+  if(x.thumb_path) return `<img data-mdb="${escAttr(x.thumb_path)}" data-id="${escAttr(x.id)}" alt="">`;
+  if(x.thumb_src) return `<img src="${escAttr(x.thumb_src)}" data-id="${escAttr(x.id)}" alt="" referrerpolicy="no-referrer">`;
+  return `<span class="none"><i class="ti ti-photo"></i></span>`;
+}
+async function mdbSign(root){
+  const nodes=[...(root||document).querySelectorAll("img[data-mdb]")].filter(n=>!n._mdb);
+  await Promise.all(nodes.map(async n=>{ n._mdb=true; const u=await signedUrl(n.getAttribute("data-mdb")); if(u) n.src=u; }));
+}
+/* the size of a picture is learned the first time it is drawn, once */
+function mdbLearn(img){
+  const x=MDB.items.find(i=>i.id===img.dataset.id); if(!x||x.width||!img.naturalWidth) return;
+  x.width=img.naturalWidth; x.height=img.naturalHeight;
+  sb.from("mood_items").update({width:x.width,height:x.height}).eq("id",x.id).then(()=>{},()=>{});
+}
+
+/* ── the left panel: tags, and nothing else ───────────────────────── */
+function buildMoodSidebar(){
+  mdbEnsure();
+  const st=document.getElementById("sb-stats"); if(st) st.innerHTML="";
+  const sm=document.getElementById("sb-months"); if(!sm) return;
+  const on=mdbTagSel();
+  const counts=new Map(mdbCount(MDB.items.flatMap(mdbTagIds)));
+  const tags=MDB.tags.slice().sort((a,b)=>(counts.get(b.id)||0)-(counts.get(a.id)||0)||a.name.localeCompare(b.name));
+  sm.innerHTML=`<div class="mdb-up" onclick="openBrief()"><i class="ti ti-arrow-left"></i> Strategy</div>
+    <div class="s-lbl">Tags</div>
+    <div class="mdb-trow${on.length?"":" on"}" onclick="mdbClearTags()"><span class="nm">All references</span><span class="ct">${MDB.items.length}</span></div>
+    ${tags.map(t=>{
+      const c=counts.get(t.id)||0;
+      if(MDB.ren===t.id) return `<div class="mdb-trow menu" onclick="event.stopPropagation()"><input class="mdb-ren" id="mdb-ren" value="${escAttr(t.name)}"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();mdbRename('${t.id}',this.value);}if(event.key==='Escape'){MDB.ren=null;buildMoodSidebar();}"
+          onblur="mdbRename('${t.id}',this.value)"></div>`;
+      const m=MDB.tmenu===t.id;
+      return `<div class="mdb-trow${on.includes(t.id)?" on":""}${m?" menu":""}" data-tag="${t.id}" onclick="mdbTagClick(event,'${t.id}')">
+        <span class="nm">${escHtml(t.name)}</span><span class="ct hasm">${c}</span>
+        <button class="mdb-tmb" title="Tag options" onclick="mdbTMenu(event,'${t.id}')"><i class="ti ti-dots"></i></button>
+        ${m?mdbTagMenu(t,c):""}</div>`;}).join("")}`;
+  const r=document.getElementById("mdb-ren"); if(r){ r.focus(); r.select(); }
+}
+function mdbTagMenu(t,c){
+  if(MDB.tmerge) return `<div class="mdb-menu" onclick="event.stopPropagation()"><div class="brfb-top">Merge “${escHtml(t.name)}” into</div>
+    ${MDB.tags.filter(x=>x.id!==t.id).sort((a,b)=>a.name.localeCompare(b.name)).map(x=>
+      `<div class="mdb-mi" onclick="mdbMerge('${t.id}','${x.id}')"><span style="flex:1">${escHtml(x.name)}</span></div>`).join("")||'<div class="mdb-mi">No other tags</div>'}</div>`;
+  return `<div class="mdb-menu" onclick="event.stopPropagation()">
+    <div class="mdb-mi" onclick="mdbCopyTag('${t.id}')"><i class="ti ti-link"></i>Copy link</div>
+    <div class="mdb-msep"></div>
+    <div class="mdb-mi" onclick="MDB.tmenu=null;MDB.ren='${t.id}';buildMoodSidebar()"><i class="ti ti-pencil"></i>Rename</div>
+    <div class="mdb-mi" onclick="MDB.tmerge=true;buildMoodSidebar()"><i class="ti ti-arrow-merge"></i>Merge into…</div>
+    <div class="mdb-msep"></div>
+    <div class="mdb-mi red" onclick="mdbAskDelete('${t.id}',${c})"><i class="ti ti-trash"></i>Delete tag</div></div>`;
+}
+function mdbTMenu(e,id){ e.stopPropagation(); MDB.tmenu=MDB.tmenu===id?null:id; MDB.tmerge=false; buildMoodSidebar(); }
+function mdbTagClick(e,id){
+  if(e) e.stopPropagation();
+  if(view!=="mood"){ mdbGo(); }
+  let f=MDB.f.find(f=>f.k==="tag"&&f.op==="is"); if(!f){ f={k:"tag",op:"is",vals:[]}; MDB.f.push(f); }
+  f.vals=f.vals.includes(id)?f.vals.filter(x=>x!==id):f.vals.concat(id);
+  if(!f.vals.length) MDB.f=MDB.f.filter(x=>x!==f);
+  MDB.pop=null; MDB.tmenu=null; if(MDB.open) mdbClose(true);
+  mdbRefresh();
+}
+function mdbClearTags(){ MDB.f=MDB.f.filter(f=>f.k!=="tag"); MDB.pop=null; mdbRefresh(); }
+function mdbRefresh(){ if(view!=="mood") return; buildMoodSidebar(); mdbBar(); mdbGrid(); urlSync(); }
+function mdbCopyTag(id){
+  MDB.tmenu=null; buildMoodSidebar();
+  const t=mdbTag(id); if(!t) return;
+  const url=location.origin+location.pathname+"?b="+encodeURIComponent(activeBrand)+"&p=mood&tag="+encodeURIComponent(id);
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(()=>toast(`Link to “${escHtml(t.name)}” copied`),()=>toast(url));
+  } else toast(url);
+}
+
+/* ── the undo, for every tag change and every selection change ────── */
+function mdbUndoToast(msg,snap){
+  const wrap=document.getElementById("toast-wrap"); if(!wrap) return;
+  const t=document.createElement("div"); t.className="toast";
+  t.innerHTML=`<span>✓</span><span>${msg}</span>`;
+  if(snap){
+    const a=document.createElement("a"); a.textContent="Undo";
+    a.style.cssText="margin-left:10px;font-weight:700;text-decoration:underline;cursor:pointer;color:inherit;";
+    a.onclick=async()=>{ t.remove(); await mdbRestore(snap); };
+    t.appendChild(a);
+  }
+  wrap.appendChild(t);
+  setTimeout(()=>{ t.style.opacity="0"; t.style.transition="opacity 180ms"; setTimeout(()=>t.remove(),200); },8000);
+}
+function mdbSnap(ids){ return {items:MDB.items.filter(x=>ids.includes(x.id)).map(x=>({id:x.id,tag_ids:(x.tag_ids||[]).slice(),deleted_at:x.deleted_at||null})), tags:MDB.tags.map(t=>({...t}))}; }
+async function mdbRestore(s){
+  const now=new Date().toISOString();
+  for(const t of s.tags){
+    const cur=mdbTag(t.id);
+    if(!cur||cur.name!==t.name) await sb.from("mood_tags").update({name:t.name,deleted_at:null,updated_at:now}).eq("id",t.id);
+  }
+  for(const x of s.items) await sb.from("mood_items").update({tag_ids:x.tag_ids,deleted_at:x.deleted_at,updated_at:now}).eq("id",x.id);
+  toast("Undone"); await mdbLoad(MDB.bid);
+}
+/* only the rows that actually change are written — never wipe and rewrite */
+async function mdbWriteTags(changes){
+  const now=new Date().toISOString(); let fail="";
+  for(const c of changes){
+    const r=await sb.from("mood_items").update({tag_ids:c.tag_ids,updated_at:now}).eq("id",c.id).select("id");
+    if(r.error){ fail=r.error.message; continue; }
+    const x=MDB.items.find(i=>i.id===c.id); if(x) x.tag_ids=c.tag_ids;
+  }
+  return fail;
+}
+async function mdbRename(id,v){
+  if(MDB.ren!==id) return; MDB.ren=null;
+  const t=mdbTag(id); v=String(v||"").trim();
+  if(!t||!v||v===t.name){ buildMoodSidebar(); return; }
+  if(MDB.tags.some(x=>x.id!==id&&x.name.toLowerCase()===v.toLowerCase())){
+    toast(`There is already a tag called “${escHtml(v)}”. Use Merge into… to combine them.`,"err"); buildMoodSidebar(); return; }
+  const snap=mdbSnap([]);
+  const r=await sb.from("mood_tags").update({name:v,updated_at:new Date().toISOString()}).eq("id",id).select("id");
+  if(r.error){ toast("Not renamed — "+escHtml(r.error.message),"err"); buildMoodSidebar(); return; }
+  const n=MDB.items.filter(x=>mdbTagIds(x).includes(id)).length;
+  t.name=v; mdbRefresh();
+  mdbUndoToast(`Renamed to “${escHtml(v)}” on ${n} reference${n===1?"":"s"}`,snap);
+}
+async function mdbMerge(from,into){
+  MDB.tmenu=null; MDB.tmerge=false;
+  const a=mdbTag(from), b=mdbTag(into); if(!a||!b) return;
+  const hit=MDB.items.filter(x=>(x.tag_ids||[]).includes(from));
+  const snap=mdbSnap(hit.map(x=>x.id));
+  const fail=await mdbWriteTags(hit.map(x=>({id:x.id,tag_ids:[...new Set((x.tag_ids||[]).map(t=>t===from?into:t))]})));
+  if(fail){ toast("Some references were not changed — "+escHtml(fail),"err"); await mdbLoad(MDB.bid); return; }
+  const r=await sb.from("mood_tags").update({deleted_at:new Date().toISOString()}).eq("id",from).select("id");
+  if(!r.error) MDB.tags=MDB.tags.filter(t=>t.id!==from);
+  MDB.f.forEach(f=>{ if(f.k==="tag") f.vals=[...new Set(f.vals.map(v=>v===from?into:v))]; });
+  mdbRefresh();
+  mdbUndoToast(`Merged “${escHtml(a.name)}” into “${escHtml(b.name)}” on ${hit.length} reference${hit.length===1?"":"s"}`,snap);
+}
+function mdbAskDelete(id,c){
+  MDB.tmenu=null; buildMoodSidebar();
+  const t=mdbTag(id); if(!t) return;
+  mdbModal(`Delete the tag “${escHtml(t.name)}”?`,
+    `It comes off <b>${c} reference${c===1?"":"s"}</b>. The pictures stay on the board.`,
+    "Delete tag", async()=>{
+      const hit=MDB.items.filter(x=>(x.tag_ids||[]).includes(id));
+      const snap=mdbSnap(hit.map(x=>x.id));
+      const fail=await mdbWriteTags(hit.map(x=>({id:x.id,tag_ids:(x.tag_ids||[]).filter(v=>v!==id)})));
+      if(fail){ toast("Some references kept the tag — "+escHtml(fail),"err"); await mdbLoad(MDB.bid); return; }
+      const r=await sb.from("mood_tags").update({deleted_at:new Date().toISOString()}).eq("id",id).select("id");
+      if(r.error){ toast("The tag was not deleted — "+escHtml(r.error.message),"err"); return; }
+      MDB.tags=MDB.tags.filter(x=>x.id!==id);
+      MDB.f.forEach(f=>{ if(f.k==="tag") f.vals=f.vals.filter(v=>v!==id); }); MDB.f=MDB.f.filter(f=>f.k!=="tag"||f.vals.length);
+      mdbRefresh();
+      mdbUndoToast(`Deleted “${escHtml(t.name)}” from ${c} reference${c===1?"":"s"}`,snap);
+    });
+}
+/* one small confirm box, built on the kit's own modal */
+function mdbModal(title,body,go,fn){
+  let ov=document.getElementById("ov-mdb-cf");
+  if(!ov){
+    document.body.insertAdjacentHTML("beforeend",`<div class="overlay" id="ov-mdb-cf" style="z-index:950" onclick="if(event.target===this)closeM('mdb-cf')">
+      <div class="modal" style="max-width:420px"><div class="modal-top"><div class="modal-title" id="mdb-cf-t"></div>
+        <button class="modal-x" onclick="closeM('mdb-cf')">✕</button></div>
+      <div class="modal-body"><div id="mdb-cf-b" style="font-size:13.5px;line-height:1.5"></div></div>
+      <div class="modal-foot"><button class="btn btn-s" onclick="closeM('mdb-cf')">Cancel</button><button class="btn btn-d" id="mdb-cf-go"></button></div></div></div>`);
+    ov=document.getElementById("ov-mdb-cf");
+  }
+  document.getElementById("mdb-cf-t").innerHTML=title;
+  document.getElementById("mdb-cf-b").innerHTML=body;
+  const b=document.getElementById("mdb-cf-go"); b.textContent=go;
+  b.onclick=async()=>{ b.disabled=true; try{ await fn(); }finally{ b.disabled=false; closeM("mdb-cf"); } };
+  openM("mdb-cf");
+}
+
+/* ── the page ─────────────────────────────────────────────────────── */
+function renderMood(){
+  mdbEnsure();
+  const mc=document.getElementById("main");
+  mc.innerHTML=`<div style="padding:0 32px 20px;">
+      <div class="brfb" id="mdb-bar"></div>
+      <div class="mdb-card"><div class="mdb-grid" id="mdb-grid"></div></div>
+      <input type="file" id="mdb-files" multiple style="display:none;" onchange="mdbStage(this.files);this.value=''">
+    </div>`;
+  mdbBar(); mdbGrid();
+}
+function mdbBar(){
+  const bar=document.getElementById("mdb-bar"); if(!bar) return;
+  if(MDB.sel){ bar.innerHTML=mdbSelBar(); return; }
+  const n=mdbVisible().length;
+  const chips=MDB.f.map((f,i)=>`<span class="brfb-w"><span class="brfb-chip${MDB.pop==="f"+i?" open":""}" onclick="mdbPop(event,'f${i}')">
+      ${MDB_FIELDS[f.k].label} <span class="op">${f.op}</span> <span class="val">${f.vals.length?escHtml(f.vals.map(MDB_FIELDS[f.k].name).join(", ")):"…"}</span>
+      <i class="ti ti-x kill" onclick="mdbKill(event,${i})"></i>${f.vals.length?'<span class="dot"></span>':""}</span>
+      ${MDB.pop==="f"+i?mdbValPop(i):""}</span>`).join("");
+  bar.innerHTML=`
+    <input class="fi brfb-q" placeholder="Search the board…" value="${escAttr(MDB.q)}"
+      oninput="MDB.q=this.value;mdbGrid();mdbCnt()" onclick="event.stopPropagation()">
+    ${chips}
+    <span class="brfb-w"><button class="brfb-add" onclick="mdbPop(event,'add')">+ Filter</button>${MDB.pop==="add"?`<div class="brfb-pop"><div class="brfb-top">Filter by</div>${
+      Object.keys(MDB_FIELDS).map(k=>`<div class="brfb-opt" onclick="mdbAddF(event,'${k}')"><span class="nm">${MDB_FIELDS[k].label}</span></div>`).join("")}</div>`:""}</span>
+    <span class="brfb-end">
+      ${MDB.ok&&MDB.items.length?`<span class="brfb-chip" onclick="mdbSelect(true)" title="Select several pictures"><i class="ti ti-checkbox"></i>Select</span>`:""}
+      <span class="brfb-cnt" id="mdb-cnt">${mdbCntHtml(n)}</span>
+      <span class="brfb-w"><span class="brfb-chip${MDB.pop==="sort"?" open":""}" onclick="mdbPop(event,'sort')">Sort <span class="op">by</span><span class="val">${MDB.sort}</span></span>${
+        MDB.pop==="sort"?`<div class="brfb-pop" style="left:auto;right:0">${["newest","oldest"].map(k=>
+          `<div class="brfb-opt${MDB.sort===k?" on":""}" onclick="event.stopPropagation();MDB.sort='${k}';MDB.pop=null;mdbBar();mdbGrid()"><span class="bx">${MDB.sort===k?"✓":""}</span><span class="nm">${k}</span></div>`).join("")}</div>`:""}</span>
+    </span>`;
+}
+function mdbCntHtml(n){ return `<b>${n}</b>${n!==MDB.items.length?`<span>of ${MDB.items.length}</span>`:`<span>reference${n===1?"":"s"}</span>`}`; }
+function mdbCnt(){ const c=document.getElementById("mdb-cnt"); if(c) c.innerHTML=mdbCntHtml(mdbVisible().length); }
+function mdbValPop(i){
+  const f=MDB.f[i], F=MDB_FIELDS[f.k];
+  const vals=mdbCount(MDB.items.flatMap(F.of)).sort((a,b)=>b[1]-a[1]);
+  if(f.k==="tag") MDB.tags.forEach(t=>{ if(!vals.some(v=>v[0]===t.id)) vals.push([t.id,0]); });
+  return `<div class="brfb-pop" onclick="event.stopPropagation()"><div class="brfb-top">${F.label}<span style="flex:1"></span>
+    <span style="cursor:pointer;color:var(--text)" onclick="mdbFlip(event,${i})">${f.op} ⌄</span></div>
+    ${vals.map(([v,c])=>{const on=f.vals.includes(v);
+      return `<div class="brfb-opt${on?" on":""}" onclick="mdbTick(event,${i},'${escAttr(String(v)).replace(/'/g,"\\'")}')"><span class="bx">${on?"✓":""}</span><span class="nm">${escHtml(F.name(v))}</span><span class="ct">${c}</span></div>`}).join("")||'<div class="brfb-none">Nothing to filter yet</div>'}</div>`;
+}
+function mdbPop(e,k){ e.stopPropagation(); MDB.pop=MDB.pop===k?null:k; mdbBar(); }
+function mdbAddF(e,k){ e.stopPropagation(); let i=MDB.f.findIndex(f=>f.k===k&&f.op==="is"); if(i<0){ MDB.f.push({k,op:"is",vals:[]}); i=MDB.f.length-1; } MDB.pop="f"+i; mdbBar(); }
+function mdbTick(e,i,v){ e.stopPropagation(); const f=MDB.f[i]; f.vals=f.vals.includes(v)?f.vals.filter(x=>x!==v):f.vals.concat(v); MDB.pop="f"+i; mdbRefresh(); }
+function mdbFlip(e,i){ e.stopPropagation(); MDB.f[i].op=MDB.f[i].op==="is"?"is not":"is"; MDB.pop="f"+i; mdbRefresh(); }
+function mdbKill(e,i){ e.stopPropagation(); MDB.f.splice(i,1); MDB.pop=null; mdbRefresh(); }
+document.addEventListener("click",e=>{
+  if(view!=="mood") return;
+  if(MDB.pop&&!(e.target.closest&&e.target.closest("#mdb-bar .brfb-pop"))){ MDB.pop=null; mdbBar(); }
+  if((MDB.tmenu||MDB.tmerge)&&!(e.target.closest&&e.target.closest(".mdb-menu"))){ MDB.tmenu=null; MDB.tmerge=false; buildMoodSidebar(); }
+});
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&MDB.open) mdbClose(); });
+
+function mdbGrid(){
+  const g=document.getElementById("mdb-grid"); if(!g) return;
+  if(!MDB.ok){ g.innerHTML=`<div class="mdb-empty">${MDB.err?"Could not load the board — "+escHtml(MDB.err):"Loading the board…"}</div>`; return; }
+  const r=mdbVisible();
+  if(!r.length){ g.innerHTML=`<div class="mdb-empty">${MDB.items.length?"No references match these filters.":"No references yet. Use Add to paste a link, upload pictures or bring in a Pinterest sheet."}</div>`; return; }
+  const n=Math.max(2,Math.min(6,Math.floor((g.clientWidth+14)/234)));
+  const cols=Array.from({length:n},()=>[]); r.forEach((x,k)=>cols[k%n].push(x));
+  g.classList.toggle("mdb-sel",!!MDB.sel);
+  g.innerHTML=cols.map(c=>`<div class="mdb-col">${c.map(mdbTileHtml).join("")}</div>`).join("");
+  mdbSign(g);
+  g.querySelectorAll("img[data-id]").forEach(im=>{ if(im.complete) mdbLearn(im); else im.addEventListener("load",()=>mdbLearn(im),{once:true}); });
+}
+function mdbTileHtml(x){
+  const on=MDB.sel&&MDB.sel.has(x.id);
+  const ar=(x.width&&x.height)?`aspect-ratio:${x.width}/${x.height};`:"";
+  const tags=mdbTagIds(x).map(id=>mdbTag(id));
+  const n=MDB.counts[x.id]||0;
+  const href=x.source_url||x.pin_url;
+  return `<div class="mdb-tile${on?" on":""}" data-item="${x.id}" onclick="${MDB.sel?`mdbPick(event,'${x.id}')`:`mdbOpen('${x.id}')`}">
+    <span class="ck">${on?'<i class="ti ti-check"></i>':""}</span>
+    <div class="mdb-ph" style="${ar}">${mdbImgTag(x)}</div>
+    ${x.kind==="video"?`<span class="mdb-play"><i class="ti ti-player-play-filled"></i></span><span class="mdb-vid"><i class="ti ${mdbIcon(x)}"></i>VIDEO</span>`:""}
+    ${n?`<span class="mdb-msg"><i class="ti ti-message"></i>${n}</span>`:""}
+    ${href?`<a class="mdb-src" href="${escAttr(href)}" target="_blank" rel="noopener" onclick="event.stopPropagation()"><i class="ti ${mdbIcon(x)}"></i>${escHtml(mdbSrcName(x))}<i class="ti ti-arrow-up-right"></i></a>`:""}
+    <div class="mdb-ov">${x.note?`<div class="nt">${escHtml(x.note)}</div>`:""}
+      <div class="tg">${tags.map(t=>`<span onclick="mdbTagClick(event,'${t.id}')">${escHtml(t.name)}</span>`).join("")}</div></div>
+  </div>`;
+}
+let MDB_RW; window.addEventListener("resize",()=>{ clearTimeout(MDB_RW); MDB_RW=setTimeout(()=>{ if(view==="mood") mdbGrid(); },150); });
+
+/* ── select several ───────────────────────────────────────────────── */
+function mdbSelect(on){ MDB.sel=on?new Set():null; MDB.pop=null; mdbBar(); mdbGrid(); }
+function mdbPick(e,id){ if(e) e.stopPropagation(); MDB.sel.has(id)?MDB.sel.delete(id):MDB.sel.add(id); mdbBar(); mdbGrid(); }
+function mdbSelAll(){ mdbVisible().forEach(x=>MDB.sel.add(x.id)); mdbBar(); mdbGrid(); }
+function mdbSelBar(){
+  const n=MDB.sel.size, picked=MDB.items.filter(x=>MDB.sel.has(x.id));
+  const dis=n?"":' style="opacity:.45;pointer-events:none"';
+  const all=MDB.tags.slice().sort((a,b)=>a.name.localeCompare(b.name));
+  const onSel=mdbCount(picked.flatMap(mdbTagIds));
+  return `<span class="mdb-selcnt">${n} selected</span>
+    <button class="brfb-add" onclick="mdbSelAll()">Select all ${mdbVisible().length}</button>
+    <span class="brfb-w"${dis}><button class="btn btn-s btn-sm" onclick="mdbPop(event,'addtag')"><i class="ti ti-tag"></i> Add tag</button>${MDB.pop==="addtag"?`<div class="brfb-pop" onclick="event.stopPropagation()">
+      <div class="mdb-pin"><input id="mdb-nt" placeholder="New tag" onkeydown="if(event.key==='Enter')mdbBulkAdd(this.value)"><button class="btn btn-p btn-sm" onclick="mdbBulkAdd(document.getElementById('mdb-nt').value)">Add</button></div>
+      ${all.map(t=>{const k=picked.filter(x=>mdbTagIds(x).includes(t.id)).length;
+        return `<div class="brfb-opt${k===n?" on":""}" onclick="mdbBulkAdd(null,'${t.id}')"><span class="bx">${k===n?"✓":k?"–":""}</span><span class="nm">${escHtml(t.name)}</span><span class="ct">${k}/${n}</span></div>`}).join("")}</div>`:""}</span>
+    <span class="brfb-w"${dis}><button class="btn btn-s btn-sm" onclick="mdbPop(event,'rmtag')"><i class="ti ti-tag-off"></i> Remove tag</button>${MDB.pop==="rmtag"?`<div class="brfb-pop" onclick="event.stopPropagation()">
+      ${onSel.map(([id,k])=>`<div class="brfb-opt" onclick="mdbBulkRemove('${id}')"><span class="nm">${escHtml((mdbTag(id)||{}).name||"")}</span><span class="ct">on ${k}</span></div>`).join("")||'<div class="brfb-none">These carry no tags</div>'}</div>`:""}</span>
+    <span class="brfb-w"${dis}><button class="btn btn-s btn-sm" onclick="mdbBulkTrash()"><i class="ti ti-trash"></i> Move to Trash</button></span>
+    <span class="brfb-end"><button class="btn btn-p btn-sm" onclick="mdbSelect(false)">Done</button></span>`;
+}
+async function mdbTagIdsFor(names){
+  const out=[];
+  for(const raw of names){
+    const nm=String(raw||"").trim(); if(!nm) continue;
+    let t=MDB.tags.find(x=>x.name.toLowerCase()===nm.toLowerCase());
+    if(!t){
+      const row={id:crypto.randomUUID(),brand_id:MDB.bid,name:nm,created_by:ME.id||null};
+      const r=await sb.from("mood_tags").insert([row]).select("*");
+      if(r.error){ toast("Tag “"+escHtml(nm)+"” was not created — "+escHtml(r.error.message),"err"); continue; }
+      t=(r.data&&r.data.find&&r.data.find(x=>x.id===row.id))||row; MDB.tags.push(t);
+    }
+    if(!out.includes(t.id)) out.push(t.id);
+  }
+  return out;
+}
+async function mdbBulkAdd(name,id){
+  const ids=id?[id]:await mdbTagIdsFor([name]); if(!ids.length) return;
+  const tid=ids[0], t=mdbTag(tid);
+  const hit=MDB.items.filter(x=>MDB.sel.has(x.id)&&!(x.tag_ids||[]).includes(tid));
+  const snap=mdbSnap(hit.map(x=>x.id));
+  const fail=await mdbWriteTags(hit.map(x=>({id:x.id,tag_ids:(x.tag_ids||[]).concat(tid)})));
+  MDB.pop=null; mdbRefresh();
+  if(fail) toast("Some were not tagged — "+escHtml(fail),"err");
+  else mdbUndoToast(`Added “${escHtml(t?t.name:"")}” to ${hit.length} reference${hit.length===1?"":"s"}`,snap);
+}
+async function mdbBulkRemove(tid){
+  const t=mdbTag(tid);
+  const hit=MDB.items.filter(x=>MDB.sel.has(x.id)&&(x.tag_ids||[]).includes(tid));
+  const snap=mdbSnap(hit.map(x=>x.id));
+  const fail=await mdbWriteTags(hit.map(x=>({id:x.id,tag_ids:(x.tag_ids||[]).filter(v=>v!==tid)})));
+  MDB.pop=null; mdbRefresh();
+  if(fail) toast("Some kept the tag — "+escHtml(fail),"err");
+  else mdbUndoToast(`Removed “${escHtml(t?t.name:"")}” from ${hit.length} reference${hit.length===1?"":"s"}`,snap);
+}
+async function mdbBulkTrash(){
+  const ids=[...MDB.sel]; if(!ids.length) return;
+  if(!confirm(`Move ${ids.length} reference${ids.length===1?"":"s"} to Trash?\n\nTheir conversations stay with them and they can be restored.`)) return;
+  const snap=mdbSnap(ids), now=new Date().toISOString(); let fail="";
+  for(const id of ids){ const r=await sb.from("mood_items").update({deleted_at:now}).eq("id",id).select("id"); if(r.error) fail=r.error.message; }
+  MDB.items=MDB.items.filter(x=>!ids.includes(x.id)); MDB.sel=new Set(); mdbRefresh();
+  if(fail) toast("Some were not moved — "+escHtml(fail),"err");
+  else mdbUndoToast(`Moved ${ids.length} to Trash`,snap);
+}
+
+/* ── the opened reference ─────────────────────────────────────────── */
+function mdbOpen(id){
+  const x=MDB.items.find(i=>i.id===id); if(!x) return;
+  MDB.open=id; MDB.staged=[];
+  mdbDrawer(); mdbThLoad(id);
+}
+function mdbClose(quiet){
+  MDB.open=null;
+  ["mdb-dw","mdb-dws"].forEach(k=>{ const e=document.getElementById(k); if(e) e.remove(); });
+  if(!quiet&&view==="mood") mdbGrid();
+}
+async function mdbMediaSrc(x){ return x.media_path?await signedUrl(x.media_path):""; }
+function mdbDrawer(){
+  const x=MDB.items.find(i=>i.id===MDB.open); if(!x){ mdbClose(true); return; }
+  let dw=document.getElementById("mdb-dw");
+  if(!dw){
+    document.body.insertAdjacentHTML("beforeend",`<div class="mdb-scrim" id="mdb-dws" onclick="mdbClose()"></div><div class="mdb-dw" id="mdb-dw"></div>`);
+    dw=document.getElementById("mdb-dw");
+  }
+  const href=x.source_url||x.pin_url;
+  const T=MDB.th.id===x.id?MDB.th:{loading:true,msgs:[]};
+  const body=T.loading?`<div class="th-load">Loading the conversation…</div>`
+    :T.err?`<div class="th-load">Could not load the conversation — ${escHtml(T.err)}</div>`
+    :(T.msgs.length?T.msgs.map(mdbMsgHtml).join(""):`<div class="mdb-meta">No messages yet.</div>`);
+  const keep=document.getElementById("mdbc-in");
+  const view_=x.embed_url?`<iframe src="${escAttr(x.embed_url)}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`
+    :x.media_path?`<video controls playsinline data-mdbv="${escAttr(x.media_path)}"></video>`
+    :mdbImgTag(x);
+  /* the player is drawn once per reference; a new message redraws the
+     side only, so a playing video is never restarted */
+  const left=dw.querySelector(".mdb-dwimg");
+  const sameMedia=!!(left&&left.dataset.for===x.id);
+  const side=`<div class="mdb-side">
+      <div class="mdb-top"><span class="t">${escHtml(x.title||"Reference")}</span>
+        <button class="mdb-ib" onclick="mdbTrashOne('${x.id}')" title="Move to Trash"><i class="ti ti-trash"></i></button>
+        <button class="mdb-ib" onclick="mdbClose()" title="Close"><i class="ti ti-x"></i></button></div>
+      <div class="mdb-body">
+        ${href?`<a class="mdb-sl" href="${escAttr(href)}" target="_blank" rel="noopener"><i class="ti ${mdbIcon(x)}"></i>
+          <div style="min-width:0;flex:1"><div class="d">${escHtml(mdbSrcName(x))}</div><div class="u">${escHtml(href.replace(/^https?:\/\//,""))}</div></div>
+          <i class="ti ti-arrow-up-right"></i></a>`:""}
+        <div><div class="mdb-l">Tags</div><div class="mdb-tags">${mdbTagIds(x).map(id=>{const t=mdbTag(id);
+            return `<span class="mdb-tag">${escHtml(t.name)}<i class="ti ti-link lk" title="Copy a link to this tag" onclick="mdbCopyTag('${t.id}')"></i><i class="ti ti-x" title="Take this tag off" onclick="mdbUntag('${x.id}','${t.id}')"></i></span>`;}).join("")}
+          <input class="mdb-addtag" placeholder="+ Add tag" list="mdb-taglist" onkeydown="if(event.key==='Enter'){event.preventDefault();mdbTagOne('${x.id}',this.value);}">
+          <datalist id="mdb-taglist">${MDB.tags.map(t=>`<option value="${escAttr(t.name)}">`).join("")}</datalist></div></div>
+        <div><div class="mdb-l">Note</div><textarea class="mdb-note" id="mdb-note" placeholder="What to take from this" onblur="mdbSaveNote('${x.id}',this.value)">${escHtml(x.note||"")}</textarea></div>
+        <div class="mdb-meta">Added by <b>${escHtml(mdbWho(x.created_by))}</b>${x.created_at?" · "+fmtWhen(x.created_at):""}${x.pin_url&&x.source_url&&x.pin_url!==x.source_url?` · <a href="${escAttr(x.pin_url)}" target="_blank" rel="noopener">pinned on Pinterest</a>`:""}</div>
+        <div class="mdb-thread"><div class="mdb-l">Conversation</div>${body}
+          <div class="ccm-wrap" data-drop="mood:">
+            <div class="ccm">
+              <span class="th-av ccm-av">${escHtml(brInitials(ME.id)||"··")}</span>
+              <div id="mdbc-in" class="ccw rt" contenteditable="true" data-ph="Write a message" data-att="mood"
+                data-draft="mdbc-${escAttr(x.id)}"
+                onkeydown="if(mentionKeyNav(event))return;if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();mdbPost();}"
+                oninput="fbMentionKey(event,'mdbc-in',activeBrand,true)"
+                onfocus="rtFocus(this)" onblur="mpBarHide();setTimeout(closeMentionBox,150)"></div>
+              <button class="ccm-send" onclick="mdbPost()" title="Post"><i class="ti ti-arrow-up"></i></button>
+            </div>
+            ${MDB.staged.length?`<span class="stagedfs">${MDB.staged.map((f,i)=>`<span class="stagedf" title="${escAttr(f.name)}"><span class="sfn">${escHtml(f.name)}</span>
+              <b>${kbmb(f.size)}</b><i onclick="mdbUnstage(${i})" title="Remove">&times;</i></span>`).join("")}</span>`:""}
+          </div></div>
+      </div>
+    </div>`;
+  if(sameMedia){ const old=dw.querySelector(".mdb-side"); if(old) old.outerHTML=side; }
+  else dw.innerHTML=`<div class="mdb-dwimg" data-for="${x.id}">${view_}</div>${side}`;
+  /* what was being typed survives a redraw */
+  if(keep&&keep.innerHTML){ const n=document.getElementById("mdbc-in"); if(n) n.innerHTML=keep.innerHTML; }
+  mdbSign(dw);
+  dw.querySelectorAll("video[data-mdbv]").forEach(async v=>{ if(!v.src) v.src=await signedUrl(v.dataset.mdbv); });
+  try{ hydrateMedia(dw); }catch(e){}
+}
+function mdbStage(files){
+  const seen=new Set(MDB.staged.map(f=>f.name+"|"+f.size));
+  [...(files||[])].forEach(f=>{ const k=f.name+"|"+f.size; if(!seen.has(k)){ seen.add(k); MDB.staged.push(f); } });
+  if(MDB.open) mdbDrawer();
+}
+function mdbUnstage(i){ MDB.staged.splice(i,1); mdbDrawer(); }
+function mdbMsgHtml(m){
+  const who=escHtml(nameShow(m.author_name,m.author_email,m.author_kind)||brPersonName(m.author_id)||"someone");
+  const own=fbIsMine(m)?`<div class="th-acts"><span class="th-rx"></span><span class="rgt">
+      <button onclick="mdbMsgDelete('${escAttr(m.id)}')">Delete</button></span></div>`:"";
+  return `<div class="th-m"><span class="th-av">${escHtml(brInitials(m.author_id)||"··")}</span>
+    <div class="th-b"><div class="th-h"><b>${who}</b><span class="th-kind">Team</span>
+      <span class="th-when">${m.created_at?fmtWhen(m.created_at):""}</span></div>
+      <div class="th-t">${fbBody(m.body||"")}</div>
+      ${mediaBlock(assetsFor("message",m.id))+uploadLiveBlock("message",m.id)+uploadFailBlock("message",m.id)}
+      ${own}</div></div>`;
+}
+async function mdbThLoad(id){
+  MDB.th={id,msgs:[],loading:true,err:""};
+  try{
+    const c=await sb.from("post_comments").select("*").eq("mood_item_id",id).order("created_at");
+    if(c.error) throw new Error(c.error.message);
+    const live=(c.data||[]).filter(x=>!x.deleted_at&&x.mood_item_id===id);
+    try{ await loadAssetsFor("message",live.map(x=>x.id)); }catch(e){}
+    MDB.th={id,msgs:live,loading:false,err:""};
+    MDB.counts[id]=live.length;
+  }catch(e){ MDB.th={id,msgs:[],loading:false,err:String(e&&e.message||e)}; }
+  if(MDB.open===id) mdbDrawer();
+}
+async function mdbPost(){
+  if(MDB.posting) return; MDB.posting=true;
+  try{
+    const id=MDB.open; const box=document.getElementById("mdbc-in");
+    const body=box?rtValue(box):"";
+    if(!id||(!body&&!MDB.staged.length)) return;
+    const row={id:"c"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36),
+      mood_item_id:id, brand_id:activeBrand, body, author_kind:"team", author_name:actorName(),
+      author_email:ME.email||"", author_id:ME.id||null, mentions:brMentions(body)};
+    const r=await sb.from("post_comments").insert([row]);
+    if(r.error){ toast("Could not post — "+escHtml(r.error.message),"err"); return; }
+    if(box){ wDraftClear(box); rtClear(box); }
+    const staged=MDB.staged; MDB.staged=[];
+    await mdbThLoad(id);
+    if(staged.length){
+      await uploadMany(staged,{ownerKind:"message",ownerId:row.id,brandId:activeBrand,onTick:()=>{ if(MDB.open===id) mdbDrawer(); }});
+      await mdbThLoad(id);
+    }
+  }finally{ MDB.posting=false; }
+}
+async function mdbMsgDelete(id){
+  if(!confirm("Delete this message?")) return;
+  const r=await sb.from("post_comments").update({deleted_at:new Date().toISOString()}).eq("id",id);
+  if(r.error){ toast("Could not delete — "+escHtml(r.error.message),"err"); return; }
+  mdbThLoad(MDB.open);
+}
+async function mdbSaveNote(id,v){
+  const x=MDB.items.find(i=>i.id===id); if(!x) return; v=String(v||"").trim();
+  if((x.note||"")===v) return;
+  const r=await sb.from("mood_items").update({note:v,updated_at:new Date().toISOString()}).eq("id",id).select("id");
+  if(r.error){ toast("The note was not saved — "+escHtml(r.error.message),"err"); return; }
+  x.note=v; toast("Note saved");
+}
+async function mdbTagOne(id,name){
+  const ids=await mdbTagIdsFor([name]); if(!ids.length) return;
+  const x=MDB.items.find(i=>i.id===id); if(!x||(x.tag_ids||[]).includes(ids[0])){ mdbDrawer(); return; }
+  const fail=await mdbWriteTags([{id,tag_ids:(x.tag_ids||[]).concat(ids[0])}]);
+  if(fail) toast("Not tagged — "+escHtml(fail),"err");
+  mdbDrawer(); buildMoodSidebar(); mdbGrid();
+  const inp=document.querySelector("#mdb-dw .mdb-addtag"); if(inp) inp.focus();
+}
+async function mdbUntag(id,tid){
+  const x=MDB.items.find(i=>i.id===id); if(!x) return;
+  const fail=await mdbWriteTags([{id,tag_ids:(x.tag_ids||[]).filter(v=>v!==tid)}]);
+  if(fail) toast("The tag stayed — "+escHtml(fail),"err");
+  mdbDrawer(); buildMoodSidebar(); mdbGrid();
+}
+async function mdbTrashOne(id){
+  const x=MDB.items.find(i=>i.id===id); if(!x) return;
+  if(!confirm(`Move “${x.title||"this reference"}” to Trash?\n\nIts conversation stays with it and it can be restored.`)) return;
+  const snap=mdbSnap([id]);
+  const r=await sb.from("mood_items").update({deleted_at:new Date().toISOString()}).eq("id",id).select("id");
+  if(r.error){ toast("Could not move it — "+escHtml(r.error.message),"err"); return; }
+  MDB.items=MDB.items.filter(i=>i.id!==id); mdbClose(true); mdbRefresh();
+  mdbUndoToast("Moved to Trash",snap);
+}
+
+/* ── Add: paste a link, upload, or a Pinterest sheet ──────────────── */
+function mdbAddOpen(){
+  if(!activeBrand) return;
+  MDB.add={tab:0,url:"",busy:false,read:null,err:"",tags:"",files:[],sheet:null,done:0,of:0,pic:null};
+  let ov=document.getElementById("ov-mdb-add");
+  if(!ov){
+    document.body.insertAdjacentHTML("beforeend",`<div class="overlay" id="ov-mdb-add" onclick="if(event.target===this)mdbAddClose()">
+      <div class="modal"><div class="modal-top"><div class="modal-title" id="mdb-add-t"></div>
+        <button class="modal-x" onclick="mdbAddClose()">✕</button></div>
+      <div class="modal-body" id="mdb-add-b"></div>
+      <div class="modal-foot" id="mdb-add-f"></div></div></div>`);
+  }
+  mdbAddDraw(); openM("mdb-add");
+  setTimeout(()=>{ const i=document.getElementById("mdb-url"); if(i) i.focus(); },60);
+}
+function mdbAddClose(){ if(MDB.add&&MDB.add.busy) return; closeM("mdb-add"); MDB.add=null; }
+function mdbAddDraw(){
+  const A=MDB.add; if(!A) return;
+  document.getElementById("mdb-add-t").textContent=`Add to ${(brands[activeBrand]||{}).name||"this brand"}'s mood board`;
+  const tabs=[["ti-link","Paste a link"],["ti-upload","Upload"],["ti-brand-pinterest","Pinterest sheet"]];
+  let mid="";
+  if(A.tab===0){
+    const R=A.read;
+    mid=`<div class="field"><label class="fl">Link</label>
+        <input class="fi" id="mdb-url" value="${escAttr(A.url)}" placeholder="Pinterest, Instagram, YouTube, Vimeo, Behance or any page"
+          oninput="MDB.add.url=this.value" onpaste="setTimeout(mdbRead,30)" onkeydown="if(event.key==='Enter'){event.preventDefault();mdbRead();}"></div>
+      ${A.busy?`<div class="mdb-files">Reading the link…</div>`:""}
+      ${R?`<div class="mdb-prev"><div class="im">${R.thumb_path?`<img data-mdb="${escAttr(R.thumb_path)}" alt="">`:A.pic?`<img src="${escAttr(URL.createObjectURL(A.pic))}" alt="">`:`<i class="ti ti-photo-off"></i>`}</div>
+          <div style="min-width:0;flex:1"><input class="fi" style="height:32px;font-weight:600" value="${escAttr(R.title||"")}" oninput="MDB.add.read.title=this.value">
+          <div class="s">${escHtml(R.domain||"")} · ${R.kind==="video"?"video found":"picture found"}</div></div></div>
+        ${!R.thumb_path&&!A.pic?`<label class="mdb-drop" style="margin-top:10px;padding:14px"><input type="file" accept="image/*" style="display:none" onchange="MDB.add.pic=this.files[0];mdbAddDraw()">
+          <i class="ti ti-photo-up"></i>No picture came with this link. Add a screenshot of it</label>`:""}`:""}`;
+  }else if(A.tab===1){
+    mid=`<label class="mdb-drop"><input type="file" multiple accept="image/*,video/*" style="display:none" onchange="MDB.add.files=[...this.files];mdbAddDraw()">
+        <i class="ti ti-photo-up"></i>Drop images or short videos here, or click to pick</label>
+      ${A.files.length?`<div class="mdb-files">${A.files.map(f=>`${escHtml(f.name)} · ${kbmb(f.size)}${f.size>W_UPLOAD_MAX?" · <b style='color:var(--acc)'>over 50 MB, will be skipped</b>":""}`).join("<br>")}</div>`:""}`;
+  }else{
+    mid=`<label class="mdb-drop"><input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="mdbSheet(this.files[0])">
+        <i class="ti ti-file-spreadsheet"></i>Drop the Pinterest sheet here</label>
+      ${A.sheet?`<div class="mdb-files">${A.sheet.length} pin${A.sheet.length===1?"":"s"} in the sheet${A.of?` · ${A.done} of ${A.of} added`:""}</div>`:""}`;
+  }
+  document.getElementById("mdb-add-b").innerHTML=`
+    <div class="mdb-tabs">${tabs.map(([ic,l],i)=>`<button class="${A.tab===i?"on":""}" onclick="MDB.add.tab=${i};MDB.add.err='';mdbAddDraw()"><i class="ti ${ic}"></i> ${l}</button>`).join("")}</div>
+    ${mid}
+    ${A.tab!==2?`<div class="field" style="margin-top:14px"><label class="fl">Tags</label>
+      <input class="fi" value="${escAttr(A.tags)}" placeholder="${escAttr(MDB.tags.slice(0,3).map(t=>t.name).join(", ")||"Lobby, Facade, Diwali 2026")}" list="mdb-taglist2" oninput="MDB.add.tags=this.value">
+      <datalist id="mdb-taglist2">${MDB.tags.map(t=>`<option value="${escAttr(t.name)}">`).join("")}</datalist></div>`:""}
+    ${A.err?`<div class="mdb-err">${escHtml(A.err)}</div>`:""}`;
+  const can=A.tab===0?!!A.read:A.tab===1?A.files.length>0:!!(A.sheet&&A.sheet.length);
+  document.getElementById("mdb-add-f").innerHTML=`<button class="btn btn-s" onclick="mdbAddClose()">Cancel</button>
+    <button class="btn btn-p" ${can&&!A.busy?"":"disabled"} onclick="mdbAddGo()">${A.busy?"Adding…":A.tab===2?"Import":"Add to board"}</button>`;
+  mdbSign(document.getElementById("mdb-add-b"));
+}
+async function mdbCallFn(body){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session) throw new Error("Your sign-in has expired. Reload the page.");
+  let r;
+  try{
+    r=await fetch(MDB_FN,{method:"POST",headers:{authorization:"Bearer "+(session.access_token||""),"content-type":"application/json"},
+      body:JSON.stringify(Object.assign({brand_id:activeBrand},body))});
+  }catch(e){ throw new Error("Could not reach the server. Check your connection and try again."); }
+  const text=await r.text(); let out={};
+  try{ out=text?JSON.parse(text):{}; }catch(e){ out={}; }
+  if(!r.ok) throw new Error(out.error||("The server refused ("+r.status+")."));
+  return out;
+}
+async function mdbRead(){
+  const A=MDB.add; if(!A||A.busy) return;
+  const i=document.getElementById("mdb-url"); if(i) A.url=i.value;
+  const u=String(A.url||"").trim(); if(!/^https?:\/\//i.test(u)){ A.err=u?"That is not a web link.":""; mdbAddDraw(); return; }
+  A.busy=true; A.err=""; A.read=null; A.pic=null; mdbAddDraw();
+  try{ A.read=await mdbCallFn({url:u}); }catch(e){ A.err=String(e.message||e); }
+  A.busy=false; mdbAddDraw();
+}
+function mdbAlready(r){
+  const keys=[r.source_url,r.pin_url].filter(Boolean);
+  return MDB.items.find(x=>keys.includes(x.source_url)||keys.includes(x.pin_url))||null;
+}
+async function mdbInsert(row){
+  const r=await sb.from("mood_items").insert([row]).select("*");
+  if(r.error) throw new Error(r.error.message);
+  MDB.items.unshift((r.data&&r.data.find&&r.data.find(x=>x.id===row.id))||row);
+}
+function mdbRowFrom(R,tagIds){
+  return {id:crypto.randomUUID(),brand_id:activeBrand,kind:R.kind==="video"?"video":"image",title:String(R.title||"").slice(0,200),
+    source_url:R.source_url||"",pin_url:R.pin_url||"",domain:R.domain||"",provider:R.provider||"web",embed_url:R.embed_url||"",
+    thumb_path:R.thumb_path||"",thumb_src:R.thumb_src||"",media_path:R.media_path||"",width:R.width||null,height:R.height||null,
+    note:"",tag_ids:tagIds,created_by:ME.id||null,created_at:new Date().toISOString()};
+}
+/* a picture from this computer: never the original, a screen-sized copy */
+function mdbShrink(file,max){
+  return new Promise(res=>{
+    const im=new Image(), u=URL.createObjectURL(file);
+    im.onload=()=>{
+      const k=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight));
+      const c=document.createElement("canvas"); c.width=Math.round(im.naturalWidth*k); c.height=Math.round(im.naturalHeight*k);
+      c.getContext("2d").drawImage(im,0,0,c.width,c.height); URL.revokeObjectURL(u);
+      c.toBlob(b=>res({blob:b,w:c.width,h:c.height}),"image/jpeg",0.86);
+    };
+    im.onerror=()=>{ URL.revokeObjectURL(u); res(null); };
+    im.src=u;
+  });
+}
+function mdbPoster(file){
+  return new Promise(res=>{
+    const v=document.createElement("video"), u=URL.createObjectURL(file);
+    v.muted=true; v.playsInline=true; v.preload="metadata"; v.src=u;
+    const done=(x)=>{ URL.revokeObjectURL(u); res(x); };
+    v.onloadeddata=()=>{ try{ v.currentTime=Math.min(1,(v.duration||2)/2); }catch(e){ done(null); } };
+    v.onseeked=()=>{
+      const k=Math.min(1,1600/Math.max(v.videoWidth,v.videoHeight));
+      const c=document.createElement("canvas"); c.width=Math.round(v.videoWidth*k); c.height=Math.round(v.videoHeight*k);
+      c.getContext("2d").drawImage(v,0,0,c.width,c.height);
+      c.toBlob(b=>done({blob:b,w:c.width,h:c.height}),"image/jpeg",0.82);
+    };
+    v.onerror=()=>done(null);
+    setTimeout(()=>done(null),15000);
+  });
+}
+async function mdbAddGo(){
+  const A=MDB.add; if(!A||A.busy) return;
+  A.busy=true; A.err=""; mdbAddDraw();
+  try{
+    const tagIds=A.tab===2?[]:await mdbTagIdsFor(String(A.tags||"").split(","));
+    if(A.tab===0){
+      const R=Object.assign({},A.read);
+      const dup=mdbAlready(R); if(dup){ throw new Error(`Already on the board${dup.title?": “"+dup.title+"”":""}.`); }
+      if(!R.thumb_path&&A.pic){
+        const s=await mdbShrink(A.pic,1600);
+        if(s){ const p=await putObject(mediaPath(activeBrand,"mood","link",A.pic.name.replace(/\.\w+$/,"")+".jpg"),s.blob,"image/jpeg");
+               if(p.path){ R.thumb_path=p.path; R.width=s.w; R.height=s.h; } }
+      }
+      await mdbInsert(mdbRowFrom(R,tagIds));
+      toast("Added to the board");
+    }else if(A.tab===1){
+      let n=0;
+      for(const f of A.files){
+        if(f.size>W_UPLOAD_MAX) continue;
+        const isV=/^video\//.test(f.type), key=crypto.randomUUID();
+        const R={kind:isV?"video":"image",provider:"upload",title:f.name.replace(/\.\w+$/,""),domain:"",source_url:"",pin_url:""};
+        const s=isV?await mdbPoster(f):await mdbShrink(f,1600);
+        if(s&&s.blob){ const p=await putObject(mediaPath(activeBrand,"mood",key,"thumb.jpg"),s.blob,"image/jpeg"); if(p.path){ R.thumb_path=p.path; R.width=s.w; R.height=s.h; } }
+        if(isV){ const p=await putObject(mediaPath(activeBrand,"mood",key,f.name),f,f.type||"video/mp4");
+                 if(!p.path){ toast("“"+escHtml(f.name)+"” did not upload — "+escHtml(p.error),"err"); continue; } R.media_path=p.path; }
+        else if(!R.thumb_path){ toast("“"+escHtml(f.name)+"” did not upload","err"); continue; }
+        await mdbInsert(mdbRowFrom(R,tagIds)); n++;
+      }
+      toast(`${n} added to the board`);
+    }else{
+      await mdbImport();
+    }
+    A.busy=false; closeM("mdb-add"); MDB.add=null;
+    if(view==="mood") mdbRefresh(); else mdbGo();
+  }catch(e){ A.busy=false; A.err=String(e&&e.message||e); mdbAddDraw(); }
+}
+/* THE PINTEREST SHEET. One row per pin: Board · Pin link · Original link
+   · Picture link · Title · Tags. The board's name becomes a tag, and a
+   pin already on the board is skipped, so a sheet can be dropped twice. */
+async function mdbSheet(file){
+  const A=MDB.add; if(!A||!file) return;
+  A.err=""; A.sheet=null;
+  try{
+    if(typeof XLSX==="undefined") throw new Error("The spreadsheet reader has not loaded. Reload the page and try again.");
+    const wb=XLSX.read(await file.arrayBuffer(),{type:"array"});
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""});
+    const pick=(r,names)=>{ const k=Object.keys(r).find(k=>names.includes(String(k).trim().toLowerCase())); return k?String(r[k]).trim():""; };
+    A.sheet=rows.map(r=>({board:pick(r,["board","pinterest board"]),pin:pick(r,["pin link","pin","pinterest link"]),
+      orig:pick(r,["original link","original","source","website"]),img:pick(r,["picture link","image link","picture","image"]),
+      title:pick(r,["title","name"]),tags:pick(r,["tags","tag"])})).filter(r=>r.pin||r.orig);
+    if(!A.sheet.length) throw new Error("No pins found. The sheet needs a Pin link or an Original link column.");
+  }catch(e){ A.err=String(e.message||e); A.sheet=null; }
+  mdbAddDraw();
+}
+async function mdbImport(){
+  const A=MDB.add; A.of=A.sheet.length; A.done=0; let skipped=0, failed=0;
+  for(const r of A.sheet){
+    const url=r.pin||r.orig;
+    if(MDB.items.some(x=>[x.pin_url,x.source_url].includes(url)||(r.orig&&x.source_url===r.orig))){ skipped++; A.done++; mdbAddDraw(); continue; }
+    let R=null;
+    try{ R=await mdbCallFn({url,img:r.img,title:r.title}); }catch(e){ failed++; A.done++; mdbAddDraw(); continue; }
+    if(r.orig&&R.provider==="pinterest"&&(!R.source_url||R.source_url===R.pin_url)){ R.source_url=r.orig; try{ R.domain=new URL(r.orig).hostname.replace(/^www\./,""); }catch(e){} }
+    const tagIds=await mdbTagIdsFor([r.board,...String(r.tags||"").split(",")]);
+    try{ await mdbInsert(mdbRowFrom(R,tagIds)); }catch(e){ failed++; }
+    A.done++; mdbAddDraw();
+  }
+  toast(`${A.done-skipped-failed} added${skipped?` · ${skipped} already on the board`:""}${failed?` · ${failed} could not be read`:""}`,failed?"err":"");
+}
+</script>
+
 </body>
 </html>
