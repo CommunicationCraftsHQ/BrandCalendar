@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.0 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.1 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12953,7 +12953,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.0 Tbilisi";
+const TOOL_VERSION="V118.1 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -18674,7 +18674,7 @@ function buildBriefSidebar(){
   ].join("");
   const lnkA=l=>`<a href="${escAttr(bdHref(l.url))}" target="_blank" rel="noopener" class="bd-sblink">${escAttr(l.label||bdShort(l.url))} ↗</a>`;
   const lnkGrp=(t,arr)=>(arr&&arr.length)?`<div class="s-lbl" style="margin-top:18px;">${t}</div><div style="display:flex;flex-direction:column;gap:4px;">${arr.map(lnkA).join("")}</div>`:"";
-  const sbLinks=lnkGrp("Quick links",D.links)
+  const sbLinks=""   /* V118.1 — the quick links are the row at the top of the page now */
     +(D.categories||[]).map(cat=>lnkGrp(escAttr(cat.name||"Category")+" links",cat.links)).join("");
   document.getElementById("sb-stats").innerHTML=`
     <div class="s-stat-num">${c.n}<span style="font-size:16px;color:var(--subtle);">/${c.of}</span></div>
@@ -18858,11 +18858,10 @@ function renderBriefForm(){
   ${pageHead(`<button class="btn btn-p" onclick="bdToggleEdit()"><i class="ti ti-check"></i> Done — view dashboard</button>`)}
   <div style="padding:0 32px 14px;"><div class="year-tag">Editing · saves automatically</div></div>
   <div class="bd-wrap">
-    <div class="bd-f"><h3>Brand basics</h3><div class="hint">Tagline, the chips shown under the title, and the links.</div>
+    <div class="bd-f"><h3>Brand basics</h3><div class="hint">Tagline and the chips shown under the title.</div>
       ${fIn("Tagline",D.tagline,"bset('tagline',this.value)")}
       <div class="bd-fgap">${fTa("Header chips — one per line",bLines(D.meta),"bset('meta',bpLines(this.value))","e.g. industry, founded, city, price band",2)}</div>
-      <div class="bd-fgap"><div class="bd-fl">Links — label and address</div>${linkRows}
-        <button class="btn btn-s btn-sm" onclick="bArrAdd('links',{label:'',url:''})">+ Add link</button></div></div>
+</div>
 
     <div class="bd-f"><h3>Brand facts &amp; rhythm</h3><div class="hint">Services are not typed here. They come from the signed contract, through the Portfolio's client page.</div>
       ${fTa("Brand facts",bjPairs(D.tl,["k","v"]),"bset('tl',bpPairs(this.value,['k','v']))","Label | value — e.g. Category | Real estate",2)}
@@ -31288,7 +31287,7 @@ async function objaCreate(){ return objaElsewhere(); }
 (function(){
   const baseRoute=viewRoute;
   viewRoute=function(v){
-    if(v==="objadmin") return {render:renderObjAdmin,sidebar:null,needs:"admin"};
+    if(v==="objadmin") return {render:function(){ /* V118.1 — a reload restores this view without openObjAdmin, so it reads here */ if(!OBJA.loading&&!OBJA.err&&!(OBJA.rows.obj||[]).length) objaLoad().then(()=>{ if(view==="objadmin") renderObjAdmin(); }); renderObjAdmin(); },sidebar:null,needs:"admin"};
     return baseRoute(v);
   };
   /* routeAllows knows brand, brand+edit and edit, and sends anything
@@ -32331,14 +32330,16 @@ window.prSegOpen=function(){ pbOpen("seg"); };
   async function vbLoad(bid){
     VB.busy = true; VB.err = "";
     try{
-      const [mo, ms, mc, mw, bo, bs] = await Promise.all([
+      const [mo, ms, mc, mw, bo, bs, bs2] = await Promise.all([
         sb.from("promotion_objectives").select("key,label,unit,sort,active"),
         sb.from("promotion_segments").select("key,label,sort,active"),
         sb.from("stream_channel_options").select("key,label,pos,deleted_at"),
         sb.from("stream_sway_options").select("key,label,pos,deleted_at"),
         sb.from("brand_objectives").select("brand_id,objective_key,label,unit").eq("brand_id", bid),
         sb.from("brand_segments").select("*").eq("brand_id", bid).is("deleted_at", null),
+        sb.from("brand_segments").select("brand_id,segment_key,label").neq("brand_id", bid).is("deleted_at", null),
       ]);
+      VB.others = (bs2 && !bs2.error) ? (bs2.data || []).filter(r => r.brand_id !== bid && !r.deleted_at) : [];
       const bad = [mo, ms, mc, mw, bo, bs].find(r => r.error);
       if (bad) throw new Error(bad.error.message);
       const srt = (a, b) => (a.sort || a.pos || 0) - (b.sort || b.pos || 0)
@@ -32348,7 +32349,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
       VB.chans = (mc.data || []).filter(o => !o.deleted_at).sort(srt);
       VB.sways = (mw.data || []).filter(o => !o.deleted_at).sort(srt);
       VB.bobjs = (bo.data || []).filter(r => r.brand_id === bid);
-      VB.bsegs = (bs.data || []).filter(r => r.brand_id === bid)
+      VB.bsegs = (bs.data || []).filter(r => r.brand_id === bid && !r.deleted_at)
                    .sort((a, b) => (a.sort || 0) - (b.sort || 0)
                                    || String(a.label || "").localeCompare(String(b.label || "")));
       VB.key = bid;
@@ -32424,39 +32425,250 @@ window.prSegOpen=function(){ pbOpen("seg"); };
      went from three columns to six when the dialog was removed, and at
      1440 a half-width card gave each column about 90px, which broke
      every channel name over two lines. */
+  /* ══ V118.1 TBILISI · TARGET GROUPS — ONE LINE EACH ═══════════════════
+     Chirag, 15 Oct: "first, you select the target group… and you also
+     can choose a secondary option from the defined target group from
+     the secondary list. Wherever the secondary list is not available,
+     for example, in the case of customers, can add specific segments…
+     For each target group, you can choose multiple objectives and
+     multiple talking points."
+
+     Approved the same night as A3 (07 - Target groups mockup): one table,
+     one line per entry — Target group · Segment · Objectives · Talking
+     points · ✕. The talking points open under the row as a numbered list
+     edited in place; each one's text starts exactly under the segment
+     word, the numbers hang to the left. The brand's key talking points
+     (section 01) sit underneath as one-click adds.
+
+     · A segment of Trade Channel or Specifiers is picked from that list
+       on the Lists page; one that is not there is created on the Lists
+       page, for every brand, by whoever needs it (Chirag: "open to
+       everyone"). Customers, Internal Team and Open have no list, so the
+       picker offers the words other brands already use, then + Create.
+     · No customer type and no separate objectives card. An objective put
+       on a row also joins the brand's objective list (a database
+       trigger), so the Promotions page keeps offering it.               */
+  const LISTED = { trade_channel: "chans", specifier: "sways" };
+  const LIST_TABLE = { trade_channel: "stream_channel_options", specifier: "stream_sway_options" };
+  const low = (s) => String(s || "").trim().toLowerCase();
+  const grpOrder = () => VB.segs.map(s => s.key);
+  function tgRows(){
+    const o = grpOrder(), at = (k) => { const i = o.indexOf(k); return i < 0 ? 999 : i; };
+    return VB.bsegs.slice().sort((a, b) => (at(a.segment_key) - at(b.segment_key))
+      || ((a.sort || 0) - (b.sort || 0)) || String(a.label || "").localeCompare(String(b.label || "")));
+  }
+  const tgUsed = (g, except) => VB.bsegs.filter(r => r.segment_key === g && r.id !== except).map(r => low(r.label));
+  function tgChoices(g, except){
+    const used = tgUsed(g, except);
+    if (LISTED[g]) return (VB[LISTED[g]] || []).map(o => ({ key: o.key, label: o.label })).filter(o => !used.includes(low(o.label)));
+    const seen = new Set(), out = [];
+    (VB.others || []).forEach(r => {
+      if (r.segment_key !== g || !String(r.label || "").trim()) return;
+      const k = low(r.label); if (seen.has(k) || used.includes(k)) return;
+      seen.add(k); out.push({ key: null, label: String(r.label).trim() });
+    });
+    return out.sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  /* the picker: a list under the control, closes on the next click. A
+     second step opened from inside it stays where the first one was. */
+  function tgPop(ev, inner){
+    ev.stopPropagation();
+    const inPop = ev.target.closest && ev.target.closest(".vb-pop");
+    const b = (inPop && VB._rect) ? VB._rect : ev.target.closest("button,span,b,td").getBoundingClientRect();
+    VB._rect = b;
+    vbInfClose();
+    const box = document.createElement("div");
+    box.className = "vb-pop tg-pop"; box.id = "vb-pop"; box.innerHTML = inner;
+    box.addEventListener("click", e => e.stopPropagation());
+    document.body.appendChild(box);
+    box.style.left = Math.max(8, Math.min(window.innerWidth - box.offsetWidth - 8, b.left)) + "px";
+    box.style.top = (b.bottom + window.scrollY + 4) + "px";
+    setTimeout(() => document.addEventListener("click", vbInfClose, { once: true }), 0);
+    const i = box.querySelector("input"); if (i) i.focus();
+  }
+
+  /* ── segment ── */
+  window.tgSegOpen = function(ev, target){
+    const g = target === "new" ? VB.newG : (VB.bsegs.find(r => r.id === target) || {}).segment_key;
+    if (!g) return;
+    VB._seg = { target, g, q: "", items: [] };
+    tgPop(ev, `<input class="tg-pop-in" placeholder="Search or create" oninput="tgSegQ(this.value)"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();tgSegEnter();}">
+      <div id="tg-segitems">${tgSegItems()}</div>`);
+  };
+  function tgSegItems(){
+    const S = VB._seg, q = S.q.trim(), ql = low(q), except = S.target === "new" ? null : S.target;
+    const all = tgChoices(S.g, except);
+    S.items = all.filter(o => !ql || low(o.label).includes(ql));
+    const exact = all.some(o => low(o.label) === ql) || tgUsed(S.g, except).includes(ql);
+    return (S.items.map((o, i) => `<div class="vb-popi" onclick="tgSegPick(${i})">${esc(o.label)}</div>`).join("")
+        || `<div class="vb-popi off">${q ? "Nothing matches" : "Nothing left to pick"}</div>`)
+      + (q && !exact ? `<div class="tg-sep"></div><div class="vb-popi mk" onclick="tgSegCreate()">+ Create “${esc(q)}”</div>` : "");
+  }
+  window.tgSegQ = function(v){ if (!VB._seg) return; VB._seg.q = v; const el = document.getElementById("tg-segitems"); if (el) el.innerHTML = tgSegItems(); };
+  window.tgSegEnter = function(){
+    const S = VB._seg; if (!S) return; const ql = low(S.q);
+    const hit = S.items.findIndex(o => low(o.label) === ql);
+    if (hit > -1) return tgSegPick(hit);
+    if (ql && !tgUsed(S.g, S.target === "new" ? null : S.target).includes(ql)) return tgSegCreate();
+    if (S.items.length === 1) return tgSegPick(0);
+  };
+  window.tgSegPick = function(i){ const S = VB._seg; const o = S && S.items[i]; if (!o) return; vbInfClose(); tgSegSet(S.target, S.g, o.label, o.key); };
+  window.tgSegCreate = async function(){
+    const S = VB._seg; if (!S) return; const label = S.q.trim(); if (!label) return;
+    vbInfClose();
+    if (!LISTED[S.g]) return tgSegSet(S.target, S.g, label, null);
+    /* a new word for the Lists page — open to everyone, on Chirag's word */
+    const list = VB[LISTED[S.g]] || [];
+    const base = (typeof objaKeyFor === "function" ? objaKeyFor(label) : low(label).replace(/[^a-z0-9]+/g, "_")) || "term";
+    const pos = Math.max(100, list.reduce((m, o) => Math.max(m, o.pos || 0), 0) + 1);
+    let key = base, r = null;
+    for (let n = 0; n < 3; n++){
+      r = await sb.from(LIST_TABLE[S.g]).insert([{ key, label, pos, created_by: (ME && ME.id) || null }]);
+      if (!r.error) break;
+      if (!/duplicate|unique|23505/i.test(String(r.error.message || "") + (r.error.code || ""))) break;
+      key = base + "_" + Math.random().toString(36).slice(2, 6);
+    }
+    if (r && r.error) return say("Not added to the Lists page — " + r.error.message, "err");
+    list.push({ key, label, pos });
+    say(`“${esc(label)}” added to ${esc(mlabel(VB.segs, S.g))} on the Lists page`);
+    tgSegSet(S.target, S.g, label, key);
+  };
+  async function tgSegSet(target, g, label, key){
+    if (VB.bsegs.some(r => r.id !== target && r.segment_key === g && low(r.label) === low(label)))
+      return say(esc(label) + " is already here", "err");
+    if (target === "new"){
+      const row = { id: crypto.randomUUID(), brand_id: VB.key, segment_key: g, label, list_key: key || null,
+        objective_keys: [], talking_points: [], sway: [],
+        sort: VB.bsegs.reduce((m, x) => Math.max(m, x.sort || 0), 0) + 10 };
+      const r = await sb.from("brand_segments").insert([row]).select("*");
+      if (r.error) return say("Not added — " + r.error.message, "err");
+      VB.bsegs.push(((r.data || []).find ? (r.data || []).find(x => x.id === row.id) : null) || row);
+      return vbPaint();
+    }
+    const r0 = VB.bsegs.find(x => x.id === target); if (!r0) return;
+    const was = { segment_key: r0.segment_key, label: r0.label, list_key: r0.list_key };
+    Object.assign(r0, { segment_key: g, label, list_key: key || null });
+    vbPaint();
+    const u = await sb.from("brand_segments").update({ segment_key: g, label, list_key: key || null }).eq("id", target);
+    if (u.error){ Object.assign(r0, was); say("Not saved — " + u.error.message, "err"); vbPaint(); }
+  }
+  /* moving a row to another group keeps its word, unless the new group
+     has a list the word is not on — then the segment is picked again */
+  window.tgGrp = async function(id, g){
+    const r = VB.bsegs.find(x => x.id === id); if (!r || r.segment_key === g) return;
+    let label = r.label, key = null;
+    if (LISTED[g]){ const hit = (VB[LISTED[g]] || []).find(o => low(o.label) === low(label)); if (hit) key = hit.key; else label = null; }
+    if (label && tgUsed(g, id).includes(low(label))) label = null, key = null;
+    const was = { segment_key: r.segment_key, label: r.label, list_key: r.list_key };
+    Object.assign(r, { segment_key: g, label, list_key: key });
+    vbPaint();
+    const u = await sb.from("brand_segments").update({ segment_key: g, label, list_key: key }).eq("id", id);
+    if (u.error){ Object.assign(r, was); say("Not saved — " + u.error.message, "err"); vbPaint(); }
+  };
+
+  /* ── objectives ── */
+  window.tgObjOpen = function(ev, id){
+    const r = VB.bsegs.find(x => x.id === id); if (!r) return;
+    const on = r.objective_keys || [];
+    const spare = VB.objs.filter(o => !on.includes(o.key));
+    tgPop(ev, spare.length
+      ? spare.map(o => { const w = vbObjWords(o.key);
+          return `<div class="vb-popi" onclick="tgObj('${escA(id)}','${escA(o.key)}')">${esc(w.label)}${w.unit ? `<span class="s">counted in ${esc(w.unit)}</span>` : ""}</div>`; }).join("")
+      : `<div class="vb-popi off">Every objective is already here</div>`);
+  };
+  window.tgObj = async function(id, k){
+    const r = VB.bsegs.find(x => x.id === id); if (!r) return;
+    vbInfClose();
+    const was = (r.objective_keys || []).slice();
+    const now = was.includes(k) ? was.filter(x => x !== k) : was.concat([k]);
+    r.objective_keys = now; vbPaint();
+    const u = await sb.from("brand_segments").update({ objective_keys: now }).eq("id", id);
+    if (u.error){ r.objective_keys = was; say("Not saved — " + u.error.message, "err"); return vbPaint(); }
+    if (now.includes(k) && !VB.bobjs.find(b => b.objective_key === k))
+      VB.bobjs.push({ brand_id: VB.key, objective_key: k, label: null, unit: null });
+  };
+
+  /* ── talking points ── */
+  const tpKey = () => { const b = (typeof brands === "object" && brands) ? brands[VB.key] : null;
+    return ((b && b.brief && Array.isArray(b.brief.talking)) ? b.brief.talking : []).map(t => String(t || "").trim()).filter(Boolean); };
+  window.tgTpToggle = function(id){ VB.open = VB.open || {}; VB.open[id] = !VB.open[id]; vbPaint(); };
+  async function tgTpWrite(r, now, focusNew){
+    const was = (r.talking_points || []).slice();
+    r.talking_points = now; vbPaint();
+    if (focusNew){ const n = document.getElementById("tg-tpnew-" + r.id); if (n) n.focus(); }
+    const u = await sb.from("brand_segments").update({ talking_points: now }).eq("id", r.id);
+    if (u.error){ r.talking_points = was; say("Not saved — " + u.error.message, "err"); vbPaint(); }
+  }
+  window.tgTpSet = function(id, i, v){
+    const r = VB.bsegs.find(x => x.id === id); if (!r) return;
+    const cur = (r.talking_points || []).slice(), t = String(v || "").trim();
+    if ((cur[i] || "") === t) return;
+    if (t) cur[i] = t; else cur.splice(i, 1);
+    tgTpWrite(r, cur, false);
+  };
+  window.tgTpAdd = function(id, v){
+    const r = VB.bsegs.find(x => x.id === id); if (!r) return;
+    const t = String(v || "").trim(); if (!t) return;
+    const cur = (r.talking_points || []);
+    if (cur.some(x => low(x) === low(t))) return say("Already on this row", "err");
+    tgTpWrite(r, cur.concat([t]), true);
+  };
+  window.tgTpSug = function(id, i){ const s = tpKey().filter(t => !((VB.bsegs.find(x => x.id === id) || {}).talking_points || []).some(x => low(x) === low(t))); if (s[i]) tgTpAdd(id, s[i]); };
+  window.tgTpOff = function(id, i){ const r = VB.bsegs.find(x => x.id === id); if (!r) return; const cur = (r.talking_points || []).slice(); cur.splice(i, 1); tgTpWrite(r, cur, false); };
+
+  function tgTpBody(r){
+    const tps = r.talking_points || [];
+    if (!may()) return `<div class="x4">${tps.map((t, i) => `<div class="ln ro"><span class="no">${i + 1}</span><span class="tx">${esc(t)}</span><span></span></div>`).join("")
+      || `<div class="bd-note" style="margin:0 0 0 37px">None yet.</div>`}</div>`;
+    const spare = tpKey().filter(t => !tps.some(x => low(x) === low(t)));
+    return `<div class="x4">${tps.map((t, i) => `<div class="ln"><span class="no">${i + 1}</span>
+        <input class="vb-ce" value="${escA(t)}" onblur="tgTpSet('${escA(r.id)}',${i},this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+        <span class="k" title="Take it off" onclick="tgTpOff('${escA(r.id)}',${i})">✕</span></div>`).join("")}
+      <div class="ln new"><span class="no">${tps.length + 1}</span><input class="vb-ce" id="tg-tpnew-${escA(r.id)}" placeholder="Type a talking point…"
+        onkeydown="if(event.key==='Enter'&&this.value.trim()){event.preventDefault();tgTpAdd('${escA(r.id)}',this.value);}"><span></span></div>
+      ${spare.length ? `<div class="sug">Key talking points ${spare.map((t, i) => `<b onclick="tgTpSug('${escA(r.id)}',${i})">+ ${esc(t)}</b>`).join("")}</div>` : ""}</div>`;
+  }
+
+  /* ── the table ── */
+  const grpSel = (cur, on) => `<select class="vb-ce vb-sel" onchange="${on}">${VB.segs.map(s =>
+      `<option value="${escA(s.key)}"${cur === s.key ? " selected" : ""}>${esc(s.label)}</option>`).join("")}</select>`;
+  function tgRow(r){
+    const id = escA(r.id), n = (r.talking_points || []).length, op = !!(VB.open && VB.open[r.id]);
+    const objs = (r.objective_keys || []);
+    const edit = may();
+    const objCell = `<div class="vb-inf tg-obj">${objs.map(k => edit
+        ? `<b title="Take it off" onclick="tgObj('${id}','${escA(k)}')">${esc(vbObjWords(k).label)}</b>`
+        : `<b class="ro">${esc(vbObjWords(k).label)}</b>`).join("")}${edit ? `<span class="vb-plus" onclick="tgObjOpen(event,'${id}')">+ objective</span>` : (objs.length ? "" : `<span class="nsdim">—</span>`)}</div>`;
+    const tp = `<span class="a3-tp${n ? "" : " none"}${op ? " open" : ""}" onclick="tgTpToggle('${id}')">${n ? n + " talking point" + (n > 1 ? "s" : "") : (edit ? "Add talking points" : "None")}</span>`;
+    const main = `<tr data-tg="${id}">
+        <td class="w-grp">${edit ? grpSel(r.segment_key, `tgGrp('${id}',this.value)`) : `<span class="vb-ro">${esc(mlabel(VB.segs, r.segment_key))}</span>`}</td>
+        <td class="w-seg">${edit ? `<button class="tg-segbtn" onclick="tgSegOpen(event,'${id}')">${r.label ? esc(r.label) : `<span class="ph">Pick or create…</span>`}</button>`
+                                  : `<span class="vb-ro tg-segro">${esc(r.label || "—")}</span>`}</td>
+        <td>${objCell}</td>
+        <td class="w-tp">${tp}</td>
+        <td class="vb-x">${edit ? `<button class="vb-del" title="Take this off" onclick="vbSegDel('${id}')">✕</button>` : ""}</td></tr>`;
+    return main + (op ? `<tr class="a3-open"><td></td><td colspan="4">${tgTpBody(r)}</td></tr>` : "");
+  }
   function html(){
     if (VB.busy) return `<div class="bd-card"><div class="bd-note" style="margin:0;">Reading the lists…</div></div>`;
     if (VB.err)  return `<div class="bd-card"><div class="bd-note" style="margin:0;">Could not read them — ${esc(VB.err)}</div></div>`;
-    const spare = VB.objs.filter(o => !VB.bobjs.find(r => r.objective_key === o.key));
+    if (!VB.newG || !VB.segs.find(s => s.key === VB.newG)) VB.newG = (VB.segs[0] || {}).key || "";
+    const rows = tgRows();
     return `
-    <div class="vb-stack">
-      <div class="bd-card">
-        <div class="bd-lbl">Objectives</div>
-        <table class="vb-t"><thead><tr>
-            <th>Called here</th><th class="w-unit">Counted in</th><th></th>
-          </tr></thead><tbody>${VB.bobjs.map(objRow).join("")}
-          ${may() && spare.length ? `<tr class="vb-new">
-            <td><select class="vb-ce vb-sel vb-nm" id="vb-objpick" onchange="vbObjOn()">
-              <option value="">Add one…</option>
-              ${spare.map(o => `<option value="${escA(o.key)}">${esc(o.label)}</option>`).join("")}
-            </select></td>
-            <td class="w-unit nsdim" style="font-size:12px">follows the objective</td>
-            <td class="vb-x"></td></tr>` : ""}
-          </tbody></table>
-        ${(!VB.bobjs.length && !may()) ? `<div class="bd-note" style="margin:6px 0 0;">None yet.</div>` : ""}
-        ${may() && !spare.length ? `<div class="bd-note" style="margin-top:10px;">Every objective on the master list is already here. New ones are added in the Portfolio.</div>` : ""}
-      </div>
-
-      <div class="bd-card">
-        <div class="bd-lbl">Target groups</div>
-        <table class="vb-t vb-seg"><thead><tr>
-            <th>Called here</th><th class="w-kind">Kind</th><th class="w-buy">Customer type</th>
-            <th class="w-chan">Trade Channel</th><th>Specifiers</th><th></th>
-          </tr></thead><tbody>${VB.bsegs.map(segRow).join("")}${may() ? segNewRow() : ""}</tbody></table>
-        ${(!VB.bsegs.length && !may()) ? `<div class="bd-note" style="margin:6px 0 0;">None yet.</div>` : ""}
-      </div>
+    <div class="bd-card tg-card">
+      <table class="vb-t a3"><thead><tr><th>Target group</th><th>Segment</th><th>Objectives</th><th>Talking points</th><th></th></tr></thead>
+      <tbody>${rows.map(tgRow).join("")}
+        ${may() ? `<tr class="vb-new">
+          <td class="w-grp">${grpSel(VB.newG, "tgNewG(this.value)")}</td>
+          <td class="w-seg"><button class="tg-segbtn" onclick="tgSegOpen(event,'new')"><span class="ph">Pick or create…</span></button></td>
+          <td></td><td></td><td class="vb-x"></td></tr>` : ""}
+      </tbody></table>
+      ${(!rows.length && !may()) ? `<div class="bd-note" style="margin:6px 0 0;">None yet.</div>` : ""}
     </div>`;
   }
+  window.tgNewG = function(g){ VB.newG = g; };
 
   function vbPaint(){
     const host = document.getElementById("vb-host");
@@ -32666,9 +32878,9 @@ window.prSegOpen=function(){ pbOpen("seg"); };
       if (wrap && !document.getElementById("vb-host")){
         const sec = document.createElement("div");
         sec.innerHTML = `
-          <div class="bd-sec" id="bd-vb"><div class="bd-secnum">09</div>
-            <div class="bd-sectitle">Objectives and segments</div><div class="bd-secrule"></div>
-            <div class="bd-secsub">What this brand is trying to achieve, and who it talks to</div></div>
+          <div class="bd-sec" id="bd-vb"><div class="bd-secnum">07</div>
+            <div class="bd-sectitle">Target groups</div><div class="bd-secrule"></div>
+            <div class="bd-secsub">Who this brand talks to, what it wants from each, and what it tells them</div></div>
           <div id="vb-host"></div>`;
         wrap.appendChild(sec);
       }
@@ -37385,5 +37597,734 @@ function xmDress(){
   try{ mfTabsFill(); }catch(e){}
 })();
 </script>
+<style>
+/* ══ V118.1 TBILISI — THE BRAND'S LINKS AND FILES ═════════════════════
+   Approved by Chirag, 15 Oct 2026 (02 - Strategy links and files mockup):
+   · links: a row of buttons at the top of the Strategy page (option C)
+   · files: section 06 on the Strategy page, and a Files page of its own
+     with folders in the left panel (option A), like the mood board
+   Every class is .bf- so nothing borrows the Proposal Bank's .hl- names. */
+.bf-links{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 6px;}
+.bf-lk{position:relative;display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:999px;background:var(--surface);
+  border:1px solid var(--div);font-size:12.5px;font-weight:600;color:var(--text);text-decoration:none;cursor:pointer;white-space:nowrap;}
+.bf-lk:hover{border-color:var(--text);}
+.bf-lk i{font-size:15px;}
+.bf-lk .ed{display:none;width:20px;height:20px;margin:0 -6px 0 0;border-radius:50%;align-items:center;justify-content:center;color:var(--subtle);font-size:13px;}
+.bf-lk:hover .ed{display:inline-flex;}
+.bf-lk .ed:hover{background:var(--surface2);color:var(--text);}
+.bf-lk.add{border-style:dashed;color:var(--muted);background:transparent;}
+.bf-lk.add:hover{border-color:var(--acc);color:var(--acc);}
+.bf-pop{position:absolute;z-index:9000;background:#fff;border:1px solid var(--div);border-radius:10px;box-shadow:0 8px 24px rgba(13,13,13,.12);padding:4px;}
+.bf-menu{min-width:200px;}
+.bf-mh{padding:7px 10px 4px;font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);}
+.bf-mi{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;font-size:12.5px;cursor:pointer;white-space:nowrap;}
+.bf-mi:hover{background:var(--surface2);}
+.bf-mi i{color:var(--muted);font-size:15px;}
+.bf-mi.red,.bf-mi.red i{color:var(--acc);}
+.bf-mi .s{margin-left:auto;color:var(--subtle);font-size:11.5px;padding-left:12px;}
+.bf-msep{height:1px;background:var(--div);margin:4px 2px;}
+.bf-form{width:320px;padding:8px;display:flex;flex-direction:column;gap:8px;}
+.bf-form .fi{height:34px;}
+.bf-form .row{display:flex;gap:8px;justify-content:flex-end;align-items:center;}
+.bf-form .row .sp{flex:1;}
+.bf-seg{display:flex;gap:2px;padding:3px;background:#E7E6E1;border-radius:9px;margin:4px 4px 6px;}
+.bf-seg button{flex:1;height:28px;border:0;border-radius:7px;background:transparent;font:inherit;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;}
+.bf-seg button.on{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.08);}
+/* a file, one line — the Hot leads Documents row, widened */
+.bf-row{display:grid;grid-template-columns:30px minmax(0,1fr) 150px 128px 112px 130px 40px 22px 18px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid #F0EFEC;}
+.bf-row:last-child{border-bottom:0;}
+.bf-row .dn{min-width:0;}
+.bf-row .dn b{font-weight:650;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13.5px;}
+.bf-row .dn span{color:var(--subtle);font-size:11.5px;}
+.bf-row .who{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bf-row.up{opacity:.75;}
+.bf-row .bar{height:4px;border-radius:2px;background:var(--div);overflow:hidden;margin-top:5px;max-width:260px;}
+.bf-row .bar i{display:block;height:100%;background:var(--acc);}
+.bf-ren{width:100%;height:28px;border:1px solid var(--text);border-radius:6px;padding:0 8px;font:inherit;font-size:13.5px;font-weight:600;}
+.bf-fold{font-size:11.5px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bf-dic{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;color:#fff;background:#8A8984;flex:none;letter-spacing:.02em;}
+.bf-dic.pdf{background:#C8412B}.bf-dic.doc{background:#2E6BC0}.bf-dic.ppt{background:#D0782A}
+.bf-dic.xls{background:#2F7A46}.bf-dic.zip{background:#6B6A66}.bf-dic.img{background:#7C5CBF}.bf-dic.vid{background:#0D0D0D}
+.bf-src{font-size:11px;font-weight:650;border-radius:6px;padding:3px 8px;justify-self:start;white-space:nowrap;background:#F0EFEC;color:#55544F;}
+.bf-src.lead{background:#EEF0FB;color:#3B46A0;}
+.bf-tk{font-size:11.5px;font-weight:650;color:var(--muted);cursor:pointer;white-space:nowrap;}
+.bf-tk b{color:var(--text);}
+.bf-tk.none{color:var(--subtle);font-weight:500;}
+.bf-tk:hover,.bf-tk:hover b{color:var(--acc);}
+.bf-tk.ro{cursor:default;}
+.bf-tk.ro:hover,.bf-tk.ro:hover b{color:var(--muted);}
+.bf-open{font-weight:650;text-align:right;cursor:pointer;color:var(--text);font-size:13px;}
+.bf-open:hover{color:var(--acc);}
+.bf-dots{width:22px;height:22px;border-radius:6px;border:0;background:transparent;color:var(--subtle);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:15px;}
+.bf-dots:hover{background:var(--surface2);color:var(--text);}
+.bf-x{color:var(--subtle);cursor:pointer;text-align:center;font-size:12px;}
+.bf-x:hover{color:var(--acc);}
+/* the Strategy page's section 06 */
+.bf-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
+.bf-chips span{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;border-radius:999px;border:1px solid var(--div);font-size:12px;font-weight:600;cursor:pointer;background:#fff;}
+.bf-chips span:hover{border-color:var(--text);}
+.bf-chips span b{color:var(--subtle);font-weight:600;}
+.bf-card{background:var(--surface);border:1px solid var(--div);border-radius:var(--rc);padding:6px 18px;}
+.bf-s6{padding:14px 18px 10px;}
+.bf-more{display:inline-flex;align-items:center;gap:6px;margin-top:10px;font-size:13.5px;font-weight:600;color:var(--acc);cursor:pointer;}
+.bf-empty{padding:40px 0;text-align:center;color:var(--muted);font-size:13px;}
+/* the task picker */
+.bf-pick{width:380px;max-height:360px;overflow-y:auto;}
+.bf-pick .t{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;font-size:12.5px;cursor:pointer;}
+.bf-pick .t:hover{background:var(--surface2);}
+.bf-pick .t .nm{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bf-pick .t .d{margin-left:auto;color:var(--subtle);font-size:11.5px;white-space:nowrap;padding-left:10px;}
+.bf-pick .t.on{font-weight:650;}
+.bf-pick .ck{width:15px;height:15px;border-radius:4px;border:1.5px solid var(--div);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;flex:none;}
+.bf-pick .t.on .ck{background:var(--text);border-color:var(--text);}
+.bf-pick .q{margin:4px;width:calc(100% - 8px);height:32px;border:1px solid var(--div);border-radius:7px;padding:0 9px;font:inherit;font-size:12.5px;}
+.bf-pick .q:focus{outline:none;border-color:var(--acc);}
+.bf-pick .none{padding:10px;color:var(--subtle);font-size:12.5px;}
+/* inside a task: the files linked from the brand */
+.bft{margin:0 0 14px;padding:0 0 10px;border-bottom:1px solid var(--div);}
+.bft-h{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
+.bft-h .t{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);font-weight:700;}
+.bft-h .sp{flex:1;}
+.bft-add{display:inline-flex;align-items:center;gap:6px;border:1px dashed #D8D7D2;border-radius:8px;background:transparent;padding:5px 10px;font:inherit;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;}
+.bft-add:hover{border-color:var(--acc);color:var(--acc);}
+.bft-r{display:grid;grid-template-columns:30px minmax(0,1fr) 150px 40px 18px;gap:12px;align-items:center;padding:7px 0;}
+.bft-none{font-size:12.5px;color:var(--subtle);padding:4px 0 2px;}
+
+/* ══ V118.1 · TARGET GROUPS, ONE LINE EACH (07 - Target groups mockup, A3)
+   The numbers of an open row hang into the target-group column so each
+   talking point's text starts exactly under the segment word: the list
+   is pulled 28px left (22px number + 6px gap), and the input carries the
+   same 1px border and 8px padding as the segment button. */
+.tg-card{margin-top:12px;}
+.a3 td{vertical-align:middle;}
+.a3 td.w-grp{width:170px;} .a3 td.w-seg{width:230px;} .a3 td.w-tp{width:170px;}
+.tg-obj b{background:var(--surface2);color:var(--text);}
+.tg-obj b:hover{background:#E9E8E4;}
+.tg-obj b.ro{cursor:default;}
+.tg-segbtn{height:32px;display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;text-align:left;cursor:pointer;
+  border:1px solid transparent;background:transparent;font:inherit;font-size:13px;font-weight:600;color:inherit;padding:5px 8px;border-radius:6px;}
+.tg-segbtn:hover{border-color:var(--div);background:#fff;}
+.tg-segbtn .ph{color:var(--subtle);font-weight:500;}
+.tg-segbtn:after{content:"";width:5px;height:5px;border-right:1.5px solid #9A9890;border-bottom:1.5px solid #9A9890;transform:rotate(45deg) translateY(-2px);flex:none;}
+.vb-new .tg-segbtn{border:1px dashed #D8D7D2;background:transparent;}
+.tg-segro{padding:5px 9px;}
+.tg-pop{max-width:340px;max-height:340px;overflow-y:auto;}
+.tg-pop-in{margin:4px;width:calc(100% - 8px);height:32px;border:1px solid var(--div);border-radius:7px;padding:0 9px;font:inherit;font-size:12.5px;}
+.tg-pop-in:focus{outline:none;border-color:var(--acc);}
+.tg-sep{height:1px;background:var(--div);margin:4px 2px;}
+.vb-popi .s{color:var(--subtle);font-size:11px;margin-left:8px;}
+.vb-popi.mk{color:var(--acc);font-weight:600;}
+.a3-tp{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--text);cursor:pointer;padding:4px 10px;border-radius:999px;background:var(--surface2);white-space:nowrap;}
+.a3-tp.none{background:transparent;color:var(--muted);border:1px dashed #D8D7D2;font-weight:500;}
+.a3-tp:after{content:"";width:5px;height:5px;border-right:1.5px solid #9A9890;border-bottom:1.5px solid #9A9890;transform:rotate(45deg) translateY(-2px);}
+.a3-tp.open:after{transform:rotate(-135deg) translateY(-1px);}
+.a3-open td{background:#FBFBF9;padding:10px 6px 14px 6px !important;}
+.x4{max-width:760px;margin-left:-28px;}
+.x4 .ln{display:grid;grid-template-columns:22px 1fr 28px;align-items:center;gap:6px;border-bottom:1px solid var(--div);}
+.x4 .ln .no{font-size:11px;font-weight:700;color:var(--subtle);text-align:right;padding-right:2px;}
+.x4 .ln .vb-ce{font-weight:500;}
+.x4 .ln .tx{display:block;padding:6px 9px;font-size:13px;}
+.x4 .ln .k{color:var(--subtle);cursor:pointer;font-size:11px;text-align:center;visibility:hidden;}
+.x4 .ln:hover .k{visibility:visible;}
+.x4 .ln .k:hover{color:var(--acc);}
+.x4 .ln.new .vb-ce{border:1px dashed #D8D7D2;background:#fff;}
+.x4 .sug{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0 0 37px;font-size:11px;color:var(--subtle);}
+.x4 .sug b{font-weight:600;font-size:11.5px;background:var(--surface2);color:var(--text);border-radius:999px;padding:3px 9px;cursor:pointer;}
+.x4 .sug b:hover{background:#E9E8E4;}
+</style>
+<script>
+/* ══ V118.1 TBILISI — THE BRAND'S LINKS AND FILES ═════════════════════
+   Chirag, 15 Oct: "We need space to put all social media handles and
+   website links… we also need a functionality to upload and store data
+   received from the client before we start the project. Later on, we
+   will also link here all the reports created by us or the final output
+   files sent to clients. So this place will become the master back up
+   from where any file can be linked to an upcoming task."
+
+   · Links live in brand_links. The old quick links (brief.links) were
+     copied in by the migration and are no longer drawn in the left panel.
+   · Files live in the "CC Suite Files" SharePoint site, brand › Files ›
+     folder; brand_files only says where. Every write that touches a file
+     goes through the brand-file function, because it is also a
+     SharePoint action. Rename and move change the SharePoint file too.
+   · ✕ takes a file off the brand; the bytes stay in SharePoint. Only a
+     CC Platform admin deletes bytes, and not from here.
+   · A file can be linked to any of the brand's tasks; inside a task,
+     "Attach from brand files" links one from this side.
+   · A lead won as this brand brings its files into Brief and inputs,
+     marked From the lead. The function copies them; the originals stay
+     on the Contracts site, so the Proposal Bank keeps them. */
+const BF_FN=SB_URL+"/functions/v1/brand-file";
+const BF_CHUNK=10*1024*1024;
+const BF={bid:null,ok:false,loading:false,err:"",links:[],folders:[],files:[],ties:[],
+  fold:"all",q:"",f:[],sort:"newest",ren:null,fren:null,fnew:false,fmenu:null,up:[],synced:{}};
+PAGE_NAME.files="Files";
+const BF_KINDS=[["website","Website","world"],["instagram","Instagram","brand-instagram"],["facebook","Facebook","brand-facebook"],
+  ["linkedin","LinkedIn","brand-linkedin"],["youtube","YouTube","brand-youtube"],["google","Google Business","map-pin"],
+  ["x","X","brand-x"],["whatsapp","WhatsApp","brand-whatsapp"],["pinterest","Pinterest","brand-pinterest"],["other","Other link","link"]];
+const bfKind=k=>BF_KINDS.find(x=>x[0]===k)||BF_KINDS[BF_KINDS.length-1];
+const BF_SRC={client:"From the client",us:"From us",lead:"From the lead"};
+const BF_TYPES={pdf:"PDF",doc:"Document",xls:"Spreadsheet",ppt:"Presentation",img:"Image",vid:"Video",zip:"Zip",other:"Other"};
+function bfExt(n){ const m=/\.([A-Za-z0-9]{1,8})$/.exec(String(n||"")); return m?m[1].toLowerCase():""; }
+function bfType(n){
+  const e=bfExt(n);
+  if(e==="pdf") return "pdf";
+  if(["doc","docx","rtf","txt","pages","odt"].includes(e)) return "doc";
+  if(["xls","xlsx","csv","numbers","ods"].includes(e)) return "xls";
+  if(["ppt","pptx","key","odp"].includes(e)) return "ppt";
+  if(["jpg","jpeg","png","gif","webp","heic","tif","tiff","svg","psd","psb","ai","eps","indd"].includes(e)) return "img";
+  if(["mp4","mov","m4v","mxf","avi","mkv","webm","mp3","wav"].includes(e)) return "vid";
+  if(["zip","rar","7z"].includes(e)) return "zip";
+  return "other";
+}
+function bfIcon(n){ const t=bfType(n), e=({pdf:"PDF",doc:"DOC",xls:"XLS",ppt:"PPT",zip:"ZIP"})[t]||bfExt(n).toUpperCase().slice(0,3)||"FILE"; return `<span class="bf-dic ${t}">${escHtml(e)}</span>`; }
+function bfWho(id){ const p=id?personById(id):null; return p?(String(p.name||p.email||"").split(/[\s@]/)[0]||"Someone"):""; }
+function bfSize(b){ return b==null?"":kbmb(b); }
+function bfFolder(id){ return BF.folders.find(f=>f.id===id)||null; }
+function bfFile(id){ return BF.files.find(f=>f.id===id)||null; }
+function bfTiesOf(fid){ return BF.ties.filter(x=>x.file_id===fid); }
+function bfMay(){ return typeof canEdit==="function"&&canEdit(); }
+function bfMayLinks(){ return typeof canEditVision==="function"&&canEditVision(); }
+
+/* ── reading ─────────────────────────────────────────────────────── */
+async function bfLoad(bid){
+  BF.bid=bid; BF.loading=true; BF.err="";
+  try{
+    const [l,fo,fi,ti]=await Promise.all([
+      sb.from("brand_links").select("*").eq("brand_id",bid).is("deleted_at",null).order("sort"),
+      sb.from("brand_file_folders").select("*").eq("brand_id",bid).is("deleted_at",null).order("sort"),
+      sb.from("brand_files").select("*").eq("brand_id",bid).is("deleted_at",null).order("created_at",{ascending:false}),
+      sb.from("brand_file_tasks").select("*").eq("brand_id",bid).is("deleted_at",null)]);
+    const bad=[l,fo,fi,ti].find(r=>r.error); if(bad) throw new Error(bad.error.message);
+    if(BF.bid!==bid) return;
+    BF.links=(l.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at);
+    BF.folders=(fo.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at).sort((a,b)=>(a.sort||0)-(b.sort||0)||String(a.name).localeCompare(String(b.name)));
+    BF.files=(fi.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at);
+    BF.ties=(ti.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at);
+    BF.ok=true;
+  }catch(e){ BF.err=String(e&&e.message||e); }
+  BF.loading=false;
+  bfRepaint();
+  if(BF.ok&&!BF.synced[bid]&&bfMay()) bfSyncLead(bid);
+}
+function bfEnsure(){
+  if(!activeBrand||!brands[activeBrand]) return;
+  if(BF.bid!==activeBrand){ BF.fold="all"; BF.q=""; BF.f=[]; BF.ren=null; BF.fren=null; BF.fnew=false; BF.ok=false; bfLoad(activeBrand); }
+}
+/* the files of a lead won as this brand, copied in once; the function
+   skips anything already copied, so this is safe on every visit */
+async function bfSyncLead(bid){
+  BF.synced[bid]=true;
+  try{ const r=await bfCall("sync_lead",{brand_id:bid}); if(r&&r.copied&&BF.bid===bid) await bfLoad(bid); }catch(e){}
+}
+async function bfCall(action,body){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session) throw new Error("Your sign-in has expired. Reload the page.");
+  let r;
+  try{
+    r=await fetch(BF_FN,{method:"POST",headers:{authorization:"Bearer "+(session.access_token||""),"content-type":"application/json"},
+      body:JSON.stringify(Object.assign({action},body||{}))});
+  }catch(e){ throw new Error("Could not reach the server. Check your connection and try again."); }
+  const text=await r.text(); let out={};
+  try{ out=text?JSON.parse(text):{}; }catch(e){ out={}; }
+  if(!r.ok) throw new Error(out.error||("The server refused ("+r.status+")."));
+  return out;
+}
+function bfRepaint(){
+  if(view==="brief"&&!briefEdit){ bfPaintStrategy(); bfSideCount(); }
+  else if(view==="files") bfRefresh();
+  else if(view==="branding"&&typeof BR_OPEN!=="undefined"&&BR_OPEN&&BR_TAB==="files") render();
+}
+
+/* ── the one small popup: a list under the control, closes on the next click ── */
+function bfPop(ev,html,alignRight){
+  if(ev) ev.stopPropagation();
+  const inPop=ev&&ev.target&&ev.target.closest&&ev.target.closest(".bf-pop");
+  const b=inPop&&BF._rect?BF._rect:(ev?ev.target.closest("button,span,a,div").getBoundingClientRect():{left:100,right:100,bottom:100});
+  BF._rect=b;
+  bfPopClose();
+  const box=document.createElement("div"); box.className="bf-pop"; box.id="bf-pop"; box.innerHTML=html;
+  box.addEventListener("click",e=>e.stopPropagation());
+  document.body.appendChild(box);
+  const left=alignRight?b.right-box.offsetWidth:b.left;
+  box.style.left=Math.max(8,Math.min(window.innerWidth-box.offsetWidth-8,left))+"px";
+  box.style.top=(b.bottom+window.scrollY+4)+"px";
+  setTimeout(()=>document.addEventListener("click",bfPopClose,{once:true}),0);
+  const i=box.querySelector("input"); if(i){ i.focus(); try{ i.select(); }catch(e){} }
+  return box;
+}
+function bfPopClose(){ const p=document.getElementById("bf-pop"); if(p) p.remove(); }
+
+/* ══ LINKS ═════════════════════════════════════════════════════════ */
+function bfLinksHtml(){
+  if(!BF.ok) return "";
+  const may=bfMayLinks();
+  if(!BF.links.length&&!may) return "";
+  return BF.links.map(l=>{ const k=bfKind(l.kind);
+      return `<a class="bf-lk" href="${escAttr(bdHref(l.url))}" target="_blank" rel="noopener" title="${escAttr(bdShort(l.url))}"><i class="ti ti-${k[2]}"></i>${escHtml(l.label||k[1])}${may?`<span class="ed" title="Change or remove" onclick="event.preventDefault();event.stopPropagation();bfLinkEdit(event,'${l.id}')"><i class="ti ti-pencil"></i></span>`:""}</a>`; }).join("")
+    +(may?`<span class="bf-lk add" onclick="bfLinkMenu(event)"><i class="ti ti-plus"></i>Add a link</span>`:"");
+}
+function bfLinkMenu(ev){
+  bfPop(ev,`<div class="bf-menu">${BF_KINDS.map(([k,l,i])=>`<div class="bf-mi" onclick="bfLinkForm(event,null,'${k}')"><i class="ti ti-${i}"></i>${l}</div>`).join("")}</div>`);
+}
+function bfLinkEdit(ev,id){ const l=BF.links.find(x=>x.id===id); if(l) bfLinkForm(ev,id,l.kind); }
+function bfLinkForm(ev,id,kind){
+  const l=id?BF.links.find(x=>x.id===id):null, k=bfKind(kind);
+  bfPop(ev,`<div class="bf-form"><div class="bf-mh" style="padding:0 2px"><i class="ti ti-${k[2]}"></i> ${escHtml(k[1])}</div>
+    <input class="fi" id="bf-lu" placeholder="Paste the address" value="${escAttr(l?l.url:"")}" onkeydown="if(event.key==='Enter')bfLinkSave('${id||""}','${k[0]}')">
+    <input class="fi" id="bf-ll" placeholder="${escAttr(k[0]==="other"?"What it is":"Label (optional)")}" value="${escAttr(l?l.label:"")}" onkeydown="if(event.key==='Enter')bfLinkSave('${id||""}','${k[0]}')">
+    <div class="row">${l?`<button class="btn btn-s btn-sm" onclick="bfLinkOff('${l.id}')">Remove</button>`:""}<span class="sp"></span>
+      <button class="btn btn-p btn-sm" onclick="bfLinkSave('${id||""}','${k[0]}')">${l?"Save":"Add"}</button></div></div>`);
+}
+/* the kind is read from the address when it is obvious, so pasting an
+   Instagram link under "Other" still shows the Instagram button */
+function bfKindFromUrl(u,fallback){
+  const s=String(u||"").toLowerCase();
+  if(/instagram\.com/.test(s)) return "instagram";
+  if(/facebook\.com|fb\.com/.test(s)) return "facebook";
+  if(/linkedin\.com/.test(s)) return "linkedin";
+  if(/youtube\.com|youtu\.be/.test(s)) return "youtube";
+  if(/(^|\/\/|\.)x\.com|twitter\.com/.test(s)) return "x";
+  if(/wa\.me|whatsapp/.test(s)) return "whatsapp";
+  if(/pinterest\./.test(s)) return "pinterest";
+  if(/g\.page|maps\.app\.goo|google\.[a-z.]+\/maps|business\.google/.test(s)) return "google";
+  return fallback;
+}
+async function bfLinkSave(id,kind){
+  const u=String((document.getElementById("bf-lu")||{}).value||"").trim();
+  const lb=String((document.getElementById("bf-ll")||{}).value||"").trim();
+  if(!u){ toast("Paste the address first","err"); return; }
+  const k=(kind==="other"||kind==="website")?bfKindFromUrl(u,kind):kind;
+  const now=new Date().toISOString();
+  if(id){
+    const r=await sb.from("brand_links").update({url:u,label:lb,kind:k,updated_at:now}).eq("id",id).select("id");
+    if(r.error){ toast("Not saved — "+escHtml(r.error.message),"err"); return; }
+    const l=BF.links.find(x=>x.id===id); if(l){ l.url=u; l.label=lb; l.kind=k; }
+  }else{
+    const row={id:crypto.randomUUID(),brand_id:BF.bid,kind:k,label:lb,url:u,sort:(BF.links.reduce((m,x)=>Math.max(m,x.sort||0),0))+10};
+    const r=await sb.from("brand_links").insert([row]).select("*");
+    if(r.error){ toast("Not added — "+escHtml(r.error.message),"err"); return; }
+    BF.links.push(((r.data||[]).find?(r.data||[]).find(x=>x.id===row.id):null)||row);
+  }
+  bfPopClose(); bfPaintStrategy();
+}
+async function bfLinkOff(id){
+  const r=await sb.from("brand_links").update({deleted_at:new Date().toISOString()}).eq("id",id).select("id");
+  if(r.error){ toast("Not removed — "+escHtml(r.error.message),"err"); return; }
+  BF.links=BF.links.filter(x=>x.id!==id); bfPopClose(); bfPaintStrategy(); toast("Link removed");
+}
+
+/* ══ A FILE, ONE LINE ══════════════════════════════════════════════ */
+function bfRowHtml(f,showFold){
+  const n=bfTiesOf(f.id).length, may=bfMay();
+  const when=f.created_at?fmtShort(f.created_at):"", who=bfWho(f.uploaded_by);
+  const name=BF.ren===f.id
+    ?`<input class="bf-ren" id="bf-ren" value="${escAttr(f.file_name.replace(/\.[A-Za-z0-9]{1,8}$/,""))}" onclick="event.stopPropagation()"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();bfRename('${f.id}',this.value);}if(event.key==='Escape'){BF.ren=null;bfRefresh();}"
+        onblur="bfRename('${f.id}',this.value)">`
+    :`<b title="${escAttr(f.file_name)}">${escHtml(f.file_name)}</b>`;
+  return `<div class="bf-row" data-file="${f.id}">
+    ${bfIcon(f.file_name)}
+    <div class="dn">${name}<span>${escHtml(bfSize(f.size_bytes))}</span></div>
+    <span class="bf-fold">${showFold?escHtml((bfFolder(f.folder_id)||{}).name||""):""}</span>
+    <span class="bf-tk${n?"":" none"}${may?"":" ro"}" ${may?`onclick="bfTaskPick(event,'${f.id}')"`:""}>${n?`Linked to <b>${n} task${n>1?"s":""}</b>`:(may?"Link to a task":"")}</span>
+    <span class="bf-src${f.src==="lead"?" lead":""}">${BF_SRC[f.src]||""}</span>
+    <span class="who">${escHtml([who,when].filter(Boolean).join(" · "))}</span>
+    <span class="bf-open" onclick="bfOpen('${f.id}')">Open</span>
+    ${may?`<button class="bf-dots" title="More" onclick="bfRowMenu(event,'${f.id}')"><i class="ti ti-dots"></i></button>`:"<span></span>"}
+    ${may?`<span class="bf-x" title="Take it off this brand" onclick="bfDetach('${f.id}')">✕</span>`:"<span></span>"}
+  </div>`;
+}
+function bfUpRowHtml(u){
+  return `<div class="bf-row up">${bfIcon(u.name)}
+    <div class="dn"><b>${escHtml(u.name)}</b><span>${escHtml(bfSize(u.size))} · ${u.err?escHtml(u.err):"uploading "+Math.round(u.pct*100)+"%"}</span>
+      ${u.err?"":`<div class="bar"><i style="width:${Math.round(u.pct*100)}%"></i></div>`}</div>
+    <span class="bf-fold">${escHtml((bfFolder(u.folder)||{}).name||"")}</span><span></span><span></span><span></span><span></span><span></span>
+    ${u.err?`<span class="bf-x" title="Clear" onclick="bfUpClear('${u.id}')">✕</span>`:"<span></span>"}</div>`;
+}
+function bfRowMenu(ev,id){
+  const f=bfFile(id); if(!f) return;
+  const others=BF.folders.filter(x=>x.id!==f.folder_id);
+  bfPop(ev,`<div class="bf-menu">
+    <div class="bf-mi" onclick="bfPopClose();bfStartRename('${id}')"><i class="ti ti-pencil"></i>Rename</div>
+    <div class="bf-msep"></div><div class="bf-mh">Move to folder</div>
+    ${others.map(o=>`<div class="bf-mi" onclick="bfMove('${id}','${o.id}')"><i class="ti ti-folder"></i>${escHtml(o.name)}</div>`).join("")||`<div class="bf-mi">No other folder</div>`}
+    <div class="bf-msep"></div>
+    <div class="bf-mi red" onclick="bfPopClose();bfDetach('${id}')"><i class="ti ti-x"></i>Take it off this brand</div></div>`,true);
+}
+function bfStartRename(id){
+  if(view!=="files"){ BF.fold="all"; bfGo(); }
+  BF.ren=id; bfRefresh();
+  const i=document.getElementById("bf-ren"); if(i){ i.focus(); i.select(); }
+}
+async function bfRename(id,v){
+  if(BF.ren!==id) return; BF.ren=null;
+  const f=bfFile(id); if(!f){ bfRefresh(); return; }
+  const typed=String(v||"").trim();
+  if(!typed||typed===f.file_name.replace(/\.[A-Za-z0-9]{1,8}$/,"")){ bfRefresh(); return; }
+  bfRefresh();
+  try{ const r=await bfCall("rename",{file_id:id,name:typed}); if(r.file) Object.assign(f,r.file); toast("Renamed in SharePoint too"); }
+  catch(e){ toast(escHtml(e.message||e),"err"); }
+  bfRefresh(); bfPaintStrategy();
+}
+async function bfMove(id,fid){
+  bfPopClose();
+  const f=bfFile(id), to=bfFolder(fid); if(!f||!to) return;
+  try{ const r=await bfCall("move",{file_id:id,folder_id:fid}); if(r.file) Object.assign(f,r.file); toast(`Moved to ${escHtml(to.name)}`); }
+  catch(e){ toast(escHtml(e.message||e),"err"); }
+  bfRefresh(); bfPaintStrategy();
+}
+async function bfDetach(id){
+  const f=bfFile(id); if(!f) return;
+  if(!confirm(`Take “${f.file_name}” off this brand?\n\nThe file stays in SharePoint.`)) return;
+  try{ await bfCall("detach",{file_id:id}); }
+  catch(e){ toast(escHtml(e.message||e),"err"); return; }
+  BF.files=BF.files.filter(x=>x.id!==id); BF.ties=BF.ties.filter(x=>x.file_id!==id);
+  toast("Taken off this brand"); bfRefresh(); bfPaintStrategy(); bfSideCount();
+}
+/* a new tab is opened at the click, then pointed at the file, so the
+   browser does not block it as a pop-up */
+async function bfOpen(id){
+  const w=window.open("about:blank","_blank");
+  try{
+    const r=await bfCall("open",{file_id:id});
+    const u=r.url||r.view; if(!u) throw new Error("SharePoint did not hand back an address for this file.");
+    if(w) w.location=u; else location.href=u;
+  }catch(e){ if(w) w.close(); toast(escHtml(e.message||e),"err"); }
+}
+
+/* ══ LINKING A FILE TO THE BRAND'S TASKS ═══════════════════════════ */
+async function bfTasksReady(){
+  if(!(BR&&BR.ok&&BR.brand===activeBrand)&&typeof loadBranding==="function") await loadBranding(activeBrand);
+  return (BR&&BR.ok&&BR.brand===activeBrand)?BR.tasks:[];
+}
+function bfDue(t){ return t.delivery_date?"due "+fmtShort(t.delivery_date):""; }
+async function bfTaskPick(ev,fid){
+  ev.stopPropagation(); const anchor=ev;
+  const tasks=(await bfTasksReady()).filter(t=>!t.archived_at&&!t.deleted_at);
+  bfTaskPickDraw(anchor,fid,tasks,"");
+}
+function bfTaskPickDraw(ev,fid,tasks,q){
+  const on=new Set(bfTiesOf(fid).map(x=>x.task_id));
+  const qq=String(q||"").trim().toLowerCase();
+  const list=tasks.slice().sort((a,b)=>(on.has(b.id)-on.has(a.id))||String(a.delivery_date||"9").localeCompare(String(b.delivery_date||"9")))
+    .filter(t=>!qq||String(t.title||"").toLowerCase().includes(qq));
+  BF._pick={fid,tasks};
+  const box=bfPop(ev,`<div class="bf-pick"><input class="q" placeholder="Search tasks" value="${escAttr(q||"")}" oninput="bfTaskPickQ(this.value)">
+    <div id="bf-pickl">${bfTaskPickRows(fid,list,on)}</div></div>`);
+  const i=box.querySelector("input"); if(i){ i.focus(); i.setSelectionRange(i.value.length,i.value.length); }
+}
+function bfTaskPickRows(fid,list,on){
+  return list.map(t=>`<div class="t${on.has(t.id)?" on":""}" onclick="bfTie('${fid}','${t.id}')"><span class="ck">${on.has(t.id)?"✓":""}</span><span class="nm">${escHtml(t.title||"Untitled task")}</span><span class="d">${escHtml(bfDue(t))}</span></div>`).join("")
+    ||`<div class="none">No tasks on this brand${BF._pick&&BF._pick.tasks.length?" match":" yet"}.</div>`;
+}
+function bfTaskPickQ(q){
+  const P=BF._pick; if(!P) return; const on=new Set(bfTiesOf(P.fid).map(x=>x.task_id)); const qq=q.trim().toLowerCase();
+  const list=P.tasks.filter(t=>!qq||String(t.title||"").toLowerCase().includes(qq));
+  const el=document.getElementById("bf-pickl"); if(el) el.innerHTML=bfTaskPickRows(P.fid,list,on);
+}
+async function bfTie(fid,tid){
+  const hit=BF.ties.find(x=>x.file_id===fid&&x.task_id===tid);
+  if(hit){
+    const r=await sb.from("brand_file_tasks").update({deleted_at:new Date().toISOString()}).eq("id",hit.id).select("id");
+    if(r.error){ toast("Not changed — "+escHtml(r.error.message),"err"); return; }
+    BF.ties=BF.ties.filter(x=>x!==hit);
+  }else{
+    const row={id:crypto.randomUUID(),file_id:fid,task_id:tid,brand_id:BF.bid,linked_by:ME.id||null};
+    const r=await sb.from("brand_file_tasks").insert([row]).select("*");
+    if(r.error){ toast("Not linked — "+escHtml(r.error.message),"err"); return; }
+    BF.ties.push(((r.data||[]).find?(r.data||[]).find(x=>x.id===row.id):null)||row);
+  }
+  const P=BF._pick;
+  const q=(document.querySelector("#bf-pop .q")||{}).value||"";
+  if(P&&P.fid===fid){ const on=new Set(bfTiesOf(fid).map(x=>x.task_id)); const qq=q.trim().toLowerCase();
+    const el=document.getElementById("bf-pickl"); if(el) el.innerHTML=bfTaskPickRows(fid,P.tasks.filter(t=>!qq||String(t.title||"").toLowerCase().includes(qq)),on); }
+  if(view==="files"){ bfList(); } else if(view==="brief") bfPaintStrategy();
+}
+
+/* ══ ADDING A FILE — "Add a file" in the black bar asks which folder ══ */
+function bfAddMenu(ev){
+  if(!BF.ok){ toast("The files are still loading","err"); return; }
+  BF._src=BF._src||"us";
+  bfPop(ev,`<div class="bf-menu" style="min-width:240px">
+    <div class="bf-seg"><button class="${BF._src==="us"?"on":""}" onclick="BF._src='us';bfAddMenu(event)">From us</button><button class="${BF._src==="client"?"on":""}" onclick="BF._src='client';bfAddMenu(event)">From the client</button></div>
+    <div class="bf-mh">Into which folder</div>
+    ${BF.folders.map(f=>`<div class="bf-mi" onclick="bfPickFiles('${f.id}')"><i class="ti ti-folder"></i>${escHtml(f.name)}${BF.fold===f.id?`<span class="s">open now</span>`:""}</div>`).join("")}</div>`,true);
+}
+function bfPickFiles(fid){
+  bfPopClose();
+  const inp=document.getElementById("bf-input"); if(!inp) return;
+  inp.dataset.folder=fid; inp.value=""; inp.click();
+}
+async function bfUpload(files,fid){
+  const list=[...(files||[])]; if(!list.length) return;
+  const src=BF._src||"us", bid=BF.bid;
+  if(view==="files"&&BF.fold!=="all"&&BF.fold!==fid){ BF.fold=fid; }
+  for(const file of list){
+    const u={id:"u"+Math.random().toString(36).slice(2),name:file.name,size:file.size,folder:fid,pct:0,err:""};
+    BF.up.push(u); bfRefresh();
+    try{
+      const {uploadUrl}=await bfCall("upload",{brand_id:bid,folder_id:fid,name:file.name,size:file.size});
+      let sent=0,item=null;
+      while(sent<file.size){
+        const end=Math.min(sent+BF_CHUNK,file.size);
+        const r=await fetch(uploadUrl,{method:"PUT",headers:{"content-range":"bytes "+sent+"-"+(end-1)+"/"+file.size},body:file.slice(sent,end)});
+        if(!r.ok&&r.status!==202) throw new Error("The upload stopped at "+Math.round(sent/file.size*100)+"%. Nothing was added — try again.");
+        if(r.status===200||r.status===201) item=await r.json();
+        sent=end; u.pct=sent/file.size; bfUpTick(u);
+      }
+      if(!item||!item.id) throw new Error("SharePoint did not confirm the file. Nothing was added — try again.");
+      const c=await bfCall("confirm",{brand_id:bid,folder_id:fid,item_id:item.id,src});
+      if(c.file&&BF.bid===bid&&!BF.files.some(x=>x.id===c.file.id)) BF.files.unshift(c.file);
+      BF.up=BF.up.filter(x=>x!==u);
+    }catch(e){ u.err=String(e&&e.message||e); }
+    bfRefresh(); bfPaintStrategy(); bfSideCount();
+  }
+  const ok=list.length-BF.up.filter(x=>x.err).length;
+  if(ok) toast(`${ok} file${ok===1?"":"s"} added to ${escHtml((bfFolder(fid)||{}).name||"the brand")}`);
+}
+function bfUpTick(){ bfList(); }
+function bfUpClear(id){ BF.up=BF.up.filter(x=>x.id!==id); bfRefresh(); }
+
+/* ══ THE STRATEGY PAGE — the links row at the top, section 06 ══════ */
+function bfPaintStrategy(){
+  const lk=document.getElementById("bf-links"); if(lk) lk.innerHTML=bfLinksHtml();
+  const c=document.getElementById("bf-s6card"), sub=document.getElementById("bf-s6sub");
+  if(sub) sub.textContent=BF.ok?`${BF.files.length} file${BF.files.length===1?"":"s"}`:"";
+  if(!c) return;
+  if(!BF.ok){ c.innerHTML=`<div class="bd-note" style="margin:0">${BF.err?"Could not load the files — "+escHtml(BF.err):"Loading…"}</div>`; return; }
+  const cnt=id=>BF.files.filter(f=>f.folder_id===id).length;
+  const newest=BF.files.slice().sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||""))).slice(0,5);
+  c.innerHTML=`<div class="bf-chips">${BF.folders.map(f=>`<span onclick="bfGo('${f.id}')">${escHtml(f.name)} <b>${cnt(f.id)}</b></span>`).join("")}</div>
+    ${newest.map(f=>bfRowHtml(f,true)).join("")||`<div class="bd-note" style="margin:6px 0 2px">No files yet.</div>`}
+    <div class="bf-more" onclick="bfGo('all')">${BF.files.length?`Open all ${BF.files.length} files`:"Open the files"} <i class="ti ti-arrow-right"></i></div>`;
+}
+function bfSideCount(){ const n=document.querySelector("#sb-months .bf-navi .mdb-navct"); if(n) n.textContent=BF.ok?BF.files.length:""; }
+(function(){
+  const baseSide=buildBriefSidebar;
+  buildBriefSidebar=function(){
+    const out=baseSide.apply(this,arguments);
+    bfEnsure();
+    const first=document.querySelector("#sb-months .bd-navi");
+    if(first&&!document.querySelector("#sb-months .bf-navi")){
+      first.parentElement.insertAdjacentHTML("beforeend",
+        `<div class="bd-navi bf-navi" data-tgt="bd-s6" onclick="bfGo('all')">06 · Files <span class="mdb-navct">${BF.bid===activeBrand&&BF.ok?BF.files.length:""}</span></div>
+         <div class="bd-navi" data-tgt="bd-vb" onclick="bdJump('bd-vb')">07 · Target groups</div>`);
+    }
+    return out;
+  };
+  const baseBrief=renderBrief;
+  renderBrief=function(){
+    const out=baseBrief.apply(this,arguments);
+    if(!briefEdit){
+      bfEnsure();
+      const w=document.querySelector("#main .bd-wrap");
+      if(w){
+        if(!w.querySelector("#bf-links")) w.insertAdjacentHTML("afterbegin",`<div class="bf-links" id="bf-links"></div>`);
+        if(!w.querySelector("#bd-s6")) w.insertAdjacentHTML("beforeend",`
+          <div class="bd-sec" id="bd-s6"><div class="bd-secnum">06</div><div class="bd-sectitle">Files</div><div class="bd-secrule"></div>
+            <div class="bd-secsub" id="bf-s6sub"></div></div>
+          <div class="bf-card bf-s6" id="bf-s6card"></div>`);
+        /* 07 · Target groups goes last, after the files */
+        const vb=document.getElementById("vb-host"); if(vb&&vb.parentElement&&vb.parentElement.parentElement===w) w.appendChild(vb.parentElement);
+        bfPaintStrategy();
+      }
+    }
+    return out;
+  };
+})();
+
+/* ══ THE FILES PAGE ════════════════════════════════════════════════ */
+function bfGo(fold){
+  if(!canEdit()){ toast("View-only account","err"); return; }
+  if(!activeBrand||!brands[activeBrand]){ toast("Pick a brand first","err"); return; }
+  if(fold) BF.fold=fold;
+  closeAllPops(); bfPopClose(); setView("files"); const m=document.getElementById("main"); if(m) m.scrollTop=0;
+}
+const BF_FIELDS=[
+  {k:"src", label:"Source",  icon:"inbox"},
+  {k:"type",label:"Type",    icon:"file"},
+  {k:"tied",label:"Linked",  icon:"link"},
+  {k:"by",  label:"Added by",icon:"user"},
+];
+function bfValsOf(f,k){
+  if(k==="src") return [f.src];
+  if(k==="type") return [bfType(f.file_name)];
+  if(k==="tied") return [bfTiesOf(f.id).length?"yes":"no"];
+  if(k==="by") return f.uploaded_by?[f.uploaded_by]:[];
+  return [];
+}
+function bfOptionsFor(k){
+  const rows=bfInFolder();
+  if(k==="src") return fltCounts(rows,k,bfValsOf,[["client","From the client"],["us","From us"],["lead","From the lead"]]);
+  if(k==="type") return fltCounts(rows,k,bfValsOf,Object.entries(BF_TYPES).map(([v,l])=>[v,l]));
+  if(k==="tied") return fltCounts(rows,k,bfValsOf,[["yes","Linked to a task"],["no","Not linked"]]);
+  return fltCounts(rows,k,bfValsOf,[],v=>bfWho(v)||"Someone");
+}
+FLT_HOSTS.files={fields:BF_FIELDS,optionsFor:bfOptionsFor,get:()=>BF.f,set:fs=>{ BF.f=fs; },render:()=>bfRefresh()};
+function bfInFolder(){ return BF.files.filter(f=>BF.fold==="all"||f.folder_id===BF.fold); }
+function bfVisible(){
+  const q=BF.q.trim().toLowerCase();
+  const r=bfInFolder().filter(f=>(!q||[f.file_name,(bfFolder(f.folder_id)||{}).name].join(" ").toLowerCase().includes(q))&&fltKeep(f,BF.f,bfValsOf));
+  const by={newest:(a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||"")),
+    oldest:(a,b)=>String(a.created_at||"").localeCompare(String(b.created_at||"")),
+    name:(a,b)=>String(a.file_name).localeCompare(String(b.file_name),undefined,{sensitivity:"base"}),
+    size:(a,b)=>(b.size_bytes||0)-(a.size_bytes||0)}[BF.sort]||(()=>0);
+  return r.sort(by);
+}
+function bfPickSort(k){ BF.sort=k; bfRefresh(); }
+function renderFiles(){
+  bfEnsure();
+  const mc=document.getElementById("main");
+  mc.innerHTML=`<div style="padding:0 32px 20px;">
+      <div class="fb" id="bf-bar"></div>
+      <div class="bf-card"><div id="bf-list"></div></div>
+      <input type="file" id="bf-input" multiple style="display:none;" onchange="bfUpload(this.files,this.dataset.folder);this.value=''">
+    </div>`;
+  bfBar(); bfList();
+}
+function bfBar(){
+  const bar=document.getElementById("bf-bar"); if(!bar) return;
+  bar.innerHTML=`
+    <input class="fi fb-q" placeholder="Search files…" value="${escAttr(BF.q)}" oninput="BF.q=this.value;bfList();bfCnt()" onclick="event.stopPropagation()">
+    ${fltChipsHtml("files")}
+    <span class="fb-end">
+      <span id="bf-cnt">${bfCntHtml()}</span>
+      ${fltSortHtml("files",[["newest","Newest first"],["oldest","Oldest first"],["name","Name"],["size","Largest first"]],BF.sort,"newest","bfPickSort")}
+    </span>`;
+}
+function bfCntHtml(){ return fltCountHtml(bfVisible().length,bfInFolder().length,"file"); }
+function bfCnt(){ const c=document.getElementById("bf-cnt"); if(c) c.innerHTML=bfCntHtml(); }
+function bfList(){
+  const g=document.getElementById("bf-list"); if(!g) return;
+  if(!BF.ok){ g.innerHTML=`<div class="bf-empty">${BF.err?"Could not load the files — "+escHtml(BF.err):"Loading the files…"}</div>`; return; }
+  const ups=BF.up.filter(u=>BF.fold==="all"||u.folder===BF.fold);
+  const r=bfVisible();
+  g.innerHTML=ups.map(bfUpRowHtml).join("")+(r.map(f=>bfRowHtml(f,BF.fold==="all")).join("")
+    ||(ups.length?"":`<div class="bf-empty">${bfInFolder().length?"No files match these filters.":"No files here yet. Use Add a file in the bar above."}</div>`));
+  bfCnt();
+}
+function bfRefresh(){ if(view!=="files") return; buildFilesSidebar(); bfBar(); bfList(); }
+function buildFilesSidebar(){
+  bfEnsure();
+  const st=document.getElementById("sb-stats"); if(st) st.innerHTML="";
+  const sm=document.getElementById("sb-months"); if(!sm) return;
+  const cnt=id=>BF.files.filter(f=>f.folder_id===id).length, may=bfMay();
+  sm.innerHTML=`<div class="mdb-up" onclick="openBrief()"><i class="ti ti-arrow-left"></i> Strategy</div>
+    <div class="s-lbl">Folders</div>
+    <div class="mdb-trow${BF.fold==="all"?" on":""}" onclick="bfFold('all')"><span class="nm">All files</span><span class="ct">${BF.files.length}</span></div>
+    ${BF.folders.map(f=>{
+      if(BF.fren===f.id) return `<div class="mdb-trow menu" onclick="event.stopPropagation()"><input class="mdb-ren" id="bf-fren" value="${escAttr(f.name)}"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();bfFolderRename('${f.id}',this.value);}if(event.key==='Escape'){BF.fren=null;buildFilesSidebar();}"
+          onblur="bfFolderRename('${f.id}',this.value)"></div>`;
+      const m=BF.fmenu===f.id;
+      return `<div class="mdb-trow${BF.fold===f.id?" on":""}${m?" menu":""}" onclick="bfFold('${f.id}')">
+        <span class="nm">${escHtml(f.name)}</span><span class="ct${may?" hasm":""}">${cnt(f.id)}</span>
+        ${may?`<button class="mdb-tmb" title="Folder options" onclick="bfFMenu(event,'${f.id}')"><i class="ti ti-dots"></i></button>`:""}
+        ${m?`<div class="mdb-menu" onclick="event.stopPropagation()"><div class="mdb-mi" onclick="BF.fmenu=null;BF.fren='${f.id}';buildFilesSidebar()"><i class="ti ti-pencil"></i>Rename</div></div>`:""}</div>`;}).join("")}
+    ${may?(BF.fnew?`<div class="mdb-trow menu" onclick="event.stopPropagation()"><input class="mdb-ren" id="bf-fnew" placeholder="Folder name"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();bfFolderNew(this.value);}if(event.key==='Escape'){BF.fnew=false;buildFilesSidebar();}"
+          onblur="bfFolderNew(this.value)"></div>`
+      :`<div class="mdb-trow" style="color:var(--acc);font-weight:600" onclick="BF.fnew=true;buildFilesSidebar()"><i class="ti ti-plus" style="font-size:15px"></i><span class="nm">New folder</span></div>`):""}`;
+  const r=document.getElementById("bf-fren")||document.getElementById("bf-fnew"); if(r){ r.focus(); r.select(); }
+}
+function bfFold(id){ BF.fold=id; BF.fmenu=null; BF.ren=null; bfRefresh(); }
+function bfFMenu(e,id){ e.stopPropagation(); BF.fmenu=BF.fmenu===id?null:id; buildFilesSidebar(); }
+async function bfFolderRename(id,v){
+  if(BF.fren!==id) return; BF.fren=null;
+  const f=bfFolder(id), nm=String(v||"").trim();
+  if(!f||!nm||nm===f.name){ buildFilesSidebar(); return; }
+  if(BF.folders.some(x=>x.id!==id&&x.name.toLowerCase()===nm.toLowerCase())){ toast(`There is already a folder called “${escHtml(nm)}”`,"err"); buildFilesSidebar(); return; }
+  try{ const r=await bfCall("folder_rename",{folder_id:id,name:nm}); if(r.folder) Object.assign(f,r.folder); toast("Folder renamed in SharePoint too"); }
+  catch(e){ toast(escHtml(e.message||e),"err"); }
+  bfRefresh();
+}
+async function bfFolderNew(v){
+  if(!BF.fnew) return; BF.fnew=false;
+  const nm=String(v||"").trim(); if(!nm){ buildFilesSidebar(); return; }
+  if(BF.folders.some(x=>x.name.toLowerCase()===nm.toLowerCase())){ toast(`There is already a folder called “${escHtml(nm)}”`,"err"); buildFilesSidebar(); return; }
+  const row={id:crypto.randomUUID(),brand_id:BF.bid,name:nm,sort:(BF.folders.reduce((m,x)=>Math.max(m,x.sort||0),0))+10,created_by:ME.id||null};
+  const r=await sb.from("brand_file_folders").insert([row]).select("*");
+  if(r.error){ toast("Not created — "+escHtml(r.error.message),"err"); buildFilesSidebar(); return; }
+  BF.folders.push(((r.data||[]).find?(r.data||[]).find(x=>x.id===row.id):null)||row); BF.fold=row.id; bfRefresh();
+}
+document.addEventListener("click",e=>{
+  if(view!=="files") return;
+  if(BF.fmenu&&!(e.target.closest&&e.target.closest(".mdb-menu"))){ BF.fmenu=null; buildFilesSidebar(); }
+});
+/* the route, the tab, and the Add a file button in the black bar */
+(function(){
+  const base=viewRoute;
+  viewRoute=function(v){
+    if(v==="files") return {render:renderFiles,sidebar:buildFilesSidebar,needs:"brand+edit"};
+    return base(v);
+  };
+  const st=BN_TABS.find(t=>t.k==="brief"); if(st&&st.on.indexOf("files")<0) st.on.push("files");
+  const baseRender=render;
+  render=function(){
+    if(view!=="files"){ BF.ren=null; BF.fren=null; BF.fnew=false; }
+    bfPopClose();
+    const out=baseRender.apply(this,arguments);
+    let b=document.getElementById("bf-new");
+    if(!b){
+      const nw=document.getElementById("brk-new");
+      if(nw){ nw.insertAdjacentHTML("afterend",`<button class="nav-btn red mf-hide" id="bf-new" style="display:none;" onclick="bfAddMenu(event)"><i class="ti ti-plus"></i> Add a file</button>`);
+              b=document.getElementById("bf-new"); }
+    }
+    if(b) b.style.display=(view==="files"&&bfMay())?"":"none";
+    return out;
+  };
+})();
+
+/* ══ INSIDE A TASK — the brand files linked to it ══════════════════ */
+function bfTaskBlock(t){
+  if(BF.bid!==activeBrand||!BF.ok) return `<div class="bft"><div class="bft-h"><span class="t">From brand files</span></div><div class="bft-none">Loading…</div></div>`;
+  const ids=BF.ties.filter(x=>x.task_id===t.id).map(x=>x.file_id);
+  const files=BF.files.filter(f=>ids.includes(f.id));
+  const may=bfMay();
+  return `<div class="bft"><div class="bft-h"><span class="t">From brand files</span><span class="sp"></span>
+      ${may?`<button class="bft-add" onclick="bfAttachPick(event,'${t.id}')"><i class="ti ti-paperclip"></i> Attach from brand files</button>`:""}</div>
+    ${files.map(f=>`<div class="bft-r">${bfIcon(f.file_name)}<div class="dn" style="min-width:0"><b style="display:block;font-weight:650;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(f.file_name)}</b><span style="color:var(--subtle);font-size:11.5px">${escHtml(bfSize(f.size_bytes))}</span></div>
+      <span class="bf-fold">${escHtml((bfFolder(f.folder_id)||{}).name||"")}</span>
+      <span class="bf-open" onclick="bfOpen('${f.id}')">Open</span>
+      ${may?`<span class="bf-x" title="Unlink from this task" onclick="bfTaskUnlink('${f.id}','${t.id}')">✕</span>`:"<span></span>"}</div>`).join("")
+      ||`<div class="bft-none">None linked yet.</div>`}</div>`;
+}
+function bfAttachPick(ev,tid){ ev.stopPropagation(); bfAttachDraw(ev,tid,""); }
+function bfAttachRows(tid,q){
+  const on=new Set(BF.ties.filter(x=>x.task_id===tid).map(x=>x.file_id)), qq=String(q||"").trim().toLowerCase();
+  const list=BF.files.filter(f=>!qq||[f.file_name,(bfFolder(f.folder_id)||{}).name].join(" ").toLowerCase().includes(qq))
+    .sort((a,b)=>(on.has(b.id)-on.has(a.id))||String(b.created_at||"").localeCompare(String(a.created_at||"")));
+  return list.map(f=>`<div class="t${on.has(f.id)?" on":""}" onclick="bfAttachTog('${f.id}','${tid}')"><span class="ck">${on.has(f.id)?"✓":""}</span><span class="nm">${escHtml(f.file_name)}</span><span class="d">${escHtml((bfFolder(f.folder_id)||{}).name||"")}</span></div>`).join("")
+    ||`<div class="none">${BF.files.length?"No file matches.":"This brand has no files yet. Add them on the Strategy page, under Files."}</div>`;
+}
+function bfAttachDraw(ev,tid,q){
+  BF._att=tid;
+  bfPop(ev,`<div class="bf-pick"><input class="q" placeholder="Search the brand's files" value="${escAttr(q)}" oninput="bfAttachQ(this.value)">
+    <div id="bf-attl">${bfAttachRows(tid,q)}</div></div>`,true);
+}
+function bfAttachQ(q){ const el=document.getElementById("bf-attl"); if(el&&BF._att) el.innerHTML=bfAttachRows(BF._att,q); }
+async function bfAttachTog(fid,tid){
+  await bfTie(fid,tid);
+  const q=(document.querySelector("#bf-pop .q")||{}).value||"";
+  const el=document.getElementById("bf-attl"); if(el) el.innerHTML=bfAttachRows(tid,q);
+  bfTaskRedraw();
+}
+async function bfTaskUnlink(fid,tid){ await bfTie(fid,tid); bfTaskRedraw(); }
+/* the task panel is redrawn without closing the open picker */
+function bfTaskRedraw(){
+  const host=document.querySelector(".br-open .bft"); const t=BR&&BR.tasks?BR.tasks.find(x=>x.id===BR_OPEN):null;
+  if(host&&t){ const d=document.createElement("div"); d.innerHTML=bfTaskBlock(t); host.replaceWith(d.firstElementChild); }
+}
+(function(){
+  if(typeof brFilesHtml!=="function") return;
+  const base=brFilesHtml;
+  brFilesHtml=function(t,msgs){
+    const h=base.apply(this,arguments);
+    try{ if(brCV()) return h; bfEnsure(); return bfTaskBlock(t)+h; }catch(e){ return h; }
+  };
+})();
+</script>
+
 </body>
 </html>
