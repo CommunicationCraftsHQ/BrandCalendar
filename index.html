@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.4 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.5 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12953,7 +12953,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.4 Tbilisi";
+const TOOL_VERSION="V118.5 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -32926,7 +32926,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
         sec.innerHTML = `
           <div class="bd-sec" id="bd-vb"><div class="bd-secnum">07</div>
             <div class="bd-sectitle">Target groups</div><div class="bd-secrule"></div>
-            <div class="bd-secsub">Who this brand talks to, what it wants from each, and what it tells them</div></div>
+            <div class="bd-secsub"></div></div>
           <div id="vb-host"></div>`;
         wrap.appendChild(sec);
       }
@@ -39044,6 +39044,91 @@ document.addEventListener("scroll",e=>{ if(AC_MENU&&!(e.target&&e.target.closest
       if(q.get("p")==="accounts"&&view==="year"&&!activeBrand) acGo();
     }
   }catch(e){}
+})();
+</script>
+
+<style>
+/* ══ V118.3 TBILISI · THE STRATEGY PAGE, ARRANGED (layout A) ═══════════
+   Chirag, 16 Oct: "Give better and more organised way of arranging this
+   sections… The order should be files, target groups, mood board."
+   Picked A of three mockups the same morning:
+   · section headings are smaller, with no descriptive line on the right;
+     a count sits there instead where there is one
+   · from 04 on, each section is ONE white card with its heading inside,
+     and its "Open…" link on the heading's line
+   · 05 Files · 06 Target groups · 07 Mood board                         */
+.bd-wrap.mkA .bd-sec{margin:40px 0 12px;padding:0;}
+.bd-wrap.mkA .bd-secnum{width:26px;height:26px;font-size:11px;}
+.bd-wrap.mkA .bd-sectitle{font-size:20px;}
+.bd-wrap.mkA .bd-secrule{background:transparent;}
+.bd-wrap.mkA .bd-secsub{font-size:13px;color:var(--subtle);}
+.mk-lk{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--acc);cursor:pointer;white-space:nowrap;margin-left:14px;}
+.mk-card{background:var(--surface);border:1px solid var(--div);border-radius:var(--rc);padding:16px 22px 18px;margin-top:20px;}
+.bd-wrap.mkA .mk-card > .bd-sec{margin:0 0 6px;padding:0 0 14px;border-bottom:1px solid var(--div);}
+.mk-card .bd-card,.mk-card .bf-card{border:0 !important;box-shadow:none !important;padding:0 !important;background:transparent !important;margin-top:0 !important;}
+.mk-card .bf-s6{padding-top:10px !important;}
+.mk-card .bd-grid{margin-top:10px;}
+.mk-card .mdb-strip{margin-top:14px;}
+.mk-card .tg-card{margin-top:2px !important;}
+.mk-card .bf-more,.mk-card .mdb-open{display:none;}
+.a3 td.w-seg{width:290px;}
+</style>
+<script>
+(function(){
+  const LATE=["bd-s4","bd-s6","bd-vb","bd-s5"];
+  const NUM={"bd-s6":"05","bd-vb":"06","bd-s5":"07"};
+  function tgCount(){
+    const el=document.getElementById("tg-count"); if(!el) return;
+    const n=document.querySelectorAll("#vb-host tr[data-tg]").length;
+    el.textContent=n?n+" target group"+(n===1?"":"s"):"";
+  }
+  function arrange(){
+    const w=document.querySelector("#main .bd-wrap"); if(!w||w.classList.contains("mkA")) return;
+    w.classList.add("mkA");
+    const vb=document.getElementById("vb-host");
+    const vbw=vb&&vb.parentElement;
+    if(vbw&&vbw.parentElement===w){ while(vbw.firstChild) w.insertBefore(vbw.firstChild,vbw); vbw.remove(); }
+    const secs=[]; let cur=null; const lead=[];
+    [...w.children].forEach(k=>{ if(k.classList.contains("bd-sec")){ cur={h:k,id:k.id,body:[]}; secs.push(cur); } else if(cur) cur.body.push(k); else lead.push(k); });
+    const S=id=>secs.find(s=>s.id===id);
+    secs.forEach(s=>{
+      const sub=s.h.querySelector(".bd-secsub");
+      if(sub&&s.id!=="bd-s6") sub.textContent="";
+      if(NUM[s.id]){ const n=s.h.querySelector(".bd-secnum"); if(n) n.textContent=NUM[s.id]; }
+    });
+    const mood=S("bd-s5"), tg=S("bd-vb"), files=S("bd-s6");
+    if(mood){ const sub=mood.h.querySelector(".bd-secsub");
+      if(sub&&typeof MDB==="object"&&MDB.bid===activeBrand&&MDB.ok) sub.textContent=MDB.items.length+" reference"+(MDB.items.length===1?"":"s");
+      mood.h.insertAdjacentHTML("beforeend",`<span class="mk-lk" onclick="mdbGo()">Open the mood board <i class="ti ti-arrow-right"></i></span>`); }
+    if(files) files.h.insertAdjacentHTML("beforeend",`<span class="mk-lk" onclick="bfGo('all')">Open all files <i class="ti ti-arrow-right"></i></span>`);
+    if(tg){ const sub=tg.h.querySelector(".bd-secsub"); if(sub) sub.id="tg-count"; }
+    const order=secs.filter(s=>!LATE.includes(s.id)).concat(["bd-s4","bd-s6","bd-vb","bd-s5"].map(S).filter(Boolean));
+    w.innerHTML=""; lead.forEach(x=>w.appendChild(x));
+    order.forEach(s=>{
+      if(LATE.includes(s.id)){ const c=document.createElement("div"); c.className="mk-card"; c.appendChild(s.h); s.body.forEach(b=>c.appendChild(b)); w.appendChild(c); }
+      else { w.appendChild(s.h); s.body.forEach(b=>w.appendChild(b)); }
+    });
+    tgCount();
+    if(vb&&!vb._mkObs){ vb._mkObs=new MutationObserver(tgCount); vb._mkObs.observe(vb,{childList:true,subtree:true}); }
+  }
+  const baseBrief=renderBrief;
+  renderBrief=function(){ const out=baseBrief.apply(this,arguments); if(!briefEdit){ try{ arrange(); }catch(e){} } return out; };
+  /* the left panel follows the same order */
+  const baseSide=buildBriefSidebar;
+  buildBriefSidebar=function(){
+    const out=baseSide.apply(this,arguments);
+    try{
+      const first=document.querySelector("#sb-months .bd-navi"); if(!first) return out;
+      const box=first.parentElement;
+      const lab={"bd-s6":"05 · Files","bd-vb":"06 · Target groups","bd-s5":"07 · Mood board"};
+      ["bd-s4","bd-s6","bd-vb","bd-s5"].forEach(id=>{
+        const n=box.querySelector(`.bd-navi[data-tgt="${id}"]`); if(!n) return;
+        if(lab[id]){ const ct=n.querySelector(".mdb-navct"); n.textContent=lab[id]+" "; if(ct) n.appendChild(ct); }
+        box.appendChild(n);
+      });
+    }catch(e){}
+    return out;
+  };
 })();
 </script>
 
