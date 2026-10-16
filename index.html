@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.5 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.6 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12953,7 +12953,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.5 Tbilisi";
+const TOOL_VERSION="V118.6 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -38420,6 +38420,9 @@ function bfTaskRedraw(){
 .brl-menu.brl-owners.ac-menu{position:fixed;right:auto;width:300px;z-index:900;}
 .ac-menu .brl-pl .ck{width:16px;height:16px;border-radius:4px;border:1.5px solid #CFCFCB;display:grid;place-items:center;font-size:10px;color:#fff;flex:none;}
 .ac-menu .brl-pl.on .ck{background:var(--text);border-color:var(--text);}
+.ac-menu .brl-pl.off{opacity:.45;cursor:not-allowed;}
+.ac-menu .brl-pl.off:hover{background:none;}
+.ac-menu .brl-pl .rl{margin-left:auto;font-size:11px;color:var(--subtle);white-space:nowrap;}
 .ac-menu .brl-pl select{height:24px;border:1px solid var(--div);border-radius:6px;background-color:#fff;font-size:11.5px;font-weight:600;color:var(--text);padding-left:7px;width:122px;flex:none;}
 .ac-stack{display:flex;}
 .ac-stack span{width:22px;height:22px;border-radius:50%;background:#F2F2F0;border:1.5px solid #fff;margin-left:-6px;display:grid;place-items:center;font-size:12px;}
@@ -38810,6 +38813,7 @@ async function acSetRole(uid,bid,role){
   const cur=AC.team.find(t=>t.user_id===uid&&t.brand_id===bid);
   if(!(canManagePeople(bid)||(me&&role==="account_manager"&&acIsAM()))){ toast("Only an admin or this brand's account manager can change its team","err"); return; }
   if(cur&&cur.team_role===role) return;
+  if(role==="account_manager"&&!(p&&p.toolRole==="account_manager")){ toast("Make them Account manager in CC Platform → People & access first","err"); acTeamDraw(); if(AC_MENU) acMenuDraw(); return; }
   const stamp={team_role:role,team_role_by:ME.id||null,team_role_at:new Date().toISOString()};
   const had=acHasRow(uid,bid);
   const before=AC.team.slice();
@@ -38938,6 +38942,7 @@ document.addEventListener("click",e=>{
    suite role (Account manager, else Creator); the small role dropdown on
    their line changes it. */
 let AC_MENU=null, AC_MQ="";
+const AC_TOOLROLE_LBL={admin:"Admin",account_manager:"Account manager",creator:"Creator",member:"Member",client_reviewer:"Client",client_viewer:"Client"};
 function acMenuClose(){ const m=document.getElementById("ac-menu"); if(m) m.remove(); AC_MENU=null; AC_MQ=""; }
 function acMenuOpen(e,bid,kind){
   if(e){ e.preventDefault(); e.stopPropagation(); }
@@ -38960,13 +38965,21 @@ function acMenuDraw(first){
   const q=AC_MQ.trim().toLowerCase();
   const all=acMenuPeople().filter(p=>!q||p.nm.toLowerCase().includes(q));
   const mark=nm=>{ if(!q) return escHtml(nm); const i=nm.toLowerCase().indexOf(q); return i<0?escHtml(nm):escHtml(nm.slice(0,i))+"<mark>"+escHtml(nm.slice(i,i+q.length))+"</mark>"+escHtml(nm.slice(i+q.length)); };
+  /* V118.6 — CC PLATFORM DECIDES WHO CAN BE AN ACCOUNT MANAGER. Chirag,
+     16 Oct, option (a): only people whose Calendar role in People &
+     access is Account manager can be picked; anyone else is greyed with
+     their real role, so the fix is visibly in CC Platform. Someone
+     already named who no longer qualifies can still be taken OFF. */
+  const amOk=p=>p.tr==="account_manager";
   const line=p=>{
-    const on=isOn(p.id);
-    const sel=(kind==="team"&&on)?`<select class="cc-stsel" onclick="event.stopPropagation()" onchange="acSetRole('${p.id}','${bid}',this.value)">${AC_ROLES.map(([k,l])=>`<option value="${k}"${k===roleOf(p.id)?" selected":""}>${l}</option>`).join("")}</select>`:"";
-    return `<div class="brl-pl${on?" on":""}" data-uid="${escAttr(p.id)}" onclick="acMenuPick(event,'${escAttr(p.id)}')">
-      <span class="ck">${on?"✓":""}</span><span class="em">${p.em?escHtml(p.em):""}</span><span class="nm">${mark(p.nm)}</span>${sel}</div>`;
+    const on=isOn(p.id), blocked=kind==="ams"&&!on&&!amOk(p);
+    const sel=(kind==="team"&&on)?`<select class="cc-stsel" onclick="event.stopPropagation()" onchange="acSetRole('${p.id}','${bid}',this.value)">${AC_ROLES.map(([k,l])=>`<option value="${k}"${k===roleOf(p.id)?" selected":""}${k==="account_manager"&&!amOk(p)&&roleOf(p.id)!==k?" disabled":""}>${l}</option>`).join("")}</select>`:"";
+    const note=(kind==="ams"&&!amOk(p))?`<span class="rl">${escHtml(AC_TOOLROLE_LBL[p.tr]||"No Calendar role")}</span>`:"";
+    return `<div class="brl-pl${on?" on":""}${blocked?" off":""}" data-uid="${escAttr(p.id)}" ${blocked?`title="Make them Account manager in CC Platform → People & access first"`:`onclick="acMenuPick(event,'${escAttr(p.id)}')"`}>
+      <span class="ck">${on?"✓":""}</span><span class="em">${p.em?escHtml(p.em):""}</span><span class="nm">${mark(p.nm)}</span>${note}${sel}</div>`;
   };
-  const here=all.filter(p=>isOn(p.id)), rest=all.filter(p=>!isOn(p.id));
+  const here=all.filter(p=>isOn(p.id)), rest=all.filter(p=>!isOn(p.id))
+    .sort((a,b)=>kind==="ams"?((amOk(b)?1:0)-(amOk(a)?1:0)):0);
   let list="";
   if(here.length) list+=`<div class="fb-sec">${kind==="ams"?"Account managers":"On this team"}</div>`+here.map(line).join("");
   if(rest.length) list+=(here.length?`<div class="fb-sec">Everyone</div>`:"")+rest.map(line).join("");
@@ -38992,7 +39005,9 @@ async function acMenuPick(e,uid){
   const {bid,kind}=AC_MENU, cur=AC.team.find(t=>t.user_id===uid&&t.brand_id===bid);
   if(kind==="ams"){
     if(cur&&cur.team_role==="account_manager") await acOffTeam(uid,bid);
-    else await acSetRole(uid,bid,"account_manager");
+    else{ const p=acPerson(uid);
+      if(!p||p.toolRole!=="account_manager"){ toast("Make them Account manager in CC Platform → People & access first","err"); return; }
+      await acSetRole(uid,bid,"account_manager"); }
   }else{
     if(cur) await acOffTeam(uid,bid);
     else{ const p=acPerson(uid); await acSetRole(uid,bid,p&&p.toolRole==="account_manager"?"account_manager":"creator"); }
