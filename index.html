@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.1 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.2 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12953,7 +12953,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.1 Tbilisi";
+const TOOL_VERSION="V118.2 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -20366,6 +20366,7 @@ const URL_LS="cc_url_state";
 (function stashUrlState(){
   try{
     const q=new URLSearchParams(location.search);
+    window.__URL_AT_LOAD=q.toString();   /* V118.2 — read by the Accounts page if it loads after boot */
     if(q.get("p")) sessionStorage.setItem(URL_LS,q.toString());
   }catch(e){}
 })();
@@ -38323,6 +38324,580 @@ function bfTaskRedraw(){
     const h=base.apply(this,arguments);
     try{ if(brCV()) return h; bfEnsure(); return bfTaskBlock(t)+h; }catch(e){ return h; }
   };
+})();
+</script>
+
+<style>
+/* ══ V118.2 TBILISI · THE ACCOUNTS PAGE ═══════════════════════════════
+   Mockup "01 - Accounts page - mockup.html", approved 15 Oct 2026. The
+   list is the Tasks list's furniture (.brl) with its own columns. */
+.acl.brl .brl-hd,.acl.brl .brl-tr{display:grid;grid-template-columns:var(--ac-cols);align-items:center;gap:10px;padding:0 14px 0 0;}
+.acl.brl .brl-hd{height:38px;border-bottom:1px solid var(--div);}
+.acl.brl .brl-tr{height:50px;}
+.acl .h{text-align:center;}
+.acl{--ac-b:140px;--ac-a:150px;--ac-t:78px;--ac-h:82px;}
+.acl .brl-hd span{overflow:hidden;text-overflow:ellipsis;}
+@media (max-width:1320px){ .acl{--ac-b:110px;--ac-a:120px;--ac-t:56px;--ac-h:80px;}
+  .acl.brl .brl-hd,.acl.brl .brl-tr{gap:8px;} .acl .brl-hd{letter-spacing:.04em;} }
+.ac-bn{display:flex;align-items:center;min-width:0;font-weight:700;font-size:14px;letter-spacing:-.01em;cursor:pointer;}
+.ac-bn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ac-bn:hover{color:var(--acc);}
+.ac-ams{display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap;overflow:hidden;font-size:12.5px;}
+.ac-who{display:inline-flex;align-items:center;gap:4px;font-weight:600;}
+.ac-who .e{font-size:14px;line-height:1;}
+.ac-who.me{color:var(--acc);}
+.ac-claim{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:7px;border:1px dashed #CFCFCB;
+  background:var(--surface);color:var(--muted);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;}
+.ac-claim:hover{border-color:var(--text);color:var(--text);}
+.ac-claim i{font-size:13px;}
+.ac-team{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);cursor:pointer;}
+.ac-stack{display:flex;}
+.ac-stack span{width:22px;height:22px;border-radius:50%;background:#F2F2F0;border:1.5px solid #fff;margin-left:-6px;display:grid;place-items:center;font-size:12px;}
+.ac-stack span:first-child{margin-left:0;}
+.ac-hc{display:flex;justify-content:center;}
+.ac-hp{display:inline-flex;align-items:center;gap:6px;height:23px;padding:0 9px;border-radius:20px;font-size:11px;font-weight:650;white-space:nowrap;
+  border:0;font-family:inherit;cursor:pointer;}
+.ac-hp i{width:7px;height:7px;border-radius:50%;flex:none;}
+.ac-hp.g{background:#EAF3DE;color:#3B6D11;} .ac-hp.g i{background:#3B6D11;}
+.ac-hp.a{background:#FAEEDA;color:#854F0B;} .ac-hp.a i{background:#C98A1B;}
+.ac-hp.r{background:#FDEDED;color:#B42020;} .ac-hp.r i{background:var(--acc);}
+.ac-hp.n{background:transparent;color:var(--subtle);font-weight:600;cursor:default;padding:0;}
+.ac-hp.w{background:transparent;color:var(--subtle);cursor:default;}
+.ac-empty{padding:52px 20px;text-align:center;color:var(--muted);font-size:13px;}
+.ac-sbe{width:18px;text-align:center;flex:none;font-size:14px;line-height:1;}
+.mdb-trow.ac-none .nm,.mdb-trow.ac-none .ct{color:var(--acc);font-weight:600;}
+/* a health cell, opened */
+.ac-pop{position:fixed;z-index:900;background:#fff;border:1px solid var(--div);border-radius:12px;box-shadow:0 12px 34px rgba(0,0,0,.14);
+  padding:12px 14px;width:290px;font-size:12.5px;}
+.ac-pop h5{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--subtle);margin:0 0 6px;display:flex;align-items:center;gap:8px;}
+.ac-pop .ln{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #F2F0EA;}
+.ac-pop .ln:first-of-type{border-top:0;}
+.ac-pop .ln .k{flex:1;color:var(--muted);}
+.ac-pop .ln b{font-weight:700;}
+.ac-pop .ln b.bad{color:var(--acc);}
+.ac-pop .go{display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:9px;border-top:1px solid var(--div);font-weight:600;cursor:pointer;}
+.ac-pop .go:hover{color:var(--acc);}
+.ac-pop .go i{font-size:14px;color:var(--subtle);margin-left:auto;}
+/* the brand's team window */
+.ac-tw .brs-h{flex-wrap:wrap;row-gap:8px;}
+.ac-svc{display:flex;gap:6px;margin-left:auto;margin-right:8px;}
+.ac-svc label{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--div);border-radius:7px;
+  font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;background:var(--surface);user-select:none;}
+.ac-svc label.on{color:var(--text);border-color:#CFCFCB;}
+.ac-svc label input{width:14px;height:14px;margin:0;accent-color:var(--text);}
+.ac-svc label.ro{cursor:default;}
+.ac-tw .bp-wrap{overflow:auto;}
+.ac-add{position:relative;flex:1;}
+.ac-add input{width:100%;height:32px;padding:0 11px;border:1px solid var(--div);border-radius:9px;background:var(--surface2);
+  font-family:inherit;font-size:12.5px;color:var(--text);outline:none;box-sizing:border-box;}
+.ac-add input:focus{border-color:var(--muted);background:#fff;}
+.ac-addl{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;background:#fff;border:1px solid var(--div);border-radius:10px;
+  box-shadow:0 10px 28px rgba(0,0,0,.12);max-height:260px;overflow:auto;padding:4px;}
+.ac-addl .o{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px;cursor:pointer;font-size:12.5px;}
+.ac-addl .o:hover{background:rgba(13,13,13,.05);}
+.ac-addl .o .e{width:20px;text-align:center;font-size:15px;}
+.ac-addl .o .m{color:var(--subtle);font-size:11.5px;margin-left:auto;}
+.ac-addl .none{padding:10px;color:var(--subtle);font-size:12px;}
+.ac-tw .bp-gh .n{color:var(--muted);}
+.ac-tw .bp-gh .claim{margin-left:auto;text-transform:none;letter-spacing:0;font-size:12px;color:var(--acc);cursor:pointer;display:inline-flex;align-items:center;gap:4px;}
+.ac-p{display:flex;align-items:center;gap:10px;padding:6px 4px;border-radius:8px;}
+.ac-p:hover{background:var(--surface2);}
+.ac-p .e{width:24px;text-align:center;font-size:16px;flex:none;line-height:1;}
+.ac-p .nm{flex:1;min-width:0;}
+.ac-p .nm b{display:block;font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ac-p .nm span{display:block;font-size:11px;color:var(--subtle);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ac-p.me .nm b{color:var(--acc);}
+.ac-p select{height:28px;border:1px solid var(--div);border-radius:7px;background-color:#fff;font-size:12px;font-weight:600;color:var(--text);padding-left:9px;width:170px;}
+.ac-p .x{width:26px;height:26px;border-radius:6px;border:1px solid var(--div);background:#fff;color:var(--subtle);display:grid;place-items:center;font-size:13px;cursor:pointer;flex:none;}
+.ac-p .x:hover{color:var(--acc);border-color:var(--acc);}
+.ac-p .rol{font-size:12px;color:var(--muted);font-weight:600;}
+.ac-nobody{padding:6px 4px 6px 38px;font-size:12.5px;color:var(--subtle);}
+</style>
+<script>
+/* ══ V118.2 TBILISI · THE ACCOUNTS PAGE ═══════════════════════════════
+   Chirag, 15 Oct 2026: "a proper page where he can see all the brands
+   which are assigned to an individual account manager. This is
+   different from being visible to an account manager." Then, on the
+   same page, the people on each brand by role, and how healthy each
+   brand's marketing is, deliverable by deliverable.
+
+   Decisions (checklist "01 - Accounts page - build checklist.md"):
+   · On All brands the bar carries two tabs: Calendar and Accounts.
+   · Any number of account managers per brand; an account manager CLAIMS
+     a brand themselves.
+   · Roles on a brand: Account manager, Creator, Production manager,
+     Performance marketer.
+   · Six health columns, green / amber / red, a dash where the brand does
+     not take that service.
+
+   ONE LIST, NOT TWO. The team role is a column on user_brands — the list
+   the brand switcher and People & access already write. Responsibility
+   is the role; visibility is the row (or the "Always all brands" flag).
+   Taking someone off a TEAM here leaves their access alone: the switcher's
+   people window is still the door for who can see a brand.
+
+   SAFE BEFORE THE MIGRATION. If the role column or the health read is not
+   there yet, the page says so in one line and nothing else is touched. */
+const AC_ROLES=[["account_manager","Account manager","Account managers"],["creator","Creator","Creators"],
+  ["production_manager","Production manager","Production managers"],["performance_marketer","Performance marketer","Performance marketers"]];
+const AC_ROLE_LBL=Object.fromEntries(AC_ROLES.map(r=>[r[0],r[1]]));
+const AC_SVC=[["social","Social"],["branding","Branding"],["performance","Performance marketing"]];
+const AC_COLS=[["ams","Account managers"],["team","Team"],["strategy","Strategy"],["plan","Plan"],["posts","Posts"],["tasks","Tasks"],["promos","Promotions"],["adopt","Adoption"]];
+const AC_HEALTH_COLS=["strategy","plan","posts","tasks","promos","adopt"];
+const AC_COL_SVC={posts:"social",tasks:"branding",promos:"performance"};
+let AC={ok:false,loading:false,err:"",migr:true,team:[],health:{},hOk:false,svc:{},svcOk:false,
+  am:null,q:"",f:[],sort:"health",open:null,addQ:"",cell:null,at:0};
+let AC_HIDE=new Set();
+try{ AC_HIDE=new Set(JSON.parse(localStorage.getItem("cc-ac-cols")||"[]")); }catch(e){}
+
+function acMay(){ return typeof canEdit==="function"&&canEdit()&&ME.role!=="client"; }
+function acIsAM(){ return ME.toolRole==="account_manager"; }
+function acPerson(id){ return personById(id)||null; }
+function acName(id){ const p=acPerson(id); return p?p.name:"Someone"; }
+function acEmoji(p){ return p&&p.emoji?escHtml(p.emoji):"·"; }
+function acToday(){ return new Date(Date.now()+330*60000).toISOString().slice(0,10); }
+function acMonthName(){ return (MN[parseInt(acToday().slice(5,7),10)]||"").slice(0,3); }
+function acBrands(){
+  return Object.keys(brands||{}).filter(k=>isOnBrand(k))
+    .sort((a,b)=>String(brands[a].name).localeCompare(String(brands[b].name),undefined,{sensitivity:"base"}));
+}
+function acTeamOf(bid){ return AC.team.filter(t=>t.brand_id===bid); }
+function acAMsOf(bid){ return acTeamOf(bid).filter(t=>t.team_role==="account_manager"); }
+function acSvcOf(bid){ const s=AC.svc[bid]; return Array.isArray(s)?s:AC_SVC.map(x=>x[0]); }
+
+/* ── reading ────────────────────────────────────────────────────────── */
+async function acLoad(force){
+  if(AC.loading) return;
+  if(AC.ok&&!force&&Date.now()-AC.at<60000) return;
+  AC.loading=true; AC.err="";
+  try{
+    const PAGE=1000; let rows=[], bad=null;
+    for(let from=0;;from+=PAGE){
+      const r=await sb.from("user_brands").select("user_id,brand_id,team_role").not("team_role","is",null)
+        .order("user_id").order("brand_id").range(from,from+PAGE-1);
+      if(r.error){ bad=r.error; break; }
+      rows=rows.concat(r.data||[]);
+      if((r.data||[]).length<PAGE) break;
+    }
+    AC.team=[];
+    if(bad){
+      /* the column not existing is the migration not having run — a
+         different fact from a failed read, and the page says which */
+      AC.migr=!/team_role/i.test(bad.message||"");
+      if(AC.migr) AC.err=bad.message||"could not read";
+    }else{ AC.migr=true; AC.team=rows.filter(r=>r&&r.team_role); }
+    const [h,s]=await Promise.all([sb.rpc("account_health",{}), sb.from("brands").select("id,cal_services").is("deleted_at",null)]);
+    AC.health={}; AC.hOk=!h.error&&Array.isArray(h.data);
+    if(AC.hOk) h.data.forEach(x=>{ AC.health[x.brand_id]=x; });
+    AC.svc={}; AC.svcOk=!s.error;
+    if(AC.svcOk) (s.data||[]).forEach(x=>{ if(Array.isArray(x.cal_services)) AC.svc[x.id]=x.cal_services; });
+    AC.ok=true; AC.at=Date.now();
+  }catch(e){ AC.err=String(e&&e.message||e); }
+  AC.loading=false;
+  if(view==="accounts") acRefresh();
+}
+
+/* ── the health of one brand ────────────────────────────────────────── */
+function acStrategy(bid){
+  const D=(brands[bid]&&brands[bid].brief&&typeof brands[bid].brief==="object")?brands[bid].brief:{};
+  const L=k=>Array.isArray(D[k])?D[k].length:0, S=k=>String(D[k]||"").trim();
+  /* bdCompleteness's own list, less the old quick links — V118.1 moved
+     them out of the brief, so they can no longer be filled in there */
+  const checks=[S("tagline"),L("meta"),S("positioning"),S("toneWords"),L("toneNever"),S("toneNote"),
+    L("usps"),L("talking"),S("audWho"),S("audNote"),L("markets"),S("funnelStage"),S("funnelNote"),
+    L("categories"),S("revBig"),L("revRows"),L("segs"),L("tl"),L("rhythm"),L("smDeliv"),L("pillars")];
+  return {n:checks.filter(Boolean).length,of:checks.length};
+}
+/* Every cell is {s: g|a|r|n|w, t: words}. n = the brand does not take
+   this service; w = still reading. */
+function acCell(bid,col){
+  if(AC_COL_SVC[col]&&acSvcOf(bid).indexOf(AC_COL_SVC[col])<0) return {s:"n",t:"—"};
+  if(col==="strategy"){ const c=acStrategy(bid);
+    return c.n===0?{s:"r",t:"Empty"}:c.n===c.of?{s:"g",t:"Done"}:{s:"a",t:`${c.n} of ${c.of}`}; }
+  const h=AC.health[bid];
+  if(!h) return AC.hOk?{s:"n",t:"—"}:{s:"w",t:AC.loading||!AC.ok?"…":"—"};
+  const mon=acMonthName();
+  if(col==="plan") return h.plan_status?{s:"g",t:mon}:{s:"r",t:"No "+mon};
+  if(col==="posts"){
+    if(!h.posts_total) return {s:"r",t:"None"};
+    if(h.posts_late>=3) return {s:"r",t:h.posts_late+" late"};
+    if(h.posts_late>0) return {s:"a",t:h.posts_late+" late"};
+    return {s:"g",t:`${h.posts_approved} of ${h.posts_total}`};
+  }
+  if(col==="tasks"){
+    if(h.tasks_late>=2) return {s:"r",t:h.tasks_late+" late"};
+    if(h.tasks_late===1) return {s:"a",t:"1 late"};
+    return {s:"g",t:"On time"};
+  }
+  if(col==="promos") return h.promos_live?{s:"g",t:h.promos_live+" live"}:{s:"r",t:"None"};
+  if(col==="adopt"){
+    if(!h.team_size) return {s:"r",t:"No team"};
+    const d=h.adoption_days||0;
+    return {s:d>=4?"g":d>=2?"a":"r",t:`${d} of 5`};
+  }
+  return {s:"n",t:"—"};
+}
+function acScore(bid){
+  return AC_HEALTH_COLS.reduce((n,c)=>{ const s=acCell(bid,c).s; return n+(s==="r"?100:s==="a"?1:0); },0);
+}
+
+/* ── the filter (the kit's), the sort, the sidebar's account manager ── */
+const AC_FIELDS=[
+  {k:"health",label:"Health", icon:"heart-rate-monitor"},
+  {k:"svc",   label:"Services",icon:"stack-2"},
+  {k:"team",  label:"Team",   icon:"users"},
+];
+function acValsOf(bid,k){
+  if(k==="health"){ const ss=AC_HEALTH_COLS.map(c=>acCell(bid,c).s);
+    return ss.includes("r")?["red"]:ss.includes("a")?["amber"]:["green"]; }
+  if(k==="svc") return acSvcOf(bid).slice();
+  if(k==="team") return acTeamOf(bid).map(t=>t.user_id);
+  return [];
+}
+function acOptionsFor(k){
+  const rows=acInScope();
+  if(k==="health") return fltCounts(rows,k,acValsOf,[["red","Something red"],["amber","Amber, nothing red"],["green","All green"]]);
+  if(k==="svc") return fltCounts(rows,k,acValsOf,AC_SVC.map(x=>[x[0],x[1]]));
+  return fltCounts(rows,k,acValsOf,[],v=>acName(v));
+}
+FLT_HOSTS.accounts={fields:AC_FIELDS,optionsFor:acOptionsFor,get:()=>AC.f,set:fs=>{ AC.f=fs; },render:()=>acRefresh()};
+function acDefaultAM(){
+  if(ME.role!=="admin"&&ME.toolRole==="account_manager") return ME.id||"all";
+  return "all";
+}
+function acInScope(){
+  const all=acBrands();
+  if(!AC.am||AC.am==="all") return all;
+  if(AC.am==="none") return all.filter(b=>!acAMsOf(b).length);
+  return all.filter(b=>acAMsOf(b).some(t=>t.user_id===AC.am));
+}
+function acVisible(){
+  const q=AC.q.trim().toLowerCase();
+  const r=acInScope().filter(b=>(!q||String(brands[b].name).toLowerCase().includes(q))&&fltKeep(b,AC.f,acValsOf));
+  const nm=(a,b)=>String(brands[a].name).localeCompare(String(brands[b].name),undefined,{sensitivity:"base"});
+  if(AC.sort==="name") return r.sort(nm);
+  if(AC.sort==="team") return r.sort((a,b)=>(acTeamOf(b).length-acTeamOf(a).length)||nm(a,b));
+  return r.sort((a,b)=>(acScore(b)-acScore(a))||nm(a,b));
+}
+function acPickSort(k){ AC.sort=k; acRefresh(); }
+function acPickAM(k){ AC.am=k; acRefresh(); }
+
+/* ── the page ───────────────────────────────────────────────────────── */
+function acGo(){
+  if(!acMay()){ toast("View-only account","err"); return; }
+  closeAllPops(); acPopClose();
+  const sel=document.getElementById("brand-sel"); if(sel) sel.value="";
+  if(activeBrand){ activeBrand=""; try{ applyLayerDefaults(); }catch(e){} }
+  if(AC.am===null) AC.am=acDefaultAM();
+  setView("accounts");
+  const m=document.getElementById("main"); if(m) m.scrollTop=0;
+}
+function renderAccounts(){
+  if(AC.am===null) AC.am=acDefaultAM();
+  acLoad();
+  const mc=document.getElementById("main");
+  mc.innerHTML=`<div style="padding:0 var(--pg-x) 26px;">
+      <div class="fb" id="ac-bar"></div>
+      <div id="ac-list"></div>
+    </div>`;
+  acBar(); acList();
+}
+function acRefresh(){ if(view!=="accounts") return; buildAccountsSidebar(); acBar(); acList(); acColsSync(); }
+function acBar(){
+  const bar=document.getElementById("ac-bar"); if(!bar) return;
+  bar.innerHTML=`
+    <input class="fi fb-q" placeholder="Search brands…" value="${escAttr(AC.q)}" oninput="AC.q=this.value;acList()" onclick="event.stopPropagation()">
+    ${fltChipsHtml("accounts")}
+    <span class="fb-end">
+      <span id="ac-cnt">${acCntHtml()}</span>
+      ${fltSortHtml("accounts",[["health","Health"],["name","Brand"],["team","Team size"]],AC.sort,"health","acPickSort")}
+    </span>`;
+}
+function acCntHtml(){ return fltCountHtml(acVisible().length,acInScope().length,"brand"); }
+function acColsVar(){
+  const H="var(--ac-h)";
+  const w={ams:"minmax(var(--ac-a),1.1fr)",team:"var(--ac-t)",strategy:H,plan:H,posts:H,tasks:H,promos:H,adopt:H};
+  return ["3px","minmax(var(--ac-b),1fr)"].concat(AC_COLS.filter(([k])=>!AC_HIDE.has(k)).map(([k])=>w[k])).concat(["18px"]).join(" ");
+}
+function acList(){
+  const g=document.getElementById("ac-list"); if(!g) return;
+  const c=document.getElementById("ac-cnt"); if(c) c.innerHTML=acCntHtml();
+  if(!AC.migr){ g.innerHTML=`<div class="brl acl"><div class="ac-empty">The database change for this page has not been run yet.</div></div>`; return; }
+  if(AC.err&&!AC.ok){ g.innerHTML=`<div class="brl acl"><div class="ac-empty">Could not load the accounts — ${escHtml(AC.err)}</div></div>`; return; }
+  const rows=acVisible();
+  const cols=AC_COLS.filter(([k])=>!AC_HIDE.has(k));
+  const head=`<div class="brl-hd"><span></span><span>Brand</span>${cols.map(([k,l])=>`<span class="${AC_HEALTH_COLS.includes(k)?"h":""}">${l}</span>`).join("")}<span></span></div>`;
+  const body=rows.map(acRowHtml).join("")||`<div class="ac-empty">${acInScope().length?"No brands match these filters.":AC.am==="none"?"Every brand has an account manager.":"No brands here yet."}</div>`;
+  g.innerHTML=`<div class="brl acl" style="--ac-cols:${acColsVar()}">${head}${body}</div>`;
+}
+function acRowHtml(bid){
+  const b=brands[bid], cols=AC_COLS.filter(([k])=>!AC_HIDE.has(k));
+  const cell=k=>{
+    if(k==="ams"){
+      const ams=acAMsOf(bid);
+      const mine=ams.some(t=>t.user_id===ME.id);
+      const who=ams.map(t=>{ const p=acPerson(t.user_id);
+        return `<span class="ac-who${t.user_id===ME.id?" me":""}"><span class="e">${acEmoji(p)}</span>${escHtml(p?p.name:"Someone")}</span>`; }).join("");
+      const claim=(!mine&&acIsAM()&&AC.migr)?`<button class="ac-claim" onclick="event.stopPropagation();acClaim('${bid}')"><i class="ti ti-hand-grab"></i>Claim</button>`:"";
+      return `<span class="ac-ams">${who}${claim}</span>`;
+    }
+    if(k==="team"){
+      const t=acTeamOf(bid), em=t.slice(0,4).map(x=>`<span>${acEmoji(acPerson(x.user_id))}</span>`).join("");
+      return `<span class="ac-team" onclick="event.stopPropagation();acTeamOpen('${bid}')">${t.length?`<span class="ac-stack">${em}</span>`:""}${t.length}</span>`;
+    }
+    const v=acCell(bid,k);
+    return `<span class="ac-hc"><button class="ac-hp ${v.s}" data-col="${k}" ${v.s==="n"||v.s==="w"?"disabled":`onclick="acPopOpen(event,'${bid}','${k}')"`}>${v.s==="n"||v.s==="w"?"":"<i></i>"}${escHtml(v.t)}</button></span>`;
+  };
+  return `<div class="brl-tr" data-brand="${bid}" onclick="acTeamOpen('${bid}')"><span class="brl-sp"></span>
+    <span class="ac-bn"><span>${escHtml(b.name)}</span></span>${cols.map(([k])=>cell(k)).join("")}
+    <span class="brl-car"><i class="ti ti-chevron-right" style="font-size:15px"></i></span></div>`;
+}
+function buildAccountsSidebar(){
+  const st=document.getElementById("sb-stats"); if(st) st.innerHTML="";
+  const sm=document.getElementById("sb-months"); if(!sm) return;
+  const all=acBrands();
+  const by=new Map();
+  all.forEach(b=>acAMsOf(b).forEach(t=>by.set(t.user_id,(by.get(t.user_id)||0)+1)));
+  if(ME.toolRole==="account_manager"&&ME.id&&!by.has(ME.id)) by.set(ME.id,0);
+  const ids=[...by.keys()].sort((a,b)=>(a===ME.id?-1:b===ME.id?1:0)||acName(a).localeCompare(acName(b)));
+  const none=all.filter(b=>!acAMsOf(b).length).length;
+  const row=(k,label,n,emo,cls)=>`<div class="mdb-trow${AC.am===k?" on":""}${cls?" "+cls:""}" data-am="${k}" onclick="acPickAM('${k}')">
+      <span class="ac-sbe">${emo}</span><span class="nm">${label}</span><span class="ct">${n}</span></div>`;
+  sm.innerHTML=`<div class="s-lbl">Account managers</div>
+    ${row("all","Everyone",all.length,"·")}
+    ${ids.map(id=>row(id,escHtml(acName(id))+(id===ME.id?" <span class='bp-you'>you</span>":""),by.get(id),acEmoji(acPerson(id)))).join("")}
+    ${row("none","Unclaimed",none,"!", "ac-none")}`;
+}
+/* the Columns button in the black bar, as on Tasks */
+function acColsSync(){
+  const on=view==="accounts";
+  let w=document.getElementById("ac-cols");
+  if(!w){
+    const ref=document.getElementById("brk-cols");
+    if(ref){ ref.insertAdjacentHTML("afterend",`<div class="bsw mf-hide" id="ac-cols" style="display:none;">
+        <button class="nav-btn brk-colsbtn" id="ac-cols-btn" onclick="acColsOpen(event)" title="Columns" aria-label="Columns"><i class="ti ti-columns-3"></i><span id="ac-cn"></span></button>
+        <div class="bpanel right" id="ac-cols-panel"></div></div>`);
+      w=document.getElementById("ac-cols"); }
+  }
+  if(w) w.style.display=on?"":"none";
+  const cn=document.getElementById("ac-cn"); if(cn) cn.textContent=`${1+AC_COLS.length-AC_HIDE.size}/${1+AC_COLS.length}`;
+  const ex=document.getElementById("export-btn"); if(ex&&ex.parentElement) ex.parentElement.style.display=on?"none":"";
+}
+function acColsFill(){
+  const el=document.getElementById("ac-cols-panel"); if(!el) return;
+  el.innerHTML=`<div class="brk-ioh">Columns</div>
+    <div class="brow brk-lock"><span class="brk-bx on"><i class="ti ti-lock"></i></span><span class="bnm">Brand</span></div>`+
+    AC_COLS.map(([k,l])=>`<div class="brow" onclick="acColFlip('${k}')"><span class="brk-bx${AC_HIDE.has(k)?"":" on"}">${AC_HIDE.has(k)?"":"✓"}</span><span class="bnm">${l}</span></div>`).join("")+
+    (AC_HIDE.size?`<div class="brk-reset" onclick="acColFlip('')">Show all</div>`:"");
+}
+function acColsOpen(e){ acColsFill(); popOpen("ac-cols-panel",e); }
+function acColFlip(k){
+  if(!k) AC_HIDE.clear(); else if(AC_HIDE.has(k)) AC_HIDE.delete(k); else AC_HIDE.add(k);
+  try{ localStorage.setItem("cc-ac-cols",JSON.stringify([...AC_HIDE])); }catch(e){}
+  acList(); acColsSync(); acColsFill();
+}
+
+/* ── a health cell, opened ─────────────────────────────────────────── */
+function acPopClose(){ const p=document.getElementById("ac-pop"); if(p) p.remove(); AC.cell=null; }
+function acPopOpen(e,bid,col){
+  e.stopPropagation();
+  if(AC.cell&&AC.cell.bid===bid&&AC.cell.col===col){ acPopClose(); return; }
+  acPopClose(); closeAllPops();
+  const v=acCell(bid,col), h=AC.health[bid]||{}, mon=MN[parseInt(acToday().slice(5,7),10)]||"";
+  const ln=(k,n,bad)=>`<div class="ln"><span class="k">${k}</span><b class="${bad&&n?"bad":""}">${n}</b></div>`;
+  const NAME={strategy:"Strategy",plan:"Plan",posts:"Posts",tasks:"Tasks",promos:"Promotions",adopt:"Adoption"};
+  let body="", go="";
+  if(col==="strategy"){ const c=acStrategy(bid); body=ln("Parts of the Strategy page filled in",`${c.n} of ${c.of}`); go="openBrief()"; }
+  if(col==="plan"){ body=ln(`${mon} plan`,h.plan_status?(h.plan_status==="approved"?"Approved":"Drafted"):"Not made"); go="openMonthPlanView(0)"; }
+  if(col==="posts"){ body=ln(`Posts in ${mon}`,h.posts_total||0)+ln("Approved",h.posts_approved||0)+ln("In review",h.posts_review||0)
+    +ln("Drafting",h.posts_drafting||0)+ln("Past their date, not approved",h.posts_late||0,true); go="navPosts()"; }
+  if(col==="tasks"){ body=ln("Open tasks",h.tasks_open||0)+ln("Past their delivery date",h.tasks_late||0,true); go="navTasks()"; }
+  if(col==="promos"){ body=ln(`Promotions running in ${mon}`,h.promos_live||0); go="navPromotions()"; }
+  if(col==="adopt"){ body=ln("People on the team",h.team_size||0)+ln("Of the last 5 weekdays, days the team opened it",h.adoption_days||0); }
+  const lbl={g:"Green",a:"Amber",r:"Red"}[v.s]||"";
+  const p=document.createElement("div"); p.id="ac-pop"; p.className="ac-pop";
+  p.onclick=ev=>ev.stopPropagation();
+  p.innerHTML=`<h5><span class="ac-hp ${v.s}" style="height:19px;font-size:10px;cursor:default"><i></i>${lbl}</span>${NAME[col]} · ${escHtml(brands[bid].name)}</h5>${body}
+    ${go?`<div class="go" onclick="acPopGo('${bid}','${go}')">Open ${NAME[col]}<i class="ti ti-arrow-right"></i></div>`:""}`;
+  document.body.appendChild(p);
+  const r=e.currentTarget.getBoundingClientRect(), W=290;
+  let left=Math.min(Math.max(8,r.left+r.width/2-W/2),window.innerWidth-W-8), top=r.bottom+6;
+  const ph=p.getBoundingClientRect().height; if(top+ph>window.innerHeight-8) top=Math.max(8,r.top-ph-6);
+  p.style.left=left+"px"; p.style.top=top+"px";
+  AC.cell={bid,col};
+}
+function acPopGo(bid,go){ acPopClose(); pickBrand(bid); try{ (new Function(go))(); }catch(e){} }
+document.addEventListener("click",()=>{ if(AC.cell) acPopClose(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&AC.cell) acPopClose(); });
+
+/* ── writing: one row per person per brand, the role on it ─────────── */
+function acHasRow(uid,bid){ return (ASSIGN[bid]||[]).indexOf(uid)>-1||AC.team.some(t=>t.user_id===uid&&t.brand_id===bid); }
+async function acSetRole(uid,bid,role){
+  if(!AC.migr) return;
+  const me=uid===ME.id, p=acPerson(uid);
+  const cur=AC.team.find(t=>t.user_id===uid&&t.brand_id===bid);
+  if(!(canManagePeople(bid)||(me&&role==="account_manager"&&acIsAM()))){ toast("Only an admin or this brand's account manager can change its team","err"); return; }
+  if(cur&&cur.team_role===role) return;
+  const stamp={team_role:role,team_role_by:ME.id||null,team_role_at:new Date().toISOString()};
+  const had=acHasRow(uid,bid);
+  const before=AC.team.slice();
+  if(cur) cur.team_role=role; else AC.team.push({user_id:uid,brand_id:bid,team_role:role});
+  acRefresh(); acTeamDraw();
+  const r=had?await sb.from("user_brands").update(stamp).eq("user_id",uid).eq("brand_id",bid)
+             :await sb.from("user_brands").insert([{user_id:uid,brand_id:bid,...stamp}]);
+  if(r.error){ AC.team=before; acRefresh(); acTeamDraw(); dbErr(r); return; }
+  if(!had){ (ASSIGN[bid]=ASSIGN[bid]||[]).push(uid); try{ buildBrandPanel(); }catch(e){} }
+  try{ AC.health[bid]&&(AC.health[bid].team_size=acTeamOf(bid).length); }catch(e){}
+  toast(`${me?"You are":(p?p.name+" is":"Saved:")} ${AC_ROLE_LBL[role]} on ${brands[bid].name}`);
+}
+function acClaim(bid){ if(!acIsAM()){ toast("Only an account manager can claim a brand","err"); return; } acSetRole(ME.id,bid,"account_manager"); }
+/* Off the TEAM, not off the brand. Someone on "Always all brands" (or an
+   admin) only had a row because of the role, so theirs goes; everybody
+   else keeps theirs, so the brand stays in their switcher. */
+async function acOffTeam(uid,bid){
+  if(!canManagePeople(bid)&&uid!==ME.id){ toast("Only an admin or this brand's account manager can change its team","err"); return; }
+  const p=acPerson(uid), me=uid===ME.id;
+  const cur=AC.team.find(t=>t.user_id===uid&&t.brand_id===bid); if(!cur) return;
+  const lastAM=cur.team_role==="account_manager"&&acAMsOf(bid).length===1;
+  const warn=[me?"That is you.":"",lastAM?"The brand will have no account manager.":""].filter(Boolean).join(" ");
+  if(!confirm(`Take ${me?"yourself":(p?p.name:"this person")} off the ${brands[bid].name} team? ${warn}\nThey can still open the brand. Nothing they have written is deleted.`)) return;
+  const always=!!(p&&(p.allBrands||p.toolRole==="admin"));
+  const before=AC.team.slice();
+  AC.team=AC.team.filter(t=>t!==cur);
+  acRefresh(); acTeamDraw();
+  const r=always?await sb.from("user_brands").delete().eq("user_id",uid).eq("brand_id",bid)
+                :await sb.from("user_brands").update({team_role:null,team_role_by:ME.id||null,team_role_at:new Date().toISOString()}).eq("user_id",uid).eq("brand_id",bid);
+  if(r.error){ AC.team=before; acRefresh(); acTeamDraw(); dbErr(r); return; }
+  if(always) ASSIGN[bid]=(ASSIGN[bid]||[]).filter(x=>x!==uid);
+  toast(`Off the ${brands[bid].name} team`);
+}
+async function acSvcSet(bid,svc,on){
+  if(!canManagePeople(bid)){ toast("Only an admin or this brand's account manager can change this","err"); acTeamDraw(); return; }
+  const before=acSvcOf(bid).slice();
+  const next=AC_SVC.map(x=>x[0]).filter(k=>k===svc?on:before.includes(k));
+  AC.svc[bid]=next; acRefresh(); acTeamDraw();
+  const r=await sb.from("brands").update({cal_services:next}).eq("id",bid);
+  if(r.error){ AC.svc[bid]=before; acRefresh(); acTeamDraw(); dbErr(r); }
+}
+async function acCopyTeam(from,bid){
+  if(!from||!canManagePeople(bid)) return;
+  const src=acTeamOf(from), have=acTeamOf(bid);
+  const add=src.filter(s=>!have.some(h=>h.user_id===s.user_id));
+  if(!add.length){ toast("Everyone on that team is already here"); return; }
+  if(!confirm(`Add ${add.length} ${add.length===1?"person":"people"} from ${brands[from].name}'s team to ${brands[bid].name}, with the same roles?`)) return;
+  for(const s of add) await acSetRole(s.user_id,bid,s.team_role);
+}
+
+/* ── the brand's team window ───────────────────────────────────────── */
+function acTeamOpen(bid){
+  if(!brands[bid]) return;
+  acPopClose(); closeAllPops();
+  AC.open=bid; AC.addQ="";
+  let ov=document.getElementById("ov-ac-team");
+  if(!ov){
+    document.body.insertAdjacentHTML("beforeend",`<div class="overlay" id="ov-ac-team" onclick="if(event.target===this)acTeamClose()">
+      <div class="modal ac-tw" style="max-width:760px;"><div id="ac-tw-body"></div></div></div>`);
+  }
+  acTeamDraw(); openM("ac-team");
+}
+function acTeamClose(){ AC.open=null; closeM("ac-team"); }
+function acTeamDraw(){
+  const el=document.getElementById("ac-tw-body"), bid=AC.open; if(!el||!bid||!brands[bid]) return;
+  const may=canManagePeople(bid)&&AC.migr, team=acTeamOf(bid), svc=acSvcOf(bid);
+  const others=acBrands().filter(k=>k!==bid&&acTeamOf(k).length);
+  const svcHtml=AC_SVC.map(([k,l])=>`<label class="${svc.includes(k)?"on":""}${may&&AC.svcOk?"":" ro"}"><input type="checkbox" ${svc.includes(k)?"checked":""}
+      ${may&&AC.svcOk?`onchange="acSvcSet('${bid}','${k}',this.checked)"`:"disabled"}>${l}</label>`).join("");
+  const iAm=team.some(t=>t.user_id===ME.id&&t.team_role==="account_manager");
+  const person=t=>{
+    const p=acPerson(t.user_id), me=t.user_id===ME.id;
+    const sel=may?`<select class="cc-stsel" onchange="acSetRole('${t.user_id}','${bid}',this.value)">${AC_ROLES.map(([k,l])=>`<option value="${k}"${k===t.team_role?" selected":""}>${l}</option>`).join("")}</select>`
+      :`<span class="rol">${AC_ROLE_LBL[t.team_role]||""}</span>`;
+    return `<div class="ac-p${me?" me":""}" data-uid="${t.user_id}"><span class="e">${acEmoji(p)}</span>
+      <span class="nm"><b>${escHtml(p?p.name:"Someone")}${me?" <span class='bp-you'>you</span>":""}</b><span>${escHtml(p?p.email:"")}</span></span>
+      ${sel}${may||me?`<span class="x" title="Off the team" onclick="acOffTeam('${t.user_id}','${bid}')"><i class="ti ti-x"></i></span>`:""}</div>`;
+  };
+  const groups=AC_ROLES.map(([k,,many])=>{
+    const g=team.filter(t=>t.team_role===k).sort((a,b)=>acName(a.user_id).localeCompare(acName(b.user_id)));
+    const claim=k==="account_manager"&&!iAm&&acIsAM()&&AC.migr?`<span class="claim" onclick="acClaim('${bid}')"><i class="ti ti-hand-grab"></i>Claim</span>`:"";
+    return `<div class="bp-gh">${many} <span class="n">${g.length}</span>${claim}</div>${g.map(person).join("")||`<div class="ac-nobody">Nobody yet</div>`}`;
+  }).join("");
+  const clients=(PEOPLE||[]).filter(p=>p.role==="client"&&p.brand_id===bid);
+  el.innerHTML=`<div class="brs-h"><b>${escHtml(brands[bid].name)}</b><span class="bp-count">${team.length} ${team.length===1?"person":"people"}</span>
+      <span class="ac-svc">${svcHtml}</span>
+      <button class="brs-x" onclick="acTeamClose()">&times;</button></div>
+    <div class="brs-b bp-wrap" style="max-height:66vh;">
+      ${!AC.migr?`<div class="bp-none">The database change for this page has not been run yet.</div>`:""}
+      ${may?`<div class="bp-ctl"><span class="ac-add"><input id="ac-add-q" placeholder="Add a person to this team…" value="${escAttr(AC.addQ)}"
+            oninput="AC.addQ=this.value;acAddDraw()" onfocus="acAddDraw()" onclick="event.stopPropagation()"><span id="ac-add-l"></span></span>
+          ${others.length?`<select class="bp-sel cc-stsel" onchange="if(this.value){acCopyTeam(this.value,'${bid}');this.value='';}">
+            <option value="">Same team as…</option>${others.map(k=>`<option value="${k}">${escHtml(brands[k].name)} · ${acTeamOf(k).length}</option>`).join("")}</select>`:""}</div>`:""}
+      ${groups}
+      ${clients.length?`<div class="bp-gh">Client <span class="n">${clients.length}</span></div>${clients.map(p=>`<div class="ac-p"><span class="e">${acEmoji(p)}</span>
+        <span class="nm"><b>${escHtml(p.email)}</b><span>Client</span></span></div>`).join("")}`:""}
+    </div>
+    <div class="modal-foot"><button class="btn btn-g" onclick="acTeamClose()">Done</button></div>`;
+}
+function acAddDraw(){
+  const l=document.getElementById("ac-add-l"), bid=AC.open; if(!l||!bid) return;
+  const q=String(AC.addQ||"").trim().toLowerCase();
+  if(!q&&document.activeElement!==document.getElementById("ac-add-q")){ l.innerHTML=""; return; }
+  const on=new Set(acTeamOf(bid).map(t=>t.user_id));
+  const list=(PEOPLE||[]).filter(p=>p.role!=="client"&&!on.has(p.id)&&(!q||String(p.name).toLowerCase().includes(q)||String(p.email).toLowerCase().includes(q)))
+    .sort((a,b)=>String(a.name).localeCompare(String(b.name))).slice(0,30);
+  l.innerHTML=`<div class="ac-addl" onclick="event.stopPropagation()">${list.map(p=>`<div class="o" onmousedown="event.preventDefault()" onclick="acAddPick('${p.id}')"><span class="e">${acEmoji(p)}</span>${escHtml(p.name)}<span class="m">${p.toolRole==="account_manager"?"Account manager":"Creator"}</span></div>`).join("")
+    ||`<div class="none">${q?"Nobody matches.":"Everyone is already on this team."}</div>`}</div>`;
+}
+function acAddPick(uid){
+  const p=acPerson(uid), bid=AC.open; if(!p||!bid) return;
+  AC.addQ="";
+  acSetRole(uid,bid,p.toolRole==="account_manager"?"account_manager":"creator");
+}
+document.addEventListener("click",e=>{
+  if(!AC.open) return;
+  const l=document.getElementById("ac-add-l"); if(l&&!(e.target.closest&&e.target.closest(".ac-add"))) l.innerHTML="";
+});
+
+/* ── the route, the two tabs on All brands, the page's name ────────── */
+(function(){
+  const base=viewRoute;
+  viewRoute=function(v){
+    if(v==="accounts") return {render:renderAccounts,sidebar:buildAccountsSidebar,needs:"edit"};
+    return base(v);
+  };
+  PAGE_NAME.accounts="Accounts";
+  const baseTabs=renderBnTabs;
+  renderBnTabs=function(){
+    const el=document.getElementById("bn-tabs");
+    if(el&&!(activeBrand&&brands[activeBrand])&&acMay()){
+      el.style.display="";
+      const on=view==="accounts";
+      el.innerHTML=`<button class="bntab${on?"":" on"}" data-ac="cal" onclick="acPopClose();goHome()" aria-current="${on?"false":"page"}"><i class="ti ti-calendar"></i> Calendar</button>`
+        +`<button class="bntab${on?" on":""}" data-ac="acc" onclick="acGo()" aria-current="${on?"page":"false"}"><i class="ti ti-briefcase"></i> Accounts</button>`;
+      return;
+    }
+    return baseTabs.apply(this,arguments);
+  };
+  const baseRender=render;
+  render=function(){
+    /* Accounts belongs to All brands: a brand picked from anywhere takes
+       you to that brand, which pickBrand already does */
+    if(view==="accounts"&&activeBrand&&brands[activeBrand]) view="mplan";
+    if(view!=="accounts") acPopClose();
+    const out=baseRender.apply(this,arguments);
+    acColsSync();
+    return out;
+  };
+  /* THIS SCRIPT CAN ARRIVE AFTER BOOT HAS DRAWN THE PAGE — on a warm
+     cache the first render happens before the end of the file is read.
+     So: draw the tabs once more, and if the address asked for this page
+     and nothing has moved since, go there. */
+  try{
+    if(typeof ME==="object"&&ME&&ME.id){
+      renderBnTabs();
+      const q=new URLSearchParams(window.__URL_AT_LOAD||"");
+      if(q.get("p")==="accounts"&&view==="year"&&!activeBrand) acGo();
+    }
+  }catch(e){}
 })();
 </script>
 
