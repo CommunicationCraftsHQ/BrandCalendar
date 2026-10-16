@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.17 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.18 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12951,7 +12951,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.17 Tbilisi";
+const TOOL_VERSION="V118.18 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -24067,13 +24067,27 @@ function wClean(html){
       /* every attribute goes, then href is put back if it is safe — an
          allow-list, so a new attribute nobody thought of cannot arrive
          already permitted */
+      /* V3.45 — an empty <i> is a chip's icon left behind by the clean
+         (I is allowed because it is italic). Stored, it came back as a
+         second icon on every render. */
+      if(tag==="I"&&!String(ch.textContent||"").trim()){ ch.remove(); return; }
       const href=tag==="A"?ch.getAttribute("href"):null;
+      /* V3.45 — a link MENTION keeps its kind, and only its title: the
+         icon and the grey second line are drawn again on every render, so
+         nothing that can change is ever stored. */
+      const mk=tag==="A"?String(ch.getAttribute("data-m")||""):"";
+      const mt=(mk&&ch.querySelector(".lmn-t"))?ch.querySelector(".lmn-t").textContent:null;
       [...ch.attributes].forEach(a=>ch.removeAttribute(a.name));
       if(tag==="A"){
         if(href&&W_SAFE_HREF.test(String(href).trim())){
           ch.setAttribute("href",String(href).trim());
           ch.setAttribute("target","_blank");
           ch.setAttribute("rel","noreferrer noopener");
+          if(W_MKINDS[mk]){
+            ch.setAttribute("data-m",mk);
+            ch.textContent=String(mt!=null?mt:ch.textContent).replace(/\s+/g," ").trim();
+            return;
+          }
         } else {
           /* a javascript: or data: link is unwrapped, not deleted */
           walk(ch);
@@ -24098,18 +24112,211 @@ const wIsRich = v => /<[a-zA-Z/]/.test(String(v==null?"":v));
    on hover. The stored text is untouched — display only, so nothing is
    rewritten and nothing can be lost. */
 const W_URL=/\b(https?:\/\/[^\s<>"']+)/g;
+function wLnkHost(u){
+  let h=String(u||""); try{ h=new URL(u).hostname.replace(/^www\./,""); }catch(e){}
+  return h;
+}
+/* ONE SHORT CHIP, NEVER A LINE OF ADDRESS (V3.44, Chirag 16 Oct: three
+   SharePoint addresses in one note wrapped over nine lines). The words
+   are what somebody typed; a bare address shows the site it points at.
+   The address itself is never lost — it is the href and the hover. */
+function wLnkTag(url,label){
+  return '<a class="w-lnk" href="'+url+'" target="_blank" rel="noreferrer noopener" title="'+url+'">'
+       + '<i class="ti ti-link"></i>'+wEsc(label||wLnkHost(url))+'</a>';
+}
 function wAutoLink(escaped){
-  return escaped.replace(W_URL,u=>{
-    let host=u; try{ host=new URL(u).hostname.replace(/^www\./,""); }catch(e){}
-    return '<a href="'+u+'" target="_blank" rel="noreferrer noopener" title="'+u+'">'+wEsc(host)+' <i class="ti ti-external-link" style="font-size:11px;"></i></a>';
+  return String(escaped==null?"":escaped).replace(W_URL,u=>{
+    const m=/[.,;:)\]]+$/.exec(u);
+    const tail=m?m[0]:"";                      /* a full stop is not part of an address */
+    const url=tail?u.slice(0,-tail.length):u;
+    return wLnkTag(url, wLnkHost(url.replace(/&amp;/g,"&")))+tail;
   });
+}
+
+/* Every address inside a message becomes that chip, however the message
+   was written — typed as rich text, pasted, or stored years ago as
+   plain words. Text nodes only: a link that is already a link is left
+   alone, apart from being given the chip's own clothes. */
+function wLinkify(html){
+  const raw=String(html==null?"":html);
+  let doc;
+  try{ doc=new DOMParser().parseFromString("<div id=r>"+raw+"</div>","text/html"); }
+  catch(e){ return raw; }
+  const root=doc.getElementById("r"); if(!root) return raw;
+  const texts=[];
+  (function walk(n){
+    [...n.childNodes].forEach(ch=>{
+      if(ch.nodeType===3){
+        W_URL.lastIndex=0;
+        if(W_URL.test(ch.nodeValue||"")) texts.push(ch);
+        W_URL.lastIndex=0; return;
+      }
+      if(ch.nodeType!==1) return;
+      if(ch.tagName==="A"&&W_MKINDS[ch.getAttribute("data-m")||""]){   /* V3.45 — a mention */
+        const t=doc.createElement("span");
+        t.innerHTML=wMentionHtml(ch.getAttribute("href")||"",ch.getAttribute("data-m"),ch.textContent||"");
+        if(t.firstChild) ch.replaceWith(t.firstChild);
+        return;
+      }
+      if(ch.tagName==="A"){                    /* already a link: dress it, leave it */
+        if(!/\bw-lnk\b/.test(ch.getAttribute("class")||"")) ch.setAttribute("class","w-lnk");
+        if(!ch.querySelector("i.ti")){
+          const i=doc.createElement("i"); i.className="ti ti-link";
+          ch.insertBefore(i,ch.firstChild);
+        }
+        return;
+      }
+      walk(ch);
+    });
+  })(root);
+  texts.forEach(t=>{
+    let out=wAutoLink(wEsc(t.nodeValue||""));
+    /* WORDS, A COLON, THEN THE ADDRESS — the words become the link.
+       That is how the team already writes these notes, so an old note
+       tidies itself without a single character being rewritten. */
+    out=out.replace(/([^\n:<>]{1,60}?)\s*:\s*(<a class="w-lnk"[^>]*>)<i class="ti ti-link"><\/i>[^<]*<\/a>/g,
+      (whole,label,open)=>{
+        const words=label.replace(/^[\s\-\u2013\u2022]+/,"").trim();
+        return words ? (open+'<i class="ti ti-link"></i>'+words+'</a>') : whole;
+      });
+    const span=doc.createElement("span"); span.innerHTML=out;
+    t.replaceWith(...span.childNodes);
+  });
+  return root.innerHTML;
+}
+
+
+/* ══ V3.45 · PASTE AS — A LINK CAN BE A MENTION ════════════════════════
+   Chirag, 16 Oct, after Notion: a pasted link offers "Paste as" — Mention
+   or URL. Mention is a pill that says WHAT the link is: a task's title, a
+   mood board tag and its brand, an Instagram account. URL is the chip
+   above.
+
+   STORED AS LITTLE AS POSSIBLE: <a href data-m="task">title</a>. The
+   icon and the grey second line are worked out again on every render, and
+   a tool that knows the item's current name (the Calendar knows its own
+   tasks) hands it in through wLinkName, so a renamed task reads right
+   without one stored note being rewritten. */
+const W_MKINDS={task:1,post:1,meeting:1,mood:1,shoot:1,page:1,tool:1,web:1};
+const W_KIND_LOOK={
+  task:["ti-checkbox","Task"], post:["ti-photo","Post"], meeting:["ti-notes","Meeting"],
+  mood:["ti-mood-heart","Mood board"], shoot:["ti-camera","Shoot"], page:["ti-layout","Marketing Calendar"],
+  tool:["ti-apps",""], web:["ti-world",""]
+};
+
+/* tracking is not part of an address. The suite's own rule for pasted links. */
+const W_TRACK=/^(utm_[a-z_]+|fbclid|gclid|dclid|gbraid|wbraid|msclkid|yclid|twclid|ttclid|li_fat_id|igsh|igshid|mc_cid|mc_eid|_hsenc|_hsmi|ref_src|ref_url)$/i;
+function wCleanUrl(u){
+  let x; try{ x=new URL(String(u||"").trim()); }catch(e){ return String(u||"").trim(); }
+  const drop=[...x.searchParams.keys()].filter(k=>W_TRACK.test(k)
+    ||(k==="si"&&/(^|\.)(youtube\.com|youtu\.be|spotify\.com)$/i.test(x.hostname)));
+  drop.forEach(k=>x.searchParams.delete(k));
+  return x.toString();
+}
+
+/* Is this one of ours, and what does it point at? */
+function wSuiteLink(u){
+  let x; try{ x=new URL(u); }catch(e){ return null; }
+  const ours=/^communicationcraftshq\.github\.io$/i.test(x.hostname)
+    ||(typeof location!=="undefined"&&location.host&&x.host===location.host);
+  if(!ours) return null;
+  const p=x.pathname||"", q=x.searchParams, h=x.hash||"";
+  const hq=new URLSearchParams(h.indexOf("?")>=0?h.slice(h.indexOf("?")+1):"");
+  if(/\/production\//i.test(p)) return h.indexOf("#shoot")===0&&hq.get("id")
+    ? {kind:"shoot",id:hq.get("id"),tool:"Production Planner"} : {kind:"tool",tool:"Production Planner"};
+  if(/\/ProposalBank\//i.test(p)) return {kind:"tool",tool:"Proposal Bank"};
+  if(/\/portfolio\//i.test(p))    return {kind:"tool",tool:"Portfolio"};
+  if(/\/roster\//i.test(p))       return {kind:"tool",tool:"Roster"};
+  if(/\/app\.html$/i.test(p))     return {kind:"tool",tool:"CC Platform"};
+  if(q.get("task"))    return {kind:"task",id:q.get("task"),tool:"Marketing Calendar"};
+  if(q.get("meeting")) return {kind:"meeting",id:q.get("meeting"),tool:"Marketing Calendar"};
+  if(q.get("post"))    return {kind:"post",id:q.get("post"),comment:q.get("c")||"",tool:"Marketing Calendar"};
+  if(q.get("p")==="mood"&&q.get("tag")) return {kind:"mood",id:q.get("tag"),brand:q.get("b")||"",tool:"Marketing Calendar"};
+  if(q.get("b"))       return {kind:"page",brand:q.get("b"),page:q.get("p")||"",tool:"Marketing Calendar"};
+  return {kind:"tool",tool:"Marketing Calendar"};
+}
+
+/* A site the team links to every day, by name and by its own icon. */
+const W_SITES=[
+  [/(^|\.)instagram\.com$/,"Instagram","ti-brand-instagram"],
+  [/(^|\.)(facebook\.com|fb\.com|fb\.watch)$/,"Facebook","ti-brand-facebook"],
+  [/(^|\.)(youtube\.com|youtu\.be)$/,"YouTube","ti-brand-youtube"],
+  [/(^|\.)linkedin\.com$/,"LinkedIn","ti-brand-linkedin"],
+  [/(^|\.)(x\.com|twitter\.com)$/,"X","ti-brand-x"],
+  [/(^|\.)threads\.(net|com)$/,"Threads","ti-brand-threads"],
+  [/(^|\.)pinterest\.[a-z.]+$|(^|\.)pin\.it$/,"Pinterest","ti-brand-pinterest"],
+  [/(^|\.)vimeo\.com$/,"Vimeo","ti-brand-vimeo"],
+  [/(^|\.)behance\.net$/,"Behance","ti-brand-behance"],
+  [/(^|\.)dribbble\.com$/,"Dribbble","ti-brand-dribbble"],
+  [/(^|\.)figma\.com$/,"Figma","ti-brand-figma"],
+  [/^drive\.google\.com$/,"Google Drive","ti-brand-google-drive"],
+  [/^docs\.google\.com$/,"Google Docs","ti-file-text"],
+  [/(^|\.)(sharepoint\.com|onedrive\.live\.com|1drv\.ms)$/,"SharePoint","ti-file-text"],
+  [/(^|\.)(whatsapp\.com|wa\.me)$/,"WhatsApp","ti-brand-whatsapp"],
+  [/(^|\.)github\.com$/,"GitHub","ti-brand-github"],
+  [/(^|\.)notion\.(so|site)$/,"Notion","ti-brand-notion"],
+  [/(^|\.)canva\.com$/,"Canva","ti-palette"],
+  [/(^|\.)amazon\.[a-z.]+$|(^|\.)amzn\.(to|in)$/,"Amazon","ti-brand-amazon"]
+];
+function wSiteOf(u){
+  const h=wLnkHost(u).toLowerCase();
+  for(const [re,name,icon] of W_SITES) if(re.test(h)) return {name,icon,host:h};
+  return {name:h,icon:"ti-world",host:h};
+}
+/* The best name an address gives away before anything is fetched. */
+function wWebGuess(u){
+  const s=wSiteOf(u);
+  let path=""; try{ path=new URL(u).pathname; }catch(e){}
+  const seg=path.split("/").filter(Boolean);
+  if(/^(Instagram|X|Threads)$/.test(s.name)&&seg.length===1&&!/^(p|reel|reels|tv|stories|explore)$/i.test(seg[0]))
+    return "@"+seg[0].replace(/^@/,"");
+  if(s.name==="LinkedIn"&&/^(company|in|school|showcase)$/.test(seg[0]||"")&&seg[1])
+    return seg[1].replace(/[-_]+/g," ").replace(/\b\w/g,c=>c.toUpperCase());
+  if(s.name==="YouTube"&&seg[0]&&seg[0].charAt(0)==="@") return seg[0];
+  return s.name;
+}
+/* A page's own title, without the site's name hanging off the end. */
+function wTidyTitle(t,site){
+  let x=String(t||"").replace(/\s+/g," ").trim();
+  const nm=String(site||"").toLowerCase();
+  if(nm){
+    const parts=x.split(/\s+[|•·–—-]\s+/);
+    while(parts.length>1&&parts[parts.length-1].toLowerCase().indexOf(nm)>=0) parts.pop();
+    x=parts.join(" · ");
+    x=x.replace(/\s+on\s+(Instagram|LinkedIn|X|Threads|Facebook)\s*:.*$/i,"");
+  }
+  return x.slice(0,90).trim();
+}
+
+/* What a tool knows about one of its own links right now. */
+const W_LINK_NAMES={};
+function wLinkName(url,info){ if(url&&info&&info.title) W_LINK_NAMES[url]=info; return W_LINK_NAMES[url]||null; }
+
+function wMentionLook(url,kind,title){
+  const known=W_LINK_NAMES[url]||null;
+  const look=W_KIND_LOOK[kind]||W_KIND_LOOK.web;
+  let icon=look[0], sub=look[1];
+  if(kind==="web"){ const s=wSiteOf(url); icon=s.icon; sub=s.name; }
+  if(kind==="tool"){ const s=wSuiteLink(url); sub=""; title=title||(s&&s.tool)||"CC Suite"; }
+  const t=String((known&&known.title)||title||sub||wLnkHost(url)).trim();
+  let sb=(known&&known.sub!=null)?known.sub:sub;
+  if(sb&&sb.toLowerCase()===t.toLowerCase()) sb="";
+  return {icon,title:t,sub:sb};
+}
+function wMentionHtml(url,kind,title){
+  const k=W_MKINDS[kind]?kind:"web";
+  const L=wMentionLook(url,k,title);
+  const href=W_SAFE_HREF.test(String(url||""))?String(url).replace(/"/g,"&quot;"):"#";
+  return '<a class="lmn" data-m="'+k+'" href="'+href+'" target="_blank" rel="noreferrer noopener" title="'+href+'" contenteditable="false">'
+       + '<i class="ti '+L.icon+'"></i><span class="lmn-t">'+wEsc(L.title)+'</span>'
+       + (L.sub?'<span class="lmn-s">'+wEsc(L.sub)+'</span>':'')+'</a>';
 }
 
 /* stored value -> what the screen shows */
 function wRender(v){
   const raw=String(v==null?"":v);
-  if(!wIsRich(raw)) return wAutoLink(wEsc(raw)).replace(/\n/g,"<br>");
-  return wClean(raw);
+  if(!wIsRich(raw)) return wLinkify(wEsc(raw).replace(/\n/g,"<br>"));
+  return wLinkify(wClean(raw));
 }
 
 /* stored value -> plain words. The deck, the Word file, a notification
@@ -25133,14 +25340,82 @@ function wFmt(ev,cmd,arg){
   if(WBAR_FOR) try{ WBAR_FOR.dispatchEvent(new Event("input",{bubbles:true})); }catch(e){}
   return false;
 }
+/* ══ V3.44 · A LINK IS A CHIP, AND THE ADDRESS IS ASKED FOR IN PLACE ══
+   Until now this called the browser's own prompt() — a grey system box
+   that cannot be styled, that some browsers refuse outright, and that
+   stops every other script while it is open. It asks here instead, in
+   two fields that look like the rest of the suite. */
+let WLINK_RANGE=null, WLINK_BOX=null;
+
+function wLinkSave(){
+  WLINK_BOX=WBAR_FOR; WLINK_RANGE=null;
+  try{
+    const sel=getSelection();
+    if(sel&&sel.rangeCount) WLINK_RANGE=sel.getRangeAt(0).cloneRange();
+  }catch(e){}
+}
+function wLinkRestore(){
+  if(!WLINK_BOX) return;
+  try{
+    WLINK_BOX.focus();
+    if(WLINK_RANGE){
+      const sel=getSelection(); sel.removeAllRanges(); sel.addRange(WLINK_RANGE);
+    }
+  }catch(e){}
+}
+function wLinkEl(){
+  let el=document.getElementById("mp-link");
+  if(el) return el;
+  el=document.createElement("div"); el.id="mp-link"; el.className="mplink";
+  el.innerHTML='<input class="mpl-t" type="text" placeholder="What it is">'
+    +'<input class="mpl-u" type="url" placeholder="https://">'
+    +'<button class="mpl-go" type="button">Add</button>';
+  document.body.appendChild(el);
+  el.querySelector(".mpl-go").addEventListener("mousedown",e=>{ e.preventDefault(); wLinkApply(); });
+  el.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){ e.preventDefault(); wLinkApply(); }
+    if(e.key==="Escape"){ e.preventDefault(); wLinkClose(); }
+  });
+  return el;
+}
+function wLinkClose(){
+  const el=document.getElementById("mp-link");
+  if(el) el.classList.remove("open");
+  WLINK_RANGE=null; WLINK_BOX=null;
+}
+function wLinkApply(){
+  const el=wLinkEl();
+  const u=String(el.querySelector(".mpl-u").value||"").trim();
+  const t=String(el.querySelector(".mpl-t").value||"").trim();
+  if(!u){ wLinkClose(); return; }
+  if(!W_SAFE_HREF.test(u)){ WBAR_CFG.toast("Only http, https and mailto links","err"); return; }
+  const box=WLINK_BOX;
+  wLinkRestore();
+  const had=String(getSelection()||"").trim();
+  try{ document.execCommand("insertHTML",false,wLnkTag(u, t||had||wLnkHost(u))); }catch(e){}
+  if(box) try{ box.dispatchEvent(new Event("input",{bubbles:true})); }catch(e){}
+  wLinkClose();
+}
 function wLink(ev){
   if(ev){ ev.preventDefault(); ev.stopPropagation(); }
-  const u=prompt("Link address"); if(!u) return false;
-  if(!W_SAFE_HREF.test(String(u).trim())){ WBAR_CFG.toast("Only http, https and mailto links","err"); return false; }
-  try{ document.execCommand("createLink",false,String(u).trim()); }catch(e){}
-  if(WBAR_FOR) try{ WBAR_FOR.dispatchEvent(new Event("input",{bubbles:true})); }catch(e){}
+  wLinkSave();
+  const el=wLinkEl();
+  let had=""; try{ had=String(getSelection()||"").trim(); }catch(e){}
+  el.querySelector(".mpl-t").value=had;
+  el.querySelector(".mpl-u").value="";
+  el.classList.add("open");
+  /* under the bar, and never off the right edge */
+  const bar=document.getElementById("mp-bar");
+  const r=bar?bar.getBoundingClientRect():(WLINK_BOX?WLINK_BOX.getBoundingClientRect():null);
+  if(r){
+    const w=el.offsetWidth||420, vw=window.innerWidth||1200;
+    el.style.top=(r.bottom+6)+"px";
+    el.style.left=Math.max(8,Math.min(r.left,vw-w-8))+"px";
+  }
+  setTimeout(()=>{ try{ el.querySelector(had?".mpl-u":".mpl-t").focus(); }catch(e){} },0);
   return false;
 }
+
 function wAttach(ev){
   if(ev){ ev.preventDefault(); ev.stopPropagation(); }
   try{ WBAR_CFG.onAttach(WBAR_FOR); }catch(e){}
@@ -25296,12 +25571,150 @@ document.addEventListener("input",e=>{
   if(WBAR_FOR&&e.target===WBAR_FOR) wBarShow(WBAR_FOR);
 },true);
 
+/* ══ A PASTED ADDRESS COLLAPSES, IN EVERY BOX IN EVERY TOOL ═════════
+   One listener in the kit rather than a handler per tool: the Calendar's
+   own boxes are plain JS and would have been missed. Capture, so the
+   React writer's own paste never also runs on the same event. Only a
+   clipboard holding ONE address is taken; anything else pastes as it
+   always did. */
+const W_URL_ONE=/^https?:\/\/[^\s<>"']+$/i;
+document.addEventListener("paste",e=>{
+  const t0=e.target;
+  const el=(t0&&t0.closest)?t0.closest('[contenteditable="true"]'):null;
+  if(!el||!el.isContentEditable) return;
+  const dt=e.clipboardData; if(!dt) return;
+  if(dt.files&&dt.files.length) return;              /* files are the writer's own business */
+  const raw=String(dt.getData("text/plain")||"").trim();
+  if(!W_URL_ONE.test(raw)||!W_SAFE_HREF.test(raw)) return;
+  e.preventDefault(); e.stopPropagation();
+  const txt=wCleanUrl(raw);                            /* V3.45 — no tracking tails */
+  let had=""; try{ had=String(getSelection()||"").trim(); }catch(err){}
+  const tag=wLnkTag(txt, had||wLnkHost(txt)).replace("<a ",'<a data-wnew="1" ');
+  try{ document.execCommand("insertHTML",false,tag); }catch(err){}
+  const chip=el.querySelector("a[data-wnew]");
+  if(chip) chip.removeAttribute("data-wnew");
+  try{ el.dispatchEvent(new Event("input",{bubbles:true})); }catch(err){}
+  /* words selected and a link pasted over them: those words ARE the
+     link, so there is nothing to ask. */
+  if(chip&&!had&&!el.dataset.nomention) wPasteAsOpen(el,chip,txt);
+},true);
+
+/* ══ V3.45 · PASTE AS — MENTION OR URL ════════════════════════════════
+   The link lands as the URL chip at once, so nothing waits on the menu,
+   and "Paste as" opens under it with Mention lit: Enter takes the
+   mention, Esc or simply typing on keeps the chip. One menu, drawn here
+   in plain DOM, so the Calendar and every bundled tool show the same
+   one. */
+let WPA=null;          /* {box, chip, url, sel} */
+function wPasteAsEl(){
+  let el=document.getElementById("mp-paste");
+  if(el) return el;
+  el=document.createElement("div"); el.id="mp-paste"; el.className="ccw-paste";
+  document.body.appendChild(el);
+  el.addEventListener("mousedown",e=>{
+    const r=e.target.closest&&e.target.closest("[data-pa]");
+    e.preventDefault();
+    if(r) wPasteAsPick(Number(r.dataset.pa));
+  });
+  return el;
+}
+function wPasteAsDraw(){
+  const el=wPasteAsEl(); if(!WPA) return;
+  const s=wSuiteLink(WPA.url);
+  const ic=s?({task:"ti-checkbox",post:"ti-photo",meeting:"ti-notes",mood:"ti-mood-heart",shoot:"ti-camera"}[s.kind]||"ti-apps")
+            :wSiteOf(WPA.url).icon;
+  el.innerHTML='<div class="h">Paste as</div>'
+    +'<div class="row'+(WPA.sel===0?' on':'')+'" data-pa="0"><i class="ti '+ic+'"></i>Mention</div>'
+    +'<div class="row'+(WPA.sel===1?' on':'')+'" data-pa="1"><i class="ti ti-link"></i>URL</div>';
+}
+function wPasteAsOpen(box,chip,url){
+  WPA={box,chip,url,sel:0};
+  const el=wPasteAsEl(); wPasteAsDraw(); el.classList.add("open");
+  const r=chip.getBoundingClientRect();
+  const vh=window.innerHeight||800, vw=window.innerWidth||1200;
+  const h=el.offsetHeight||96, w=el.offsetWidth||180;
+  const below=vh-r.bottom > h+12;
+  el.style.top=Math.round((below?r.bottom+6:Math.max(8,r.top-h-6))+window.scrollY)+"px";
+  el.style.left=Math.round(Math.max(8,Math.min(r.left,vw-w-8))+window.scrollX)+"px";
+}
+function wPasteAsClose(){
+  const el=document.getElementById("mp-paste");
+  if(el) el.classList.remove("open");
+  WPA=null;
+}
+function wPasteAsPick(i){
+  const P=WPA; wPasteAsClose();
+  if(!P||i!==0) return;                 /* URL: the chip is already there */
+  wPasteMention(P.box,P.chip,P.url);
+}
+/* Swap the chip for the mention, put the caret after it, then ask the
+   tool for a better name and write it in when it comes. */
+function wPasteMention(box,chip,url){
+  if(!box||!chip||!box.contains(chip)) return null;
+  const s=wSuiteLink(url);
+  const kind=s?s.kind:"web";
+  const t=document.createElement("span");
+  t.innerHTML=wMentionHtml(url,kind,s?"":wWebGuess(url));
+  const m=t.firstChild; if(!m) return null;
+  chip.replaceWith(m);
+  const sp=document.createTextNode("\u00a0");
+  m.after(sp);
+  try{
+    box.focus();
+    const r=document.createRange(); r.setStart(sp,1); r.collapse(true);
+    const sel=getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  }catch(e){}
+  try{ box.dispatchEvent(new Event("input",{bubbles:true})); }catch(e){}
+  Promise.resolve().then(()=>WBAR_CFG.nameLink?WBAR_CFG.nameLink(url,s):null).then(info=>{
+    if(!info||!info.title||!m.isConnected) return;
+    const site=s?"":wSiteOf(url).name;
+    const title=s?String(info.title):wTidyTitle(info.title,site);
+    if(!title) return;
+    if(s) wLinkName(url,{title,sub:info.sub!=null?info.sub:undefined});
+    const tt=m.querySelector(".lmn-t"); if(tt) tt.textContent=title;
+    const ss=m.querySelector(".lmn-s");
+    const sub=info.sub!=null?String(info.sub):(ss?ss.textContent:"");
+    if(ss&&sub) ss.textContent=sub;
+    else if(!ss&&sub){ const n=document.createElement("span"); n.className="lmn-s"; n.textContent=sub; m.appendChild(n); }
+    try{ box.dispatchEvent(new Event("input",{bubbles:true})); }catch(e){}
+  }).catch(()=>{});
+  return m;
+}
+/* the keys belong to the menu while it is open: arrows walk, Enter
+   picks (and does NOT send the message), Esc keeps the URL, and any
+   other key closes it and types as normal. */
+document.addEventListener("keydown",e=>{
+  if(!WPA) return;
+  const k=e.key;
+  if(k==="ArrowDown"||k==="ArrowUp"){ e.preventDefault(); e.stopPropagation(); WPA.sel=WPA.sel?0:1; wPasteAsDraw(); return; }
+  if(k==="Enter"||k==="Tab"){ e.preventDefault(); e.stopPropagation(); wPasteAsPick(WPA.sel); return; }
+  if(k==="Escape"){ e.preventDefault(); e.stopPropagation(); wPasteAsClose(); return; }
+  if(k==="Shift"||k==="Meta"||k==="Control"||k==="Alt") return;
+  wPasteAsClose();
+},true);
+document.addEventListener("mousedown",e=>{
+  if(WPA&&!(e.target.closest&&e.target.closest("#mp-paste"))) wPasteAsClose();
+},true);
+
+
+/* Cmd K — the same two fields, without reaching for the bar. */
+document.addEventListener("keydown",e=>{
+  if(!(e.metaKey||e.ctrlKey) || String(e.key||"").toLowerCase()!=="k") return;
+  const t0=e.target;
+  if(!t0||!t0.isContentEditable) return;
+  e.preventDefault(); e.stopPropagation();
+  if(!WBAR_FOR) WBAR_FOR=t0;
+  wLink(null);
+},true);
+
 /* The bar's buttons are inline handlers on an element in document.body,
    so the functions have to be reachable by bare name from there. In the
    Calendar they already are; in a bundled tool they are not, and the
    bar would be five buttons that silently do nothing. */
 try{
   window.wFmt=wFmt; window.wLink=wLink; window.wAttach=wAttach;
+  window.wLinkApply=wLinkApply; window.wLinkClose=wLinkClose;
+  window.wPasteAsPick=wPasteAsPick;
 }catch(e){}
 
 /* ==CC-WRITER-BAR:END== */
@@ -25337,7 +25750,10 @@ function rtClear(el){ if(!el) return; if(el.isContentEditable) el.innerHTML=""; 
 /* a comment's body may be either era: plain text (every comment before
    today) or this editor's HTML. One reader for both. */
 function fbBody(text){
-  return mpIsRich(text) ? fbHighlightMentions(mpClean(text)) : fbRich(text);
+  /* V118.18 — the kit's reader, so an address is the one short chip and a
+     pasted mention is a pill here too (V3.44 / V3.45 in the kit). Every
+     message, old or new, plain or rich, goes through wRender. */
+  return fbHighlightMentions(wRender(text));
 }
 /* text before the caret inside a contenteditable — the @ matcher needs it */
 const rtTextUptoCaret=wTextUptoCaret;
@@ -39804,6 +40220,97 @@ function cpLinkSave(id,i,kind,off){
     }catch(e){}
     return out;
   };
+})();
+</script>
+<script>
+/* ══ V118.18 TBILISI · PASTE AS — MENTION OR URL ═══════════════════════
+   Chirag, 16 Oct: a link pasted into any message box offers Mention or
+   URL, the way Notion does. The menu, the pill and the stored shape are
+   the kit's (writer-core / writer-bar, V3.45). What only the Calendar
+   can do is NAME its own links: a task's title, a mood board tag, a
+   meeting, a post, a shoot — and say which brand it belongs to.
+
+   An outside link is named by the page's own title, read by the same
+   server reader the mood board uses, asked for the title only: no
+   picture is saved and no brand is needed. Until it answers, the pill
+   shows what the address gives away (@handle, the site's name). */
+(function(){
+  const PAGE_NAMES={tasks:"Tasks",mood:"Mood board",brief:"Strategy",content:"Posts",plan:"Plan",
+                    promotions:"Promotions",year:"Calendar",accounts:"Accounts"};
+  const bn=id=>(brands&&brands[id]&&brands[id].name)||"";
+  const withBrand=(kind,id)=>bn(id)?kind+" · "+bn(id):kind;
+  const day=(y,m,d)=>{ try{ return new Date(Number(y),Number(m)-1,Number(d)||1).toLocaleDateString("en-GB",{day:"numeric",month:"short"}); }catch(e){ return ""; } };
+  async function one(table,cols,id){
+    const r=await sb.from(table).select(cols).eq("id",id).is("deleted_at",null).maybeSingle();
+    return r&&r.data||null;
+  }
+  async function suiteName(s){
+    if(s.kind==="task"){ const r=await one("branding_tasks","title,brand_id",s.id);
+      return r&&{title:r.title||"Task",sub:withBrand("Task",r.brand_id)}; }
+    if(s.kind==="meeting"){ const r=await one("brand_meetings","topic,held_on,brand_id",s.id);
+      if(!r) return null; const d=String(r.held_on||"").slice(0,10).split("-");
+      return {title:r.topic||("Meeting, "+day(d[0],d[1],d[2])),sub:withBrand("Meeting",r.brand_id)}; }
+    if(s.kind==="post"){ const r=await one("social_posts","format,date,month,year,brand_id",s.id);
+      if(!r) return null;
+      const fmt=String(r.format||"post"); const what=fmt.charAt(0).toUpperCase()+fmt.slice(1);
+      const when=(r.year&&r.month&&r.date)?day(r.year,r.month,r.date):"";
+      return {title:[what,when].filter(Boolean).join(", "),sub:withBrand("Post",r.brand_id)}; }
+    if(s.kind==="mood"){ const r=await one("mood_tags","name,brand_id",s.id);
+      return r&&{title:r.name||"Mood board",sub:withBrand("Mood board",r.brand_id)}; }
+    if(s.kind==="shoot"){ const r=await one("productions","shoot_type,shoot_types,date_year,date_month,date_day,brand_id",s.id);
+      if(!r) return null;
+      const what=(Array.isArray(r.shoot_types)&&r.shoot_types.length?r.shoot_types.join(", "):r.shoot_type)||"Shoot";
+      const when=r.date_year?day(r.date_year,r.date_month,r.date_day):"";
+      return {title:[what,when].filter(Boolean).join(", "),sub:withBrand("Shoot",r.brand_id)}; }
+    if(s.kind==="page"){ const b=bn(s.brand); if(!b) return null;
+      return {title:b,sub:PAGE_NAMES[s.page]||"Marketing Calendar"}; }
+    return null;
+  }
+  async function webName(url){
+    const {data:{session}}=await sb.auth.getSession(); if(!session) return null;
+    const r=await fetch(MDB_FN,{method:"POST",
+      headers:{authorization:"Bearer "+(session.access_token||""),"content-type":"application/json"},
+      body:JSON.stringify({url,title_only:true})});
+    if(!r.ok) return null;
+    const out=await r.json().catch(()=>null);
+    return out&&out.title?{title:String(out.title)}:null;
+  }
+  const ASKED={};
+  function nameLink(url,s){
+    if(ASKED[url]) return ASKED[url];
+    ASKED[url]=(s?suiteName(s):webName(url)).then(info=>{
+      if(info&&s) wLinkName(url,info);
+      return info;
+    }).catch(()=>null);
+    return ASKED[url];
+  }
+  wBarConfig({nameLink});
+
+  /* A STORED MENTION READS TODAY'S NAME. The note keeps the title it
+     was written with; a Calendar item is asked for its current one the
+     first time its pill is drawn, and every pill for it is corrected. */
+  function refresh(){
+    document.querySelectorAll("a.lmn[data-m]:not([data-nm])").forEach(a=>{
+      a.setAttribute("data-nm","1");
+      const href=a.getAttribute("href")||"";
+      const s=wSuiteLink(href);
+      if(!s||s.kind==="tool"||a.closest('[contenteditable="true"]')) return;
+      nameLink(href,s).then(info=>{
+        if(!info||!info.title) return;
+        document.querySelectorAll("a.lmn[data-m]").forEach(b=>{
+          if(b.getAttribute("href")!==href||b.closest('[contenteditable="true"]')) return;
+          const t=b.querySelector(".lmn-t"); if(t&&t.textContent!==info.title) t.textContent=info.title;
+          const ss=b.querySelector(".lmn-s"); if(ss&&info.sub) ss.textContent=info.sub;
+        });
+      });
+    });
+  }
+  let queued=false;
+  try{
+    new MutationObserver(()=>{ if(queued) return; queued=true;
+      requestAnimationFrame(()=>{ queued=false; try{ refresh(); }catch(e){} }); })
+      .observe(document.body,{childList:true,subtree:true});
+  }catch(e){}
 })();
 </script>
 
