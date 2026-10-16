@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.6 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.7 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12953,7 +12953,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.6 Tbilisi";
+const TOOL_VERSION="V118.7 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -37988,7 +37988,7 @@ function bfRowHtml(f,showFold){
   return `<div class="bf-row" data-file="${f.id}">
     ${bfIcon(f.file_name)}
     <div class="dn">${name}<span>${escHtml(bfSize(f.size_bytes))}</span></div>
-    <span class="bf-fold">${showFold?escHtml((bfFolder(f.folder_id)||{}).name||""):""}</span>
+    <span class="bf-fold"></span>
     <span class="bf-tk${n?"":" none"}${may?"":" ro"}" ${may?`onclick="bfTaskPick(event,'${f.id}')"`:""}>${n?`Linked to <b>${n} task${n>1?"s":""}</b>`:(may?"Link to a task":"")}</span>
     <span class="bf-src${f.src==="lead"?" lead":""}">${BF_SRC[f.src]||""}</span>
     <span class="who">${escHtml([who,when].filter(Boolean).join(" · "))}</span>
@@ -38009,8 +38009,6 @@ function bfRowMenu(ev,id){
   const others=BF.folders.filter(x=>x.id!==f.folder_id);
   bfPop(ev,`<div class="bf-menu">
     <div class="bf-mi" onclick="bfPopClose();bfStartRename('${id}')"><i class="ti ti-pencil"></i>Rename</div>
-    <div class="bf-msep"></div><div class="bf-mh">Move to folder</div>
-    ${others.map(o=>`<div class="bf-mi" onclick="bfMove('${id}','${o.id}')"><i class="ti ti-folder"></i>${escHtml(o.name)}</div>`).join("")||`<div class="bf-mi">No other folder</div>`}
     <div class="bf-msep"></div>
     <div class="bf-mi red" onclick="bfPopClose();bfDetach('${id}')"><i class="ti ti-x"></i>Take it off this brand</div></div>`,true);
 }
@@ -38106,12 +38104,13 @@ async function bfTie(fid,tid){
 
 /* ══ ADDING A FILE — "Add a file" in the black bar asks which folder ══ */
 function bfAddMenu(ev){
+  /* V118.7 — Chirag, 16 Oct: "There should be only two folders, from us
+     and from the client. There are no subfolders required." The folder a
+     file goes into says who it came from, so the menu is the two folders. */
   if(!BF.ok){ toast("The files are still loading","err"); return; }
-  BF._src=BF._src||"us";
-  bfPop(ev,`<div class="bf-menu" style="min-width:240px">
-    <div class="bf-seg"><button class="${BF._src==="us"?"on":""}" onclick="BF._src='us';bfAddMenu(event)">From us</button><button class="${BF._src==="client"?"on":""}" onclick="BF._src='client';bfAddMenu(event)">From the client</button></div>
-    <div class="bf-mh">Into which folder</div>
-    ${BF.folders.map(f=>`<div class="bf-mi" onclick="bfPickFiles('${f.id}')"><i class="ti ti-folder"></i>${escHtml(f.name)}${BF.fold===f.id?`<span class="s">open now</span>`:""}</div>`).join("")}</div>`,true);
+  const fo=k=>BF.folders.find(f=>f.name.toLowerCase()===(k==="client"?"from the client":"from us"));
+  const row=k=>{ const f=fo(k); return f?`<div class="bf-mi" onclick="BF._src='${k}';bfPickFiles('${f.id}')"><i class="ti ti-folder"></i>${escHtml(f.name)}</div>`:""; };
+  bfPop(ev,`<div class="bf-menu" style="min-width:220px">${row("us")}${row("client")}</div>`,true);
 }
 function bfPickFiles(fid){
   bfPopClose();
@@ -38204,7 +38203,6 @@ function bfGo(fold){
   closeAllPops(); bfPopClose(); setView("files"); const m=document.getElementById("main"); if(m) m.scrollTop=0;
 }
 const BF_FIELDS=[
-  {k:"src", label:"Source",  icon:"inbox"},
   {k:"type",label:"Type",    icon:"file"},
   {k:"tied",label:"Linked",  icon:"link"},
   {k:"by",  label:"Added by",icon:"user"},
@@ -38271,7 +38269,7 @@ function buildFilesSidebar(){
   bfEnsure();
   const st=document.getElementById("sb-stats"); if(st) st.innerHTML="";
   const sm=document.getElementById("sb-months"); if(!sm) return;
-  const cnt=id=>BF.files.filter(f=>f.folder_id===id).length, may=bfMay();
+  const cnt=id=>BF.files.filter(f=>f.folder_id===id).length, may=false;   /* V118.7 — two fixed folders */
   sm.innerHTML=`<div class="mdb-up" onclick="openBrief()"><i class="ti ti-arrow-left"></i> Strategy</div>
     <div class="s-lbl">Folders</div>
     <div class="mdb-trow${BF.fold==="all"?" on":""}" onclick="bfFold('all')"><span class="nm">All files</span><span class="ct">${BF.files.length}</span></div>
