@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.16 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.17 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12951,7 +12951,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.16 Tbilisi";
+const TOOL_VERSION="V118.17 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -39355,11 +39355,15 @@ function acInScopeFor(bid){ return acInScope().indexOf(bid)>-1; }
   const baseTabs=renderBnTabs;
   renderBnTabs=function(){
     const el=document.getElementById("bn-tabs");
-    if(el&&!(activeBrand&&brands[activeBrand])&&acMay()){
+    /* V118.17 — Calendar · Events · Accounts. The Calendar / Events
+       switch moved up here from the first row; Accounts only for admins
+       and account managers. */
+    if(el&&!(activeBrand&&brands[activeBrand])&&typeof ME==="object"&&ME&&ME.role&&ME.role!=="client"&&ME.role!=="pending"){
       el.style.display="";
-      const on=view==="accounts";
-      el.innerHTML=`<button class="bntab${on?"":" on"}" data-ac="cal" onclick="acPopClose();goHome()" aria-current="${on?"false":"page"}"><i class="ti ti-calendar"></i> Calendar</button>`
-        +`<button class="bntab${on?" on":""}" data-ac="acc" onclick="acGo()" aria-current="${on?"page":"false"}"><i class="ti ti-briefcase"></i> Accounts</button>`;
+      const t=(k,ic,l,go,on)=>`<button class="bntab${on?" on":""}" data-ac="${k}" onclick="${go}" aria-current="${on?"page":"false"}"><i class="ti ${ic}"></i> ${l}</button>`;
+      el.innerHTML=t("cal","ti-calendar","Calendar","acPopClose();goHome()",view==="year")
+        +t("evs","ti-calendar-event","Events","acPopClose();setView('list')",view==="list")
+        +(acMay()?t("acc","ti-briefcase","Accounts","acGo()",view==="accounts"):"");
       return;
     }
     return baseTabs.apply(this,arguments);
@@ -39387,6 +39391,173 @@ function acInScopeFor(bid){ return acInScope().indexOf(bid)>-1; }
     }
   }catch(e){}
 })();
+</script>
+<style>
+/* ══ V118.17 TBILISI · THE HOMEPAGE'S LAYERS ════════════════════════
+   Each switch carries the colour it puts on the calendar, as Social's
+   does on a brand (#lay-social.on .sw). */
+#lay-shoot.on .sw{background:#4A55A8;}
+#lay-meet.on .sw{background:#B8860B;}
+#lay-camp.on .sw{background:#F0A3CC;}
+.dp-mrow .hm-sub{color:var(--muted);font-size:12.5px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+</style><script>
+/* ══ V118.17 TBILISI · THE HOMEPAGE ══════════════════════════════════
+   Chirag, 16 Oct 22:41–23:00, mockup "02 - Homepage - mockup.html",
+   approved. All brands lines up with the other pages:
+   · Calendar · Events · Accounts are the black bar's tabs; the old
+     Calendar / Events switch leaves the first row (it stays on a brand
+     and on the phone, where the bar carries no tabs).
+   · No "2026." title block above the months, nor "Events. 2026".
+   · The first row carries Shoots · Meetings · Campaigns — the brand
+     page's own layer switch (.lay) — then the year and Past months.
+   · Shoots were already across brands. Meetings (brand_meetings) and
+     campaigns (promotions, for people who can see Promotions) join them,
+     every brand the person can open (row level security decides).
+   · Meetings take the meeting mark the Plan page already draws; a
+     campaign takes the calendar's campaign wash, because a new kind of
+     item takes an existing slot (THE DAY CELL'S FIVE SLOTS).
+   · The hover box and the day window name the brand on every line.
+   · Each switch is remembered in this browser. All start on. */
+const HM={key:"",meets:[],promos:[],loading:false};
+const HM_LAY=(()=>{ let s={}; try{ s=JSON.parse(localStorage.getItem("cc-home-layers")||"{}")||{}; }catch(e){}
+  return {shoot:s.shoot!==false,meet:s.meet!==false,camp:s.camp!==false}; })();
+let HM_NOCAMP=false;
+function hmHome(){ return !(activeBrand&&brands[activeBrand]); }
+function hmCamps(){ return typeof canCap==="function"&&canCap("view_promotions"); }
+function hmOn(k){ return !!HM_LAY[k]&&(k!=="camp"||hmCamps()); }
+function hmReady(){ return HM.key===String(YEAR); }
+function hmFlip(k){ HM_LAY[k]=!HM_LAY[k]; try{ localStorage.setItem("cc-home-layers",JSON.stringify(HM_LAY)); }catch(e){} render(); }
+async function hmLoad(){
+  const k=String(YEAR); if(HM.loading||HM.key===k||typeof sb==="undefined"||!sb) return;
+  HM.loading=true;
+  const from=k+"-01-01", to=(YEAR+1)+"-01-01";
+  try{
+    const [m,p]=await Promise.all([
+      sb.from("brand_meetings").select("id,brand_id,held_on,topic").is("deleted_at",null).gte("held_on",from).lt("held_on",to),
+      hmCamps()?sb.from("promotions").select("id,brand_id,name,starts_on,ends_on").is("deleted_at",null).lt("starts_on",to)
+               :Promise.resolve({data:[]})
+    ]);
+    HM.meets=((m&&m.data)||[]).filter(x=>x&&brands[x.brand_id]&&x.held_on);
+    HM.promos=((p&&p.data)||[]).filter(x=>x&&brands[x.brand_id]&&x.starts_on&&(!x.ends_on||x.ends_on>=from));
+  }catch(e){ HM.meets=[]; HM.promos=[]; }
+  HM.key=k; HM.loading=false;
+  if(hmHome()&&view==="year") render();
+}
+function hmYmd(s){ const a=String(s).slice(0,10).split("-").map(Number); return {y:a[0],m:a[1],d:a[2]}; }
+/* a promotion with no end date marks its first day only */
+function hmPromoSpan(p){
+  const s=hmYmd(p.starts_on), e=hmYmd(p.ends_on||p.starts_on);
+  if(s.y>YEAR||e.y<YEAR) return null;
+  return {sM:s.y<YEAR?1:s.m, sD:s.y<YEAR?1:s.d, eM:e.y>YEAR?12:e.m, eD:e.y>YEAR?31:e.d};
+}
+(function(){
+  if(typeof prodDayMap!=="function"||typeof allCampaigns!=="function") return;
+  const pdm=prodDayMap;
+  prodDayMap=function(){ if(hmHome()&&!hmOn("shoot")) return {}; return pdm.apply(this,arguments); };
+  const ac=allCampaigns;
+  allCampaigns=function(){
+    const out=ac.apply(this,arguments);
+    if(!hmHome()||HM_NOCAMP||!hmOn("camp")||!hmReady()) return out;
+    HM.promos.forEach(p=>{ const sp=hmPromoSpan(p); if(!sp) return;
+      out.push(Object.assign({m:sp.sM,e:{id:"promo-"+p.id,name:brands[p.brand_id].name+" · "+(p.name||"Promotion"),_promo:p.id}},sp)); });
+    return out;
+  };
+  /* meetings: the Plan page's own mark, on every brand */
+  const bm=buildMini;
+  buildMini=function(m){
+    const card=bm.apply(this,arguments);
+    if(!hmHome()||!hmOn("meet")||!hmReady()) return card;
+    const days=card.querySelectorAll(".mc-grid .mc-day"), by={};
+    HM.meets.forEach(x=>{ const t=hmYmd(x.held_on); if(t.y===YEAR&&t.m===m)(by[t.d]=by[t.d]||[]).push(x); });
+    Object.keys(by).forEach(d=>{
+      const cell=days[Number(d)-1]; if(!cell) return;
+      if(!cell.querySelector(".pl-meet")) cell.insertAdjacentHTML("beforeend",`<span class="pl-meet" aria-hidden="true">${PL_MEET_SVG}</span>`);
+      cell.classList.add("has-ev");
+      const add=by[d].map(x=>"M|"+brands[x.brand_id].name+" · "+String(x.topic||"Meeting")).join("\n");
+      const had=cell.getAttribute("data-tip");
+      cell.setAttribute("data-tip",had?add+"\n"+had:add);
+    });
+    return card;
+  };
+  /* no title block above the months or the events list */
+  const ry=renderYear;
+  renderYear=function(){
+    const out=ry.apply(this,arguments);
+    if(hmHome()){ const yh=document.querySelector("#main > .year-head"); if(yh) yh.remove(); if(!hmReady()) hmLoad(); }
+    return out;
+  };
+  const rl=renderList;
+  renderList=function(){
+    const out=rl.apply(this,arguments);
+    if(hmHome()){ const yh=document.querySelector("#main > .year-head"); if(yh) yh.remove(); }
+    return out;
+  };
+  /* the first row */
+  const sl=syncLayerBar;
+  syncLayerBar=function(){
+    const out=sl.apply(this,arguments);
+    const grp=document.getElementById("lay-grp"), sep=document.getElementById("lay-sep"), pill=document.getElementById("view-pill");
+    const home=hmHome()&&typeof ME==="object"&&ME&&ME.role!=="client";
+    const phone=window.matchMedia&&window.matchMedia("(max-width:768px)").matches;
+    if(pill) pill.style.display=(home&&!phone)?"none":"";
+    if(!grp) return out;
+    const soc=document.getElementById("lay-social");
+    let mine=grp.querySelectorAll("[data-hm]");
+    if(home&&view==="year"){
+      if(!mine.length){
+        grp.insertAdjacentHTML("beforeend",[["shoot","Shoots"],["meet","Meetings"],["camp","Campaigns"]].map(([k,l])=>
+          `<button class="lay" id="lay-${k}" data-hm="${k}" onclick="hmFlip('${k}')"><i class="sw"></i> ${l}</button>`).join(""));
+        mine=grp.querySelectorAll("[data-hm]");
+      }
+      grp.style.display="flex"; if(sep) sep.style.display="none"; if(soc) soc.style.display="none";
+      mine.forEach(b=>{ const k=b.dataset.hm, on=!!HM_LAY[k];
+        b.style.display=(k==="camp"&&!hmCamps())?"none":"";
+        b.classList.toggle("on",on); b.classList.remove("inert");
+        b.title=(on?"Hide ":"Show ")+b.textContent.trim().toLowerCase()+" on the calendar"; });
+    } else {
+      mine.forEach(b=>{ b.style.display="none"; });
+      if(soc) soc.style.display="";
+      if(home){ grp.style.display="none"; if(sep) sep.style.display="none"; }
+    }
+    return out;
+  };
+  /* the day window names each one, with its brand, and opens it */
+  const od=openDay;
+  openDay=function(m,day){
+    if(!hmHome()) return od.apply(this,arguments);
+    HM_NOCAMP=true; let out; try{ out=od.apply(this,arguments); } finally{ HM_NOCAMP=false; }
+    const body=document.getElementById("dp-body"); if(!body) return out;
+    const iso=`${YEAR}-${String(m).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    const nm=b=>escHtml((brands[b]||{}).name||"");
+    const sec=(cls,label,ic,col,rows)=>rows.length?`<div class="dp-meet ${cls}"><div class="lbl">${label}</div>`+rows.map(r=>
+      `<div class="dp-mrow" onclick="${r[2]}"><span class="ic" style="color:${col}">${ic}</span><b>${r[0]}</b><span class="hm-sub">${r[1]}</span><span class="go">Open ›</span></div>`).join("")+`</div>`:"";
+    const meets=(hmOn("meet")&&hmReady())?HM.meets.filter(x=>String(x.held_on).slice(0,10)===iso)
+      .map(x=>[nm(x.brand_id),escHtml(x.topic||"Meeting"),`hmGoMeet('${escAttr(x.id)}')`]):[];
+    const shoots=hmOn("shoot")?((prodDayMap(m)||{})[day]||[])
+      .map(p=>[nm(p.brand_id),escHtml(prodWhat(p))+((PROD_STATUS_LBL[p.status])?" · "+PROD_STATUS_LBL[p.status]:""),`hmGoShoot('${escAttr(p.brand_id)}',${m})`]):[];
+    const camps=(hmOn("camp")&&hmReady())?HM.promos.filter(p=>p.starts_on<=iso&&(p.ends_on||p.starts_on)>=iso).map(p=>{
+      const e=p.ends_on?hmYmd(p.ends_on):null;
+      return [nm(p.brand_id),escHtml(p.name||"Promotion")+(e?" · till "+e.d+" "+MN[e.m].slice(0,3):""),`hmGoPromo('${escAttr(p.brand_id)}','${escAttr(p.id)}')`];}):[];
+    const sw=`<span style="display:block;width:14px;height:10px;margin-top:2px;border-radius:3px;background:${CAMP_PINK_DEEP}"></span>`;
+    const html=sec("hm-meet",meets.length>1?"Meetings":"Meeting",PL_MEET_SVG,"#B8860B",meets)
+      +sec("hm-shoot",shoots.length>1?"Shoots":"Shoot",PROD_CAM_SVG,"#4A55A8",shoots)
+      +sec("hm-camp",camps.length>1?"Campaigns":"Campaign",sw,"",camps);
+    if(html) body.insertAdjacentHTML("afterbegin",html);
+    return out;
+  };
+})();
+async function hmGoMeet(id){
+  const x=HM.meets.find(r=>r.id===id); if(!x) return;
+  try{ closeM("day-pop"); }catch(e){}
+  pickBrand(x.brand_id);
+  const y=Number(String(x.held_on).slice(0,4))||YEAR;
+  if(y!==YEAR) setYear(y);
+  const k=x.brand_id+"|"+y;
+  if(PLD.key!==k) await plLoad(k);
+  plMeetOpen(id);
+}
+function hmGoShoot(bid,m){ try{ closeM("day-pop"); }catch(e){} pickBrand(bid); openMonthPlanView(m); }
+function hmGoPromo(bid,id){ try{ closeM("day-pop"); }catch(e){} pickBrand(bid); navPromotions(); PR.open=id; render(); }
 </script>
 
 <style>
