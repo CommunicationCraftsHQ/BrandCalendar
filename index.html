@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.2 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.4 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12953,7 +12953,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.2 Tbilisi";
+const TOOL_VERSION="V118.4 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -32338,7 +32338,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
         sb.from("stream_sway_options").select("key,label,pos,deleted_at"),
         sb.from("brand_objectives").select("brand_id,objective_key,label,unit").eq("brand_id", bid),
         sb.from("brand_segments").select("*").eq("brand_id", bid).is("deleted_at", null),
-        sb.from("brand_segments").select("brand_id,segment_key,label").neq("brand_id", bid).is("deleted_at", null),
+        sb.from("brand_segments").select("brand_id,segment_key,label,labels").neq("brand_id", bid).is("deleted_at", null),
       ]);
       VB.others = (bs2 && !bs2.error) ? (bs2.data || []).filter(r => r.brand_id !== bid && !r.deleted_at) : [];
       const bad = [mo, ms, mc, mw, bo, bs].find(r => r.error);
@@ -32452,41 +32452,72 @@ window.prSegOpen=function(){ pbOpen("seg"); };
   const LISTED = { trade_channel: "chans", specifier: "sways" };
   const LIST_TABLE = { trade_channel: "stream_channel_options", specifier: "stream_sway_options" };
   const low = (s) => String(s || "").trim().toLowerCase();
+  /* V118.3 — A ROW HOLDS ONE OR MORE SEGMENTS OF ITS GROUP. Chirag, 16
+     Oct: "just like objectives, you should be able to select multiple
+     [segments] in a single row… when all of them have the same
+     objectives and same target audience category." `labels` and
+     `list_keys` run side by side; `label` stays the words joined, so
+     every other screen that reads it keeps working. */
+  const segsOf = (r) => (Array.isArray(r.labels) && r.labels.length) ? r.labels.slice() : (r.label ? [r.label] : []);
+  const keysOf = (r) => { const l = segsOf(r);
+    return (Array.isArray(r.list_keys) && r.list_keys.length === l.length) ? r.list_keys.slice() : l.map((_, i) => (i === 0 ? (r.list_key || "") : "")); };
   const grpOrder = () => VB.segs.map(s => s.key);
   function tgRows(){
     const o = grpOrder(), at = (k) => { const i = o.indexOf(k); return i < 0 ? 999 : i; };
     return VB.bsegs.slice().sort((a, b) => (at(a.segment_key) - at(b.segment_key))
-      || ((a.sort || 0) - (b.sort || 0)) || String(a.label || "").localeCompare(String(b.label || "")));
+      || ((a.sort || 0) - (b.sort || 0)) || String(segsOf(a)[0] || "").localeCompare(String(segsOf(b)[0] || "")));
   }
-  const tgUsed = (g, except) => VB.bsegs.filter(r => r.segment_key === g && r.id !== except).map(r => low(r.label));
+  const tgUsed = (g, except) => VB.bsegs.filter(r => r.segment_key === g && r.id !== except).flatMap(r => segsOf(r).map(low));
   function tgChoices(g, except){
     const used = tgUsed(g, except);
     if (LISTED[g]) return (VB[LISTED[g]] || []).map(o => ({ key: o.key, label: o.label })).filter(o => !used.includes(low(o.label)));
     const seen = new Set(), out = [];
     (VB.others || []).forEach(r => {
-      if (r.segment_key !== g || !String(r.label || "").trim()) return;
-      const k = low(r.label); if (seen.has(k) || used.includes(k)) return;
-      seen.add(k); out.push({ key: null, label: String(r.label).trim() });
+      if (r.segment_key !== g) return;
+      segsOf(r).forEach(w => {
+        const t = String(w || "").trim(), k = low(t); if (!t || seen.has(k) || used.includes(k)) return;
+        seen.add(k); out.push({ key: null, label: t });
+      });
     });
     return out.sort((a, b) => a.label.localeCompare(b.label));
   }
 
   /* the picker: a list under the control, closes on the next click. A
-     second step opened from inside it stays where the first one was. */
+     second step opened from inside it stays where the first one was.
+     V118.3 — Chirag, 16 Oct, two screenshots: the segment list sometimes
+     opened attached to its control and sometimes well below it. It was
+     measured from whatever the click landed on (the grey "Pick or
+     create…" words, not the button) and placed in page coordinates,
+     then the search box took focus and could move the page under it.
+     Now it is measured from the control that was clicked, pinned to the
+     window, opens upward when there is no room below, focuses without
+     scrolling, and closes if the page scrolls away from it. */
   function tgPop(ev, inner){
     ev.stopPropagation();
     const inPop = ev.target.closest && ev.target.closest(".vb-pop");
-    const b = (inPop && VB._rect) ? VB._rect : ev.target.closest("button,span,b,td").getBoundingClientRect();
+    const ct = ev.currentTarget && ev.currentTarget.getBoundingClientRect ? ev.currentTarget : null;
+    const anchor = ct || ev.target.closest(".tg-segbtn,.vb-plus,button,b,span,td");
+    const b = (inPop && VB._rect) ? VB._rect : anchor.getBoundingClientRect();
     VB._rect = b;
     vbInfClose();
     const box = document.createElement("div");
     box.className = "vb-pop tg-pop"; box.id = "vb-pop"; box.innerHTML = inner;
     box.addEventListener("click", e => e.stopPropagation());
     document.body.appendChild(box);
+    const below = window.innerHeight - b.bottom - 12, above = b.top - 12;
+    const up = below < 240 && above > below;
+    box.style.maxHeight = Math.max(150, Math.min(340, up ? above : below)) + "px";
     box.style.left = Math.max(8, Math.min(window.innerWidth - box.offsetWidth - 8, b.left)) + "px";
-    box.style.top = (b.bottom + window.scrollY + 4) + "px";
+    if (up){ box.style.top = "auto"; box.style.bottom = (window.innerHeight - b.top + 4) + "px"; }
+    else box.style.top = (b.bottom + 4) + "px";
     setTimeout(() => document.addEventListener("click", vbInfClose, { once: true }), 0);
-    const i = box.querySelector("input"); if (i) i.focus();
+    const m = document.getElementById("main");
+    if (m){ const t0 = Date.now(), onS = () => {
+        if (document.getElementById("vb-pop") !== box){ m.removeEventListener("scroll", onS); return; }
+        if (Date.now() - t0 < 300) return;          /* the scroll that brought the control into view */
+        vbInfClose(); m.removeEventListener("scroll", onS); };
+      m.addEventListener("scroll", onS, { passive: true }); }
+    const i = box.querySelector("input"); if (i) { try { i.focus({ preventScroll: true }); } catch (e) { i.focus(); } }
   }
 
   /* ── segment ── */
@@ -32499,7 +32530,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
       <div id="tg-segitems">${tgSegItems()}</div>`);
   };
   function tgSegItems(){
-    const S = VB._seg, q = S.q.trim(), ql = low(q), except = S.target === "new" ? null : S.target;
+    const S = VB._seg, q = S.q.trim(), ql = low(q), except = null;   /* a row's own segments are not offered twice */
     const all = tgChoices(S.g, except);
     S.items = all.filter(o => !ql || low(o.label).includes(ql));
     const exact = all.some(o => low(o.label) === ql) || tgUsed(S.g, except).includes(ql);
@@ -32512,8 +32543,8 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     const S = VB._seg; if (!S) return; const ql = low(S.q);
     const hit = S.items.findIndex(o => low(o.label) === ql);
     if (hit > -1) return tgSegPick(hit);
-    if (ql && !tgUsed(S.g, S.target === "new" ? null : S.target).includes(ql)) return tgSegCreate();
-    if (S.items.length === 1) return tgSegPick(0);
+    if (S.items.length === 1) return tgSegPick(0);     /* one match left: Enter takes it */
+    if (ql && !tgUsed(S.g, null).includes(ql)) return tgSegCreate();
   };
   window.tgSegPick = function(i){ const S = VB._seg; const o = S && S.items[i]; if (!o) return; vbInfClose(); tgSegSet(S.target, S.g, o.label, o.key); };
   window.tgSegCreate = async function(){
@@ -32537,10 +32568,11 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     tgSegSet(S.target, S.g, label, key);
   };
   async function tgSegSet(target, g, label, key){
-    if (VB.bsegs.some(r => r.id !== target && r.segment_key === g && low(r.label) === low(label)))
+    if (tgUsed(g, null).includes(low(label)))
       return say(esc(label) + " is already here", "err");
     if (target === "new"){
       const row = { id: crypto.randomUUID(), brand_id: VB.key, segment_key: g, label, list_key: key || null,
+        labels: [label], list_keys: [key || ""],
         objective_keys: [], talking_points: [], sway: [],
         sort: VB.bsegs.reduce((m, x) => Math.max(m, x.sort || 0), 0) + 10 };
       const r = await sb.from("brand_segments").insert([row]).select("*");
@@ -32549,24 +32581,34 @@ window.prSegOpen=function(){ pbOpen("seg"); };
       return vbPaint();
     }
     const r0 = VB.bsegs.find(x => x.id === target); if (!r0) return;
-    const was = { segment_key: r0.segment_key, label: r0.label, list_key: r0.list_key };
-    Object.assign(r0, { segment_key: g, label, list_key: key || null });
-    vbPaint();
-    const u = await sb.from("brand_segments").update({ segment_key: g, label, list_key: key || null }).eq("id", target);
-    if (u.error){ Object.assign(r0, was); say("Not saved — " + u.error.message, "err"); vbPaint(); }
+    tgSegWrite(r0, r0.segment_key, segsOf(r0).concat([label]), keysOf(r0).concat([key || ""]));
   }
-  /* moving a row to another group keeps its word, unless the new group
-     has a list the word is not on — then the segment is picked again */
+  /* every change to a row's segments goes through here: the two lists,
+     and the joined word every other screen reads */
+  async function tgSegWrite(r, g, labels, keys){
+    const was = { segment_key: r.segment_key, label: r.label, list_key: r.list_key, labels: r.labels, list_keys: r.list_keys };
+    const now = { segment_key: g, labels, list_keys: keys, label: labels.join(", ") || null, list_key: keys.find(Boolean) || null };
+    Object.assign(r, now);
+    vbPaint();
+    const u = await sb.from("brand_segments").update(now).eq("id", r.id);
+    if (u.error){ Object.assign(r, was); say("Not saved — " + u.error.message, "err"); vbPaint(); }
+  }
+  window.tgSegOff = function(id, i){
+    const r = VB.bsegs.find(x => x.id === id); if (!r) return;
+    const L = segsOf(r), K = keysOf(r); L.splice(i, 1); K.splice(i, 1);
+    tgSegWrite(r, r.segment_key, L, K);
+  };
+  /* moving a row to another group keeps its words, except any the new
+     group's list does not have or another row there already holds */
   window.tgGrp = async function(id, g){
     const r = VB.bsegs.find(x => x.id === id); if (!r || r.segment_key === g) return;
-    let label = r.label, key = null;
-    if (LISTED[g]){ const hit = (VB[LISTED[g]] || []).find(o => low(o.label) === low(label)); if (hit) key = hit.key; else label = null; }
-    if (label && tgUsed(g, id).includes(low(label))) label = null, key = null;
-    const was = { segment_key: r.segment_key, label: r.label, list_key: r.list_key };
-    Object.assign(r, { segment_key: g, label, list_key: key });
-    vbPaint();
-    const u = await sb.from("brand_segments").update({ segment_key: g, label, list_key: key }).eq("id", id);
-    if (u.error){ Object.assign(r, was); say("Not saved — " + u.error.message, "err"); vbPaint(); }
+    const used = tgUsed(g, id), L = [], K = [];
+    segsOf(r).forEach(w => {
+      if (used.includes(low(w)) || L.some(x => low(x) === low(w))) return;
+      if (LISTED[g]){ const hit = (VB[LISTED[g]] || []).find(o => low(o.label) === low(w)); if (hit){ L.push(hit.label); K.push(hit.key); } }
+      else { L.push(w); K.push(""); }
+    });
+    tgSegWrite(r, g, L, K);
   };
 
   /* ── objectives ── */
@@ -32642,11 +32684,14 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     const objCell = `<div class="vb-inf tg-obj">${objs.map(k => edit
         ? `<b title="Take it off" onclick="tgObj('${id}','${escA(k)}')">${esc(vbObjWords(k).label)}</b>`
         : `<b class="ro">${esc(vbObjWords(k).label)}</b>`).join("")}${edit ? `<span class="vb-plus" onclick="tgObjOpen(event,'${id}')">+ objective</span>` : (objs.length ? "" : `<span class="nsdim">—</span>`)}</div>`;
+    const L = segsOf(r);
+    const segCell = `<div class="vb-inf tg-seg">${L.map((w, i) => edit
+        ? `<b title="Take it off" onclick="tgSegOff('${id}',${i})">${esc(w)}</b>`
+        : `<b class="ro">${esc(w)}</b>`).join("")}${edit ? `<span class="vb-plus" onclick="tgSegOpen(event,'${id}')">+ segment</span>` : (L.length ? "" : `<span class="nsdim">—</span>`)}</div>`;
     const tp = `<span class="a3-tp${n ? "" : " none"}${op ? " open" : ""}" onclick="tgTpToggle('${id}')">${n ? n + " talking point" + (n > 1 ? "s" : "") : (edit ? "Add talking points" : "None")}</span>`;
     const main = `<tr data-tg="${id}">
         <td class="w-grp">${edit ? grpSel(r.segment_key, `tgGrp('${id}',this.value)`) : `<span class="vb-ro">${esc(mlabel(VB.segs, r.segment_key))}</span>`}</td>
-        <td class="w-seg">${edit ? `<button class="tg-segbtn" onclick="tgSegOpen(event,'${id}')">${r.label ? esc(r.label) : `<span class="ph">Pick or create…</span>`}</button>`
-                                  : `<span class="vb-ro tg-segro">${esc(r.label || "—")}</span>`}</td>
+        <td class="w-seg">${segCell}</td>
         <td>${objCell}</td>
         <td class="w-tp">${tp}</td>
         <td class="vb-x">${edit ? `<button class="vb-del" title="Take this off" onclick="vbSegDel('${id}')">✕</button>` : ""}</td></tr>`;
@@ -37615,7 +37660,7 @@ function xmDress(){
 .bf-lk .ed:hover{background:var(--surface2);color:var(--text);}
 .bf-lk.add{border-style:dashed;color:var(--muted);background:transparent;}
 .bf-lk.add:hover{border-color:var(--acc);color:var(--acc);}
-.bf-pop{position:absolute;z-index:9000;background:#fff;border:1px solid var(--div);border-radius:10px;box-shadow:0 8px 24px rgba(13,13,13,.12);padding:4px;}
+.bf-pop{position:fixed;z-index:9000;background:#fff;border:1px solid var(--div);border-radius:10px;box-shadow:0 8px 24px rgba(13,13,13,.12);padding:4px;}
 .bf-menu{min-width:200px;}
 .bf-mh{padding:7px 10px 4px;font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);}
 .bf-mi{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;font-size:12.5px;cursor:pointer;white-space:nowrap;}
@@ -37709,7 +37754,15 @@ function xmDress(){
 .tg-segbtn:after{content:"";width:5px;height:5px;border-right:1.5px solid #9A9890;border-bottom:1.5px solid #9A9890;transform:rotate(45deg) translateY(-2px);flex:none;}
 .vb-new .tg-segbtn{border:1px dashed #D8D7D2;background:transparent;}
 .tg-segro{padding:5px 9px;}
-.tg-pop{max-width:340px;max-height:340px;overflow-y:auto;}
+.tg-pop{position:fixed;max-width:340px;max-height:340px;overflow-y:auto;}
+/* V118.3 — a row's segments are chips, like its objectives; white with a
+   rule so the two columns read apart. 1px rule + 8px padding puts the
+   word where the segment button's word was, so the talking points still
+   start under it. */
+.tg-seg b{background:#fff;color:var(--text);border:1px solid var(--div);padding:3px 8px;font-size:12.5px;}
+.tg-seg b:hover{border-color:var(--acc);color:var(--acc);background:#fff;}
+.tg-seg b.ro{cursor:default;}
+.tg-seg b.ro:hover{border-color:var(--div);color:var(--text);}
 .tg-pop-in{margin:4px;width:calc(100% - 8px);height:32px;border:1px solid var(--div);border-radius:7px;padding:0 9px;font:inherit;font-size:12.5px;}
 .tg-pop-in:focus{outline:none;border-color:var(--acc);}
 .tg-sep{height:1px;background:var(--div);margin:4px 2px;}
@@ -37841,7 +37894,8 @@ function bfRepaint(){
 function bfPop(ev,html,alignRight){
   if(ev) ev.stopPropagation();
   const inPop=ev&&ev.target&&ev.target.closest&&ev.target.closest(".bf-pop");
-  const b=inPop&&BF._rect?BF._rect:(ev?ev.target.closest("button,span,a,div").getBoundingClientRect():{left:100,right:100,bottom:100});
+  const ct=ev&&ev.currentTarget&&ev.currentTarget.getBoundingClientRect?ev.currentTarget:null;
+  const b=inPop&&BF._rect?BF._rect:(ev?(ct||ev.target.closest("button,span,a,div")).getBoundingClientRect():{left:100,right:100,top:100,bottom:100});
   BF._rect=b;
   bfPopClose();
   const box=document.createElement("div"); box.className="bf-pop"; box.id="bf-pop"; box.innerHTML=html;
@@ -37849,9 +37903,16 @@ function bfPop(ev,html,alignRight){
   document.body.appendChild(box);
   const left=alignRight?b.right-box.offsetWidth:b.left;
   box.style.left=Math.max(8,Math.min(window.innerWidth-box.offsetWidth-8,left))+"px";
-  box.style.top=(b.bottom+window.scrollY+4)+"px";
+  /* V118.3 — pinned to the window, upward when there is no room below */
+  const below=window.innerHeight-b.bottom-12, above=b.top-12, up=below<240&&above>below;
+  box.style.maxHeight=Math.max(150,Math.min(420,up?above:below))+"px"; box.style.overflowY="auto";
+  if(up){ box.style.top="auto"; box.style.bottom=(window.innerHeight-b.top+4)+"px"; } else box.style.top=(b.bottom+4)+"px";
   setTimeout(()=>document.addEventListener("click",bfPopClose,{once:true}),0);
-  const i=box.querySelector("input"); if(i){ i.focus(); try{ i.select(); }catch(e){} }
+  const m=document.getElementById("main");
+  if(m){ const t0=Date.now(), onS=()=>{ if(document.getElementById("bf-pop")!==box){ m.removeEventListener("scroll",onS); return; }
+      if(Date.now()-t0<300) return; bfPopClose(); m.removeEventListener("scroll",onS); };
+    m.addEventListener("scroll",onS,{passive:true}); }
+  const i=box.querySelector("input"); if(i){ try{ i.focus({preventScroll:true}); }catch(e){ i.focus(); } try{ i.select(); }catch(e){} }
   return box;
 }
 function bfPopClose(){ const p=document.getElementById("bf-pop"); if(p) p.remove(); }
@@ -38350,7 +38411,16 @@ function bfTaskRedraw(){
   background:var(--surface);color:var(--muted);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;}
 .ac-claim:hover{border-color:var(--text);color:var(--text);}
 .ac-claim i{font-size:13px;}
-.ac-team{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);cursor:pointer;}
+.ac-team{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);}
+.ac-ams.may,.ac-team.may{cursor:pointer;border-radius:7px;margin-left:-6px;padding:4px 6px;}
+.ac-ams.may:hover,.ac-team.may:hover{background:rgba(13,13,13,.05);}
+.ac-ams .brl-sgcar,.ac-team .brl-sgcar{color:var(--subtle);font-size:10px;font-weight:400;}
+.ac-pick{color:var(--subtle);font-weight:600;}
+/* V118.3 — the person list, dropped from a cell */
+.brl-menu.brl-owners.ac-menu{position:fixed;right:auto;width:300px;z-index:900;}
+.ac-menu .brl-pl .ck{width:16px;height:16px;border-radius:4px;border:1.5px solid #CFCFCB;display:grid;place-items:center;font-size:10px;color:#fff;flex:none;}
+.ac-menu .brl-pl.on .ck{background:var(--text);border-color:var(--text);}
+.ac-menu .brl-pl select{height:24px;border:1px solid var(--div);border-radius:6px;background-color:#fff;font-size:11.5px;font-weight:600;color:var(--text);padding-left:7px;width:122px;flex:none;}
 .ac-stack{display:flex;}
 .ac-stack span{width:22px;height:22px;border-radius:50%;background:#F2F2F0;border:1.5px solid #fff;margin-left:-6px;display:grid;place-items:center;font-size:12px;}
 .ac-stack span:first-child{margin-left:0;}
@@ -38639,17 +38709,19 @@ function acRowHtml(bid){
       const who=ams.map(t=>{ const p=acPerson(t.user_id);
         return `<span class="ac-who${t.user_id===ME.id?" me":""}"><span class="e">${acEmoji(p)}</span>${escHtml(p?p.name:"Someone")}</span>`; }).join("");
       const claim=(!mine&&acIsAM()&&AC.migr)?`<button class="ac-claim" onclick="event.stopPropagation();acClaim('${bid}')"><i class="ti ti-hand-grab"></i>Claim</button>`:"";
-      return `<span class="ac-ams">${who}${claim}</span>`;
+      const mm=AC.migr&&canManagePeople(bid);
+      return `<span class="ac-ams${mm?" may":""}" ${mm?`onclick="acMenuOpen(event,'${bid}','ams')"`:""}>${who}${claim}${mm&&!ams.length&&!claim?`<span class="ac-pick">Add</span>`:""}${mm?`<b class="brl-sgcar">▾</b>`:""}</span>`;
     }
     if(k==="team"){
       const t=acTeamOf(bid), em=t.slice(0,4).map(x=>`<span>${acEmoji(acPerson(x.user_id))}</span>`).join("");
-      return `<span class="ac-team" onclick="event.stopPropagation();acTeamOpen('${bid}')">${t.length?`<span class="ac-stack">${em}</span>`:""}${t.length}</span>`;
+      const mm=AC.migr&&canManagePeople(bid);
+      return `<span class="ac-team${mm?" may":""}" ${mm?`onclick="acMenuOpen(event,'${bid}','team')"`:""}>${t.length?`<span class="ac-stack">${em}</span>`:""}${t.length}${mm?`<b class="brl-sgcar">▾</b>`:""}</span>`;
     }
     const v=acCell(bid,k);
     return `<span class="ac-hc"><button class="ac-hp ${v.s}" data-col="${k}" ${v.s==="n"||v.s==="w"?"disabled":`onclick="acPopOpen(event,'${bid}','${k}')"`}>${v.s==="n"||v.s==="w"?"":"<i></i>"}${escHtml(v.t)}</button></span>`;
   };
-  return `<div class="brl-tr" data-brand="${bid}" onclick="acTeamOpen('${bid}')"><span class="brl-sp"></span>
-    <span class="ac-bn"><span>${escHtml(b.name)}</span></span>${cols.map(([k])=>cell(k)).join("")}
+  return `<div class="brl-tr" data-brand="${bid}"><span class="brl-sp"></span>
+    <span class="ac-bn" onclick="acTeamOpen('${bid}')" title="Team and services"><span>${escHtml(b.name)}</span></span>${cols.map(([k])=>cell(k)).join("")}
     <span class="brl-car"><i class="ti ti-chevron-right" style="font-size:15px"></i></span></div>`;
 }
 function buildAccountsSidebar(){
@@ -38742,7 +38814,7 @@ async function acSetRole(uid,bid,role){
   const had=acHasRow(uid,bid);
   const before=AC.team.slice();
   if(cur) cur.team_role=role; else AC.team.push({user_id:uid,brand_id:bid,team_role:role});
-  acRefresh(); acTeamDraw();
+  acRefresh(); acTeamDraw(); if(AC_MENU) acMenuDraw();
   const r=had?await sb.from("user_brands").update(stamp).eq("user_id",uid).eq("brand_id",bid)
              :await sb.from("user_brands").insert([{user_id:uid,brand_id:bid,...stamp}]);
   if(r.error){ AC.team=before; acRefresh(); acTeamDraw(); dbErr(r); return; }
@@ -38857,6 +38929,80 @@ document.addEventListener("click",e=>{
   const l=document.getElementById("ac-add-l"); if(l&&!(e.target.closest&&e.target.closest(".ac-add"))) l.innerHTML="";
 });
 
+/* ══ V118.4 · THE TEAM AND THE ACCOUNT MANAGERS, PICKED IN THE CELL ═══
+   Chirag, 16 Oct: "Adding a team should not require opening a form. It
+   should be part of the column… click, so the drop-down opens… a search
+   bar along with name… type and select." The Tasks owner menu's look
+   (.brl-owners: search box, emoji, name), ticks because a team is many.
+   Chirag chose option 1: a person added from Team comes in by their
+   suite role (Account manager, else Creator); the small role dropdown on
+   their line changes it. */
+let AC_MENU=null, AC_MQ="";
+function acMenuClose(){ const m=document.getElementById("ac-menu"); if(m) m.remove(); AC_MENU=null; AC_MQ=""; }
+function acMenuOpen(e,bid,kind){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  const same=AC_MENU&&AC_MENU.bid===bid&&AC_MENU.kind===kind;
+  acMenuClose(); acPopClose(); closeAllPops();
+  if(same) return;
+  AC_MENU={bid,kind,anchor:e&&e.currentTarget?e.currentTarget.getBoundingClientRect():null};
+  acMenuDraw(true);
+}
+function acMenuPeople(){
+  return (PEOPLE||[]).filter(p=>p.role!=="client")
+    .map(p=>({id:p.id,nm:String(p.name||p.email||"").split("@")[0],em:p.emoji||"",tr:p.toolRole}))
+    .sort((a,b)=>a.nm.localeCompare(b.nm));
+}
+function acMenuDraw(first){
+  if(!AC_MENU) return;
+  const {bid,kind}=AC_MENU, team=acTeamOf(bid);
+  const roleOf=id=>(team.find(t=>t.user_id===id)||{}).team_role||null;
+  const isOn=id=>kind==="ams"?roleOf(id)==="account_manager":!!roleOf(id);
+  const q=AC_MQ.trim().toLowerCase();
+  const all=acMenuPeople().filter(p=>!q||p.nm.toLowerCase().includes(q));
+  const mark=nm=>{ if(!q) return escHtml(nm); const i=nm.toLowerCase().indexOf(q); return i<0?escHtml(nm):escHtml(nm.slice(0,i))+"<mark>"+escHtml(nm.slice(i,i+q.length))+"</mark>"+escHtml(nm.slice(i+q.length)); };
+  const line=p=>{
+    const on=isOn(p.id);
+    const sel=(kind==="team"&&on)?`<select class="cc-stsel" onclick="event.stopPropagation()" onchange="acSetRole('${p.id}','${bid}',this.value)">${AC_ROLES.map(([k,l])=>`<option value="${k}"${k===roleOf(p.id)?" selected":""}>${l}</option>`).join("")}</select>`:"";
+    return `<div class="brl-pl${on?" on":""}" data-uid="${escAttr(p.id)}" onclick="acMenuPick(event,'${escAttr(p.id)}')">
+      <span class="ck">${on?"✓":""}</span><span class="em">${p.em?escHtml(p.em):""}</span><span class="nm">${mark(p.nm)}</span>${sel}</div>`;
+  };
+  const here=all.filter(p=>isOn(p.id)), rest=all.filter(p=>!isOn(p.id));
+  let list="";
+  if(here.length) list+=`<div class="fb-sec">${kind==="ams"?"Account managers":"On this team"}</div>`+here.map(line).join("");
+  if(rest.length) list+=(here.length?`<div class="fb-sec">Everyone</div>`:"")+rest.map(line).join("");
+  if(!all.length) list+=`<div class="fb-none">Nobody called “${escHtml(AC_MQ.trim())}”.</div>`;
+  let m=document.getElementById("ac-menu");
+  if(!m){ m=document.createElement("div"); m.id="ac-menu"; m.className="brl-menu stm brl-owners ac-menu"; m.onclick=ev=>ev.stopPropagation(); document.body.appendChild(m); }
+  const box=document.getElementById("ac-mq"), at=box?box.selectionStart:null, scr=m.querySelector(".brl-pls")?m.querySelector(".brl-pls").scrollTop:0;
+  m.innerHTML=`<div class="bp-q"><i class="ti ti-search"></i><input id="ac-mq" placeholder="Find a person…" value="${escAttr(AC_MQ)}"
+      oninput="AC_MQ=this.value;acMenuDraw()" onkeydown="if(event.key==='Escape')acMenuClose()" onclick="event.stopPropagation()"></div>
+    <div class="brl-pls">${list}</div>`;
+  const pl=m.querySelector(".brl-pls"); if(pl&&!first) pl.scrollTop=scr;
+  const a=AC_MENU.anchor;
+  if(a){ const W=300, H=m.getBoundingClientRect().height;
+    let left=Math.min(Math.max(8,a.left),window.innerWidth-W-8), top=a.bottom+4;
+    if(top+H>window.innerHeight-8) top=Math.max(8,a.top-H-4);
+    m.style.left=left+"px"; m.style.top=top+"px"; }
+  const b2=document.getElementById("ac-mq");
+  if(b2){ b2.focus(); if(at!=null){ try{ b2.setSelectionRange(at,at); }catch(err){} } }
+}
+async function acMenuPick(e,uid){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  if(!AC_MENU) return;
+  const {bid,kind}=AC_MENU, cur=AC.team.find(t=>t.user_id===uid&&t.brand_id===bid);
+  if(kind==="ams"){
+    if(cur&&cur.team_role==="account_manager") await acOffTeam(uid,bid);
+    else await acSetRole(uid,bid,"account_manager");
+  }else{
+    if(cur) await acOffTeam(uid,bid);
+    else{ const p=acPerson(uid); await acSetRole(uid,bid,p&&p.toolRole==="account_manager"?"account_manager":"creator"); }
+  }
+  acMenuDraw();
+}
+document.addEventListener("click",()=>{ if(AC_MENU) acMenuClose(); });
+window.addEventListener("resize",()=>{ if(AC_MENU) acMenuClose(); });
+document.addEventListener("scroll",e=>{ if(AC_MENU&&!(e.target&&e.target.closest&&e.target.closest("#ac-menu"))) acMenuClose(); },true);
+
 /* ── the route, the two tabs on All brands, the page's name ────────── */
 (function(){
   const base=viewRoute;
@@ -38882,7 +39028,7 @@ document.addEventListener("click",e=>{
     /* Accounts belongs to All brands: a brand picked from anywhere takes
        you to that brand, which pickBrand already does */
     if(view==="accounts"&&activeBrand&&brands[activeBrand]) view="mplan";
-    if(view!=="accounts") acPopClose();
+    if(view!=="accounts"){ acPopClose(); acMenuClose(); }
     const out=baseRender.apply(this,arguments);
     acColsSync();
     return out;
