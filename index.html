@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.18 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.19 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12951,7 +12951,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.18 Tbilisi";
+const TOOL_VERSION="V118.19 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -40275,26 +40275,55 @@ function cpLinkSave(id,i,kind,off){
     const out=await r.json().catch(()=>null);
     return out&&out.title?{title:String(out.title)}:null;
   }
+  /* V118.19 — a failed or empty answer is NOT remembered: the same
+     link pasted again asks again. */
   const ASKED={};
   function nameLink(url,s){
     if(ASKED[url]) return ASKED[url];
     ASKED[url]=(s?suiteName(s):webName(url)).then(info=>{
-      if(info&&s) wLinkName(url,info);
+      if(info&&info.title&&s) wLinkName(url,info);
+      if(!info||!info.title) delete ASKED[url];
       return info;
-    }).catch(()=>null);
+    }).catch(()=>{ delete ASKED[url]; return null; });
     return ASKED[url];
   }
   wBarConfig({nameLink});
 
   /* A STORED MENTION READS TODAY'S NAME. The note keeps the title it
      was written with; a Calendar item is asked for its current one the
-     first time its pill is drawn, and every pill for it is corrected. */
+     first time its pill is drawn, and every pill for it is corrected.
+
+     V118.19 — AN OUTSIDE LINK SENT BEFORE ITS TITLE ARRIVED. Chirag,
+     16 Oct 23:48: three Instagram pills all read "Instagram". The page
+     answered in about five seconds and the message had gone in two, so
+     the note kept the site's name. A pill whose title is only the site's
+     name now asks once when it is drawn, and shows the page's title.
+     Display only: the stored note is not rewritten. */
+  function webRefresh(a,href){
+    const site=wSiteOf(href).name;
+    const t=a.querySelector(".lmn-t");
+    if(!t||String(t.textContent||"").trim().toLowerCase()!==String(site).toLowerCase()) return;
+    nameLink(href,null).then(info=>{
+      if(!info||!info.title) return;
+      const title=wTidyTitle(info.title,site); if(!title) return;
+      document.querySelectorAll('a.lmn[data-m="web"]').forEach(b=>{
+        if(b.getAttribute("href")!==href||b.closest('[contenteditable="true"]')) return;
+        const bt=b.querySelector(".lmn-t");
+        if(bt&&String(bt.textContent||"").trim().toLowerCase()===String(site).toLowerCase()){
+          bt.textContent=title;
+          if(!b.querySelector(".lmn-s")){ const n=document.createElement("span"); n.className="lmn-s"; n.textContent=site; b.appendChild(n); }
+        }
+      });
+    });
+  }
   function refresh(){
     document.querySelectorAll("a.lmn[data-m]:not([data-nm])").forEach(a=>{
       a.setAttribute("data-nm","1");
       const href=a.getAttribute("href")||"";
+      if(a.closest('[contenteditable="true"]')) return;
+      if(a.getAttribute("data-m")==="web"){ webRefresh(a,href); return; }
       const s=wSuiteLink(href);
-      if(!s||s.kind==="tool"||a.closest('[contenteditable="true"]')) return;
+      if(!s||s.kind==="tool") return;
       nameLink(href,s).then(info=>{
         if(!info||!info.title) return;
         document.querySelectorAll("a.lmn[data-m]").forEach(b=>{
