@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.9 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.10 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12283,8 +12283,6 @@ function buildExportPanel(){
       ? `<div class="brow act" onclick="closeAllPops();doExport('word')"><i class="ti ti-file-text"></i><span class="bnm">Word document</span></div>
          <div class="brow act" onclick="closeAllPops();doExport('excel')"><i class="ti ti-table"></i><span class="bnm">Excel sheet</span></div>
          <div class="brow act" onclick="closeAllPops();exPickOpen()"><i class="ti ti-presentation"></i><span class="bnm">PowerPoint deck</span></div>`
-      : isBrief
-      ? `<div class="brow act" onclick="closeAllPops();bdExportXLSX()"><i class="ti ti-table"></i><span class="bnm">Export this brand's data</span></div>`
       : `<div class="brow act" onclick="closeAllPops();exportXLSX()"><i class="ti ti-table"></i><span class="bnm">Excel sheet</span></div>`);
 }
 function toggleExportSw(e){ buildExportPanel(); popOpen("export-panel",e); }
@@ -12953,7 +12951,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.9 Tbilisi";
+const TOOL_VERSION="V118.10 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -13853,7 +13851,7 @@ let syncTimer=null;
 // The brand brief lives in brands.brief (jsonb). If that column has not been added to the
 // database yet, the calendar itself must still save normally — drop the brief from the
 // upsert and warn once, rather than failing the entire brand save.
-let briefCol=true;
+let briefCol=false;   /* V118.9 — brands.brief is dropped; a save never sends it */
 /* CICADA — THE ONLY WRITER OF A BRAND'S PARENT. An upsert naming three
    columns sets those three and leaves every other column on the row
    alone, so this creates a brand new row and updates an existing one
@@ -18662,143 +18660,33 @@ function bdSpyBind(){ if(bdSpyBound) return; const m=document.getElementById("ma
   window.addEventListener("resize",()=>{ bdSyncHdr(); bdSpy(); });
   bdSpyBound=true; }
 function buildBriefSidebar(){
-  const D=bdo(); const c=bdCompleteness(); const b=brands[activeBrand];
-  const pct=Math.round(c.n/c.of*100);
-  const item=(id,txt,ind)=>`<div class="bd-navi" data-tgt="${id}" style="${ind?"padding-left:22px;font-weight:500;color:var(--muted);":""}" onclick="bdJump('${id}')">${txt}</div>`;
-  const nav=[
-    item("bd-s1","01 · The brand"),
-    item("bd-s2","02 · "+escAttr(D.s2||"Products")),
-    ...(D.categories||[]).map((cat,i)=>item("bd-cat-"+i,escAttr(cat.name||("Category "+(i+1))),true)),
-    item("bd-s3","03 · Social media"),
-    item("bd-s4","04 · Brand objectives")
-  ].join("");
-  const lnkA=l=>`<a href="${escAttr(bdHref(l.url))}" target="_blank" rel="noopener" class="bd-sblink">${escAttr(l.label||bdShort(l.url))} ↗</a>`;
-  const lnkGrp=(t,arr)=>(arr&&arr.length)?`<div class="s-lbl" style="margin-top:18px;">${t}</div><div style="display:flex;flex-direction:column;gap:4px;">${arr.map(lnkA).join("")}</div>`:"";
-  const sbLinks=""   /* V118.1 — the quick links are the row at the top of the page now */
-    +(D.categories||[]).map(cat=>lnkGrp(escAttr(cat.name||"Category")+" links",cat.links)).join("");
-  document.getElementById("sb-stats").innerHTML=`
-    <div class="s-stat-num">${c.n}<span style="font-size:16px;color:var(--subtle);">/${c.of}</span></div>
-    <div class="s-stat-lbl">brief sections filled</div>
-    <div style="height:6px;border-radius:999px;background:var(--div);margin:8px 0 2px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:var(--acc);border-radius:999px;"></div></div>
-    ${briefEdit?'<div style="font-size:11px;color:var(--muted);margin-top:8px;">Editing — changes save automatically.</div>':""}`;
-  document.getElementById("sb-months").innerHTML=`
+  /* V118.9 — the "brief sections filled" counter counted the removed
+     sections, so it goes. The three entries carry the classes the Files
+     and Mood board code look for, so neither adds a second one. */
+  const st=document.getElementById("sb-stats"); if(st) st.innerHTML="";
+  const sm=document.getElementById("sb-months"); if(!sm) return;
+  const fn=(typeof BF==="object"&&BF.bid===activeBrand&&BF.ok)?BF.files.length:"";
+  const mn=(typeof MDB==="object"&&MDB.bid===activeBrand&&MDB.ok)?MDB.items.length:"";
+  sm.innerHTML=`
     <div class="s-lbl" style="margin-top:18px;">On this page</div>
-    <div style="display:flex;flex-direction:column;gap:1px;">${nav}</div>
-    ${sbLinks}`;
+    <div style="display:flex;flex-direction:column;gap:1px;">
+      <div class="bd-navi bf-navi" data-tgt="bd-s6" onclick="bfGo('all')">01 · Files <span class="mdb-navct">${fn}</span></div>
+      <div class="bd-navi" data-tgt="bd-vb" onclick="bdJump('bd-vb')">02 · Target groups</div>
+      <div class="bd-navi mdb-navi" data-tgt="bd-s5" onclick="mdbGo()">03 · Mood board <span class="mdb-navct">${mn}</span></div>
+    </div>`;
 }
 
-function renderBrief(){ if(activeBrand&&brands[activeBrand]&&canEdit()) buildBriefSidebar(); briefEdit?renderBriefForm():renderBriefDash(); bdSyncHdr(); bdSpyBind(); bdSpy(); }
+function renderBrief(){ briefEdit=false; if(activeBrand&&brands[activeBrand]&&canEdit()) buildBriefSidebar(); renderBriefDash(); bdSyncHdr(); bdSpyBind(); bdSpy(); }
 
 function renderBriefDash(){
+  /* V118.9 — Chirag, 16 Oct: sections 01 The brand, 02 Products, 03 Social
+     media and 04 Brand objectives "should be removed from all strategy
+     pages, completely and permanently, including all the relevant data".
+     brands.brief is dropped (migration 05). What is left is the frame the
+     links row, Files, Target groups and Mood board draw into. */
   const mc=document.getElementById("main");
   const b=brands[activeBrand]; if(!b){view="year";render();return;}
-  const D=bdo();
-  const uspCards=D.usps.map((u,i)=>`<div class="bd-card"><div class="bd-num">${String(i+1).padStart(2,"0")}.</div><div style="font-size:15px;font-weight:700;line-height:1.35;">${escAttr(u.t)}</div><div class="bd-note">${escAttr(u.d)}</div></div>`).join("")
-    ||'<div class="bd-card" style="flex:1;"><div class="bd-note" style="margin:0;">No USPs yet — click “Edit the data” to add them.</div></div>';
-  const cats=D.categories.map((c,ci)=>{return `
-    <div class="bd-rowhead" id="bd-cat-${ci}" style="margin-top:${ci?18:2}px;scroll-margin-top:16px;"><div class="rt">${escAttr(c.name)}</div>${String(c.tag||"").trim()?`<span class="bd-chip" style="font-size:11px;">${escAttr(c.tag)}</span>`:""}</div>
-    <div class="bd-grid g-3 bd-catgrid">
-      <div class="bd-card">
-        <div style="font-size:14px;line-height:1.6;color:var(--muted);">${bdE(c.desc)}</div>
-        <div style="margin-top:16px;"><div class="bd-lbl">Additional info</div>
-        ${(c.collections||[]).map(k=>`<div class="bd-coll"><div class="cn">${escAttr(k.n)}</div>${String(k.w||"").trim()?`<div class="cw">${escAttr(k.w)}</div>`:""}</div>`).join("")||'<div class="bd-note" style="margin:0;">Not filled yet</div>'}</div>
-      </div>
-      <div class="bd-card tint">
-        <div class="bd-lbl">USPs</div>
-        <div class="bd-chips">${(c.usps||[]).map(u=>`<span class="bd-chip" style="background:var(--surface);">${escAttr(u)}</span>`).join("")||'<span class="bd-empty" style="font-size:13px;">—</span>'}</div>
-        <div class="bd-lbl" style="margin-top:16px;">Talking points</div>
-        <div class="bd-chips">${(c.talking||[]).map(t=>`<span class="bd-chip line" style="background:var(--surface);">${escAttr(t)}</span>`).join("")||'<span class="bd-empty" style="font-size:13px;">—</span>'}</div>
-      </div>
-      <div class="bd-card">
-        <div class="bd-lbl">Competitors</div>
-        ${(c.comps||[]).map(k=>`<div class="bd-comp">${String(k.u||"").trim()?`<a href="${escAttr(bdHref(k.u))}" target="_blank" rel="noopener">${escAttr(k.n)} ↗</a>`:`<span class="nm">${escAttr(k.n)}</span>`}<span class="why">${escAttr(k.w)}</span></div>`).join("")||'<div class="bd-note" style="margin:0;">Not filled yet</div>'}
-      </div>
-    </div>`;}).join("")
-    ||'<div class="bd-card"><div class="bd-note" style="margin:0;">No categories yet — click “Edit the data” to add categories, additional info and competitors.</div></div>';
-  const pillarCards=D.pillars.map((p,i)=>`
-    <div class="bd-card bd-pil">
-      <div class="bd-num">${String(i+1).padStart(2,"0")}.</div>
-      <div class="pt">${escAttr(p.t)}</div>
-      <div style="margin-top:10px;">${(p.p||[]).map(x=>`<div class="pp">${escAttr(x)}</div>`).join("")||'<div class="bd-note" style="margin:0;">No sub-points yet</div>'}</div>
-    </div>`).join("")
-    ||'<div class="bd-card"><div class="bd-note" style="margin:0;">No content pillars yet — click “Edit the data” to add them.</div></div>';
-  const segCards=D.segs.map((s,i)=>`
-    <div class="bd-card">
-      <div class="bd-lbl">${escAttr(s.lbl)}</div>
-      <div class="bd-mid" style="margin:4px 0 2px;">${bdE(s.big)}</div>
-      <div class="bd-note" style="margin-top:2px;">${escAttr(s.sub||"")}</div>
-      ${(s.rows&&s.rows.length)?`<div style="margin-top:10px;">${bdKrows(s.rows)}</div>`:""}
-    </div>`).join("");
-  mc.innerHTML=`
-  ${pageHead(
-      (canEditVision()
-        ?`<button class="btn btn-s" onclick="bvOpen()"><i class="ti ti-upload"></i> Import</button>`:"")+
-      (canEditVision()
-        ?`<button class="btn btn-p" onclick="bdToggleEdit()"><i class="ti ti-pencil"></i> Edit the data</button>`:""))}
-  <div class="bd-wrap">
-
-    <div class="bd-sec" id="bd-s1"><div class="bd-secnum">01</div><div class="bd-sectitle">The brand</div><div class="bd-secrule"></div><div class="bd-secsub">Positioning · USPs · talking points · audience</div></div>
-    ${(String(D.tagline||"").trim()||D.meta.length||D.tl.length||D.rhythm.length)?`<div class="bd-card" style="padding:14px 18px;margin-bottom:12px;">
-      ${String(D.tagline||"").trim()?`<div class="year-tag" style="margin:0 0 10px;">${escAttr(D.tagline)}</div>`:""}
-      ${(D.meta.length||D.tl.length)?`<div style="display:flex;gap:6px;flex-wrap:wrap;">${D.meta.map(m=>`<span class="bd-chip" style="background:var(--surface);border:1px solid var(--div);">${escAttr(m)}</span>`).join("")}${D.tl.map(t=>`<span class="bd-chip" style="background:var(--surface2);">${escAttr(t.k)} · <b>${escAttr(t.v)}</b></span>`).join("")}</div>`:""}
-      ${D.rhythm.length?`<div class="bd-rhy" style="margin-top:10px;"><span class="rl">Rhythm &amp; reviews</span>${D.rhythm.map(r=>`<span class="ri">${escAttr(r.k)} · <b>${escAttr(r.v)}</b></span>`).join('<span style="color:var(--div);">|</span>')}</div>`:""}
-    </div>`:""}
-    <div class="bd-grid g-hero">
-      <div class="bd-card tint" style="display:flex;flex-direction:column;justify-content:center;padding:30px 32px;">
-        <div class="bd-lbl">Positioning</div>
-        <div style="font-size:30px;font-weight:700;letter-spacing:-.03em;line-height:1.3;">${bdE(D.positioning)}</div>
-        <div class="bd-note" style="font-size:12.5px;margin-top:12px;">${escAttr(D.posNote||"")}</div>
-      </div>
-      <div class="bd-card tint">
-        <div class="bd-lbl">Voice &amp; tone</div>
-        <div class="bd-mid" style="margin:2px 0 12px;white-space:pre-line;">${bdE(D.toneWords)}</div>
-        <div class="bd-lbl" style="margin-top:12px;">Never sounds</div>
-        <div class="bd-chips">${D.toneNever.map(t=>`<span class="bd-chip" style="background:var(--surface);">✕ ${escAttr(t)}</span>`).join("")||'<span class="bd-empty" style="font-size:12px;">—</span>'}</div>
-        ${D.noGo.length?`<div class="bd-lbl" style="margin-top:12px;">Never publish — hard rules</div>
-        <div class="bd-chips">${D.noGo.map(t=>`<span class="bd-chip" style="background:var(--surface);border:1px solid var(--acc);color:var(--acc);">✕ ${escAttr(t)}</span>`).join("")}</div>`:""}
-        <div class="bd-note" style="margin-top:12px;">${escAttr(D.toneNote||"")}</div>
-      </div>
-    </div>
-
-    <div class="bd-rowhead"><div class="rt">Brand USPs — why ${escAttr(b.name)} wins</div><div class="rc2">${D.usps.length}</div>
-      <div class="bdnav"><button onclick="bdSlide('bd-usps',-1)" aria-label="Previous">‹</button><button onclick="bdSlide('bd-usps',1)" aria-label="Next">›</button></div></div>
-    <div class="bd-slider" id="bd-usps">${uspCards}</div>
-
-    <div class="bd-grid g-3" style="margin-top:12px;">
-      <div class="bd-card"><div class="bd-lbl">Key talking points</div>
-        <div style="display:flex;flex-direction:column;gap:7px;margin-top:6px;">${D.talking.map(t=>`<span class="bd-chip" style="align-self:flex-start;font-size:12.5px;">${escAttr(t)}</span>`).join("")||'<div class="bd-note" style="margin:0;">Not filled yet</div>'}</div></div>
-      <div class="bd-card tint"><div class="bd-lbl">Primary audience</div>
-        <div class="bd-mid" style="margin:2px 0 2px;">${bdE(D.audWho)}</div>
-        <div class="bd-note">${escAttr(D.audNote||"")}</div>
-        <div class="bd-lbl" style="margin-top:12px;">Markets</div>
-        <div class="bd-chips">${D.markets.map(m=>`<span class="bd-chip" style="background:var(--surface);border:1px solid var(--div);">${escAttr(m)}</span>`).join("")}${D.marketsNext.map(m=>`<span class="bd-chip line">Next: ${escAttr(m)}</span>`).join("")}</div></div>
-      <div class="bd-card"><div class="bd-lbl">Where the audience stands</div>
-        <div class="bd-funnel" style="margin-top:8px;">${["Unaware","Aware","Engaged","Loyal"].map(s=>`<div class="${s===D.funnelStage?"on":""}">${s}${s===D.funnelStage?" ✓":""}</div>`).join("")}</div>
-        <div class="bd-note" style="margin-top:10px;">${escAttr(D.funnelNote||"")}</div></div>
-    </div>
-
-    <div class="bd-sec" id="bd-s2"><div class="bd-secnum">02</div><div class="bd-sectitle">${escAttr(D.s2||"Products")}</div><div class="bd-secrule"></div><div class="bd-secsub">Categories · additional info · competitors</div></div>
-    ${cats}
-
-    <div class="bd-sec" id="bd-s3"><div class="bd-secnum">03</div><div class="bd-sectitle">Social media</div><div class="bd-secrule"></div><div class="bd-secsub">Deliverables · content pillars</div></div>
-    ${D.smDeliv.length?`<div class="bd-card" style="padding:14px 18px;">
-      <div class="bd-lbl" style="margin-bottom:9px;">Deliverables</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">${D.smDeliv.map(d=>`<div class="bd-svc"><div class="sn">${escAttr(d.n)}</div>${String(d.w||"").trim()?`<div class="sw">${escAttr(d.w)}</div>`:""}</div>`).join("")}</div>
-    </div>`:""}
-    <div class="bd-rowhead"><div class="rt">Content pillars</div><div class="rc2">${D.pillars.length}</div></div>
-    <div class="bd-pgrid">${pillarCards}</div>
-
-    <div class="bd-sec" id="bd-s4"><div class="bd-secnum">04</div><div class="bd-sectitle">Brand objectives</div><div class="bd-secrule"></div><div class="bd-secsub">Targets by target group</div></div>
-    <div class="bd-grid" style="grid-template-columns:1.15fr repeat(${Math.max(1,D.segs.length)},1fr);">
-      <div class="bd-card tint">
-        <div class="bd-lbl">${escAttr(D.revLbl||"Revenue — the headline")}</div>
-        <div style="font-size:40px;font-weight:750;letter-spacing:-.03em;margin:6px 0 2px;">${bdE(D.revBig)}</div>
-        <div class="bd-note">${escAttr(D.revNote||"")}</div>
-        <div style="margin-top:12px;">${bdKrows(D.revRows)}</div>
-      </div>
-      ${segCards}
-    </div>
-  </div>`;
+  mc.innerHTML=`${pageHead()}<div class="bd-wrap"></div>`;
 }
 
 function renderBriefForm(){
@@ -38696,14 +38584,11 @@ async function acLoad(force){
 
 /* ── the health of one brand ────────────────────────────────────────── */
 function acStrategy(bid){
-  const D=(brands[bid]&&brands[bid].brief&&typeof brands[bid].brief==="object")?brands[bid].brief:{};
-  const L=k=>Array.isArray(D[k])?D[k].length:0, S=k=>String(D[k]||"").trim();
-  /* bdCompleteness's own list, less the old quick links — V118.1 moved
-     them out of the brief, so they can no longer be filled in there */
-  const checks=[S("tagline"),L("meta"),S("positioning"),S("toneWords"),L("toneNever"),S("toneNote"),
-    L("usps"),L("talking"),S("audWho"),S("audNote"),L("markets"),S("funnelStage"),S("funnelNote"),
-    L("categories"),S("revBig"),L("revRows"),L("segs"),L("tl"),L("rhythm"),L("smDeliv"),L("pillars")];
-  return {n:checks.filter(Boolean).length,of:checks.length};
+  /* V118.9 — counts the Strategy page as it now is: links, files, target
+     groups, mood board. Chirag, 16 Oct: "Count what's left". */
+  const h=AC.health[bid]||{};
+  const checks=[h.links_n,h.files_n,h.groups_n,h.mood_n];
+  return {n:checks.filter(x=>x>0).length,of:checks.length};
 }
 /* Every cell is {s: g|a|r|n|w, t: words}. n = the brand does not take
    this service; w = still reading. */
@@ -39449,7 +39334,7 @@ function acInScopeFor(bid){ return acInScope().indexOf(bid)>-1; }
 <script>
 (function(){
   const LATE=["bd-s4","bd-s6","bd-vb","bd-s5"];
-  const NUM={"bd-s6":"05","bd-vb":"06","bd-s5":"07"};
+  const NUM={"bd-s6":"01","bd-vb":"02","bd-s5":"03"};
   function tgCount(){
     const el=document.getElementById("tg-count"); if(!el) return;
     const n=document.querySelectorAll("#vb-host tr[data-tg]").length;
@@ -39493,7 +39378,7 @@ function acInScopeFor(bid){ return acInScope().indexOf(bid)>-1; }
     try{
       const first=document.querySelector("#sb-months .bd-navi"); if(!first) return out;
       const box=first.parentElement;
-      const lab={"bd-s6":"05 · Files","bd-vb":"06 · Target groups","bd-s5":"07 · Mood board"};
+      const lab={"bd-s6":"01 · Files","bd-vb":"02 · Target groups","bd-s5":"03 · Mood board"};
       ["bd-s4","bd-s6","bd-vb","bd-s5"].forEach(id=>{
         const n=box.querySelector(`.bd-navi[data-tgt="${id}"]`); if(!n) return;
         if(lab[id]){ const ct=n.querySelector(".mdb-navct"); n.textContent=lab[id]+" "; if(ct) n.appendChild(ct); }
