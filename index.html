@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.11 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.12 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12951,7 +12951,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.11 Tbilisi";
+const TOOL_VERSION="V118.12 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -38489,6 +38489,24 @@ function bfTaskRedraw(){
 .ac-more{font-size:12px;font-weight:600;color:var(--muted);padding:6px 6px 0 40px;cursor:pointer;}
 .ac-more:hover{color:var(--text);}
 .ac-pnone{padding:8px 6px 4px 40px;font-size:12.5px;color:var(--subtle);}
+/* V118.10 — services from the contract */
+.ac-hp.n.why{cursor:pointer;padding:0 6px;border-radius:20px;}
+.ac-hp.n.why:hover{background:rgba(13,13,13,.05);color:var(--muted);}
+.ac-pop .svh{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--subtle);margin:10px 0 2px;padding-top:9px;border-top:1px solid var(--div);}
+.ac-pop .sv{display:flex;align-items:baseline;gap:8px;padding:3px 0;font-size:12px;}
+.ac-pop .sv .t{flex:1;min-width:0;}
+.ac-pop .sv .t span{color:var(--subtle);font-size:11px;}
+.ac-pop .sv .c{color:var(--muted);font-weight:600;white-space:nowrap;}
+.ac-pop .sv .c.no{color:var(--subtle);font-weight:500;}
+.ac-pop .why{color:var(--muted);line-height:1.5;padding:2px 0 4px;}
+.ac-svl{margin:4px 0 6px;}
+.ac-svl .sv{display:flex;align-items:center;gap:10px;padding:6px 4px;border-bottom:1px solid #F2F0EA;font-size:12.5px;}
+.ac-svl .sv:last-child{border-bottom:0;}
+.ac-svl .sv .t{flex:1;min-width:0;font-weight:600;}
+.ac-svl .sv .t span{color:var(--subtle);font-weight:500;font-size:11.5px;margin-left:6px;}
+.ac-svl .sv .c{font-size:12px;font-weight:600;color:var(--text);background:#F2F1EE;border-radius:999px;padding:2px 9px;white-space:nowrap;}
+.ac-svl .sv .c.no{background:transparent;color:var(--subtle);font-weight:500;}
+.ac-svl .none{padding:6px 4px;font-size:12.5px;color:var(--acc);font-weight:600;}
 </style>
 <script>
 /* ══ V118.2 TBILISI · THE ACCOUNTS PAGE ═══════════════════════════════
@@ -38522,9 +38540,26 @@ const AC_SVC=[["social","Social"],["branding","Branding"],["performance","Perfor
 const AC_COLS=[["ams","Account managers"],["team","Team"],["strategy","Strategy"],["plan","Plan"],["posts","Posts"],["tasks","Tasks"],["promos","Promotions"],["adopt","Adoption"]];
 const AC_HEALTH_COLS=["strategy","plan","posts","tasks","promos","adopt"];
 const AC_COL_SVC={posts:"social",tasks:"branding",promos:"performance"};
+/* ══ V118.10 · THE SERVICES COME FROM THE CONTRACT ════════════════════
+   Chirag, 16 Oct: "The information about which services are active is
+   already available for each active client. So where the services are
+   not relevant, should automatically show the dash." His mapping, held
+   in ONE place — the account_services() function — which hands back each
+   running contract line with the column it counts for:
+     posts  — Social Media Marketing          → Plan and Posts
+     promos — Performance Marketing, PPC        → Promotions
+     tasks  — every other service (branding, films, campaigns, SEO …)
+     none   — web services (another team) and one-time setup lines
+   Strategy and Adoption apply to every brand. A brand with no running
+   line shows those two only. The ticks in the team window are gone: the
+   Portfolio contract is the one place this is written. */
+const AC_NEED={plan:"posts",posts:"posts",promos:"promos",tasks:"tasks"};
+const AC_CF_LBL={posts:"Plan and Posts",promos:"Promotions",tasks:"Tasks",none:"Not counted"};
+const AC_NEED_LBL={posts:"Social Media Marketing",promos:"Performance Marketing",tasks:"a service run as tasks (branding, films, campaigns, SEO)"};
 let AC={ok:false,loading:false,err:"",migr:true,team:[],health:{},hOk:false,svc:{},svcOk:false,
   am:null,q:"",f:[],sort:"health",open:null,addQ:"",cell:null,at:0,
   /* V118.8 — the People tab */
+  lines:{},linesOk:false,
   tab:"people",sortP:"name",px:null,pxQ:"",pxF:"all",pxAll:false,pxAlways:false,pxNone:false,prefs:{},prefsOk:false};
 try{ const t=localStorage.getItem("cc-ac-tab"); if(t==="health"||t==="people") AC.tab=t; }catch(e){}
 let AC_HIDE=new Set();
@@ -38544,6 +38579,11 @@ function acBrands(){
 function acTeamOf(bid){ return AC.team.filter(t=>t.brand_id===bid); }
 function acAMsOf(bid){ return acTeamOf(bid).filter(t=>t.team_role==="account_manager"); }
 function acSvcOf(bid){ const s=AC.svc[bid]; return Array.isArray(s)?s:AC_SVC.map(x=>x[0]); }
+function acLinesOf(bid){ return AC.lines[bid]||[]; }
+/* what the brand's running contract lines switch on: posts, promos, tasks */
+function acCountsOf(bid){ return new Set(acLinesOf(bid).map(l=>l.counts_for).filter(c=>c&&c!=="none")); }
+function acNoContract(bid){ return AC.linesOk&&!acLinesOf(bid).length; }
+function acNoneWhy(l){ return /one[\s-]*time\s*setup/i.test(l.title||"")?"one-time setup":"website team"; }
 
 /* ── reading ────────────────────────────────────────────────────────── */
 async function acLoad(force){
@@ -38566,8 +38606,12 @@ async function acLoad(force){
       AC.migr=!/team_role/i.test(bad.message||"");
       if(AC.migr) AC.err=bad.message||"could not read";
     }else{ AC.migr=true; AC.team=rows.filter(r=>r&&r.team_role); }
-    const [h,s,bp]=await Promise.all([sb.rpc("account_health",{}), sb.from("brands").select("id,cal_services").is("deleted_at",null),
-      sb.rpc("brand_prefs_managed",{})]);
+    const [h,s,bp,ls]=await Promise.all([sb.rpc("account_health",{}), sb.from("brands").select("id,cal_services").is("deleted_at",null),
+      sb.rpc("brand_prefs_managed",{}), sb.rpc("account_services",{})]);
+    /* V118.10 — the contract's running lines. Before the 03 migration the
+       read fails and the page falls back to counting every column. */
+    AC.lines={}; AC.linesOk=!ls.error&&Array.isArray(ls.data);
+    if(AC.linesOk) ls.data.forEach(x=>{ (AC.lines[x.brand_id]=AC.lines[x.brand_id]||[]).push(x); });
     /* V118.8 — the bell and the eye for brands you manage. Before the 02
        migration the read fails, and those two columns show a dash. */
     AC.prefs={}; AC.prefsOk=!bp.error&&Array.isArray(bp.data);
@@ -38593,7 +38637,7 @@ function acStrategy(bid){
 /* Every cell is {s: g|a|r|n|w, t: words}. n = the brand does not take
    this service; w = still reading. */
 function acCell(bid,col){
-  if(AC_COL_SVC[col]&&acSvcOf(bid).indexOf(AC_COL_SVC[col])<0) return {s:"n",t:"—"};
+  if(AC.linesOk&&AC_NEED[col]&&!acCountsOf(bid).has(AC_NEED[col])) return {s:"n",t:"—",why:1};
   if(col==="strategy"){ const c=acStrategy(bid);
     return c.n===0?{s:"r",t:"Empty"}:c.n===c.of?{s:"g",t:"Done"}:{s:"a",t:`${c.n} of ${c.of}`}; }
   const h=AC.health[bid];
@@ -38632,14 +38676,14 @@ const AC_FIELDS=[
 function acValsOf(bid,k){
   if(k==="health"){ const ss=AC_HEALTH_COLS.map(c=>acCell(bid,c).s);
     return ss.includes("r")?["red"]:ss.includes("a")?["amber"]:["green"]; }
-  if(k==="svc") return acSvcOf(bid).slice();
+  if(k==="svc"){ if(!AC.linesOk) return []; const c=[...acCountsOf(bid)]; return c.length?c:["nocontract"]; }
   if(k==="team") return acTeamOf(bid).map(t=>t.user_id);
   return [];
 }
 function acOptionsFor(k){
   const rows=acInScope();
   if(k==="health") return fltCounts(rows,k,acValsOf,[["red","Something red"],["amber","Amber, nothing red"],["green","All green"]]);
-  if(k==="svc") return fltCounts(rows,k,acValsOf,AC_SVC.map(x=>[x[0],x[1]]));
+  if(k==="svc") return fltCounts(rows,k,acValsOf,[["posts","Social Media Marketing"],["promos","Performance Marketing"],["tasks","Tasks services"],["nocontract","No running contract"]]);
   return fltCounts(rows,k,acValsOf,[],v=>acName(v));
 }
 FLT_HOSTS.accounts={fields:AC_FIELDS,optionsFor:acOptionsFor,get:()=>AC.f,set:fs=>{ AC.f=fs; },render:()=>acRefresh()};
@@ -38755,7 +38799,8 @@ function acRowHtml(bid){
       return `<span class="nc${n?"":" z"}">${n}</span>`;
     }
     const v=acCell(bid,k);
-    return `<span class="ac-hc"><button class="ac-hp ${v.s}" data-col="${k}" ${v.s==="n"||v.s==="w"?"disabled":`onclick="acPopOpen(event,'${bid}','${k}')"`}>${v.s==="n"||v.s==="w"?"":"<i></i>"}${escHtml(v.t)}</button></span>`;
+    const dead=(v.s==="n"&&!v.why)||v.s==="w";
+    return `<span class="ac-hc"><button class="ac-hp ${v.s}${v.why?" why":""}" data-col="${k}" ${dead?"disabled":`onclick="acPopOpen(event,'${bid}','${k}')"`} ${v.why?`title="Not counted — why"`:""}>${v.s==="n"||v.s==="w"?"":"<i></i>"}${escHtml(v.t)}</button></span>`;
   };
   if(AC.tab==="people") return `<div class="brl-tr${AC.px===bid?" open":""}" data-brand="${bid}" onclick="acPxToggle('${bid}')"><span class="brl-sp"></span>
     <span class="ac-bn"><span>${escHtml(b.name)}</span></span>${cols.map(([k])=>cell(k)).join("")}
@@ -38827,10 +38872,19 @@ function acPopOpen(e,bid,col){
   if(col==="tasks"){ body=ln("Open tasks",h.tasks_open||0)+ln("Past their delivery date",h.tasks_late||0,true); go="navTasks()"; }
   if(col==="promos"){ body=ln(`Promotions running in ${mon}`,h.promos_live||0); go="navPromotions()"; }
   if(col==="adopt"){ body=ln("People on the team",h.team_size||0)+ln("Of the last 5 weekdays, days the team opened it",h.adoption_days||0); }
-  const lbl={g:"Green",a:"Amber",r:"Red"}[v.s]||"";
+  /* V118.10 — the contract behind the cell, so an account manager can see
+     why a column is counted, or why it is a dash */
+  if(AC.linesOk){
+    const ls=acLinesOf(bid), need=AC_NEED[col];
+    if(v.why){ body=`<div class="why">${acNoContract(bid)?"No running service on this brand's contract in Portfolio, so only Strategy and Adoption are counted."
+        :`Not counted: the contract has no running ${AC_NEED_LBL[need]}.`}</div>`; go=""; }
+    body+=`<div class="svh">On the contract</div>`+(ls.length?ls.map(l=>`<div class="sv"><span class="t">${escHtml(l.title)}${l.basis?` <span>${escHtml(l.basis)}${l.renewal_due?" · renewal due":""}</span>`:""}</span>
+      <span class="c${l.counts_for==="none"?" no":""}">${l.counts_for==="none"?"Not counted · "+acNoneWhy(l):AC_CF_LBL[l.counts_for]}</span></div>`).join(""):`<div class="sv"><span class="t" style="color:var(--acc);font-weight:600">No running contract</span></div>`);
+  }
+  const lbl={g:"Green",a:"Amber",r:"Red",n:"Not counted"}[v.s]||"";
   const p=document.createElement("div"); p.id="ac-pop"; p.className="ac-pop";
   p.onclick=ev=>ev.stopPropagation();
-  p.innerHTML=`<h5><span class="ac-hp ${v.s}" style="height:19px;font-size:10px;cursor:default"><i></i>${lbl}</span>${NAME[col]} · ${escHtml(brands[bid].name)}</h5>${body}
+  p.innerHTML=`<h5><span class="ac-hp ${v.s}" style="height:19px;font-size:10px;cursor:default">${v.s==="n"?"":"<i></i>"}${lbl}</span>${NAME[col]} · ${escHtml(brands[bid].name)}</h5>${body}
     ${go?`<div class="go" onclick="acPopGo('${bid}','${go}')">Open ${NAME[col]}<i class="ti ti-arrow-right"></i></div>`:""}`;
   document.body.appendChild(p);
   const r=e.currentTarget.getBoundingClientRect(), W=290;
@@ -38917,10 +38971,8 @@ function acTeamOpen(bid){
 function acTeamClose(){ AC.open=null; closeM("ac-team"); }
 function acTeamDraw(){
   const el=document.getElementById("ac-tw-body"), bid=AC.open; if(!el||!bid||!brands[bid]) return;
-  const may=canManagePeople(bid)&&AC.migr, team=acTeamOf(bid), svc=acSvcOf(bid);
+  const may=canManagePeople(bid)&&AC.migr, team=acTeamOf(bid);
   const others=acBrands().filter(k=>k!==bid&&acTeamOf(k).length);
-  const svcHtml=AC_SVC.map(([k,l])=>`<label class="${svc.includes(k)?"on":""}${may&&AC.svcOk?"":" ro"}"><input type="checkbox" ${svc.includes(k)?"checked":""}
-      ${may&&AC.svcOk?`onchange="acSvcSet('${bid}','${k}',this.checked)"`:"disabled"}>${l}</label>`).join("");
   const iAm=team.some(t=>t.user_id===ME.id&&t.team_role==="account_manager");
   const person=t=>{
     const p=acPerson(t.user_id), me=t.user_id===ME.id;
@@ -38937,14 +38989,17 @@ function acTeamDraw(){
   }).join("");
   const clients=(PEOPLE||[]).filter(p=>p.role==="client"&&p.brand_id===bid);
   el.innerHTML=`<div class="brs-h"><b>${escHtml(brands[bid].name)}</b><span class="bp-count">${team.length} ${team.length===1?"person":"people"}</span>
-      <span class="ac-svc">${svcHtml}</span>
-      <button class="brs-x" onclick="acTeamClose()">&times;</button></div>
+      <button class="brs-x" onclick="acTeamClose()" style="margin-left:auto">&times;</button></div>
     <div class="brs-b bp-wrap" style="max-height:66vh;">
       ${!AC.migr?`<div class="bp-none">The database change for this page has not been run yet.</div>`:""}
       ${may?`<div class="bp-ctl"><span class="ac-add"><input id="ac-add-q" placeholder="Add a person to this team…" value="${escAttr(AC.addQ)}"
             oninput="AC.addQ=this.value;acAddDraw()" onfocus="acAddDraw()" onclick="event.stopPropagation()"><span id="ac-add-l"></span></span>
           ${others.length?`<select class="bp-sel cc-stsel" onchange="if(this.value){acCopyTeam(this.value,'${bid}');this.value='';}">
             <option value="">Same team as…</option>${others.map(k=>`<option value="${k}">${escHtml(brands[k].name)} · ${acTeamOf(k).length}</option>`).join("")}</select>`:""}</div>`:""}
+      ${AC.linesOk?`<div class="bp-gh">Services on the contract <span class="n">${acLinesOf(bid).length}</span></div>
+        <div class="ac-svl">${acLinesOf(bid).map(l=>`<div class="sv"><span class="t">${escHtml(l.title)}${l.basis?`<span>${escHtml(l.basis)}${l.renewal_due?" · renewal due":""}</span>`:""}</span>
+          <span class="c${l.counts_for==="none"?" no":""}">${l.counts_for==="none"?"Not counted · "+acNoneWhy(l):"Counts in "+AC_CF_LBL[l.counts_for]}</span></div>`).join("")
+          ||`<div class="none">No running contract — fix it in Portfolio</div>`}</div>`:""}
       ${groups}
       ${clients.length?`<div class="bp-gh">Client <span class="n">${clients.length}</span></div>${clients.map(p=>`<div class="ac-p"><span class="e">${acEmoji(p)}</span>
         <span class="nm"><b>${escHtml(p.email)}</b><span>Client</span></span></div>`).join("")}`:""}
