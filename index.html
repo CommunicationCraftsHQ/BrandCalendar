@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.7 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.8 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12953,7 +12953,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.7 Tbilisi";
+const TOOL_VERSION="V118.8 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -32461,6 +32461,18 @@ window.prSegOpen=function(){ pbOpen("seg"); };
   const segsOf = (r) => (Array.isArray(r.labels) && r.labels.length) ? r.labels.slice() : (r.label ? [r.label] : []);
   const keysOf = (r) => { const l = segsOf(r);
     return (Array.isArray(r.list_keys) && r.list_keys.length === l.length) ? r.list_keys.slice() : l.map((_, i) => (i === 0 ? (r.list_key || "") : "")); };
+  /* V118.8 — Chirag, 16 Oct: "I may want to add additional explanation
+     or information typically only one line for each segment and even each
+     objective." Picked A of three mockups: every segment and objective
+     sits on its own line with its note beside it. The notes live on the
+     row (segment_notes by the segment's words, objective_notes by the
+     objective's key), so the same objective can say different things for
+     different target groups. A row read before the notes columns existed
+     has no such key, and then no note is offered or written. */
+  const notesOf = (r, f) => (r && r[f] && typeof r[f] === "object" && !Array.isArray(r[f])) ? r[f] : {};
+  const hasNotes = (r, f) => !!r && Object.prototype.hasOwnProperty.call(r, f);
+  const noteFor = (r, f, k) => { const m = notesOf(r, f); if (m[k]) return m[k];
+    const hit = Object.keys(m).find(x => low(x) === low(k)); return hit ? m[hit] : ""; };
   const grpOrder = () => VB.segs.map(s => s.key);
   function tgRows(){
     const o = grpOrder(), at = (k) => { const i = o.indexOf(k); return i < 0 ? 999 : i; };
@@ -32588,6 +32600,12 @@ window.prSegOpen=function(){ pbOpen("seg"); };
   async function tgSegWrite(r, g, labels, keys){
     const was = { segment_key: r.segment_key, label: r.label, list_key: r.list_key, labels: r.labels, list_keys: r.list_keys };
     const now = { segment_key: g, labels, list_keys: keys, label: labels.join(", ") || null, list_key: keys.find(Boolean) || null };
+    /* a segment that leaves the row takes its note with it */
+    if (hasNotes(r, "segment_notes")){
+      was.segment_notes = r.segment_notes;
+      const sn = {}; labels.forEach(w => { const t = noteFor(r, "segment_notes", w); if (t) sn[w] = t; });
+      now.segment_notes = sn;
+    }
     Object.assign(r, now);
     vbPaint();
     const u = await sb.from("brand_segments").update(now).eq("id", r.id);
@@ -32626,11 +32644,40 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     vbInfClose();
     const was = (r.objective_keys || []).slice();
     const now = was.includes(k) ? was.filter(x => x !== k) : was.concat([k]);
+    const upd = { objective_keys: now }, wasN = r.objective_notes;
+    if (hasNotes(r, "objective_notes") && !now.includes(k) && notesOf(r, "objective_notes")[k]){
+      const on = Object.assign({}, notesOf(r, "objective_notes")); delete on[k]; upd.objective_notes = on; r.objective_notes = on;
+    }
     r.objective_keys = now; vbPaint();
-    const u = await sb.from("brand_segments").update({ objective_keys: now }).eq("id", id);
-    if (u.error){ r.objective_keys = was; say("Not saved — " + u.error.message, "err"); return vbPaint(); }
+    const u = await sb.from("brand_segments").update(upd).eq("id", id);
+    if (u.error){ r.objective_keys = was; if ("objective_notes" in upd) r.objective_notes = wasN; say("Not saved — " + u.error.message, "err"); return vbPaint(); }
     if (now.includes(k) && !VB.bobjs.find(b => b.objective_key === k))
       VB.bobjs.push({ brand_id: VB.key, objective_key: k, label: null, unit: null });
+  };
+
+  /* ── notes ── one line each; Enter or leaving the box saves */
+  window.tgNote = async function(id, kind, i, v){
+    const r = VB.bsegs.find(x => x.id === id); if (!r) return;
+    const f = kind === "s" ? "segment_notes" : "objective_notes";
+    if (!hasNotes(r, f)) return;
+    const k = kind === "s" ? segsOf(r)[i] : (r.objective_keys || [])[i]; if (!k) return;
+    const t = String(v || "").replace(/\s+/g, " ").trim().slice(0, 160);
+    if (t === noteFor(r, f, k)) return;
+    const was = r[f], now = {};
+    Object.keys(notesOf(r, f)).forEach(x => { if (low(x) !== low(k)) now[x] = notesOf(r, f)[x]; });
+    if (t) now[k] = t;
+    r[f] = now;
+    const u = await sb.from("brand_segments").update({ [f]: now }).eq("id", r.id);
+    if (u.error){ r[f] = was; say("Not saved — " + u.error.message, "err"); vbPaint(); }
+  };
+  const noteBox = (r, kind, i, k) => {
+    const f = kind === "s" ? "segment_notes" : "objective_notes";
+    if (!hasNotes(r, f)) return "";
+    const t = noteFor(r, f, k);
+    if (!may()) return t ? `<span class="tg-ntro">${esc(t)}</span>` : "";
+    return `<input class="vb-ce tg-nt" maxlength="160" placeholder="+ note" value="${escA(t)}" title="${escA(t)}"
+      onblur="tgNote('${escA(r.id)}','${kind}',${i},this.value)"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}else if(event.key==='Escape'){this.value=this.defaultValue;this.blur();}">`;
   };
 
   /* ── talking points ── */
@@ -32681,13 +32728,13 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     const id = escA(r.id), n = (r.talking_points || []).length, op = !!(VB.open && VB.open[r.id]);
     const objs = (r.objective_keys || []);
     const edit = may();
-    const objCell = `<div class="vb-inf tg-obj">${objs.map(k => edit
+    const objCell = `<div class="tg-lines">${objs.map((k, i) => `<div class="tg-ln"><span class="vb-inf tg-obj">${edit
         ? `<b title="Take it off" onclick="tgObj('${id}','${escA(k)}')">${esc(vbObjWords(k).label)}</b>`
-        : `<b class="ro">${esc(vbObjWords(k).label)}</b>`).join("")}${edit ? `<span class="vb-plus" onclick="tgObjOpen(event,'${id}')">+ objective</span>` : (objs.length ? "" : `<span class="nsdim">—</span>`)}</div>`;
+        : `<b class="ro">${esc(vbObjWords(k).label)}</b>`}</span>${noteBox(r, "o", i, k)}</div>`).join("")}${edit ? `<div class="tg-ln vb-inf"><span class="vb-plus" onclick="tgObjOpen(event,'${id}')">+ objective</span></div>` : (objs.length ? "" : `<span class="nsdim">—</span>`)}</div>`;
     const L = segsOf(r);
-    const segCell = `<div class="vb-inf tg-seg">${L.map((w, i) => edit
+    const segCell = `<div class="tg-lines">${L.map((w, i) => `<div class="tg-ln"><span class="vb-inf tg-seg">${edit
         ? `<b title="Take it off" onclick="tgSegOff('${id}',${i})">${esc(w)}</b>`
-        : `<b class="ro">${esc(w)}</b>`).join("")}${edit ? `<span class="vb-plus" onclick="tgSegOpen(event,'${id}')">+ segment</span>` : (L.length ? "" : `<span class="nsdim">—</span>`)}</div>`;
+        : `<b class="ro">${esc(w)}</b>`}</span>${noteBox(r, "s", i, w)}</div>`).join("")}${edit ? `<div class="tg-ln vb-inf"><span class="vb-plus" onclick="tgSegOpen(event,'${id}')">+ segment</span></div>` : (L.length ? "" : `<span class="nsdim">—</span>`)}</div>`;
     const tp = `<span class="a3-tp${n ? "" : " none"}${op ? " open" : ""}" onclick="tgTpToggle('${id}')">${n ? n + " talking point" + (n > 1 ? "s" : "") : (edit ? "Add talking points" : "None")}</span>`;
     const main = `<tr data-tg="${id}">
         <td class="w-grp">${edit ? grpSel(r.segment_key, `tgGrp('${id}',this.value)`) : `<span class="vb-ro">${esc(mlabel(VB.segs, r.segment_key))}</span>`}</td>
@@ -38114,7 +38161,11 @@ function bfAddMenu(ev){
 }
 function bfPickFiles(fid){
   bfPopClose();
-  const inp=document.getElementById("bf-input"); if(!inp) return;
+  /* V118.8 — the + on a folder pill opens this from the Strategy page,
+     where the Files page's hidden box is not drawn: make one there */
+  let inp=document.getElementById("bf-input");
+  if(!inp){ document.body.insertAdjacentHTML("beforeend",`<input type="file" id="bf-input" multiple style="display:none;" onchange="bfUpload(this.files,this.dataset.folder);this.value=''">`); inp=document.getElementById("bf-input"); }
+  if(!inp) return;
   inp.dataset.folder=fid; inp.value=""; inp.click();
 }
 async function bfUpload(files,fid){
@@ -38144,7 +38195,7 @@ async function bfUpload(files,fid){
   const ok=list.length-BF.up.filter(x=>x.err).length;
   if(ok) toast(`${ok} file${ok===1?"":"s"} added to ${escHtml((bfFolder(fid)||{}).name||"the brand")}`);
 }
-function bfUpTick(){ bfList(); }
+function bfUpTick(){ bfList(); if(view==="brief") bfPaintStrategy(); }
 function bfUpClear(id){ BF.up=BF.up.filter(x=>x.id!==id); bfRefresh(); }
 
 /* ══ THE STRATEGY PAGE — the links row at the top, section 06 ══════ */
@@ -38156,8 +38207,13 @@ function bfPaintStrategy(){
   if(!BF.ok){ c.innerHTML=`<div class="bd-note" style="margin:0">${BF.err?"Could not load the files — "+escHtml(BF.err):"Loading…"}</div>`; return; }
   const cnt=id=>BF.files.filter(f=>f.folder_id===id).length;
   const newest=BF.files.slice().sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||""))).slice(0,5);
-  c.innerHTML=`<div class="bf-chips">${BF.folders.map(f=>`<span onclick="bfGo('${f.id}')">${escHtml(f.name)} <b>${cnt(f.id)}</b></span>`).join("")}</div>
-    ${newest.map(f=>bfRowHtml(f,true)).join("")||`<div class="bd-note" style="margin:6px 0 2px">No files yet.</div>`}
+  /* V118.8 — Chirag, 16 Oct: "You should be able to add new files to the
+     file section without going into the all files page." Picked option 2
+     of three mockups: a + on each folder pill opens the file window
+     straight into that folder. */
+  const srcOf=f=>f.name.toLowerCase()==="from the client"?"client":"us";
+  c.innerHTML=`<div class="bf-chips">${BF.folders.map(f=>`<span onclick="bfGo('${f.id}')">${escHtml(f.name)} <b>${cnt(f.id)}</b><i class="ti ti-plus bf-cp" title="Add files to ${escHtml(f.name)}" onclick="event.stopPropagation();BF._src='${srcOf(f)}';bfPickFiles('${f.id}')"></i></span>`).join("")}</div>
+    ${BF.up.map(bfUpRowHtml).join("")}${newest.map(f=>bfRowHtml(f,true)).join("")||(BF.up.length?"":`<div class="bd-note" style="margin:6px 0 2px">No files yet.</div>`)}
     <div class="bf-more" onclick="bfGo('all')">${BF.files.length?`Open all ${BF.files.length} files`:"Open the files"} <i class="ti ti-arrow-right"></i></div>`;
 }
 function bfSideCount(){ const n=document.querySelector("#sb-months .bf-navi .mdb-navct"); if(n) n.textContent=BF.ok?BF.files.length:""; }
@@ -38264,7 +38320,7 @@ function bfList(){
     ||(ups.length?"":`<div class="bf-empty">${bfInFolder().length?"No files match these filters.":"No files here yet. Use Add a file in the bar above."}</div>`));
   bfCnt();
 }
-function bfRefresh(){ if(view!=="files") return; buildFilesSidebar(); bfBar(); bfList(); }
+function bfRefresh(){ if(view==="brief"){ bfPaintStrategy(); return; } if(view!=="files") return; buildFilesSidebar(); bfBar(); bfList(); }
 function buildFilesSidebar(){
   bfEnsure();
   const st=document.getElementById("sb-stats"); if(st) st.innerHTML="";
@@ -39084,7 +39140,20 @@ document.addEventListener("scroll",e=>{ if(AC_MENU&&!(e.target&&e.target.closest
 .mk-card .mdb-strip{margin-top:14px;}
 .mk-card .tg-card{margin-top:2px !important;}
 .mk-card .bf-more,.mk-card .mdb-open{display:none;}
-.a3 td.w-seg{width:290px;}
+.a3 td.w-seg{width:440px;}
+/* V118.8 — segments and objectives one per line, the note beside each */
+.tg-lines{display:flex;flex-direction:column;gap:6px;padding:2px 0;min-width:0;}
+.tg-ln{display:flex;align-items:center;gap:10px;min-height:28px;min-width:0;}
+.tg-ln > .vb-inf{flex-shrink:0;}
+.tg-ln b{white-space:nowrap;}
+.tg-nt{flex:1;min-width:0;width:auto !important;font-size:12.5px !important;color:var(--text);opacity:.75;border-color:transparent !important;background:transparent !important;padding:4px 6px !important;}
+.tg-nt::placeholder{color:var(--subtle);opacity:.6;}
+.tg-nt:hover,.tg-nt:focus{opacity:1;border-color:var(--div) !important;background:#fff !important;}
+.tg-ntro{font-size:12.5px;color:var(--text);opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+.a3 tr[data-tg] > td{vertical-align:top;padding-top:10px !important;padding-bottom:10px !important;}
+.a3 tr[data-tg] > td.w-grp,.a3 tr[data-tg] > td.w-tp,.a3 tr[data-tg] > td.vb-x{padding-top:13px !important;}
+.bf-cp{display:inline-flex;align-items:center;justify-content:center;font-size:13px;color:var(--subtle);border-left:1px solid var(--div);margin:0 -5px 0 2px;padding:0 0 0 7px;height:16px;}
+.bf-cp:hover{color:var(--acc);}
 </style>
 <script>
 (function(){
