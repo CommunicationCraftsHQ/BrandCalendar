@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.15 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.16 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12951,7 +12951,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.15 Tbilisi";
+const TOOL_VERSION="V118.16 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -38573,7 +38573,9 @@ try{ const t=localStorage.getItem("cc-ac-tab"); if(t==="health"||t==="people") A
 let AC_HIDE=new Set();
 try{ AC_HIDE=new Set(JSON.parse(localStorage.getItem("cc-ac-cols")||"[]")); }catch(e){}
 
-function acMay(){ return typeof canEdit==="function"&&canEdit()&&ME.role!=="client"; }
+/* V118.16 — Chirag, 16 Oct 22:20: only admins and account managers open
+   Accounts. Creators and everyone else keep the old people window. */
+function acMay(){ return typeof canEdit==="function"&&canEdit()&&ME.role!=="client"&&(ME.role==="admin"||ME.toolRole==="admin"||ME.toolRole==="account_manager"); }
 function acIsAM(){ return ME.toolRole==="account_manager"; }
 function acPerson(id){ return personById(id)||null; }
 function acName(id){ const p=acPerson(id); return p?p.name:"Someone"; }
@@ -38786,7 +38788,7 @@ function acPickAM(k){ AC.am=k; acRefresh(); }
 
 /* ── the page ───────────────────────────────────────────────────────── */
 function acGo(){
-  if(!acMay()){ toast("View-only account","err"); return; }
+  if(!acMay()) return;
   closeAllPops(); acPopClose();
   const sel=document.getElementById("brand-sel"); if(sel) sel.value="";
   if(activeBrand){ activeBrand=""; try{ applyLayerDefaults(); }catch(e){} }
@@ -39367,6 +39369,7 @@ function acInScopeFor(bid){ return acInScope().indexOf(bid)>-1; }
     /* Accounts belongs to All brands: a brand picked from anywhere takes
        you to that brand, which pickBrand already does */
     if(view==="accounts"&&activeBrand&&brands[activeBrand]) view="mplan";
+    if(view==="accounts"&&!acMay()) view="year";   /* V118.16 — admins and account managers only */
     if(view!=="accounts"){ acPopClose(); acMenuClose(); }
     const out=baseRender.apply(this,arguments);
     acColsSync();
@@ -39380,7 +39383,7 @@ function acInScopeFor(bid){ return acInScope().indexOf(bid)>-1; }
     if(typeof ME==="object"&&ME&&ME.id){
       renderBnTabs();
       const q=new URLSearchParams(window.__URL_AT_LOAD||"");
-      if(q.get("p")==="accounts"&&view==="year"&&!activeBrand) acGo();
+      if(q.get("p")==="accounts"&&view==="year"&&!activeBrand&&acMay()) acGo();
     }
   }catch(e){}
 })();
