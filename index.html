@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.10 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.11 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12951,7 +12951,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.10 Tbilisi";
+const TOOL_VERSION="V118.11 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -18670,9 +18670,9 @@ function buildBriefSidebar(){
   sm.innerHTML=`
     <div class="s-lbl" style="margin-top:18px;">On this page</div>
     <div style="display:flex;flex-direction:column;gap:1px;">
-      <div class="bd-navi bf-navi" data-tgt="bd-s6" onclick="bfGo('all')">01 · Files <span class="mdb-navct">${fn}</span></div>
-      <div class="bd-navi" data-tgt="bd-vb" onclick="bdJump('bd-vb')">02 · Target groups</div>
-      <div class="bd-navi mdb-navi" data-tgt="bd-s5" onclick="mdbGo()">03 · Mood board <span class="mdb-navct">${mn}</span></div>
+      <div class="bd-navi" data-tgt="bd-vb" onclick="bdJump('bd-vb')">01 · Target groups</div>
+      <div class="bd-navi mdb-navi" data-tgt="bd-s5" onclick="mdbGo()">02 · Mood board <span class="mdb-navct">${mn}</span></div>
+      <div class="bd-navi bf-navi" data-tgt="bd-s6" onclick="bfGo('all')">03 · Files <span class="mdb-navct">${fn}</span></div>
     </div>`;
 }
 
@@ -39333,8 +39333,9 @@ function acInScopeFor(bid){ return acInScope().indexOf(bid)>-1; }
 </style>
 <script>
 (function(){
-  const LATE=["bd-s4","bd-s6","bd-vb","bd-s5"];
-  const NUM={"bd-s6":"01","bd-vb":"02","bd-s5":"03"};
+  /* V118.11 — Chirag, 16 Oct: "The order in the strategy page should be: target group. Mood board.. files." */
+  const LATE=["bd-vb","bd-s5","bd-s6"];
+  const NUM={"bd-vb":"01","bd-s5":"02","bd-s6":"03"};
   function tgCount(){
     const el=document.getElementById("tg-count"); if(!el) return;
     const n=document.querySelectorAll("#vb-host tr[data-tg]").length;
@@ -39360,7 +39361,7 @@ function acInScopeFor(bid){ return acInScope().indexOf(bid)>-1; }
       mood.h.insertAdjacentHTML("beforeend",`<span class="mk-lk" onclick="mdbGo()">Open the mood board <i class="ti ti-arrow-right"></i></span>`); }
     if(files) files.h.insertAdjacentHTML("beforeend",`<span class="mk-lk" onclick="bfGo('all')">Open all files <i class="ti ti-arrow-right"></i></span>`);
     if(tg){ const sub=tg.h.querySelector(".bd-secsub"); if(sub) sub.id="tg-count"; }
-    const order=secs.filter(s=>!LATE.includes(s.id)).concat(["bd-s4","bd-s6","bd-vb","bd-s5"].map(S).filter(Boolean));
+    const order=secs.filter(s=>!LATE.includes(s.id)).concat(["bd-vb","bd-s5","bd-s6"].map(S).filter(Boolean));
     w.innerHTML=""; lead.forEach(x=>w.appendChild(x));
     order.forEach(s=>{
       if(LATE.includes(s.id)){ const c=document.createElement("div"); c.className="mk-card"; c.appendChild(s.h); s.body.forEach(b=>c.appendChild(b)); w.appendChild(c); }
@@ -39378,8 +39379,8 @@ function acInScopeFor(bid){ return acInScope().indexOf(bid)>-1; }
     try{
       const first=document.querySelector("#sb-months .bd-navi"); if(!first) return out;
       const box=first.parentElement;
-      const lab={"bd-s6":"01 · Files","bd-vb":"02 · Target groups","bd-s5":"03 · Mood board"};
-      ["bd-s4","bd-s6","bd-vb","bd-s5"].forEach(id=>{
+      const lab={"bd-vb":"01 · Target groups","bd-s5":"02 · Mood board","bd-s6":"03 · Files"};
+      ["bd-vb","bd-s5","bd-s6"].forEach(id=>{
         const n=box.querySelector(`.bd-navi[data-tgt="${id}"]`); if(!n) return;
         if(lab[id]){ const ct=n.querySelector(".mdb-navct"); n.textContent=lab[id]+" "; if(ct) n.appendChild(ct); }
         box.appendChild(n);
