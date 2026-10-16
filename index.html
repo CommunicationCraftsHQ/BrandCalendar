@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.13 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.15 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12951,7 +12951,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.13 Tbilisi";
+const TOOL_VERSION="V118.15 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -18660,20 +18660,23 @@ function bdSpyBind(){ if(bdSpyBound) return; const m=document.getElementById("ma
   window.addEventListener("resize",()=>{ bdSyncHdr(); bdSpy(); });
   bdSpyBound=true; }
 function buildBriefSidebar(){
-  /* V118.9 — the "brief sections filled" counter counted the removed
-     sections, so it goes. The three entries carry the classes the Files
-     and Mood board code look for, so neither adds a second one. */
+  /* V118.15 — Chirag, 16 Oct: "The styling of the content in the left
+     panel is already outdated… simplify." The Files and Mood board
+     panels' rows: plain names, the count on the right, the current
+     section in black. The classes the Files and Mood board code look
+     for are kept, so neither adds a second entry. */
   const st=document.getElementById("sb-stats"); if(st) st.innerHTML="";
   const sm=document.getElementById("sb-months"); if(!sm) return;
   const fn=(typeof BF==="object"&&BF.bid===activeBrand&&BF.ok)?BF.files.length:"";
   const mn=(typeof MDB==="object"&&MDB.bid===activeBrand&&MDB.ok)?MDB.items.length:"";
+  const cn=(typeof CP==="object"&&CP.bid===activeBrand&&CP.ok)?(cpRows().length||""):"";
+  const tn=document.querySelectorAll("#vb-host tr[data-tg]").length||"";
   sm.innerHTML=`
     <div class="s-lbl" style="margin-top:18px;">On this page</div>
-    <div style="display:flex;flex-direction:column;gap:1px;">
-      <div class="bd-navi" data-tgt="bd-vb" onclick="bdJump('bd-vb')">01 · Target groups</div>
-      <div class="bd-navi mdb-navi" data-tgt="bd-s5" onclick="mdbGo()">02 · Mood board <span class="mdb-navct">${mn}</span></div>
-      <div class="bd-navi bf-navi" data-tgt="bd-s6" onclick="bfGo('all')">03 · Files <span class="mdb-navct">${fn}</span></div>
-    </div>`;
+    <div class="mdb-trow bd-navi" data-tgt="bd-cp" onclick="bdJump('bd-cp')"><span class="nm">Competitors</span><span class="ct">${cn}</span></div>
+    <div class="mdb-trow bd-navi" data-tgt="bd-vb" onclick="bdJump('bd-vb')"><span class="nm">Target groups</span><span class="ct">${tn}</span></div>
+    <div class="mdb-trow bd-navi mdb-navi" data-tgt="bd-s5" onclick="mdbGo()"><span class="nm">Mood board</span><span class="ct mdb-navct">${mn}</span></div>
+    <div class="mdb-trow bd-navi bf-navi" data-tgt="bd-s6" onclick="bfGo('all')"><span class="nm">Files</span><span class="ct mdb-navct">${fn}</span></div>`;
 }
 
 function renderBrief(){ briefEdit=false; if(activeBrand&&brands[activeBrand]&&canEdit()) buildBriefSidebar(); renderBriefDash(); bdSyncHdr(); bdSpyBind(); bdSpy(); }
@@ -18686,7 +18689,7 @@ function renderBriefDash(){
      links row, Files, Target groups and Mood board draw into. */
   const mc=document.getElementById("main");
   const b=brands[activeBrand]; if(!b){view="year";render();return;}
-  mc.innerHTML=`${pageHead()}<div class="bd-wrap"></div>`;
+  mc.innerHTML=`<div class="bd-wrap"></div>`;   /* V118.15 — no empty title bar: the links row sits where the Tasks page's filter row does */
 }
 
 function renderBriefForm(){
@@ -26047,7 +26050,8 @@ function mountFrameRow(){
   /* V116.8 — Tasks' filter row is its first row now that the title
      line has gone, so it takes the band's place rather than sitting
      under an empty one. */
-  if(host.querySelector(":scope > .pgbar, :scope > .ph-acts-only, :scope > div > .brfb, :scope > div > .fb")) return;
+  /* V118.15 — the Strategy page's links row takes the band's place the same way */
+  if(host.querySelector(":scope > .pgbar, :scope > .ph-acts-only, :scope > div > .brfb, :scope > div > .fb, :scope > .bd-wrap > .bf-links")) return;
   const row=document.createElement("div");
   row.className="pgbar pgbar-empty";
   row.setAttribute("aria-hidden","true");
@@ -26170,6 +26174,7 @@ const HIST_LABELS={
   brands:      {one:"Brand",          icon:"ti-building-store"},
   brand_tags:  {one:"Event link",     icon:"ti-link"},
   brand_event_prefs:{one:"Event switch", icon:"ti-toggle-right"},
+  brand_competitors:{one:"Competitor", icon:"ti-swords"},
   brand_briefs:{one:"Note",           icon:"ti-note"},
   brand_posts: {one:"Posting slot",   icon:"ti-clock"},
   industries:  {one:"Industry",       icon:"ti-tags"},
@@ -38395,39 +38400,14 @@ function bfTaskRedraw(){
 .ac-pop .go:hover{color:var(--acc);}
 .ac-pop .go i{font-size:14px;color:var(--subtle);margin-left:auto;}
 /* the brand's team window */
-.ac-tw .brs-h{flex-wrap:wrap;row-gap:8px;}
 .ac-svc{display:flex;gap:6px;margin-left:auto;margin-right:8px;}
 .ac-svc label{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--div);border-radius:7px;
   font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;background:var(--surface);user-select:none;}
 .ac-svc label.on{color:var(--text);border-color:#CFCFCB;}
 .ac-svc label input{width:14px;height:14px;margin:0;accent-color:var(--text);}
 .ac-svc label.ro{cursor:default;}
-.ac-tw .bp-wrap{overflow:auto;}
-.ac-add{position:relative;flex:1;}
-.ac-add input{width:100%;height:32px;padding:0 11px;border:1px solid var(--div);border-radius:9px;background:var(--surface2);
   font-family:inherit;font-size:12.5px;color:var(--text);outline:none;box-sizing:border-box;}
-.ac-add input:focus{border-color:var(--muted);background:#fff;}
-.ac-addl{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;background:#fff;border:1px solid var(--div);border-radius:10px;
   box-shadow:0 10px 28px rgba(0,0,0,.12);max-height:260px;overflow:auto;padding:4px;}
-.ac-addl .o{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px;cursor:pointer;font-size:12.5px;}
-.ac-addl .o:hover{background:rgba(13,13,13,.05);}
-.ac-addl .o .e{width:20px;text-align:center;font-size:15px;}
-.ac-addl .o .m{color:var(--subtle);font-size:11.5px;margin-left:auto;}
-.ac-addl .none{padding:10px;color:var(--subtle);font-size:12px;}
-.ac-tw .bp-gh .n{color:var(--muted);}
-.ac-tw .bp-gh .claim{margin-left:auto;text-transform:none;letter-spacing:0;font-size:12px;color:var(--acc);cursor:pointer;display:inline-flex;align-items:center;gap:4px;}
-.ac-p{display:flex;align-items:center;gap:10px;padding:6px 4px;border-radius:8px;}
-.ac-p:hover{background:var(--surface2);}
-.ac-p .e{width:24px;text-align:center;font-size:16px;flex:none;line-height:1;}
-.ac-p .nm{flex:1;min-width:0;}
-.ac-p .nm b{display:block;font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ac-p .nm span{display:block;font-size:11px;color:var(--subtle);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ac-p.me .nm b{color:var(--acc);}
-.ac-p select{height:28px;border:1px solid var(--div);border-radius:7px;background-color:#fff;font-size:12px;font-weight:600;color:var(--text);padding-left:9px;width:170px;}
-.ac-p .x{width:26px;height:26px;border-radius:6px;border:1px solid var(--div);background:#fff;color:var(--subtle);display:grid;place-items:center;font-size:13px;cursor:pointer;flex:none;}
-.ac-p .x:hover{color:var(--acc);border-color:var(--acc);}
-.ac-p .rol{font-size:12px;color:var(--muted);font-weight:600;}
-.ac-nobody{padding:6px 4px 6px 38px;font-size:12.5px;color:var(--subtle);}
 /* ══ V118.8 · THE PEOPLE TAB (mockup 02, approved 16 Oct) ══ */
 .ac-tabs.brl-lens span{cursor:pointer;gap:5px;}
 /* V118.13 — the page hides a lens in the filter row below 1360 (Tasks swaps it for
@@ -38503,14 +38483,6 @@ function bfTaskRedraw(){
 .ac-pop .sv .c{color:var(--muted);font-weight:600;white-space:nowrap;}
 .ac-pop .sv .c.no{color:var(--subtle);font-weight:500;}
 .ac-pop .why{color:var(--muted);line-height:1.5;padding:2px 0 4px;}
-.ac-svl{margin:4px 0 6px;}
-.ac-svl .sv{display:flex;align-items:center;gap:10px;padding:6px 4px;border-bottom:1px solid #F2F0EA;font-size:12.5px;}
-.ac-svl .sv:last-child{border-bottom:0;}
-.ac-svl .sv .t{flex:1;min-width:0;font-weight:600;}
-.ac-svl .sv .t span{color:var(--subtle);font-weight:500;font-size:11.5px;margin-left:6px;}
-.ac-svl .sv .c{font-size:12px;font-weight:600;color:var(--text);background:#F2F1EE;border-radius:999px;padding:2px 9px;white-space:nowrap;}
-.ac-svl .sv .c.no{background:transparent;color:var(--subtle);font-weight:500;}
-.ac-svl .none{padding:6px 4px;font-size:12.5px;color:var(--acc);font-weight:600;}
 /* V118.13 — Adoption, the bar that leads the line */
 .ac-adb{display:flex;align-items:center;gap:12px;min-width:0;width:100%;border:0;background:none;padding:0;font-family:inherit;cursor:pointer;}
 .ac-adb .tr{flex:1;height:14px;border-radius:999px;background:#ECEBE7;overflow:hidden;min-width:40px;}
@@ -38914,7 +38886,7 @@ function acRowHtml(bid){
     <span class="ac-bn"><span>${escHtml(b.name)}</span></span>${cols.map(([k])=>cell(k)).join("")}
     <span class="brl-car"><i class="ti ti-chevron-right" style="font-size:15px"></i></span></div>`;
   return `<div class="brl-tr" data-brand="${bid}"><span class="brl-sp"></span>
-    <span class="ac-bn" onclick="acTeamOpen('${bid}')" title="Team and services"><span>${escHtml(b.name)}</span></span>${cols.map(([k])=>cell(k)).join("")}
+    <span class="ac-bn" onclick="acJump('${bid}')" title="Open ${escAttr(b.name)}"><span>${escHtml(b.name)}</span></span>${cols.map(([k])=>cell(k)).join("")}
     <span class="brl-car"><i class="ti ti-chevron-right" style="font-size:15px"></i></span></div>`;
 }
 function buildAccountsSidebar(){
@@ -39040,15 +39012,15 @@ async function acSetRole(uid,bid,role){
   const cur=AC.team.find(t=>t.user_id===uid&&t.brand_id===bid);
   if(!(canManagePeople(bid)||(me&&role==="account_manager"&&acIsAM()))){ toast("Only an admin or this brand's account manager can change its team","err"); return; }
   if(cur&&cur.team_role===role) return;
-  if(role==="account_manager"&&!(p&&p.toolRole==="account_manager")){ toast("Make them Account manager in CC Platform → People & access first","err"); acTeamDraw(); if(AC_MENU) acMenuDraw(); return; }
+  if(role==="account_manager"&&!(p&&p.toolRole==="account_manager")){ toast("Make them Account manager in CC Platform → People & access first","err"); if(AC_MENU) acMenuDraw(); return; }
   const stamp={team_role:role,team_role_by:ME.id||null,team_role_at:new Date().toISOString()};
   const had=acHasRow(uid,bid);
   const before=AC.team.slice();
   if(cur) cur.team_role=role; else AC.team.push({user_id:uid,brand_id:bid,team_role:role});
-  acRefresh(); acTeamDraw(); if(AC_MENU) acMenuDraw();
+  acRefresh(); if(AC_MENU) acMenuDraw();
   const r=had?await sb.from("user_brands").update(stamp).eq("user_id",uid).eq("brand_id",bid)
              :await sb.from("user_brands").insert([{user_id:uid,brand_id:bid,...stamp}]);
-  if(r.error){ AC.team=before; acRefresh(); acTeamDraw(); dbErr(r); return; }
+  if(r.error){ AC.team=before; acRefresh(); dbErr(r); return; }
   if(!had){ (ASSIGN[bid]=ASSIGN[bid]||[]).push(uid); try{ buildBrandPanel(); }catch(e){} }
   try{ AC.health[bid]&&(AC.health[bid].team_size=acTeamOf(bid).length); }catch(e){}
   toast(`${me?"You are":(p?p.name+" is":"Saved:")} ${AC_ROLE_LBL[role]} on ${brands[bid].name}`);
@@ -39067,99 +39039,31 @@ async function acOffTeam(uid,bid){
   const always=!!(p&&(p.allBrands||p.toolRole==="admin"));
   const before=AC.team.slice();
   AC.team=AC.team.filter(t=>t!==cur);
-  acRefresh(); acTeamDraw();
+  acRefresh();
   const r=always?await sb.from("user_brands").delete().eq("user_id",uid).eq("brand_id",bid)
                 :await sb.from("user_brands").update({team_role:null,team_role_by:ME.id||null,team_role_at:new Date().toISOString()}).eq("user_id",uid).eq("brand_id",bid);
-  if(r.error){ AC.team=before; acRefresh(); acTeamDraw(); dbErr(r); return; }
+  if(r.error){ AC.team=before; acRefresh(); dbErr(r); return; }
   if(always) ASSIGN[bid]=(ASSIGN[bid]||[]).filter(x=>x!==uid);
   toast(`Off the ${brands[bid].name} team`);
 }
 async function acSvcSet(bid,svc,on){
-  if(!canManagePeople(bid)){ toast("Only an admin or this brand's account manager can change this","err"); acTeamDraw(); return; }
+  if(!canManagePeople(bid)){ toast("Only an admin or this brand's account manager can change this","err"); return; }
   const before=acSvcOf(bid).slice();
   const next=AC_SVC.map(x=>x[0]).filter(k=>k===svc?on:before.includes(k));
-  AC.svc[bid]=next; acRefresh(); acTeamDraw();
+  AC.svc[bid]=next; acRefresh();
   const r=await sb.from("brands").update({cal_services:next}).eq("id",bid);
-  if(r.error){ AC.svc[bid]=before; acRefresh(); acTeamDraw(); dbErr(r); }
-}
-async function acCopyTeam(from,bid){
-  if(!from||!canManagePeople(bid)) return;
-  const src=acTeamOf(from), have=acTeamOf(bid);
-  const add=src.filter(s=>!have.some(h=>h.user_id===s.user_id));
-  if(!add.length){ toast("Everyone on that team is already here"); return; }
-  if(!confirm(`Add ${add.length} ${add.length===1?"person":"people"} from ${brands[from].name}'s team to ${brands[bid].name}, with the same roles?`)) return;
-  for(const s of add) await acSetRole(s.user_id,bid,s.team_role);
+  if(r.error){ AC.svc[bid]=before; acRefresh(); dbErr(r); }
 }
 
-/* ── the brand's team window ───────────────────────────────────────── */
-function acTeamOpen(bid){
+/* ── V118.14 · the brand name jumps to the brand ──────────────────────
+   Chirag, 16 Oct 21:43: retire the team window; clicking the brand goes
+   to the brand, as the switcher does. The team is set in the Team and
+   Account managers cells and on the People tab; the contract lines still
+   show in every column's popover and on every dash. */
+function acJump(bid){
   if(!brands[bid]) return;
-  acPopClose(); closeAllPops();
-  AC.open=bid; AC.addQ="";
-  let ov=document.getElementById("ov-ac-team");
-  if(!ov){
-    document.body.insertAdjacentHTML("beforeend",`<div class="overlay" id="ov-ac-team" onclick="if(event.target===this)acTeamClose()">
-      <div class="modal ac-tw" style="max-width:760px;"><div id="ac-tw-body"></div></div></div>`);
-  }
-  acTeamDraw(); openM("ac-team");
+  acPopClose(); acMenuClose(); pickBrand(bid);
 }
-function acTeamClose(){ AC.open=null; closeM("ac-team"); }
-function acTeamDraw(){
-  const el=document.getElementById("ac-tw-body"), bid=AC.open; if(!el||!bid||!brands[bid]) return;
-  const may=canManagePeople(bid)&&AC.migr, team=acTeamOf(bid);
-  const others=acBrands().filter(k=>k!==bid&&acTeamOf(k).length);
-  const iAm=team.some(t=>t.user_id===ME.id&&t.team_role==="account_manager");
-  const person=t=>{
-    const p=acPerson(t.user_id), me=t.user_id===ME.id;
-    const sel=may?`<select class="cc-stsel" onchange="acSetRole('${t.user_id}','${bid}',this.value)">${AC_ROLES.map(([k,l])=>`<option value="${k}"${k===t.team_role?" selected":""}>${l}</option>`).join("")}</select>`
-      :`<span class="rol">${AC_ROLE_LBL[t.team_role]||""}</span>`;
-    return `<div class="ac-p${me?" me":""}" data-uid="${t.user_id}"><span class="e">${acEmoji(p)}</span>
-      <span class="nm"><b>${escHtml(p?p.name:"Someone")}${me?" <span class='bp-you'>you</span>":""}</b><span>${escHtml(p?p.email:"")}</span></span>
-      ${sel}${may||me?`<span class="x" title="Off the team" onclick="acOffTeam('${t.user_id}','${bid}')"><i class="ti ti-x"></i></span>`:""}</div>`;
-  };
-  const groups=AC_ROLES.map(([k,,many])=>{
-    const g=team.filter(t=>t.team_role===k).sort((a,b)=>acName(a.user_id).localeCompare(acName(b.user_id)));
-    const claim=k==="account_manager"&&!iAm&&acIsAM()&&AC.migr?`<span class="claim" onclick="acClaim('${bid}')"><i class="ti ti-hand-grab"></i>Claim</span>`:"";
-    return `<div class="bp-gh">${many} <span class="n">${g.length}</span>${claim}</div>${g.map(person).join("")||`<div class="ac-nobody">Nobody yet</div>`}`;
-  }).join("");
-  const clients=(PEOPLE||[]).filter(p=>p.role==="client"&&p.brand_id===bid);
-  el.innerHTML=`<div class="brs-h"><b>${escHtml(brands[bid].name)}</b><span class="bp-count">${team.length} ${team.length===1?"person":"people"}</span>
-      <button class="brs-x" onclick="acTeamClose()" style="margin-left:auto">&times;</button></div>
-    <div class="brs-b bp-wrap" style="max-height:66vh;">
-      ${!AC.migr?`<div class="bp-none">The database change for this page has not been run yet.</div>`:""}
-      ${may?`<div class="bp-ctl"><span class="ac-add"><input id="ac-add-q" placeholder="Add a person to this team…" value="${escAttr(AC.addQ)}"
-            oninput="AC.addQ=this.value;acAddDraw()" onfocus="acAddDraw()" onclick="event.stopPropagation()"><span id="ac-add-l"></span></span>
-          ${others.length?`<select class="bp-sel cc-stsel" onchange="if(this.value){acCopyTeam(this.value,'${bid}');this.value='';}">
-            <option value="">Same team as…</option>${others.map(k=>`<option value="${k}">${escHtml(brands[k].name)} · ${acTeamOf(k).length}</option>`).join("")}</select>`:""}</div>`:""}
-      ${AC.linesOk?`<div class="bp-gh">Services on the contract <span class="n">${acLinesOf(bid).length}</span></div>
-        <div class="ac-svl">${acLinesOf(bid).map(l=>`<div class="sv"><span class="t">${escHtml(l.title)}${l.basis?`<span>${escHtml(l.basis)}${l.renewal_due?" · renewal due":""}</span>`:""}</span>
-          <span class="c${l.counts_for==="none"?" no":""}">${l.counts_for==="none"?"Not counted · "+acNoneWhy(l):"Counts in "+AC_CF_LBL[l.counts_for]}</span></div>`).join("")
-          ||`<div class="none">No running contract — fix it in Portfolio</div>`}</div>`:""}
-      ${groups}
-      ${clients.length?`<div class="bp-gh">Client <span class="n">${clients.length}</span></div>${clients.map(p=>`<div class="ac-p"><span class="e">${acEmoji(p)}</span>
-        <span class="nm"><b>${escHtml(p.email)}</b><span>Client</span></span></div>`).join("")}`:""}
-    </div>
-    <div class="modal-foot"><button class="btn btn-g" onclick="acTeamClose()">Done</button></div>`;
-}
-function acAddDraw(){
-  const l=document.getElementById("ac-add-l"), bid=AC.open; if(!l||!bid) return;
-  const q=String(AC.addQ||"").trim().toLowerCase();
-  if(!q&&document.activeElement!==document.getElementById("ac-add-q")){ l.innerHTML=""; return; }
-  const on=new Set(acTeamOf(bid).map(t=>t.user_id));
-  const list=(PEOPLE||[]).filter(p=>p.role!=="client"&&!on.has(p.id)&&(!q||String(p.name).toLowerCase().includes(q)||String(p.email).toLowerCase().includes(q)))
-    .sort((a,b)=>String(a.name).localeCompare(String(b.name))).slice(0,30);
-  l.innerHTML=`<div class="ac-addl" onclick="event.stopPropagation()">${list.map(p=>`<div class="o" onmousedown="event.preventDefault()" onclick="acAddPick('${p.id}')"><span class="e">${acEmoji(p)}</span>${escHtml(p.name)}<span class="m">${p.toolRole==="account_manager"?"Account manager":"Creator"}</span></div>`).join("")
-    ||`<div class="none">${q?"Nobody matches.":"Everyone is already on this team."}</div>`}</div>`;
-}
-function acAddPick(uid){
-  const p=acPerson(uid), bid=AC.open; if(!p||!bid) return;
-  AC.addQ="";
-  acSetRole(uid,bid,p.toolRole==="account_manager"?"account_manager":"creator");
-}
-document.addEventListener("click",e=>{
-  if(!AC.open) return;
-  const l=document.getElementById("ac-add-l"); if(l&&!(e.target.closest&&e.target.closest(".ac-add"))) l.innerHTML="";
-});
 
 /* ══ V118.4 · THE TEAM AND THE ACCOUNT MANAGERS, PICKED IN THE CELL ═══
    Chirag, 16 Oct: "Adding a team should not require opening a form. It
@@ -39483,6 +39387,153 @@ function acInScopeFor(bid){ return acInScope().indexOf(bid)>-1; }
 </script>
 
 <style>
+/* ══ V118.15 TBILISI · COMPETITORS, AND THE STRATEGY PAGE TIDIED ═══════
+   Chirag, 16 Oct, 21:50 — four asks, mockups at 22:01, picked C:
+   · the gap under the black bar matches the Tasks page: the links row
+     20px under it, the first card 16px under the links
+   · a link pill does not grow on hover: the pencil takes the place of
+     its icon
+   · the left panel in the Files / Mood board style
+   · 01 Competitors above Target groups: one table, one line a brand,
+     Direct or Aspirational, its links as the same pills                 */
+.bd-wrap .bf-links{margin:0 !important;}
+.bf-lk{height:32px;}
+.bf-lk .ed{display:inline-flex !important;position:absolute;left:8px;top:50%;margin:-11px 0 0 0;width:22px;height:22px;visibility:hidden;background:var(--surface2);color:var(--text);}
+.bf-lk:hover .ed{visibility:visible;}
+.bf-lk:has(.ed):hover > i{visibility:hidden;}
+.bd-wrap.mkA .bf-links + .mk-card{margin-top:16px;}
+#sb-months .mdb-trow.bd-navi{padding:7px 10px;font-size:13px;font-weight:400;color:var(--text);box-shadow:none;}
+#sb-months .mdb-trow.bd-navi.on{background:var(--text);color:#fff;font-weight:600;box-shadow:none;}
+#sb-months .mdb-trow.bd-navi.on .ct{color:rgba(255,255,255,.6);}
+.cp-t td{vertical-align:middle !important;}
+.cp-t td.w-nm{width:280px;}
+.cp-t td.w-ty{width:190px;}
+.cp-nm{font-weight:700 !important;font-size:14px !important;}
+.cp-nmro{font-size:14px;font-weight:700;}
+.cp-lks{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.cp-lk{height:28px !important;padding:0 10px !important;font-size:12px;gap:6px;}
+.cp-lk > i{font-size:13px !important;}
+.cp-lk .ed{left:5px !important;width:20px !important;height:20px !important;margin-top:-10px !important;}
+.cp-ty{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:600;background:var(--surface2);color:var(--text);cursor:pointer;user-select:none;}
+.cp-ty.aspirational{background:#EFE7F7;color:#5A4796;}
+.cp-ty.off{opacity:.45;}
+.cp-ty.ro{cursor:default;}
+.cp-new .vb-ce{border:1px dashed #D8D7D2 !important;background:#fff !important;}
+</style>
+<script>
+/* ══ V118.15 — COMPETITORS ════════════════════════════════════════════ */
+var CP={bid:null,ok:false,busy:false,err:"",rows:[],newT:"direct"};
+const CP_T={direct:"Direct",aspirational:"Aspirational"};
+function cpMay(){ return typeof bfMayLinks==="function"&&bfMayLinks(); }
+function cpRows(){ return CP.rows.filter(r=>!r.deleted_at&&r.brand_id===CP.bid)
+  .sort((a,b)=>((a.kind==="direct"?0:1)-(b.kind==="direct"?0:1))||((a.sort||0)-(b.sort||0))||String(a.name).localeCompare(String(b.name))); }
+async function cpEnsure(){
+  const bid=activeBrand; if(!bid||CP.busy||(CP.bid===bid&&(CP.ok||CP.err))) return;
+  CP.bid=bid; CP.ok=false; CP.err=""; CP.rows=[]; CP.busy=true;
+  try{
+    const r=await sb.from("brand_competitors").select("*").eq("brand_id",bid).is("deleted_at",null);
+    if(r.error) throw r.error;
+    if(CP.bid===bid){ CP.rows=(r.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at); CP.ok=true; }
+  }catch(e){ if(CP.bid===bid) CP.err=String(e&&e.message||e); }
+  CP.busy=false; cpPaint();
+}
+function cpLinksOf(r){ return Array.isArray(r.links)?r.links.filter(l=>l&&l.url):[]; }
+function cpRowHtml(r){
+  const id=escAttr(r.id), may=cpMay();
+  const lk=cpLinksOf(r).map((l,i)=>{ const k=bfKind(l.kind);
+    return `<a class="bf-lk cp-lk" href="${escAttr(bdHref(l.url))}" target="_blank" rel="noopener" title="${escAttr(bdShort(l.url))}"><i class="ti ti-${k[2]}"></i>${escHtml(k[1])}${may?`<span class="ed" title="Change or remove" onclick="event.preventDefault();event.stopPropagation();cpLinkForm(event,'${id}',${i})"><i class="ti ti-pencil"></i></span>`:""}</a>`; }).join("");
+  return `<tr data-cp="${id}">
+    <td class="w-nm">${may?`<input class="vb-ce cp-nm" value="${escAttr(r.name)}" onblur="cpName('${id}',this.value)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.defaultValue;this.blur();}">`:`<span class="cp-nmro">${escHtml(r.name)}</span>`}</td>
+    <td class="w-ty"><span class="cp-ty ${r.kind}${may?"":" ro"}"${may?` title="Switch" onclick="cpType('${id}')"`:""}>${CP_T[r.kind]||"Direct"}</span></td>
+    <td><div class="cp-lks">${lk}${may?`<span class="vb-plus" onclick="cpLinkMenu(event,'${id}')">+ link</span>`:(lk?"":`<span class="nsdim">—</span>`)}</div></td>
+    <td class="vb-x">${may?`<button class="vb-del" title="Take this off" onclick="cpDel('${id}')">✕</button>`:""}</td></tr>`;
+}
+function cpHtml(){
+  if(!CP.ok) return `<div class="bd-note" style="margin:0">${CP.err?"Could not load the competitors — "+escHtml(CP.err):"Loading…"}</div>`;
+  const rows=cpRows(), may=cpMay();
+  if(!rows.length&&!may) return `<div class="bd-note" style="margin:6px 0 2px">None yet.</div>`;
+  return `<table class="vb-t a3 cp-t"><thead><tr><th>Competitor</th><th>Type</th><th>Links</th><th></th></tr></thead><tbody>
+    ${rows.map(cpRowHtml).join("")}
+    ${may?`<tr class="vb-new cp-new"><td class="w-nm"><input class="vb-ce" id="cp-new" placeholder="Add a competitor…" onkeydown="if(event.key==='Enter'&&this.value.trim()){event.preventDefault();cpAdd(this.value);}"></td>
+      <td class="w-ty">${["direct","aspirational"].map(t=>`<span class="cp-ty ${t}${CP.newT===t?"":" off"}" onclick="CP.newT='${t}';cpPaint();const n=document.getElementById('cp-new');if(n)n.focus();">${CP_T[t]}</span>`).join(" ")}</td><td></td><td></td></tr>`:""}
+    </tbody></table>`;
+}
+function cpPaint(){
+  const h=document.getElementById("cp-host"); if(!h) return;
+  const keep=document.getElementById("cp-new"), typed=keep?keep.value:"", focus=keep&&document.activeElement===keep;
+  h.innerHTML=cpHtml();
+  const n=document.getElementById("cp-new"); if(n&&typed){ n.value=typed; } if(n&&focus) n.focus();
+  const c=CP.ok?cpRows().length:0;
+  const sub=document.getElementById("cp-count"); if(sub) sub.textContent=CP.ok&&c?c+" brand"+(c===1?"":"s"):"";
+  const sc=document.querySelector('#sb-months [data-tgt="bd-cp"] .ct'); if(sc) sc.textContent=CP.ok&&c?c:"";
+}
+async function cpWrite(r,patch,undo){
+  Object.assign(r,patch); cpPaint();
+  const u=await sb.from("brand_competitors").update(Object.assign({updated_at:new Date().toISOString()},patch)).eq("id",r.id);
+  if(u.error){ Object.assign(r,undo); toast("Not saved — "+escHtml(u.error.message),"err"); cpPaint(); return false; }
+  return true;
+}
+async function cpAdd(name){
+  const t=String(name||"").replace(/\s+/g," ").trim(); if(!t) return;
+  if(cpRows().some(r=>r.name.toLowerCase()===t.toLowerCase())){ toast("Already on the list","err"); return; }
+  const row={id:crypto.randomUUID(),brand_id:CP.bid,name:t,kind:CP.newT,links:[],sort:cpRows().reduce((m,x)=>Math.max(m,x.sort||0),0)+10};
+  const n=document.getElementById("cp-new"); if(n) n.value="";
+  const r=await sb.from("brand_competitors").insert([row]).select("*");
+  if(r.error){ toast("Not added — "+escHtml(r.error.message),"err"); return; }
+  CP.rows.push(((r.data||[]).find?(r.data||[]).find(x=>x.id===row.id):null)||row);
+  cpPaint(); const n2=document.getElementById("cp-new"); if(n2) n2.focus();
+}
+function cpName(id,v){
+  const r=CP.rows.find(x=>x.id===id); if(!r) return;
+  const t=String(v||"").replace(/\s+/g," ").trim();
+  if(!t||t===r.name){ cpPaint(); return; }
+  cpWrite(r,{name:t},{name:r.name});
+}
+function cpType(id){ const r=CP.rows.find(x=>x.id===id); if(!r) return;
+  cpWrite(r,{kind:r.kind==="direct"?"aspirational":"direct"},{kind:r.kind}); }
+async function cpDel(id){ const r=CP.rows.find(x=>x.id===id); if(!r) return;
+  if(await cpWrite(r,{deleted_at:new Date().toISOString()},{deleted_at:null})) toast(escHtml(r.name)+" taken off"); }
+function cpLinkMenu(ev,id){
+  bfPop(ev,`<div class="bf-menu">${BF_KINDS.map(([k,l,i])=>`<div class="bf-mi" onclick="cpLinkForm(event,'${escAttr(id)}',-1,'${k}')"><i class="ti ti-${i}"></i>${l}</div>`).join("")}</div>`);
+}
+function cpLinkForm(ev,id,i,kind){
+  const r=CP.rows.find(x=>x.id===id); if(!r) return;
+  const l=i>=0?cpLinksOf(r)[i]:null, k=bfKind(l?l.kind:kind);
+  bfPop(ev,`<div class="bf-form"><div class="bf-mh" style="padding:0 2px"><i class="ti ti-${k[2]}"></i> ${escHtml(r.name)} · ${escHtml(k[1])}</div>
+    <input class="fi" id="cp-lu" placeholder="Paste the address" value="${escAttr(l?l.url:"")}" onkeydown="if(event.key==='Enter')cpLinkSave('${escAttr(id)}',${i},'${k[0]}')">
+    <div class="row">${l?`<button class="btn btn-s btn-sm" onclick="cpLinkSave('${escAttr(id)}',${i},'${k[0]}',true)">Remove</button>`:""}<span class="sp"></span>
+      <button class="btn btn-p btn-sm" onclick="cpLinkSave('${escAttr(id)}',${i},'${k[0]}')">${l?"Save":"Add"}</button></div></div>`);
+}
+function cpLinkSave(id,i,kind,off){
+  const r=CP.rows.find(x=>x.id===id); if(!r) return;
+  const was=cpLinksOf(r), now=was.slice();
+  if(off){ now.splice(i,1); }
+  else{
+    const u=String((document.getElementById("cp-lu")||{}).value||"").trim();
+    if(!u){ toast("Paste the address first","err"); return; }
+    const k=(kind==="other"||kind==="website")?bfKindFromUrl(u,kind):kind;
+    if(i>=0) now[i]={kind:k,url:u}; else now.push({kind:k,url:u});
+  }
+  bfPopClose(); cpWrite(r,{links:now},{links:was});
+}
+/* the section, drawn into the Strategy page before the arrangement */
+(function(){
+  const baseBrief=renderBrief;
+  renderBrief=function(){
+    const out=baseBrief.apply(this,arguments);
+    if(!briefEdit){
+      const w=document.querySelector("#main .bd-wrap");
+      if(w&&!w.querySelector("#bd-cp")){
+        w.insertAdjacentHTML("beforeend",`<div class="bd-sec" id="bd-cp"><div class="bd-secnum">01</div><div class="bd-sectitle">Competitors</div><div class="bd-secrule"></div><div class="bd-secsub" id="cp-count"></div></div><div id="cp-host"></div>`);
+      }
+      if(CP.bid!==activeBrand){ CP.ok=false; CP.err=""; }
+      cpPaint(); cpEnsure(); setTimeout(cpPaint,0);   /* after the arrangement has cleared the heading line */
+    }
+    return out;
+  };
+})();
+</script>
+<style>
 /* ══ V118.3 TBILISI · THE STRATEGY PAGE, ARRANGED (layout A) ═══════════
    Chirag, 16 Oct: "Give better and more organised way of arranging this
    sections… The order should be files, target groups, mood board."
@@ -39524,12 +39575,13 @@ function acInScopeFor(bid){ return acInScope().indexOf(bid)>-1; }
 <script>
 (function(){
   /* V118.11 — Chirag, 16 Oct: "The order in the strategy page should be: target group. Mood board.. files." */
-  const LATE=["bd-vb","bd-s5","bd-s6"];
-  const NUM={"bd-vb":"01","bd-s5":"02","bd-s6":"03"};
+  const LATE=["bd-cp","bd-vb","bd-s5","bd-s6"];   /* V118.15 — Competitors first */
+  const NUM={"bd-cp":"01","bd-vb":"02","bd-s5":"03","bd-s6":"04"};
   function tgCount(){
     const el=document.getElementById("tg-count"); if(!el) return;
     const n=document.querySelectorAll("#vb-host tr[data-tg]").length;
     el.textContent=n?n+" target group"+(n===1?"":"s"):"";
+    const sc=document.querySelector('#sb-months [data-tgt="bd-vb"] .ct'); if(sc) sc.textContent=n||"";
   }
   function arrange(){
     const w=document.querySelector("#main .bd-wrap"); if(!w||w.classList.contains("mkA")) return;
@@ -39551,7 +39603,7 @@ function acInScopeFor(bid){ return acInScope().indexOf(bid)>-1; }
       mood.h.insertAdjacentHTML("beforeend",`<span class="mk-lk" onclick="mdbGo()">Open the mood board <i class="ti ti-arrow-right"></i></span>`); }
     if(files) files.h.insertAdjacentHTML("beforeend",`<span class="mk-lk" onclick="bfGo('all')">Open all files <i class="ti ti-arrow-right"></i></span>`);
     if(tg){ const sub=tg.h.querySelector(".bd-secsub"); if(sub) sub.id="tg-count"; }
-    const order=secs.filter(s=>!LATE.includes(s.id)).concat(["bd-vb","bd-s5","bd-s6"].map(S).filter(Boolean));
+    const order=secs.filter(s=>!LATE.includes(s.id)).concat(["bd-cp","bd-vb","bd-s5","bd-s6"].map(S).filter(Boolean));
     w.innerHTML=""; lead.forEach(x=>w.appendChild(x));
     order.forEach(s=>{
       if(LATE.includes(s.id)){ const c=document.createElement("div"); c.className="mk-card"; c.appendChild(s.h); s.body.forEach(b=>c.appendChild(b)); w.appendChild(c); }
@@ -39569,8 +39621,8 @@ function acInScopeFor(bid){ return acInScope().indexOf(bid)>-1; }
     try{
       const first=document.querySelector("#sb-months .bd-navi"); if(!first) return out;
       const box=first.parentElement;
-      const lab={"bd-vb":"01 · Target groups","bd-s5":"02 · Mood board","bd-s6":"03 · Files"};
-      ["bd-vb","bd-s5","bd-s6"].forEach(id=>{
+      const lab={};   /* V118.15 — the panel draws its own names */
+      ["bd-cp","bd-vb","bd-s5","bd-s6"].forEach(id=>{
         const n=box.querySelector(`.bd-navi[data-tgt="${id}"]`); if(!n) return;
         if(lab[id]){ const ct=n.querySelector(".mdb-navct"); n.textContent=lab[id]+" "; if(ct) n.appendChild(ct); }
         box.appendChild(n);
