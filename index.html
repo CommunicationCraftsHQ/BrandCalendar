@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.25 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.26 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -10521,6 +10521,19 @@ function brInitials(id){
   if(n==='—') return '··';
   return wPersonFace({name:n}).initials;
 }
+/* ══ V118.26 TBILISI · ONE FACE IN THE CONVERSATIONS TOO ═══════════════
+   Chirag, 17 Oct: "the posts section shows an emoji, the task section
+   shows CD as initials — why?" Because the task, creative and mood-board
+   threads drew their circle straight from brInitials and never asked
+   avatarInner, the one shape every other face in the file goes through
+   (emoji, photo, else initials). Now they do. */
+function brFace(id,extra,client){
+  /* me by my own email — the directory may not list me (a brand-less admin) */
+  const mine=!!(ME&&ME.id&&id===ME.id);
+  const n=mine?String(ME.email||"").split("@")[0]:brPersonName(id), k=(!n||n==='—')?'':n;
+  const letters=k?wPersonFace({name:k}).initials:'··';
+  return `<span class="th-av${extra?" "+extra:""}${client?" cli":""}" style="${avatarSkin(k,!!client)}">${avatarInner(k,escHtml(letters))}</span>`;
+}
 function brDaysSince(iso){
   if(!iso) return null;
   return Math.round((new Date(new Date().toDateString())-new Date(String(iso).slice(0,10)))/864e5);
@@ -11101,7 +11114,7 @@ function brOpenPanelHtml(t){
       ${aud==="client"&&JSR_PICK&&!brIsClient()?jsrPickHtml():""}
       ${TASK_REPLY&&TASK.id===t.id?`<div class="tm-qbar">${taskReplyQuote(TASK_REPLY.aid,true)}<span class="x" onclick="taskReplyClear()" title="Not a reply">✕</span></div>`:""}
       <div class="ccm">
-        <span class="th-av ccm-av${brIsClient()?" cli":""}">${escHtml(brInitials(ME.id)||(ME.email||"··").slice(0,2).toUpperCase())}</span>
+        ${brFace(ME.id,"ccm-av",brIsClient())}
         <div id="th-in" class="ccw rt" contenteditable="true" data-ph="Write a message" data-att="${aud==="client"&&!brIsClient()?"taskc":"task"}"
           data-draft="th-${escAttr(t.id)}${aud==="client"?"-c":""}"
           onkeydown="if(mentionKeyNav(event))return;if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();taskPost();}"
@@ -12066,7 +12079,7 @@ function msgHtml(m,o){
      it gets no actions — Edit on it would look like it edits the brief
      and would edit nothing. "Edit details" in the side panel does that. */
   if(m._brief) return `<div class="th-m">
-    <span class="th-av">${escHtml(brInitials(m.author_id)||"··")}</span>
+    ${brFace(m.author_id)}
     <div class="th-b">
       <div class="th-h"><b>${who}</b>
         <span class="th-kind">Team</span>
@@ -12074,7 +12087,7 @@ function msgHtml(m,o){
       <div class="th-t">${fbBody(m.body||"")}</div>
     </div></div>`;
   if(TASK_EDITING===m.id) return `<div class="th-m">
-    <span class="th-av${client?" cli":""}">${escHtml(brInitials(m.author_id)||"··")}</span>
+    ${brFace(m.author_id,"",client)}
     <div class="th-b">
       <div id="th-edit-${escAttr(m.id)}" class="ccw rt" contenteditable="true" data-nodraft="1"
         onkeydown="if(mentionKeyNav(event))return;if(event.key==='Escape'){event.preventDefault();taskCancelEdit();}"
@@ -12110,7 +12123,7 @@ function msgHtml(m,o){
   const rp=taskReplyOf(m.body), mine=(brIsClient()?client:!client)&&fbIsMine(m);
   const when=m.created_at?fmtWhen(m.created_at):"";
   return `<div class="th-m tm${client?" cli":""}${mine?" me":""}${o.cont?" cont":""}" data-mid="${escAttr(m.id)}">
-    ${o.cont?"":`<div class="tm-who"><span class="th-av${client?" cli":""}">${escHtml(brInitials(m.author_id)||"··")}</span><b>${who}</b>
+    ${o.cont?"":`<div class="tm-who">${brFace(m.author_id,"",client)}<b>${who}</b>
       <span class="th-kind${client?" cli":""}">${client?"Client":"Team"}</span>
       ${by}<span class="th-when">${when}${m.edited_at?" · edited":""}</span></div>`}
     <div class="tm-b">
@@ -13319,7 +13332,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.25 Tbilisi";
+const TOOL_VERSION="V118.26 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -25799,45 +25812,60 @@ function wAttach(ev){
   return false;
 }
 
+/* ══ V118.26 TBILISI · THE BAR DOCKS INSIDE THE BOX ═══════════════════
+   Chirag, 17 Oct, four screenshots: the bar floated over the page and
+   landed on whatever was above the box — the files in a task thread,
+   "2 changes to this post", the Production team card. Above-right when
+   the box was low on the screen, below-left when it was high: three
+   positions for one bar. And the one-line objective got the full bar.
+
+   One rule now. A box with a border (the message boxes, Notes & files,
+   a caption, a comment being edited) carries the bar INSIDE itself,
+   bottom-left, and makes room for it while it has focus; it can cover
+   nothing. Text with no border (a theme, a plan, the minutes) keeps
+   the floating bar, always below-left, never above. A one-line field
+   gets no bar at all. */
+function wBarNone(el){
+  return !!(el&&el.matches&&el.matches(".mpv-obj,.mpv-goal,[data-wbar='none']"));
+}
+function wBarDocks(el){
+  try{ const cs=getComputedStyle(el); return cs.borderTopStyle!=="none"&&parseFloat(cs.borderTopWidth)>0; }
+  catch(e){ return false; }
+}
 function wBarShow(el){
+  if(wBarNone(el)){ wBarHide(); return; }
+  if(WBAR_FOR&&WBAR_FOR!==el) WBAR_FOR.classList.remove("w-dock");
   WBAR_FOR=el;
   const bar=wBarEl();
   bar.classList.add("open");                 /* measurable only once open */
+  const dock=wBarDocks(el);
+  bar.classList.toggle("dock",dock);
+  el.classList.toggle("w-dock",dock);        /* the room at the bottom, kit css */
   const r=el.getBoundingClientRect();
-  const vh=window.innerHeight||800, vw=window.innerWidth||1200;
-  const bw=bar.offsetWidth||220, bh=bar.offsetHeight||40, GAP=7;
+  const vw=window.innerWidth||1200;
+  const bw=bar.offsetWidth||220, bh=bar.offsetHeight||40, GAP=7, IN=8;
 
-  /* where the caret actually is; the field's own box is the fallback for
-     a selection that reports nothing (an empty line does) */
-  let caretY=r.bottom;
-  try{
-    const sel=getSelection();
-    if(sel&&sel.rangeCount){
-      const cr=sel.getRangeAt(0).getBoundingClientRect();
-      if(cr&&(cr.top||cr.bottom)) caretY=cr.bottom;
-    }
-  }catch(e){}
-
-  const roomBelow = vh-r.bottom;
-  const above = roomBelow < bh+GAP+8 || caretY > vh*0.66;
-  const top = above ? (r.top-bh-GAP) : (r.bottom+GAP);
-  /* GHENT — ABOVE MEANS OVER THE BOX'S OWN LABEL. Going above is right
-     (never sit on the words being typed) but the first photograph showed
-     it parked squarely on "NOTES & FILES". A label reads left to right,
-     so above the box the bar goes to the RIGHT edge and the label stays
-     legible; below the box it keeps the left edge, where the eye is. */
-  const wanted = above ? (r.right-bw) : r.left;
+  let top, wanted;
+  if(dock){ top=r.bottom-bh-IN; wanted=r.left+IN; }
+  else    { top=r.bottom+GAP;   wanted=r.left; }
   const left = Math.max(8, Math.min(wanted, vw-bw-8));
 
   bar.style.left=Math.round(left+window.scrollX)+"px";
   bar.style.top =Math.round(Math.max(8,top)+window.scrollY)+"px";
-  bar.classList.toggle("above",above);
+  bar.classList.remove("above");
 
   /* the clip is only offered where an attachment is allowed */
   const clip=bar.querySelector('[title^="Attach"]');
   if(clip) clip.style.display=(el.dataset.mpvF==="key_theme"||el.dataset.mpvAtt||el.dataset.att)?"":"none";
 }
-function wBarHide(){ const b=document.getElementById("mp-bar"); if(b) b.classList.remove("open"); WBAR_FOR=null; }
+/* the box grows, the panel scrolls, the window changes: the bar follows */
+document.addEventListener("scroll",()=>{ if(WBAR_FOR) wBarShow(WBAR_FOR); },true);
+window.addEventListener("resize",()=>{ if(WBAR_FOR) wBarShow(WBAR_FOR); });
+function wBarHide(){
+  const b=document.getElementById("mp-bar"); if(b) b.classList.remove("open");
+  if(WBAR_FOR&&WBAR_FOR.classList) WBAR_FOR.classList.remove("w-dock");
+  WBAR_FOR=null;
+}
 /* ══ V113.7 — THE BAR GOES WHEN THE CARET GOES ═══════════════════════
    Chirag, 8 Oct: "even after you stop writing and are off the text
    area, the black box refuse to go from the screen."
@@ -29363,7 +29391,7 @@ function prMsgHtml(m){
   const who=escHtml(nameShow(m.author_name,m.author_email,m.author_kind)||brPersonName(m.author_id)||"someone");
   const own=fbIsMine(m)?`<div class="th-acts"><span class="th-rx"></span><span class="rgt">
       <button onclick="prMsgDelete('${escAttr(m.id)}')">Delete</button></span></div>`:"";
-  return `<div class="th-m"><span class="th-av">${escHtml(brInitials(m.author_id)||"··")}</span>
+  return `<div class="th-m">${brFace(m.author_id)}
     <div class="th-b"><div class="th-h"><b>${who}</b><span class="th-kind">Team</span>
       <span class="th-when">${m.created_at?fmtWhen(m.created_at):""}</span></div>
       <div class="th-t">${fbBody(m.body||"")}</div>
@@ -29400,7 +29428,7 @@ function prCreativeHtml(p,c){
         ${body}
         <div class="ccm-wrap" data-drop="creative:">
           <div class="ccm">
-            <span class="th-av ccm-av">${escHtml(brInitials(ME.id)||"··")}</span>
+            ${brFace(ME.id,"ccm-av")}
             <div id="prc-in" class="ccw rt" contenteditable="true" data-ph="Write a message" data-att="creative"
               data-draft="prc-${escAttr(c.id)}"
               onkeydown="if(mentionKeyNav(event))return;if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();prPost();}"
@@ -37760,7 +37788,7 @@ function mdbDrawer(){
         <div class="mdb-thread"><div class="mdb-l">Conversation</div>${body}
           <div class="ccm-wrap" data-drop="mood:">
             <div class="ccm">
-              <span class="th-av ccm-av">${escHtml(brInitials(ME.id)||"··")}</span>
+              ${brFace(ME.id,"ccm-av")}
               <div id="mdbc-in" class="ccw rt" contenteditable="true" data-ph="Write a message" data-att="mood"
                 data-draft="mdbc-${escAttr(x.id)}"
                 onkeydown="if(mentionKeyNav(event))return;if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();mdbPost();}"
@@ -37791,7 +37819,7 @@ function mdbMsgHtml(m){
   const who=escHtml(nameShow(m.author_name,m.author_email,m.author_kind)||brPersonName(m.author_id)||"someone");
   const own=fbIsMine(m)?`<div class="th-acts"><span class="th-rx"></span><span class="rgt">
       <button onclick="mdbMsgDelete('${escAttr(m.id)}')">Delete</button></span></div>`:"";
-  return `<div class="th-m"><span class="th-av">${escHtml(brInitials(m.author_id)||"··")}</span>
+  return `<div class="th-m">${brFace(m.author_id)}
     <div class="th-b"><div class="th-h"><b>${who}</b><span class="th-kind">Team</span>
       <span class="th-when">${m.created_at?fmtWhen(m.created_at):""}</span></div>
       <div class="th-t">${fbBody(m.body||"")}</div>
