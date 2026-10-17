@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.26 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.27 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -49,7 +49,7 @@
      byte for byte — they were extracted FROM this file in the first place.
      Loaded ABOVE the block below on purpose, so the calendar's own rules
      still win where they legitimately extend a shared one. -->
-<link rel="stylesheet" href="https://communicationcraftshq.github.io/BrandCalendar/cc-suite.css"/>
+<link rel="stylesheet" href="https://communicationcraftshq.github.io/BrandCalendar/cc-suite.css?v=V70.8"/>
 <style>
 
 
@@ -13332,7 +13332,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.26 Tbilisi";
+const TOOL_VERSION="V118.27 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -25834,13 +25834,19 @@ function wBarDocks(el){
 }
 function wBarShow(el){
   if(wBarNone(el)){ wBarHide(); return; }
-  if(WBAR_FOR&&WBAR_FOR!==el) WBAR_FOR.classList.remove("w-dock");
+  if(WBAR_FOR&&WBAR_FOR!==el){ WBAR_FOR.classList.remove("w-dock"); WBAR_FOR.style.paddingBottom=""; }
   WBAR_FOR=el;
   const bar=wBarEl();
   bar.classList.add("open");                 /* measurable only once open */
   const dock=wBarDocks(el);
   bar.classList.toggle("dock",dock);
-  el.classList.toggle("w-dock",dock);        /* the room at the bottom, kit css */
+  el.classList.toggle("w-dock",dock);
+  /* V118.27 — THE ROOM IS MADE HERE, NOT IN THE STYLESHEET. The first
+     live look (17 Oct) had the bar sitting on the line being typed: the
+     browser was still holding the previous cc-suite.css, so .w-dock meant
+     nothing and the box never grew. The script is what docks the bar, so
+     the script makes the room — one file, no second file to be stale. */
+  el.style.paddingBottom=dock?"48px":"";
   const r=el.getBoundingClientRect();
   const vw=window.innerWidth||1200;
   const bw=bar.offsetWidth||220, bh=bar.offsetHeight||40, GAP=7, IN=8;
@@ -25863,7 +25869,7 @@ document.addEventListener("scroll",()=>{ if(WBAR_FOR) wBarShow(WBAR_FOR); },true
 window.addEventListener("resize",()=>{ if(WBAR_FOR) wBarShow(WBAR_FOR); });
 function wBarHide(){
   const b=document.getElementById("mp-bar"); if(b) b.classList.remove("open");
-  if(WBAR_FOR&&WBAR_FOR.classList) WBAR_FOR.classList.remove("w-dock");
+  if(WBAR_FOR&&WBAR_FOR.classList){ WBAR_FOR.classList.remove("w-dock"); WBAR_FOR.style.paddingBottom=""; }
   WBAR_FOR=null;
 }
 /* ══ V113.7 — THE BAR GOES WHEN THE CARET GOES ═══════════════════════
