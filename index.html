@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.23 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.24 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13293,7 +13293,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.23 Tbilisi";
+const TOOL_VERSION="V118.24 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -40697,6 +40697,85 @@ function cpLinkSave(id,i,kind,off){
       requestAnimationFrame(()=>{ queued=false; try{ refresh(); }catch(e){} }); })
       .observe(document.body,{childList:true,subtree:true});
   }catch(e){}
+})();
+</script>
+
+<style>
+/* ══ V118.24 TBILISI · ONE WAY BACK ═══════════════════════════════════
+   Chirag, 17 Oct: one standard for "back" on every page one step down.
+   A page under a tab: the parent tab stays as the way back and the page
+   is the lit tab after it (Strategy · Mood board). A page from the
+   account menu: the tabs stay, none lit, and the page sits after them as
+   a lit tab with an ✕ that returns to where you were. Desktop only; the
+   phone keeps its own bar. Written to move into the kit unchanged. */
+.bk-crumb{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;margin-left:2px;
+  border-radius:var(--r);background:#fff;color:var(--text);font-size:13px;font-weight:600;white-space:nowrap;}
+.bk-crumb i{font-size:15px;}
+.bk-crumb .bk-sep{font-size:13px;opacity:.35;margin-right:-1px;}
+.bk-crumb .bk-x{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;
+  margin:0 -5px 0 2px;border:none;border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;}
+.bk-crumb .bk-x:hover{background:var(--surface2,#f1efec);color:var(--text);}
+.bk-crumb .bk-x i{font-size:14px;}
+@media (min-width:769px){
+  body.bk-on .mdb-up{display:none!important;}
+  body.bk-on .em2-headacts button[onclick="setView('year')"]{display:none!important;}
+}
+</style>
+<script>
+(function(){
+  /* under a tab: the page, and the tab it hangs from */
+  const UNDER={mood:{parent:"openBrief()",label:"Mood board",icon:"ti-mood-heart"},
+               files:{parent:"openBrief()",label:"Files",icon:"ti-folder"}};
+  /* from the account menu */
+  const STEPPED={evmgr:{label:"Event Manager",icon:"ti-calendar-cog"},
+                 objadmin:{label:"Lists",icon:"ti-target-arrow"},
+                 history:{label:"History & restore",icon:"ti-history"}};
+  const BK={prev:null};
+  window.BK_STATE=BK;
+
+  /* where you were before stepping out — the ✕ goes back there */
+  const baseSet=setView;
+  setView=function(v){
+    if(STEPPED[v]&&!STEPPED[view]) BK.prev={view, brand:activeBrand||""};
+    return baseSet.apply(this,arguments);
+  };
+  window.bkClose=function(ev){
+    if(ev){ try{ ev.stopPropagation(); }catch(e){} }
+    const p=BK.prev; BK.prev=null;
+    if(p&&p.view&&!STEPPED[p.view]){
+      if(p.view==="brief"){ openBrief(); return; }
+      if(p.view==="mood"&&typeof mdbGo==="function"){ mdbGo(); return; }
+      setView(p.view); return;
+    }
+    if(typeof goHome==="function") goHome(); else setView("year");
+  };
+
+  const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  function paint(){
+    const el=document.getElementById("bn-tabs");
+    const u=UNDER[view], s=STEPPED[view];
+    document.body.classList.toggle("bk-on",!!(u||s));
+    if(!el||el.style.display==="none"||!(u||s)) return;
+    if(el.querySelector(".bk-crumb")) return;
+    if(u){
+      const par=[...el.querySelectorAll(".bntab")].find(b=>(b.getAttribute("onclick")||"").indexOf(u.parent)>-1);
+      if(!par) return;
+      par.classList.remove("on"); par.setAttribute("aria-current","false");
+      const c=document.createElement("span"); c.className="bk-crumb"; c.setAttribute("aria-current","page");
+      c.innerHTML=`<i class="ti ti-chevron-right bk-sep"></i><i class="ti ${u.icon}"></i>${esc(u.label)}`;
+      par.after(c);
+      return;
+    }
+    el.querySelectorAll(".bntab.on").forEach(b=>{ b.classList.remove("on"); b.setAttribute("aria-current","false"); });
+    const c=document.createElement("span"); c.className="bk-crumb"; c.setAttribute("aria-current","page");
+    c.innerHTML=`<i class="ti ${s.icon}"></i>${esc(s.label)}<button class="bk-x" title="Close" aria-label="Close ${esc(s.label)}" onclick="bkClose(event)"><i class="ti ti-x"></i></button>`;
+    el.appendChild(c);
+  }
+  const baseTabs=renderBnTabs;
+  renderBnTabs=function(){ const out=baseTabs.apply(this,arguments); try{ paint(); }catch(e){} return out; };
+  const baseRender=render;
+  render=function(){ const out=baseRender.apply(this,arguments); try{ paint(); }catch(e){} return out; };
+  try{ paint(); }catch(e){}
 })();
 </script>
 
