@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.31 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.32 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13323,7 +13323,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.31 Tbilisi";
+const TOOL_VERSION="V118.32 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -40785,9 +40785,19 @@ async function trLoad(){
   const my=++TR.load; TR.busy=true; TR.err=""; trList();
   const tables=TR_ORDER.filter(t=>!TR_KINDS[t].admin||trAdmin());
   const reads=tables.map(t=>sb.from(t).select("*").not("deleted_at","is",null).order("deleted_at",{ascending:false}).limit(500).then(r=>({t,r})));
-  const since=new Date(Date.now()-180*864e5).toISOString();
-  const logRead=sb.from("change_log").select("table_name,row_id,at,actor_email,new_row").in("table_name",tables).gte("at",since).order("at",{ascending:false}).limit(3000);
-  const [outs,log]=await Promise.all([Promise.all(reads),logRead]);
+  /* V118.32 — DELETIONS ONLY. The first live look showed "someone" on
+     every row: the log held 7,503 entries for these tables in the window
+     and only 296 were deletions, so a read of the newest 3,000 was all
+     ordinary edits and the early-October deletions fell off the end.
+     Ask for the entries that set deleted_at and nothing else. */
+  const since=new Date(Date.now()-365*864e5).toISOString();
+  const logRead=sb.from("change_log").select("table_name,row_id,at,actor_email,new_row").in("table_name",tables)
+    .not("new_row->>deleted_at","is",null).is("old_row->>deleted_at",null)
+    .gte("at",since).order("at",{ascending:false}).limit(5000);
+  let [outs,log]=await Promise.all([Promise.all(reads),logRead]);
+  if(my!==TR.load) return;
+  /* belt and braces: if the server refuses the JSON filter, read the newest entries plain */
+  if(log.error) log=await sb.from("change_log").select("table_name,row_id,at,actor_email,new_row").in("table_name",tables).gte("at",since).order("at",{ascending:false}).limit(5000);
   if(my!==TR.load) return;
   const rows=[], errs=[];
   outs.forEach(({t,r})=>{
