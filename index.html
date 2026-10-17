@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.27 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.29 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -9535,7 +9535,8 @@ function bpRenderList(){
   const bid=BP.brand, can=canManagePeople(bid), g=bpGroups(bid);
   const q=String(BP.q||"").trim().toLowerCase();
   const hit=p=>!q||String(p.name||"").toLowerCase().includes(q)||String(p.email||"").toLowerCase().includes(q);
-  const ROLE_LBL={admin:"Admin",account_manager:"Ac Manager",creator:"Creator",
+  const ROLE_LBL={admin:"Administrator",account_manager:"Ac Manager",creator:"Creator",
+                  performance_marketer:"Performance marketer",production_manager:"Production manager",viewer:"Viewer",
                   client_reviewer:"Client reviewer",client_viewer:"Client viewer"};
   const row=(p,lock)=>{
     const client=p.role==="client", on=lock||g.on(p), role=p.toolRole||p.role;
@@ -13332,7 +13333,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.27 Tbilisi";
+const TOOL_VERSION="V118.29 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -20111,6 +20112,10 @@ function applyMenuVisibility(){
    so stage 3 has them ready without another round trip. Neither is read
    by anything yet. */
 const TOOLROLE_TO_LEGACY={admin:"admin",account_manager:"team",creator:"team",
+                          /* ROLES, 17 Oct — the three staff roles added by the roles migration.
+                             An unmapped role locks the person out (below), so this list and
+                             tool_roles must agree. */
+                          performance_marketer:"team",production_manager:"team",viewer:"team",
                           client_reviewer:"client",client_viewer:"client"};
 let RA_PRE=null;      // SPEED — the tool-roles read boot() starts early
 async function resolveAccess(userId, legacyRole){
@@ -39900,7 +39905,7 @@ function acJump(bid){
    suite role (Account manager, else Creator); the small role dropdown on
    their line changes it. */
 let AC_MENU=null, AC_MQ="";
-const AC_TOOLROLE_LBL={admin:"Admin",account_manager:"Account manager",creator:"Creator",member:"Member",client_reviewer:"Client",client_viewer:"Client"};
+const AC_TOOLROLE_LBL={admin:"Administrator",account_manager:"Account manager",creator:"Creator",performance_marketer:"Performance marketer",production_manager:"Production manager",viewer:"Viewer",client_reviewer:"Client",client_viewer:"Client"};
 function acMenuClose(){ const m=document.getElementById("ac-menu"); if(m) m.remove(); AC_MENU=null; AC_MQ=""; }
 function acMenuOpen(e,bid,kind){
   if(e){ e.preventDefault(); e.stopPropagation(); }
@@ -39968,7 +39973,7 @@ async function acMenuPick(e,uid){
       await acSetRole(uid,bid,"account_manager"); }
   }else{
     if(cur) await acOffTeam(uid,bid);
-    else{ const p=acPerson(uid); await acSetRole(uid,bid,p&&p.toolRole==="account_manager"?"account_manager":"creator"); }
+    else{ const p=acPerson(uid); await acSetRole(uid,bid,p&&["account_manager","production_manager","performance_marketer"].includes(p.toolRole)?p.toolRole:"creator"); }
   }
   acMenuDraw();
 }
@@ -40780,6 +40785,17 @@ function cpLinkSave(id,i,kind,off){
   margin:0 -5px 0 2px;border:none;border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;}
 .bk-crumb .bk-x:hover{background:var(--surface2,#f1efec);color:var(--text);}
 .bk-crumb .bk-x i{font-size:14px;}
+/* V118.29 — D, "one tab that grows" (Chirag, 17 Oct 11:05): a page under a
+   tab joins its tab. One white tab: the tab you came from in grey, a thin
+   rule, the page you are on in bold. The grey part is the way back. */
+.bk-pill{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 4px 0 11px;margin-left:2px;
+  border-radius:var(--r);background:#fff;color:var(--text);font-size:13px;font-weight:600;white-space:nowrap;}
+.bk-pill i{font-size:15px;}
+.bk-pill .bk-p{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0;border:0;background:transparent;
+  font:inherit;font-weight:500;color:#8a8a8a;cursor:pointer;}
+.bk-pill .bk-p:hover{color:var(--text);}
+.bk-pill .bk-d{width:1px;height:16px;background:#ddd;margin:0 2px;}
+.bk-pill .bk-c{display:inline-flex;align-items:center;gap:6px;padding-right:7px;}
 @media (min-width:769px){
   body.bk-on .mdb-up{display:none!important;}
   body.bk-on .em2-headacts button[onclick="setView('year')"]{display:none!important;}
@@ -40820,13 +40836,17 @@ function cpLinkSave(id,i,kind,off){
     const u=UNDER[view], s=STEPPED[view];
     document.body.classList.toggle("bk-on",!!(u||s));
     if(!el||el.style.display==="none"||!(u||s)) return;
-    if(el.querySelector(".bk-crumb")) return;
+    if(el.querySelector(".bk-crumb,.bk-pill")) return;
     if(u){
       const par=[...el.querySelectorAll(".bntab")].find(b=>(b.getAttribute("onclick")||"").indexOf(u.parent)>-1);
       if(!par) return;
-      par.classList.remove("on"); par.setAttribute("aria-current","false");
-      const c=document.createElement("span"); c.className="bk-crumb"; c.setAttribute("aria-current","page");
-      c.innerHTML=`<i class="ti ti-chevron-right bk-sep"></i><i class="ti ${u.icon}"></i>${esc(u.label)}`;
+      /* V118.29 — the tab grows: it is replaced in place by one white tab
+         holding both names. The original stays in the row, hidden, so the
+         next render finds it where it always was. */
+      par.classList.remove("on"); par.setAttribute("aria-current","false"); par.style.display="none";
+      const pi=par.querySelector("i"); const pIcon=pi?pi.className:"ti";
+      const c=document.createElement("span"); c.className="bk-pill"; c.setAttribute("aria-current","page");
+      c.innerHTML=`<button class="bk-p" onclick="${u.parent}" title="Back to ${esc(par.textContent.trim())}"><i class="${pIcon}"></i>${esc(par.textContent.trim())}</button><span class="bk-d"></span><span class="bk-c"><i class="ti ${u.icon}"></i>${esc(u.label)}</span>`;
       par.after(c);
       return;
     }
