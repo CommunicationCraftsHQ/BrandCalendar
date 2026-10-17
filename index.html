@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.20 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.21 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12951,7 +12951,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.20 Tbilisi";
+const TOOL_VERSION="V118.21 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -40273,7 +40273,14 @@ function cpLinkSave(id,i,kind,off){
       body:JSON.stringify({url,title_only:true})});
     if(!r.ok) return null;
     const out=await r.json().catch(()=>null);
-    return out&&out.title?{title:String(out.title)}:null;
+    /* V118.21 — a sign-in wall answers with just the site's name
+       ("Instagram", "Login • Instagram"). That is no title: say so, so it
+       is not remembered and the pill keeps its own name. */
+    const site=wSiteOf(url).name;
+    const t=out&&out.title?wTidyTitle(String(out.title),site):"";
+    const x=t.toLowerCase();
+    if(!t||x===site.toLowerCase()||/^(log ?in|sign ?in|sign ?up)\b/.test(x)) return null;
+    return {title:String(out.title)};
   }
   /* V118.19 — a failed or empty answer is NOT remembered: the same
      link pasted again asks again. */
