@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.39 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.40 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -6682,7 +6682,7 @@ function socialFieldEdit(id,field,value,platform){
   const p=(b.social||[]).find(x=>x.id===id); if(!p)return;
   if(field==="concept"){ p.content.concept=value; }
   else if(field==="caption"||field==="hashtags"||field==="image_ref"){
-    if(p.synced){p.content.facebook[field]=value;p.content.instagram[field]=value;}
+    if(p.synced){p.content.facebook[field]=value;p.content.instagram[field]=value;if(!p.content.linkedin)p.content.linkedin=emptyVariant();p.content.linkedin[field]=value;}
     else p.content[platform||"instagram"][field]=value;
   } else if(field==="format"||field==="status"||field==="time"||field==="notes"){ p[field]=value; }
   clearTimeout(socialSaveTimers[id]);
@@ -6738,7 +6738,7 @@ function socialToggleSyncInline(id){
   else{
     const f=p.content.facebook,i=p.content.instagram;
     if((f.caption!==i.caption||f.hashtags!==i.hashtags)&&!confirm("Merge to one shared version? The Instagram content will be used for both."))return;
-    p.content.facebook={...p.content.instagram}; p.synced=true;
+    p.content.facebook={...p.content.instagram}; p.content.linkedin={...p.content.instagram}; p.synced=true;
   }
   dbSaveSocialPost(p); renderSocial();
 }
@@ -6901,8 +6901,6 @@ function fbPanelHtml(p){
           ${c.edited_at?`<span style="font-size:11px;color:var(--subtle);">edited</span>`:""}
           <span style="display:flex;align-items:center;gap:8px;margin-left:auto;">
             ${own}
-            <span style="font-size:11px;color:var(--subtle);cursor:pointer;" title="Copy a link to this comment"
-                  onclick="fbCopyLink('${p.id}','${c.id}')">Link</span>
             <span style="font-size:11px;color:var(--subtle);">${fbTimeLabel(c.created_at)}</span>
           </span>
         </div>
@@ -7229,9 +7227,9 @@ function socialEditForm(p){
       </div>
       ${designBriefBlock(p,true)}`;
   } else {
-    body=`${conceptField}<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-      <div style="border:1px solid var(--div);border-radius:10px;overflow:hidden;"><div style="background:#D4537E;color:#fff;font-size:11px;font-weight:700;padding:6px 9px;"><i class="ti ti-brand-instagram"></i> INSTAGRAM</div><div style="padding:9px;">${variantFields(p,"instagram")}</div></div>
-      <div style="border:1px solid var(--div);border-radius:10px;overflow:hidden;"><div style="background:#185FA5;color:#fff;font-size:11px;font-weight:700;padding:6px 9px;"><i class="ti ti-brand-facebook"></i> FACEBOOK</div><div style="padding:9px;">${variantFields(p,"facebook")}</div></div>
+    const chs=brandChannels(p.brand_id||activeBrand);
+    body=`${conceptField}<div style="display:grid;grid-template-columns:repeat(${chs.length},minmax(0,1fr));gap:10px;">
+      ${chs.map(k=>`<div style="border:1px solid var(--div);border-radius:10px;overflow:hidden;"><div style="background:${CH_META[k].colour};color:#fff;font-size:11px;font-weight:700;padding:6px 9px;"><i class="ti ${CH_META[k].icon}"></i> ${CH_META[k].label.toUpperCase()}</div><div style="padding:9px;">${variantFields(p,k)}</div></div>`).join("")}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px;">
       <div><div class="fl2">Format</div>${fmtSelect(p.id,p.format)}</div>
@@ -7280,6 +7278,13 @@ function previewCard(platform,p,bn){
   const img=lead
     ? `<div class="pvimg" data-sign="${escAttr(lead.view_path||lead.thumb_path||lead.poster_path||"")}" style="aspect-ratio:1;background:#FAFAFA;border-top:1px solid #EFEFEF;border-bottom:1px solid #EFEFEF;overflow:hidden;position:relative;"></div>`
     : `<div style="aspect-ratio:1;background:#FAFAFA;border-top:1px solid #EFEFEF;border-bottom:1px solid #EFEFEF;display:flex;flex-direction:column;gap:5px;align-items:center;justify-content:center;color:#CFCFCF;"><i class="ti ti-photo" style="font-size:26px;"></i><span style="font-size:11px;">No design yet</span></div>`;
+  if(platform==="linkedin"){
+    return `<div style="border:1px solid #DBDBDB;border-radius:10px;overflow:hidden;background:#fff;">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px;"><div style="width:30px;height:30px;border-radius:6px;background:#0A66C2;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">${initial}</div>
+        <div><div style="font-size:12px;font-weight:700;">${seEsc(bn||"Brand")}</div><div style="font-size:10.5px;color:#888;">Company page · now</div></div></div>
+      <div style="padding:0 10px 8px;font-size:12px;line-height:1.5;">${cap}${tags}</div>${img}
+      <div style="display:flex;justify-content:space-around;padding:8px 4px;font-size:12px;color:#6B6B6B;border-top:1px solid #EFEFEF;"><span><i class="ti ti-thumb-up"></i> Like</span><span><i class="ti ti-message-circle"></i> Comment</span><span><i class="ti ti-repeat"></i> Repost</span><span><i class="ti ti-send"></i> Send</span></div></div>`;
+  }
   if(platform==="facebook"){
     return `<div style="border:1px solid #DBDBDB;border-radius:10px;overflow:hidden;background:#fff;">
       <div style="display:flex;align-items:center;gap:8px;padding:10px;"><div style="width:30px;height:30px;border-radius:50%;background:#185FA5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">${initial}</div><div><div style="font-size:12px;font-weight:700;">${seEsc(bn)}</div><div style="font-size:11px;color:#6B6B6B;">${p.date} ${(MN[p.month]||"").slice(0,3)}${p.time?" · "+escAttr(p.time):""} · <i class="ti ti-world" style="font-size:11px;"></i></div></div></div>
@@ -7295,8 +7300,10 @@ function previewCard(platform,p,bn){
 function openPreview(id){
   const b=brands[activeBrand]; const p=(b.social||[]).find(x=>x.id===id); if(!p)return;
   const synced=p.synced!==false;
-  const cards=synced?`<div style="max-width:320px;margin:0 auto;">${previewCard("instagram",p,b.name)}</div>`
-    :`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">${previewCard("instagram",p,b.name)}${previewCard("facebook",p,b.name)}</div>`;
+  /* V118.40 — one card per channel the brand runs */
+  const chs=brandChannels(activeBrand);
+  const cards=chs.length===1?`<div style="max-width:320px;margin:0 auto;">${previewCard(chs[0],p,b.name)}</div>`
+    :`<div style="display:grid;grid-template-columns:repeat(${chs.length},1fr);gap:12px;">${chs.map(k=>previewCard(k,p,b.name)).join("")}</div>`;
   document.getElementById("preview-body").innerHTML=`<div class="modal-top" style="padding:16px 18px 12px;"><div class="modal-title" style="font-size:16px;">Preview <span style="color:var(--muted);font-size:12px;font-weight:600;">· ${p.date} ${(MN[p.month]||"").slice(0,3)}</span></div><button class="modal-x" onclick="closeM('preview')">✕</button></div><div style="padding:16px 18px;">${cards}</div>`;
   openM("preview");
   /* the signed URL is minted after the modal is in the DOM */
@@ -7401,6 +7408,7 @@ function formatGridHtml(posts){
   const by={}; SOCIAL_FORMATS.forEach(f=>by[f]=0);
   (posts||[]).forEach(p=>{const f=(p.format||"static"); by[f]=(by[f]||0)+1;});
   const total=(posts||[]).length;
+  const chs=brandChannels(activeBrand);
   const cell=(n,on)=>`<td style="padding:5px 0;border-top:1px solid var(--div);text-align:right;font-weight:${n?"650":"400"};color:${n?"var(--text)":"#D6D6D2"};${on?"font-weight:700;":""}">${n}</td>`;
   const rows=SOCIAL_FORMATS.map(f=>{
     const n=by[f]||0, on=contentFormatFilter===f;
@@ -7411,22 +7419,20 @@ function formatGridHtml(posts){
     return `<tr${click} title="${n?(on?"Showing only "+label.toLowerCase()+" — click to clear":"Show only "+label.toLowerCase()):""}">
       <td style="padding:5px 0;border-top:1px solid var(--div);color:${n?"var(--text)":"#BFBFBB"};${on?"font-weight:700;":""}">
         <span style="display:flex;align-items:center;gap:6px;"><i class="ti ${FORMAT_ICON[f]||"ti-photo"}" style="font-size:12px;color:var(--subtle);"></i>${label}</span></td>
-      ${cell(n,on)}${cell(n,on)}</tr>`;
+      ${chs.map(()=>cell(n,on)).join("")}</tr>`;
   }).join("");
   return `<div class="s-divider"></div><div class="s-lbl">Format</div>`+
     `<table style="width:100%;border-collapse:collapse;font-size:12px;">`+
     `<tr><th style="padding:0 0 6px;"></th>`+
-    `<th style="padding:0 0 6px;text-align:right;" title="Instagram"><i class="ti ti-brand-instagram" style="color:#D4537E;font-size:13px;"></i></th>`+
-    `<th style="padding:0 0 6px;text-align:right;" title="Facebook"><i class="ti ti-brand-facebook" style="color:#185FA5;font-size:13px;"></i></th></tr>`+
+    chs.map(k=>`<th style="padding:0 0 6px;text-align:right;" title="${CH_META[k].label}"><i class="ti ${CH_META[k].icon}" style="color:${CH_META[k].colour};font-size:13px;"></i></th>`).join("")+`</tr>`+
     rows+
     `<tr><td style="padding:5px 0;border-top:1.5px solid var(--div);color:var(--muted);font-size:11.5px;font-weight:700;">All</td>`+
-    `<td style="padding:5px 0;border-top:1.5px solid var(--div);text-align:right;color:var(--muted);font-size:11.5px;font-weight:700;">${total}</td>`+
-    `<td style="padding:5px 0;border-top:1.5px solid var(--div);text-align:right;color:var(--muted);font-size:11.5px;font-weight:700;">${total}</td></tr>`+
+    chs.map(()=>`<td style="padding:5px 0;border-top:1.5px solid var(--div);text-align:right;color:var(--muted);font-size:11.5px;font-weight:700;">${total}</td>`).join("")+`</tr>`+
     `</table>`+
     (contentFormatFilter?`<div onclick="setContentFormatFilter('')" style="font-size:11px;color:var(--acc);cursor:pointer;padding:5px 0 0;">Clear format filter</div>`:"")+
     /* Said once, quietly, rather than left for somebody to work out from
        two columns that never disagree. */
-    `<div style="font-size:11px;color:var(--subtle);line-height:1.45;margin-top:8px;">Every post goes to both platforms.</div>`;
+    "";
 }
 
 function buildContentSidebar(){
@@ -10622,7 +10628,7 @@ function brNavSync(canE){
   if(ex){
     if(!ex.dataset.orig) ex.dataset.orig=ex.innerHTML;
     const io=brIoOn();
-    /* V118.38 — the Strategy page imports and never exports: one upload
+    /* V118.40 — the Strategy page imports and never exports: one upload
        icon for whoever may edit it, and no button at all for anyone else */
     const sio=!io&&typeof stIoOn==="function"&&stIoOn();
     const want=io?'<i class="ti ti-upload"></i><i class="ti ti-download"></i>':(sio?'<i class="ti ti-upload"></i>':ex.dataset.orig);
@@ -12532,7 +12538,7 @@ function renderBranding(){
           brArchivedOnly()?"Archived task":"Branding task")}</span>`:""}
        ${BR.ok&&!brIsClient()?`<span class="brl-lens">
      <span class="${BR_CV?"":"on"}" onclick="brSetCV(0)">Team</span>
-     <span class="cv${BR_CV?" on":""}" onclick="brSetCV(1)"><i class="ti ti-eye"></i>Client view</span></span>`:""}
+     <span class="cv${BR_CV?" on":""}" onclick="brSetCV(1)"><i class="ti ti-eye"></i>Client view <span class="beta">beta</span></span></span>`:""}
        ${BR.ok?`<span class="brl-lens">
      <span class="${brGroup?"":"on"}" onclick="brSetGroup(0)">Flat</span>
      <span class="${brGroup?"on":""}" onclick="brSetGroup(1)">By project</span></span>`:""}
@@ -13285,7 +13291,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.39 Tbilisi";
+const TOOL_VERSION="V118.40 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -14363,12 +14369,15 @@ function normalizeSocial(p){
   const c=p.content||{};
   const fb={...emptyVariant(),...(c.facebook||{})};
   const ig={...emptyVariant(),...(c.instagram||{})};
+  /* V118.40 — LinkedIn. A post written before it existed has none, and
+     takes the shared caption when it is synced. */
+  const li={...emptyVariant(),...(c.linkedin||(p.synced!==false?c.instagram:{})||{})};
   return {id:p.id,brand_id:p.brand_id,event_id:p.event_id||"",year:p.year||2026,month:p.month,date:p.date,
     time:p.time||"",format:p.format||"static",status:p.status||"drafting",synced:p.synced!==false,
     /* stage 2A: the post's pointer at its current round. Null for every
        post that predates rounds, which is all of them today. */
     current_round_id:p.current_round_id||null,
-    content:{facebook:fb,instagram:ig,concept:c.concept||""},notes:p.notes||"",_uat:p.updated_at||null};
+    content:{facebook:fb,instagram:ig,linkedin:li,concept:c.concept||""},notes:p.notes||"",_uat:p.updated_at||null};
 }
 function newSocialId(){return "sp"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function socialForBrandYear(brandId,year){
@@ -14383,7 +14392,7 @@ async function dbSaveSocialPost(p){
       /* carried explicitly: the no-_uat path is an UPSERT, and an upsert
          that omits a column writes null over it. */
       current_round_id:p.current_round_id||null,
-      content:{facebook:p.content.facebook,instagram:p.content.instagram,concept:(p.content&&p.content.concept)||""},notes:p.notes||"",updated_at:new Date().toISOString()};
+      content:{facebook:p.content.facebook,instagram:p.content.instagram,linkedin:p.content.linkedin||emptyVariant(),concept:(p.content&&p.content.concept)||""},notes:p.notes||"",updated_at:new Date().toISOString()};
     // Sydney: rows we hold a known server version of get a conflict-guarded
     // update — the write only lands if nobody changed the row since we loaded it.
     if(p._uat){
@@ -20753,14 +20762,17 @@ function socialViewCard(p){
      change the post; sending it to the client is a different question,
      and the person it would be sent to is the one looking. */
   const waBtn=(canEdit()&&actorKind()!=="client")
-    ? `<button class="pcia wa pcia-wa" onclick="waSend('${p.id}')" title="${
+    ? `<button class="pcia br-ico wa pcia-wa" onclick="waSend('${p.id}')" title="${
         waLink?escAttr(waSentLabel(waLink)):"Send to the client on WhatsApp"}"><i class="ti ti-brand-whatsapp"></i>${
         waLink?`<span class="dot"></span>`:""}</button>`
     : "";
-  const acts=waBtn+`<button class="pcia pcia-link" onclick="postCopyLink('${p.id}')" title="Copy a link that opens this post"><i class="ti ti-link"></i></button>`
-    +`<button class="pcia pcia-prev" onclick="openPreview('${p.id}')" title="Preview"><i class="ti ti-eye"></i></button>`
-    +(canEdit()?`<button class="pcia pcia-edit" onclick="openSocialEditorById('${p.id}')" title="Edit post"><i class="ti ti-pencil"></i></button>
-       <button class="pcia del pcia-del" onclick="deleteContentPost('${p.id}')" title="Delete post"><i class="ti ti-trash"></i></button>`:"");
+  /* V118.40 — Chirag, 13 Oct: one order on every item, the task head's
+     square: status · Edit · Link · WhatsApp · Delete. The eye (Preview)
+     retired on his word, "can be retired permanently". */
+  const acts=(canEdit()?`<button class="pcia br-ico pcia-edit" onclick="openSocialEditorById('${p.id}')" title="Edit post"><i class="ti ti-pencil"></i></button>`:"")
+    +`<button class="pcia br-ico pcia-link" onclick="postCopyLink('${p.id}')" title="Copy a link that opens this post"><i class="ti ti-link"></i></button>`
+    +waBtn
+    +(canEdit()?`<button class="pcia br-ico del pcia-del" onclick="deleteContentPost('${p.id}')" title="Delete post"><i class="ti ti-trash"></i></button>`:"");
 
   /* H1 — the box height is fixed so the rows line up; the width follows
      the picture so nothing is cropped. Nothing is added; nothing lost. */
@@ -20801,14 +20813,14 @@ function socialViewCard(p){
     <div class="pchead">
       <span style="font-weight:700;color:var(--text);">${shortDate(p.month,p.date)}</span>
       ${p.time?`<span style="display:flex;align-items:center;gap:4px;"><i class="ti ti-clock" style="font-size:12px;"></i> ${escAttr(p.time)}</span>`:""}
-      <span class="pc-ig" style="color:#D4537E;"><i class="ti ti-brand-instagram" style="font-size:13px;"></i></span><span class="pc-fb" style="color:#185FA5;margin-left:-4px;"><i class="ti ti-brand-facebook" style="font-size:13px;"></i></span>
+      ${chIconsHtml(p.brand_id||activeBrand)}
       ${varied?`<span style="font-size:11px;color:#993C1D;background:#FAECE7;padding:1px 6px;border-radius:999px;font-weight:700;">varied</span>`:""}
       ${brief?`<span title="Design brief: ${escAttr(mpPlain(brief))}" style="color:#8A6D00;cursor:help;"><i class="ti ti-photo-cog" style="font-size:13px;"></i></span>`:""}
       <span style="margin-left:auto;display:flex;align-items:center;gap:6px;color:var(--muted);">
         <span style="display:flex;align-items:center;gap:4px;margin-right:4px;"><i class="ti ${fmtIcon}" style="font-size:12px;"></i> ${p.format.charAt(0).toUpperCase()+p.format.slice(1)}</span>
         ${fbToggleHtml}
-        ${acts}
         ${statusChipSm(p)}
+        ${acts}
       </span>
     </div>
     <div class="pcbody">
@@ -20936,8 +20948,7 @@ function fbPanelHtml(p){
           <span class="when46">${fbTimeLabel(c.created_at)}${c.edited_at?" · edited":""}</span></div>
         <div class="ct46">${fbBody(c.body)}</div>
         ${mediaBlock(assetsFor("comment",c.id))}${uploadLiveBlock("comment",c.id)}${uploadFailBlock("comment",c.id)}
-        <div class="acts46${hasRx?" always":""}">${rx(c)}<span class="rgt">${own}
-          <button onclick="fbCopyLink('${p.id}','${c.id}')">Link</button>${
+        <div class="acts46${hasRx?" always":""}">${rx(c)}<span class="rgt">${own}${
             (canDownload()&&(assetsFor("comment",c.id)||[]).some(assetDownloadable))
               ? `<button onclick="commentDownloadAll('${c.id}',event)" title="Download the original files on this message"><i class="ti ti-download" style="font-size:14px;"></i> Download</button>` : ""
           }${resolve}</span></div>
@@ -28500,7 +28511,7 @@ function prRowHtml(p,tpl,cols){
   const open=PR.open===p.id;
   return `<div class="prrow${open?" open":""}" style="grid-template-columns:${tpl}" onclick="prOpen('${escAttr(p.id)}')">
     ${cols.map(c=>prCellHtml(p,c.k)).join("")}
-    <div class="prcv"><i class="ti ti-chevron-${open?"up":"down"}"></i></div>
+    <div class="prcv"><span class="pr-link" onclick="event.stopPropagation();prCopyLink('${escAttr(p.id)}')" title="Copy a link that opens this promotion"><i class="ti ti-link"></i></span><i class="ti ti-chevron-${open?"up":"down"}"></i></div>
   </div>`;
 }
 
@@ -29330,8 +29341,9 @@ function prCreativeHtml(p,c){
       <a class="prback" href="javascript:void 0" onclick="prCrBack()">← ${escHtml(p.name)}</a>
       <b class="prtitle">${escHtml(c.title||"Untitled")}</b>
       <span style="flex:1"></span>
-      <select class="tk-st" onchange="prCrStatus('${c.id}',this.value)" ${canE?"":"disabled"}>${st}</select>
-      ${canE?`<button class="btn btn-s" onclick="prCrTrash('${c.id}')" title="Move to Trash"><i class="ti ti-trash"></i></button>`:""}
+      <select class="tk-st cc-stsel" onchange="prCrStatus('${c.id}',this.value)" ${canE?"":"disabled"}>${st}</select>
+      <button class="br-ico" onclick="prCopyLink('${escAttr(p.id)}','${escAttr(c.id)}')" title="Copy a link that opens this creative" aria-label="Copy link"><i class="ti ti-link"></i></button>
+      ${canE?`<button class="br-ico del" onclick="prCrTrash('${c.id}')" title="Move to Trash" aria-label="Move to Trash"><i class="ti ti-trash"></i></button>`:""}
     </div>
     <div style="padding:0 32px 24px;"><div class="tk-grid">
       <div class="tk-thread">
@@ -33392,7 +33404,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     const host = document.getElementById("vb-host");
     if (host) host.innerHTML = html();
   }
-  /* V118.38 — the Strategy import reads and writes these rows by the same rules */
+  /* V118.40 — the Strategy import reads and writes these rows by the same rules */
   window.tgIo = { vb: () => VB, load: vbLoad, paint: () => vbPaint(),
     listOf: (g) => LISTED[g] ? (VB[LISTED[g]] || []) : null, segsOf, hasNotes, notesOf, noteFor };
 
@@ -36714,17 +36726,17 @@ function pcxCard(card){
   const head=card.querySelector(":scope > .pchead"), right=head&&head.lastElementChild;
   if(!head||!right) return;
   card.classList.add("pcx");
-  const date=head.children[0], ig=head.querySelector(".pc-ig"), fb=head.querySelector(".pc-fb");
+  const date=head.children[0], ig=head.querySelector(".pc-ig"), fb=head.querySelector(".pc-fb"), li=head.querySelector(".pc-li");
   const fmt=right.children[0];
   const st=[...right.children].reverse().find(n=>n.querySelector&&n.querySelector("select.cc-stsel"));
   const tog=right.querySelector(".pc-fbtoggle"), ed=right.querySelector(".pcia-edit"), ln=right.querySelector(".pcia-link");
   const keep=[...right.querySelectorAll(".pcia-prev,.pcia-wa,.pcia-del")];
   /* everything else in the old header (time, varied, brief marker) stays
      in the card, out of sight; nothing is thrown away */
-  const rest=[...head.children].filter(n=>n!==date&&n!==ig&&n!==fb&&n!==right);
+  const rest=[...head.children].filter(n=>n!==date&&n!==ig&&n!==fb&&n!==li&&n!==right);
   date.classList.add("x-date"); if(fmt) fmt.classList.add("x-fmt"); if(st) st.classList.add("x-st");
   head.textContent="";
-  [date,ig,fb,fmt,st].forEach(n=>{ if(n) head.appendChild(n); });
+  [date,ig,fb,li,fmt,st].forEach(n=>{ if(n) head.appendChild(n); });
   const hid=document.createElement("span"); hid.className="x-hide";
   rest.forEach(n=>hid.appendChild(n)); keep.forEach(n=>hid.appendChild(n)); hid.appendChild(right);
   head.appendChild(hid);
@@ -38103,7 +38115,7 @@ function capSave(id,el,platform){
   const b=brands[activeBrand]; if(!b) return;
   const p=(b.social||[]).find(x=>x.id===id); if(!p) return;
   const html=wValue(el), plain=wPlain(html), rich=wIsRich(html)?html:"";
-  const vs=p.synced?[p.content.facebook,p.content.instagram]:[p.content[platform||"instagram"]];
+  const vs=p.synced?[p.content.facebook,p.content.instagram,p.content.linkedin]:[p.content[platform||"instagram"]];
   vs.forEach(v=>{ if(v) v.caption_rich=rich; });
   socialFieldEdit(id,"caption",plain,platform);
 }
@@ -41156,7 +41168,7 @@ async function stHistory(){
 }
 </script>
 <style>
-/* V118.38 — the Strategy import check */
+/* V118.40 — the Strategy import check */
 .sti-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--div);}
 .sti-row:last-child{border-bottom:0;}
 .sti-chip{flex:0 0 auto;min-width:52px;text-align:center;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;margin-top:1px;}
@@ -42419,7 +42431,7 @@ const IO_SRC={
   task_imports:     {page:"Tasks",      noun:"row",   n:im=>im.rows_changed,   undo:()=>"tkUndo"},
   promotion_imports:{page:"Promotions", noun:"row",   n:im=>im.rows_changed,   undo:()=>"priUndo"},
   vision_imports:   {page:"Strategy",   noun:"field", n:im=>im.fields_changed, undo:()=>"bvUndo"},
-  /* V118.38 — the Strategy import (competitors and target groups) */
+  /* V118.40 — the Strategy import (competitors and target groups) */
   strategy_imports: {page:"Strategy",   noun:"row",   n:im=>im.rows_changed,   undo:()=>"stUndo",
                      pre:im=>im.list==="competitors"?"Competitors · ":im.list==="target_groups"?"Target groups · ":""}
 };
@@ -42643,6 +42655,611 @@ function buildIoSidebar(){
     }catch(e){}
     return out;
   };
+})();
+</script>
+
+<style id="v11840-css">
+/* ══ V118.40 TBILISI ═══════════════════════════════════════════════════
+   beta pills · channels per brand · a post's final files · one Link
+   everywhere · the aligned button row · a task's deliverables */
+.beta{font-size:9px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;border:1px solid currentColor;
+  border-radius:999px;padding:0 5px;line-height:14px;margin-left:5px;opacity:.7;display:inline-block;vertical-align:1px;}
+.bntab.on .beta{color:var(--acc);border-color:var(--acc);opacity:1;}
+.brl-lens .beta{font-size:8.5px;margin-left:4px;}
+/* the aligned row: the post card wears the task head's square */
+.pc46 .pchead .br-ico{margin-left:0;width:30px;height:30px;}
+/* LinkedIn wears the same dot Instagram and Facebook wear on the card */
+.pc-li i{display:none;}
+.pc-li::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.42;}
+.pc46.pcx .pchead > .pc-li{margin-left:-6px!important}
+.pc46 .pchead .br-ico.wa{color:#1E9E5A!important;}
+.br-ico.del:hover{background:#FEE2E2;color:#C62828;border-color:#F5C2C2;}
+/* the promotion row's link sits beside the chevron */
+.prcv{display:flex;align-items:center;justify-content:flex-end;gap:4px;}
+.pr-link{width:26px;height:26px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;
+  color:var(--subtle);opacity:0;cursor:pointer;}
+.prrow:hover .pr-link,.prrow.open .pr-link{opacity:1;}
+.pr-link:hover{color:var(--text);background:rgba(13,13,13,.06);}
+#pg-link{width:36px;padding:0;justify-content:center;}
+/* channels on the Strategy page */
+.chn{display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;font-weight:700;color:var(--muted);}
+.chn-b{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 10px;border:1px solid var(--div);border-radius:999px;
+  background:var(--surface);font:inherit;font-size:12px;font-weight:700;color:var(--subtle);cursor:pointer;}
+.chn-b i{font-size:14px;opacity:.5;}
+.chn-b.on{color:var(--text);border-color:var(--text);}
+.chn-b.on i{opacity:1;}
+.chn-b[disabled]{cursor:default;}
+/* a post's final files */
+.fin-tk{position:absolute;top:6px;right:6px;z-index:3;width:22px;height:22px;border-radius:50%;border:1.5px solid #fff;
+  background:rgba(13,13,13,.38);color:#fff;font:inherit;font-size:11px;font-weight:800;display:flex;align-items:center;
+  justify-content:center;cursor:pointer;padding:0;box-shadow:0 1px 3px rgba(0,0,0,.25);}
+.fin-tk:hover{background:rgba(13,13,13,.6);}
+.fin-tk.on{background:var(--acc);border-color:var(--acc);}
+.fin-n{position:absolute;right:5px;bottom:5px;z-index:2;background:rgba(13,13,13,.75);color:#fff;font-size:10px;font-weight:800;
+  border-radius:999px;padding:1px 7px;}
+.fin-lt{position:absolute;left:0;right:0;bottom:0;z-index:2;background:rgba(13,13,13,.55);color:#fff;font-size:9.5px;
+  text-align:center;padding:2px 0;font-weight:600;}
+.pcimg{position:relative;}
+.fin-strip{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.fin-strip .lb{font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-right:2px;}
+.fin-th{position:relative;width:38px;height:38px;border-radius:6px;background:#F1EFE8 center/cover no-repeat;border:1px solid var(--div);overflow:hidden;cursor:pointer;}
+.fin-th img{width:100%;height:100%;object-fit:cover;display:block;}
+.fin-th b{position:absolute;left:2px;bottom:2px;background:#fff;color:var(--text);font-size:9px;font-weight:800;border-radius:999px;padding:0 4px;line-height:13px;}
+/* a task's deliverables: the rail */
+.br-in.dlv{display:grid;grid-template-columns:minmax(0,1fr) 264px;column-gap:16px;align-items:start;}
+.br-in.dlv > .br-tabs{grid-column:1/-1;}
+.br-in.dlv > .dlv-main{grid-column:1;min-width:0;}
+.br-in.dlv > .dlv-rail{grid-column:2;}
+.dlv-rail{margin-top:12px;background:#F7F6F2;border:1px solid var(--div);border-radius:12px;padding:12px;}
+.dlv-h{display:flex;align-items:center;font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.dlv-h .dlv-add{margin-left:auto;width:24px;height:24px;border-radius:7px;border:1px solid var(--div);background:#fff;color:var(--muted);
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font:inherit;padding:0;}
+.dlv-h .dlv-add:hover{color:var(--text);}
+.dlv-c{background:#fff;border:1px solid var(--div);border-radius:10px;padding:9px 11px;margin-bottom:8px;cursor:pointer;}
+.dlv-c:hover{border-color:#C9C8C3;}
+.dlv-c.todo{border-style:dashed;}
+.dlv-c .nm{display:flex;align-items:center;gap:6px;font-weight:700;font-size:12.5px;line-height:1.3;}
+.dlv-c .nm span.t{flex:1;min-width:0;}
+.dlv-p{flex:none;font-size:10px;font-weight:700;border-radius:999px;padding:1px 7px;background:#F1EFE8;color:var(--muted);}
+.dlv-p.s-sent{background:#EAF2FB;color:#2B6CB0;}
+.dlv-p.s-approved{background:#EEF7EE;color:#1E6B2E;}
+.dlv-p.s-changes{background:#FBF3DC;color:#8A6D00;}
+.dlv-c .vers{display:flex;gap:4px;margin-top:7px;flex-wrap:wrap;}
+.dlv-v{font-size:10.5px;font-weight:700;border:1px solid var(--div);border-radius:6px;padding:1px 6px;color:var(--muted);background:#fff;}
+.dlv-v.cur{background:var(--text);color:#fff;border-color:var(--text);}
+.dlv-v.approved{background:#EEF7EE;color:#1E6B2E;border-color:#BFDCC4;}
+.dlv-c .ln{font-size:11px;color:var(--subtle);margin-top:5px;}
+.dlv-x{margin-top:8px;border-top:1px solid var(--div);padding-top:7px;}
+.dlv-x .vr{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);padding:3px 0;}
+.dlv-x .vr b{color:var(--text);}
+.dlv-x .vr .go{margin-left:auto;color:var(--acc);font-weight:700;cursor:pointer;font-size:11px;}
+.dlv-x .acts{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap;}
+.dlv-x .acts button{height:26px;padding:0 9px;border-radius:7px;border:1px solid var(--div);background:#fff;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;color:var(--text);}
+.dlv-x .acts button.ok{border-color:#BFDCC4;color:#1E6B2E;}
+.dlv-x .acts button.ch{border-color:#EBD9A2;color:#8A6D00;}
+.dlv-x .acts button.rm{color:var(--subtle);margin-left:auto;}
+.dlv-f{display:flex;gap:6px;margin-bottom:8px;}
+.dlv-f input{flex:1;min-width:0;height:30px;border:1px solid var(--div);border-radius:8px;padding:0 9px;font:inherit;font-size:12.5px;background:#fff;}
+.dlv-f button{height:30px;padding:0 10px;border-radius:8px;border:none;background:var(--text);color:#fff;font:inherit;font-size:12px;font-weight:700;cursor:pointer;}
+.dlv-empty{font-size:12px;color:var(--subtle);padding:4px 2px 2px;}
+/* the marker a delivery leaves in the conversation */
+.th-div.dlv-mk span{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--div);border-radius:999px;
+  padding:3px 11px;color:var(--text);letter-spacing:0;text-transform:none;font-size:11.5px;font-weight:700;}
+.th-div.dlv-mk span span{border:0;background:transparent;padding:0;border-radius:0;}
+.th-div.dlv-mk span span.v{background:var(--text);color:#fff;border-radius:5px;padding:0 5px;font-size:10.5px;}
+@media (max-width:768px){
+  .br-open.wa .th-div.dlv-mk{justify-content:center;}
+  .br-open.wa .th-div.dlv-mk > span{display:inline-flex!important;gap:6px;flex-wrap:wrap;justify-content:center;background:#fff!important;border:1px solid var(--div)!important;color:var(--text)!important;}
+  .br-open.wa .th-div.dlv-mk > span span{background:transparent!important;padding:0!important;border-radius:0!important;font-size:12px!important;color:inherit!important;}
+  .br-open.wa .th-div.dlv-mk > span span.v{background:var(--text)!important;color:#fff!important;border-radius:5px!important;padding:0 5px!important;}
+  .br-open.wa .th-div.dlv-mk > span .s-sent{color:#2B6CB0!important;}.br-open.wa .th-div.dlv-mk > span .s-approved{color:#1E6B2E!important;}.br-open.wa .th-div.dlv-mk > span .s-changes{color:#8A6D00!important;}
+}
+.th-div.dlv-mk .s-sent{color:#2B6CB0;}.th-div.dlv-mk .s-approved{color:#1E6B2E;}.th-div.dlv-mk .s-changes{color:#8A6D00;}
+/* deliver from the message box */
+.dlv-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px;}
+.dlv-tg{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:999px;border:1px solid var(--div);
+  background:#fff;font:inherit;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;}
+.dlv-tg:hover{color:var(--text);border-color:#C9C8C3;}
+.dlv-bar.on{border:1px solid var(--text);border-radius:10px;padding:7px 9px;background:#fff;}
+.dlv-bar.on b{font-size:12.5px;}
+.dlv-bar .cc-stsel{height:28px;border:1px solid var(--div);border-radius:8px;padding:0 26px 0 9px;font:inherit;font-size:12.5px;font-weight:650;background-color:#fff;}
+.dlv-bar input{height:28px;border:1px solid var(--div);border-radius:8px;padding:0 9px;font:inherit;font-size:12.5px;min-width:180px;}
+.dlv-bar .as{font-size:12px;color:var(--muted);}
+.dlv-bar .x{margin-left:auto;width:26px;height:26px;border:none;background:transparent;color:var(--subtle);cursor:pointer;font-size:14px;}
+/* deliver a message already in the thread */
+.dlv-mb{position:relative;}
+.dlv-menu{position:absolute;right:0;top:100%;z-index:40;background:#fff;border:1px solid var(--div);border-radius:10px;
+  box-shadow:0 10px 28px rgba(0,0,0,.12);padding:6px;min-width:230px;text-align:left;}
+.dlv-menu .mi{padding:7px 9px;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--text);display:flex;gap:8px;}
+.dlv-menu .mi:hover{background:rgba(13,13,13,.05);}
+.dlv-menu .mi small{margin-left:auto;color:var(--subtle);font-weight:600;}
+.dlv-menu .dlv-f{margin:6px 2px 2px;}
+/* the closed row says what has been delivered */
+.dlv-sum{display:inline-flex;gap:4px;flex-wrap:wrap;margin-left:8px;vertical-align:2px;}
+.dlv-sum i{font-size:11px;vertical-align:-1px;}
+.dlv-sum span{font-size:10.5px;font-weight:700;border:1px solid var(--div);border-radius:6px;padding:0 6px;color:var(--muted);background:#fff;white-space:nowrap;}
+.dlv-sum span.approved{background:#EEF7EE;color:#1E6B2E;border-color:#BFDCC4;}
+.dlv-sum span.changes{background:#FBF3DC;color:#8A6D00;border-color:#EBD9A2;}
+/* the phone: the rail folds into a strip */
+.dlv-strip{display:flex;gap:6px;overflow-x:auto;padding:8px 12px;border-bottom:1px solid var(--div);background:#F7F6F2;}
+.dlv-strip .dlv-sc{flex:none;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--div);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;}
+</style>
+<script>
+/* ══ V118.40 TBILISI ═══════════════════════════════════════════════════
+   Chirag, 12–17 Oct. Six things, one push:
+     1 · a beta pill on Strategy, Plan and the Tasks page's Client view
+     2 · LinkedIn: the channels are picked once per brand, on Strategy,
+         any mix of Instagram, Facebook and LinkedIn; every post goes to those
+     3 · a post's final files: ticked, numbered, not guessed (Posts only,
+         to test live before it goes anywhere else)
+     4 · one Link everywhere: every brand page, a post, a promotion, a
+         creative. The comment-level link is retired.
+     5 · the eye on a post retired, and one order for every item's
+         buttons: status · Edit · Link · WhatsApp · Delete
+     6 · a task's deliverables — option A, the rail beside the
+         conversation, with every version handed over
+
+   EVERYTHING HERE IS A WRAPPER OR A NEW NAME, plus a dressing pass that
+   runs after each render. A table that is not there yet (the migration
+   not run) leaves its feature off rather than half-drawn. */
+
+/* ── shared ───────────────────────────────────────────────────────── */
+function v38Copy(url){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(()=>toast("Link copied"),()=>toast(url));
+  } else toast(url);
+}
+function v38Day(iso){ return iso?fmtShort(iso):""; }
+
+/* ── 2 · channels per brand ───────────────────────────────────────── */
+const CH_META={
+  instagram:{label:"Instagram",icon:"ti-brand-instagram",colour:"#D4537E",cls:"pc-ig"},
+  facebook: {label:"Facebook", icon:"ti-brand-facebook", colour:"#185FA5",cls:"pc-fb"},
+  linkedin: {label:"LinkedIn", icon:"ti-brand-linkedin", colour:"#0A66C2",cls:"pc-li"}};
+const CH_ORDER=["instagram","facebook","linkedin"];
+let CH_BY={}, CH_OK=false;
+function brandChannels(bid){
+  const v=CH_BY[bid];
+  const l=(Array.isArray(v)&&v.length)?v:["instagram","facebook"];
+  const out=CH_ORDER.filter(k=>l.includes(k));
+  return out.length?out:["instagram","facebook"];
+}
+function chIconsHtml(bid){
+  return brandChannels(bid).map((k,i)=>`<span class="${CH_META[k].cls}" style="color:${CH_META[k].colour};${i?"margin-left:-4px;":""}" title="${CH_META[k].label}"><i class="ti ${CH_META[k].icon}" style="font-size:13px;"></i></span>`).join("");
+}
+async function chLoad(){
+  try{
+    const r=await sb.from("brands").select("id,social_platforms");
+    if(r.error) return;
+    CH_OK=true;
+    (r.data||[]).forEach(x=>{ if(Array.isArray(x.social_platforms)) CH_BY[x.id]=x.social_platforms; });
+  }catch(e){}
+}
+async function chToggle(k){
+  if(!canEditVision()) return capDenied("Changing the channels");
+  const bid=activeBrand; if(!bid) return;
+  let l=brandChannels(bid).slice();
+  if(l.includes(k)){
+    if(l.length===1){ toast("A brand runs at least one channel","err"); return; }
+    l=l.filter(x=>x!==k);
+  } else l.push(k);
+  l=CH_ORDER.filter(x=>l.includes(x));
+  if(!CH_OK){ toast("Channels cannot be saved until this week's database update is run","err"); return; }
+  const prev=CH_BY[bid]; CH_BY[bid]=l; render();
+  const r=await sb.from("brands").update({social_platforms:l}).eq("id",bid);
+  if(r.error){ CH_BY[bid]=prev; render(); toast("Not saved — "+r.error.message,"err"); return; }
+  toast(l.map(x=>CH_META[x].label).join(" · "));
+}
+function chDress(){
+  if(view!=="brief"||typeof briefEdit!=="undefined"&&briefEdit) return;
+  /* the first row of the Strategy page is the brand's links (its social
+     handles and site); the channels it runs sit at the end of that row */
+  const acts=document.querySelector("#main #bf-links")||document.querySelector("#main .ph-acts");
+  if(!acts||acts.querySelector(".chn")) return;
+  const may=canEditVision(), on=brandChannels(activeBrand);
+  acts.insertAdjacentHTML("beforeend",`<span class="chn">Channels ${CH_ORDER.map(k=>
+    `<button class="chn-b${on.includes(k)?" on":""}" ${may?`onclick="chToggle('${k}')"`:"disabled"} title="${CH_META[k].label}"><i class="ti ${CH_META[k].icon}"></i>${CH_META[k].label}</button>`).join("")}</span>`);
+}
+
+/* ── 3 · a post's final files ─────────────────────────────────────── */
+let FIN={}, FIN_OK=false, FIN_BRAND=null, FIN_AS={};
+async function finLoad(bid){
+  FIN_BRAND=bid;
+  try{
+    const r=await sb.from("post_final_assets").select("*").eq("brand_id",bid);
+    if(r.error){ FIN_OK=false; return; }
+    FIN_OK=true; FIN={};
+    (r.data||[]).filter(x=>x.brand_id===bid).forEach(x=>{ (FIN[x.post_id]=FIN[x.post_id]||[]).push(x); });
+    Object.values(FIN).forEach(l=>l.sort((a,b)=>a.slide-b.slide));
+    const need=[...new Set((r.data||[]).filter(x=>!x.deleted_at).map(x=>x.asset_id))].filter(id=>!assetById(id)&&!FIN_AS[id]);
+    if(need.length){
+      const a=await sb.from("assets").select("*").in("id",need);
+      if(!a.error) (a.data||[]).forEach(x=>{ if(need.includes(x.id)) FIN_AS[x.id]=x; });
+    }
+  }catch(e){ FIN_OK=false; }
+}
+function finAsset(id){ return assetById(id)||FIN_AS[id]||null; }
+function finFor(pid){ return (FIN[pid]||[]).filter(x=>!x.deleted_at&&finAsset(x.asset_id)).sort((a,b)=>a.slide-b.slide); }
+function finMay(){ return canEdit()&&actorKind()!=="client"; }
+async function finToggle(ev,pid,aid){
+  if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  if(!finMay()) return;
+  if(!FIN_OK){ toast("Final files cannot be saved until this week's database update is run","err"); return; }
+  const l=FIN[pid]=FIN[pid]||[];
+  const now=new Date().toISOString();
+  let x=l.find(r=>r.asset_id===aid);
+  if(x&&!x.deleted_at){ x.deleted_at=now; }
+  else{
+    const live=l.filter(r=>!r.deleted_at);
+    const slide=live.length?Math.max(...live.map(r=>r.slide))+1:1;
+    if(x){ x.deleted_at=null; x.slide=slide; x.set_by=ME.id||null; x.set_at=now; }
+    else{ x={post_id:pid,asset_id:aid,brand_id:activeBrand,slide,set_by:ME.id||null,set_at:now,deleted_at:null}; l.push(x); }
+    const a=assetById(aid); if(a) FIN_AS[aid]=a;
+  }
+  /* the set is always 1, 2, 3 … in the order it was ticked */
+  const live=l.filter(r=>!r.deleted_at).sort((a,b)=>a.slide-b.slide);
+  const touched=new Set([aid]);
+  live.forEach((r,i)=>{ if(r.slide!==i+1){ r.slide=i+1; touched.add(r.asset_id); } });
+  renderSocial();
+  const rows=l.filter(r=>touched.has(r.asset_id)).map(r=>({post_id:r.post_id,asset_id:r.asset_id,brand_id:r.brand_id,
+    slide:r.slide,set_by:r.set_by||null,set_at:r.set_at||now,deleted_at:r.deleted_at||null}));
+  const r=await sb.from("post_final_assets").upsert(rows,{onConflict:"post_id,asset_id"});
+  if(r&&r.error) toast("Not saved — "+r.error.message,"err");
+}
+(function(){
+  const base=postLeadAsset;
+  postLeadAsset=function(pid){
+    const f=finFor(pid);
+    if(f.length) return finAsset(f[0].asset_id);
+    return base.apply(this,arguments);
+  };
+})();
+function finDress(){
+  if(view!=="content") return;
+  const b=brands[activeBrand]; if(!b) return;
+  document.querySelectorAll('#main [id^="pcard-"]').forEach(w=>{
+    const pid=w.id.slice(6), p=(b.social||[]).find(x=>x.id===pid); if(!p) return;
+    const f=finFor(pid), may=finMay()&&FIN_OK;
+    /* the ticks, on every picture in the post's conversation */
+    if(may) w.querySelectorAll(".c46 [data-aid]").forEach(t=>{
+      if(t.querySelector(".fin-tk")) return;
+      const aid=t.getAttribute("data-aid"), on=f.find(r=>r.asset_id===aid);
+      if(getComputedStyle(t).position==="static") t.style.position="relative";
+      t.insertAdjacentHTML("beforeend",`<button class="fin-tk${on?" on":""}" title="${on?"Final file "+on.slide+" — click to take it out of the final set":"Add to the final files"}" onclick="finToggle(event,'${escAttr(pid)}','${escAttr(aid)}')">${on?on.slide:"✓"}</button>`);
+    });
+    const img=w.querySelector(".pcimg");
+    if(img&&!img.classList.contains("empty")&&!img.querySelector(".fin-n,.fin-lt")){
+      if(f.length>1) img.insertAdjacentHTML("beforeend",`<span class="fin-n" title="${f.length} final files">${f.length}</span>`);
+      else if(!f.length&&FIN_OK&&p.format==="carousel") img.insertAdjacentHTML("beforeend",`<span class="fin-lt">latest, not final</span>`);
+    }
+    const tx=w.querySelector(".pctxt");
+    if(tx&&f.length>1&&!tx.querySelector(".fin-strip")){
+      tx.insertAdjacentHTML("beforeend",`<div class="fin-strip"><span class="lb">Final files</span>${f.map(r=>{
+        const a=finAsset(r.asset_id)||{};
+        return `<span class="fin-th" data-sign="${escAttr(a.thumb_path||a.poster_path||a.view_path||"")}" onclick="fbTogglePanel('${escAttr(pid)}')" title="${escAttr(a.filename||"")}"><b>${r.slide}</b></span>`;
+      }).join("")}</div>`);
+      try{ hydrateMedia(tx); }catch(e){}
+    }
+  });
+}
+
+/* ── 4 · one Link everywhere ──────────────────────────────────────── */
+const PG_LINK_VIEWS=["brief","mplan","content","branding","promotions","numbers","meets","mom"];
+function pageLinkUrl(){
+  const q=urlState();
+  ["task","meeting","pr","cr","post","c"].forEach(k=>q.delete(k));
+  return location.origin+location.pathname+"?"+q.toString();
+}
+function pageCopyLink(){ v38Copy(pageLinkUrl()); }
+function prCopyLink(pid,cid){
+  const q=new URLSearchParams();
+  if(activeBrand) q.set("b",activeBrand);
+  q.set("p","promotions"); q.set("y",String(YEAR)); q.set("pr",pid); if(cid) q.set("cr",cid);
+  v38Copy(location.origin+location.pathname+"?"+q.toString());
+}
+function pgLinkSync(){
+  let bt=document.getElementById("pg-link");
+  if(!bt){
+    const ex=document.getElementById("export-btn"), at=ex&&ex.closest(".bsw");
+    if(!at) return;
+    at.insertAdjacentHTML("beforebegin",`<button class="nav-btn mf-hide" id="pg-link" onclick="pageCopyLink()" title="Copy a link that opens this page" aria-label="Copy link"><i class="ti ti-link"></i></button>`);
+    bt=document.getElementById("pg-link");
+  }
+  const on=!!(activeBrand&&brands[activeBrand]&&PG_LINK_VIEWS.includes(view));
+  bt.style.display=on?"":"none";
+}
+
+/* ── 1 · beta ─────────────────────────────────────────────────────── */
+(function(){
+  const base=renderBnTabs;
+  renderBnTabs=function(){
+    const out=base.apply(this,arguments);
+    try{
+      document.querySelectorAll("#bn-tabs .bntab").forEach(b=>{
+        const go=b.getAttribute("onclick")||"";
+        if(!/openBrief\(|openMonthPlanView\(/.test(go)||b.querySelector(".beta")) return;
+        b.insertAdjacentHTML("beforeend",`<span class="beta">beta</span>`);
+      });
+    }catch(e){}
+    return out;
+  };
+})();
+
+/* ── 6 · a task's deliverables ────────────────────────────────────── */
+const DLV={brand:null,ok:false,loading:false,list:[],vers:[]};
+let DLV_OPEN=null, DLV_ADD=null, DLV_PICK=null, DLV_MP=null;
+const DLV_WORD={none:"Not delivered",sent:"Sent",approved:"Approved",changes:"Changes asked"};
+async function dlvLoad(bid){
+  DLV.loading=true;
+  try{
+    const [d,v]=await Promise.all([
+      sb.from("task_deliverables").select("*").eq("brand_id",bid),
+      sb.from("deliverable_versions").select("*").eq("brand_id",bid)]);
+    if(d.error||v.error){ DLV.ok=false; }
+    else{
+      DLV.ok=true;
+      DLV.list=(d.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at);
+      DLV.vers=(v.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at);
+    }
+  }catch(e){ DLV.ok=false; }
+  DLV.brand=bid; DLV.loading=false;
+}
+function dlvFor(tid){ return DLV.list.filter(d=>d.task_id===tid).sort((a,b)=>(a.sort-b.sort)||String(a.created_at).localeCompare(String(b.created_at))); }
+function dlvVers(did){ return DLV.vers.filter(v=>v.deliverable_id===did).sort((a,b)=>a.version-b.version); }
+function dlvLast(did){ const vs=dlvVers(did); return vs[vs.length-1]||null; }
+function dlvState(d){ const l=dlvLast(d.id); return l?l.status:"none"; }
+function dlvWho(id){ return (id&&(brPersonName(id)||(personById(id)||{}).name))||"the client"; }
+function dlvMayEdit(t){ return !!t&&brIsAM(t)&&DLV.ok; }
+function dlvMayAnswer(t){ return !!t&&DLV.ok&&(brIsAM(t)||brIsClient()); }
+function dlvLine(d){
+  const l=dlvLast(d.id);
+  if(!l) return "not delivered yet"+(d.due_date?" · due "+v38Day(d.due_date):"");
+  if(l.status==="approved") return `v${l.version} approved by ${dlvWho(l.answered_by)} · ${v38Day(l.answered_at)}`;
+  if(l.status==="changes") return `changes asked on v${l.version} · ${v38Day(l.answered_at)}`;
+  return `v${l.version} sent · ${v38Day(l.created_at)}`;
+}
+function dlvRailHtml(t){
+  const ds=dlvFor(t.id), mayE=dlvMayEdit(t), mayA=dlvMayAnswer(t);
+  const add=DLV_ADD===t.id?`<div class="dlv-f"><input id="dlv-new" maxlength="120" placeholder="Name of the deliverable"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();dlvCreate('${t.id}');}if(event.key==='Escape'){DLV_ADD=null;render();}">
+      <button onclick="dlvCreate('${t.id}')">Add</button></div>`:"";
+  const cards=ds.map(d=>{
+    const vs=dlvVers(d.id), st=dlvState(d), open=DLV_OPEN===d.id, last=vs[vs.length-1];
+    const x=open?`<div class="dlv-x" onclick="event.stopPropagation()">
+        ${vs.slice().reverse().map(v=>`<div class="vr"><b>v${v.version}</b>${escHtml(DLV_WORD[v.status])}${v.answered_at?" · "+v38Day(v.answered_at):" · "+v38Day(v.created_at)}
+          ${v.message_id?`<span class="go" onclick="dlvJump('${escAttr(v.message_id)}')">Show</span>`:""}</div>`).join("")}
+        <div class="acts">
+          ${last&&mayA&&last.status!=="approved"?`<button class="ok" onclick="dlvAnswer('${last.id}','approved')">Approved</button>`:""}
+          ${last&&mayA&&last.status!=="changes"?`<button class="ch" onclick="dlvAnswer('${last.id}','changes')">Changes asked</button>`:""}
+          ${mayE?`<button class="rm" onclick="dlvRemove('${d.id}')" title="Take this deliverable off the task">Remove</button>`:""}
+        </div></div>`:"";
+    return `<div class="dlv-c${vs.length?"":" todo"}${open?" open":""}" onclick="dlvCardToggle('${d.id}')">
+      <div class="nm"><span class="t">${escHtml(d.name)}</span><span class="dlv-p s-${st}">${DLV_WORD[st]}</span></div>
+      ${vs.length?`<div class="vers">${vs.map(v=>`<span class="dlv-v${v.status==="approved"?" approved":(v===last?" cur":"")}">v${v.version}${v.status==="approved"?" ✓":""}</span>`).join("")}</div>`:""}
+      <div class="ln">${escHtml(dlvLine(d))}</div>${x}</div>`;
+  }).join("");
+  return `<div class="dlv-rail">
+    <div class="dlv-h">Deliverables · ${ds.length}${mayE?`<button class="dlv-add" onclick="dlvAddOpen('${t.id}')" title="Add a deliverable"><i class="ti ti-plus"></i></button>`:""}</div>
+    ${add}${cards||(add?"":`<div class="dlv-empty">${mayE?"Nothing named yet.":"Nothing delivered yet."}</div>`)}</div>`;
+}
+function dlvAddOpen(tid){ DLV_ADD=DLV_ADD===tid?null:tid; render(); setTimeout(()=>{ const i=document.getElementById("dlv-new"); if(i) i.focus(); },40); }
+function dlvCardToggle(did){ DLV_OPEN=DLV_OPEN===did?null:did; render(); }
+async function dlvCreate(tid,nameIn){
+  const t=BR.tasks.find(x=>x.id===tid); if(!dlvMayEdit(t)) return null;
+  const el=document.getElementById("dlv-new");
+  const name=String(nameIn!=null?nameIn:(el?el.value:"")).trim().slice(0,120);
+  if(!name){ toast("Give the deliverable a name","err"); return null; }
+  const row={id:(crypto.randomUUID?crypto.randomUUID():"d"+Date.now()),task_id:tid,brand_id:t.brand_id||activeBrand,name,
+    sort:dlvFor(tid).length,created_by:ME.id||null,created_at:new Date().toISOString(),deleted_at:null};
+  const r=await sb.from("task_deliverables").insert([row]);
+  if(r.error){ toast("Not added — "+r.error.message,"err"); return null; }
+  DLV.list.push(row); if(nameIn==null) DLV_ADD=null; render();
+  return row;
+}
+async function dlvRemove(did){
+  const d=DLV.list.find(x=>x.id===did); if(!d) return;
+  const t=BR.tasks.find(x=>x.id===d.task_id); if(!dlvMayEdit(t)) return;
+  const now=new Date().toISOString();
+  const r=await sb.from("task_deliverables").update({deleted_at:now}).eq("id",did);
+  if(r.error){ toast("Not removed — "+r.error.message,"err"); return; }
+  DLV.list=DLV.list.filter(x=>x.id!==did); DLV_OPEN=null; render();
+  toast("Removed "+d.name);
+}
+async function dlvAnswer(vid,status){
+  const v=DLV.vers.find(x=>x.id===vid); if(!v) return;
+  const t=BR.tasks.find(x=>x.id===v.task_id); if(!dlvMayAnswer(t)) return;
+  const patch={status,answered_by:ME.id||null,answered_at:new Date().toISOString()};
+  const r=await sb.from("deliverable_versions").update(patch).eq("id",vid);
+  if(r.error){ toast("Not saved — "+r.error.message,"err"); return; }
+  Object.assign(v,patch); render();
+}
+async function dlvAddVersion(did,mid){
+  const d=DLV.list.find(x=>x.id===did); if(!d) return false;
+  const vs=dlvVers(did);
+  const row={id:(crypto.randomUUID?crypto.randomUUID():"v"+Date.now()),deliverable_id:did,task_id:d.task_id,brand_id:d.brand_id,
+    version:(vs.length?Math.max(...vs.map(v=>v.version)):0)+1,message_id:mid||null,status:"sent",
+    created_by:ME.id||null,created_at:new Date().toISOString(),deleted_at:null};
+  const r=await sb.from("deliverable_versions").insert([row]);
+  if(r.error){ toast("Not recorded — "+r.error.message,"err"); return false; }
+  DLV.vers.push(row);
+  toast(`${d.name} · v${row.version} delivered`);
+  return true;
+}
+function dlvJump(mid){
+  const el=document.querySelector(`.br-open .th-m[data-mid="${CSS.escape(mid)}"]`);
+  if(!el){
+    /* the delivery was posted to the other conversation */
+    const m=(TASK.msgs||[]).find(x=>x.id===mid);
+    if(m){ BR_TAB=(brMsgAud&&brMsgAud(m)==="client")?"client":"talk"; render();
+      setTimeout(()=>dlvJump(mid),80); }
+    return;
+  }
+  try{ el.scrollIntoView({behavior:"smooth",block:"center"}); }catch(e){}
+  el.classList.add("fb-landed"); setTimeout(()=>el.classList.remove("fb-landed"),1600);
+}
+/* the message box, in deliver mode */
+function dlvMode(tid){ DLV_PICK=tid?{tid,did:(dlvFor(tid)[0]||{}).id||"__new",name:""}:null; render(); }
+function dlvPickSet(v){ if(!DLV_PICK) return; DLV_PICK.did=v; render(); if(v==="__new") setTimeout(()=>{ const i=document.getElementById("dlv-pn"); if(i) i.focus(); },40); }
+function dlvBarHtml(t){
+  if(!DLV_PICK||DLV_PICK.tid!==t.id)
+    return `<div class="dlv-bar"><button class="dlv-tg" onclick="dlvMode('${t.id}')" title="Send this as a version of one of the task's deliverables"><i class="ti ti-package-export"></i>Deliver to client</button></div>`;
+  const ds=dlvFor(t.id), did=DLV_PICK.did, d=ds.find(x=>x.id===did);
+  const next=d?((dlvVers(d.id).length?Math.max(...dlvVers(d.id).map(v=>v.version)):0)+1):1;
+  return `<div class="dlv-bar on"><b>Deliver</b>
+    <select class="cc-stsel" onchange="dlvPickSet(this.value)">${ds.map(x=>`<option value="${x.id}"${x.id===did?" selected":""}>${escHtml(x.name)}</option>`).join("")}
+      <option value="__new"${did==="__new"?" selected":""}>New deliverable…</option></select>
+    ${did==="__new"?`<input id="dlv-pn" maxlength="120" placeholder="Name of the deliverable" value="${escAttr(DLV_PICK.name||"")}" oninput="DLV_PICK.name=this.value">`:""}
+    <span class="as">as <b>v${next}</b> · goes to the client's conversation</span>
+    <button class="x" onclick="dlvMode(null)" title="Not a delivery">✕</button></div>`;
+}
+(function(){
+  const base=taskPost;
+  taskPost=async function(){
+    const t=brTask();
+    const pick=DLV_PICK&&t&&DLV_PICK.tid===t.id?{...DLV_PICK}:null;
+    if(!pick||!DLV.ok) return base.apply(this,arguments);
+    if(!brMayWriteClient(t)){ toast("Only the Ac Manager delivers to the client","err"); return; }
+    if(pick.did==="__new"&&!String(pick.name||"").trim()){ toast("Name the new deliverable first","err"); return; }
+    const box=document.getElementById("th-in");
+    if(!(box&&rtValue(box))&&!(TASK_STAGED||[]).length){ toast("Write a note or attach the file to deliver","err"); return; }
+    const before=new Set((TASK.msgs||[]).map(m=>m.id));
+    /* a delivery is for the client: it is posted to the client's side */
+    BR_TAB="client";
+    const out=await base.apply(this,arguments);
+    const mine=(TASK.msgs||[]).filter(m=>!before.has(m.id)&&(m.author_id===ME.id||m.author_email===ME.email))
+      .sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)))[0];
+    if(!mine) return out;
+    let did=pick.did;
+    if(did==="__new"){ const d=await dlvCreate(t.id,pick.name); if(!d) return out; did=d.id; }
+    if(await dlvAddVersion(did,mine.id)){ DLV_PICK=null; DLV_OPEN=did; }
+    render();
+    return out;
+  };
+})();
+/* deliver a message that is already in the thread */
+function dlvMsgMenu(ev,mid){ if(ev){ ev.stopPropagation(); } DLV_MP=DLV_MP===mid?null:mid; render(); }
+async function dlvMsgPick(mid,did){
+  const t=brTask(); if(!dlvMayEdit(t)) return;
+  if(did==="__new"){
+    const i=document.getElementById("dlv-mn"); const name=i?i.value:"";
+    const d=await dlvCreate(t.id,name); if(!d) return; did=d.id;
+  }
+  DLV_MP=null;
+  if(await dlvAddVersion(did,mid)) DLV_OPEN=did;
+  render();
+}
+document.addEventListener("click",e=>{
+  if(DLV_MP&&!(e.target.closest&&e.target.closest(".dlv-mb"))){ DLV_MP=null; if(view==="branding") render(); }
+},true);
+function dlvMarkHtml(v){
+  const d=DLV.list.find(x=>x.id===v.deliverable_id); if(!d) return "";
+  return `<div class="th-div dlv-mk" data-dv="${escAttr(v.id)}"><span><span class="v">v${v.version}</span>${escHtml(d.name)}<span class="s-${v.status}">${escHtml(DLV_WORD[v.status].toLowerCase())}</span>${escHtml(v38Day(v.answered_at||v.created_at))}</span></div>`;
+}
+function dlvDress(){
+  if(view!=="branding"||!BR_OPEN||!DLV.ok||DLV.brand!==activeBrand) return;
+  const t=BR.tasks.find(x=>x.id===BR_OPEN); if(!t) return;
+  const panel=document.querySelector("#main .br-open"); if(!panel) return;
+  const inner=panel.querySelector(":scope > .br-in"); if(!inner) return;
+  if(TASK.id!==t.id||TASK.loading) return;
+  const talk=BR_TAB==="talk"||BR_TAB==="client"||brCV();
+  const phone=panel.classList.contains("wa");
+  /* the rail — or, on a phone, the strip */
+  if(talk&&!inner.querySelector(".dlv-rail,.dlv-strip")){
+    if(phone){
+      const th=inner.querySelector(".br-thread"), ds=dlvFor(t.id);
+      if(th&&ds.length) th.insertAdjacentHTML("beforebegin",`<div class="dlv-strip">${ds.map(d=>{ const l=dlvLast(d.id);
+        return `<span class="dlv-sc">${escHtml(d.name)}<span class="dlv-p s-${dlvState(d)}">${l?"v"+l.version+" · ":""}${DLV_WORD[dlvState(d)]}</span></span>`; }).join("")}</div>`);
+    } else {
+      const tabs=inner.querySelector(":scope > .br-tabs");
+      if(tabs){
+        const main=document.createElement("div"); main.className="dlv-main";
+        let n=tabs.nextSibling; const move=[];
+        while(n){ move.push(n); n=n.nextSibling; }
+        move.forEach(x=>main.appendChild(x));
+        inner.appendChild(main);
+        inner.insertAdjacentHTML("beforeend",dlvRailHtml(t));
+        inner.classList.add("dlv");
+      }
+    }
+  }
+  /* the markers a delivery leaves */
+  const th=inner.querySelector(".br-thread");
+  if(th&&!th.dataset.dlv){
+    th.dataset.dlv="1";
+    const vs=DLV.vers.filter(v=>v.task_id===t.id).sort((a,b)=>String(a.created_at).localeCompare(String(b.created_at)));
+    vs.forEach(v=>{
+      const at=v.message_id&&th.querySelector(`.th-m[data-mid="${CSS.escape(v.message_id)}"]`);
+      if(at){
+        /* after the last message of that person's run, so the marker
+           does not split a run of messages in two */
+        let end=at; while(end.nextElementSibling&&end.nextElementSibling.classList.contains("cont")) end=end.nextElementSibling;
+        end.insertAdjacentHTML("afterend",dlvMarkHtml(v));
+      }
+    });
+  }
+  /* "Deliver" on a message already sent, for whoever may deliver */
+  if(talk&&dlvMayEdit(t)) th&&th.querySelectorAll(".th-m[data-mid] .th-acts .rgt").forEach(r=>{
+    if(r.querySelector(".dlv-mb")) return;
+    const mid=r.closest(".th-m").getAttribute("data-mid");
+    if(DLV.vers.some(v=>v.message_id===mid)) return;
+    const open=DLV_MP===mid, ds=dlvFor(t.id);
+    r.insertAdjacentHTML("afterbegin",`<span class="dlv-mb"><button onclick="dlvMsgMenu(event,'${escAttr(mid)}')" title="Record this message as a delivery">Deliver</button>${open?`<div class="dlv-menu" onclick="event.stopPropagation()">
+      ${ds.map(d=>{ const vs=dlvVers(d.id); const nx=(vs.length?Math.max(...vs.map(v=>v.version)):0)+1;
+        return `<div class="mi" onclick="dlvMsgPick('${escAttr(mid)}','${d.id}')">${escHtml(d.name)}<small>as v${nx}</small></div>`; }).join("")}
+      <div class="dlv-f"><input id="dlv-mn" maxlength="120" placeholder="New deliverable" onkeydown="if(event.key==='Enter'){event.preventDefault();dlvMsgPick('${escAttr(mid)}','__new');}"><button onclick="dlvMsgPick('${escAttr(mid)}','__new')">Add</button></div></div>`:""}</span>`);
+    if(open) setTimeout(()=>{ const i=document.getElementById("dlv-mn"); if(i&&!ds.length) i.focus(); },30);
+  });
+  /* the message box offers to deliver */
+  const wrap=inner.querySelector(".ccm-wrap");
+  if(wrap&&dlvMayEdit(t)&&brMayWriteClient(t)&&!brIsClient()&&!wrap.querySelector(".dlv-bar")){
+    wrap.insertAdjacentHTML("afterbegin",dlvBarHtml(t));
+  }
+}
+function dlvRowsDress(){
+  if(view!=="branding"||!DLV.ok||DLV.brand!==activeBrand) return;
+  document.querySelectorAll("#main .brl-tr:not(.wa-r)").forEach(row=>{
+    const m=/brToggleOpen\(event,'([^']+)'\)/.exec(row.getAttribute("onclick")||""); if(!m) return;
+    const nm=row.querySelector(".brl-nm"); if(!nm||nm.querySelector(".dlv-sum")) return;
+    const ds=dlvFor(m[1]); if(!ds.length) return;
+    /* ONE LINE PER ROW (the listing rule): one chip — approved of total —
+       and every deliverable, its version and state, on hover */
+    const st=ds.map(d=>dlvState(d)), okN=st.filter(x=>x==="approved").length;
+    const cls=okN===ds.length?"approved":(st.includes("changes")?"changes":"");
+    const tip=ds.map(d=>{ const l=dlvLast(d.id); return d.name+(l?" · v"+l.version:"")+" · "+DLV_WORD[dlvState(d)]; }).join("\n");
+    nm.insertAdjacentHTML("beforeend",`<span class="dlv-sum"><span class="${cls}" title="${escAttr(tip)}"><i class="ti ti-package"></i> ${okN}/${ds.length}</span></span>`);
+  });
+}
+
+/* ── loading, and the dressing pass ───────────────────────────────── */
+(function(){
+  const base=render;
+  render=function(){
+    const out=base.apply(this,arguments);
+    try{
+      const bid=activeBrand&&brands[activeBrand]?activeBrand:null;
+      if(bid&&view==="branding"&&DLV.brand!==bid&&!DLV.loading)
+        dlvLoad(bid).then(()=>{ if(view==="branding"&&activeBrand===bid) render(); });
+      if(bid&&view==="content"&&FIN_BRAND!==bid)
+        finLoad(bid).then(()=>{ if(view==="content"&&activeBrand===bid) renderSocial(); });
+      pgLinkSync();
+    }catch(e){}
+    v38Soon();
+    return out;
+  };
+})();
+let V38_Q=false;
+function v38Soon(){ if(V38_Q) return; V38_Q=true; requestAnimationFrame(()=>{ V38_Q=false; v38Dress(); }); }
+function v38Dress(){
+  try{ chDress(); }catch(e){ console.warn("[v118.40] channels",e); }
+  try{ finDress(); }catch(e){ console.warn("[v118.40] finals",e); }
+  try{ dlvDress(); }catch(e){ console.warn("[v118.40] deliverables",e); }
+  try{ dlvRowsDress(); }catch(e){ console.warn("[v118.40] rows",e); }
+}
+(function(){
+  const m=document.getElementById("main");
+  if(m&&window.MutationObserver) new MutationObserver(()=>v38Soon()).observe(m,{childList:true,subtree:true});
+  chLoad().then(()=>{ if(["content","brief"].includes(view)) render(); });
+  try{ pgLinkSync(); }catch(e){}
 })();
 </script>
 
