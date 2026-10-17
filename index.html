@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.42 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.43 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13291,7 +13291,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.42 Tbilisi";
+const TOOL_VERSION="V118.43 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -40395,6 +40395,20 @@ function hmGoPromo(bid,id){ try{ closeM("day-pop"); }catch(e){} pickBrand(bid); 
 .cp-ty.aspirational{background:#EFE7F7;color:#5A4796;}
 .cp-ty.off{opacity:.45;}
 .cp-ty.ro{cursor:default;}
+.cp-t.vb-t td{white-space:nowrap;}
+/* V118.43 — one line per competitor (Chirag, 17 Oct 19:04, picked A):
+   a link is its icon, the name shows on pointing */
+.cp-t td.w-nm{width:auto !important;} .cp-t td.w-ty{width:120px !important;} .cp-t td.w-mb{width:200px !important;} .cp-t td.w-st{width:190px !important;}
+.cp-lks{flex-wrap:nowrap !important;gap:5px !important;}
+.cp-lk.cp-ic{width:30px;height:30px !important;padding:0 !important;justify-content:center;border-radius:999px;}
+.cp-lk.cp-ic > i{font-size:15px !important;}
+.cp-lk.cp-ic .ed{left:4px !important;}
+.cp-add{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:999px;border:1px dashed #D8D7D2;color:var(--muted);cursor:pointer;flex:0 0 auto;}
+.cp-add:hover{border-color:#b9b6ae;color:var(--text);} .cp-add i{font-size:14px;}
+.cp-t tr.cp-more td{padding:10px 0 !important;text-align:center;}
+.cp-morebtn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 14px;border-radius:999px;border:1px solid var(--div,#e3e0da);background:#fff;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--text);user-select:none;}
+.cp-morebtn:hover{border-color:#c9c5bd;}
+.cp-t tr.cp-open td{white-space:normal;}
 /* V118.35 — a competitor's mood board and strengths (Chirag, 17 Oct 12:18) */
 .cp-t td.w-mb{width:210px;}
 .cp-t td.w-st{width:200px;}
@@ -40426,7 +40440,10 @@ function hmGoPromo(bid,id){ try{ closeM("day-pop"); }catch(e){} pickBrand(bid); 
 </style>
 <script>
 /* ══ V118.15 — COMPETITORS ════════════════════════════════════════════ */
-var CP={bid:null,ok:false,busy:false,err:"",rows:[],newT:"direct"};
+var CP={bid:null,ok:false,busy:false,err:"",rows:[],newT:"direct",all:false};
+/* V118.43 — Chirag, 17 Oct 19:04: "you should be seeing only seven maximum
+   competitors at a time, and then you may have an option to expand" */
+const CP_SHOW=7;
 const CP_T={direct:"Direct",aspirational:"Aspirational"};
 function cpMay(){ return typeof bfMayLinks==="function"&&bfMayLinks(); }
 function cpRows(){ return CP.rows.filter(r=>!r.deleted_at&&r.brand_id===CP.bid)
@@ -40445,11 +40462,11 @@ function cpLinksOf(r){ return Array.isArray(r.links)?r.links.filter(l=>l&&l.url)
 function cpRowHtml(r){
   const id=escAttr(r.id), may=cpMay();
   const lk=cpLinksOf(r).map((l,i)=>{ const k=bfKind(l.kind);
-    return `<a class="bf-lk cp-lk" href="${escAttr(bdHref(l.url))}" target="_blank" rel="noopener" title="${escAttr(bdShort(l.url))}"><i class="ti ti-${k[2]}"></i>${escHtml(k[1])}${may?`<span class="ed" title="Change or remove" onclick="event.preventDefault();event.stopPropagation();cpLinkForm(event,'${id}',${i})"><i class="ti ti-pencil"></i></span>`:""}</a>`; }).join("");
+    return `<a class="bf-lk cp-lk cp-ic" href="${escAttr(bdHref(l.url))}" target="_blank" rel="noopener" title="${escAttr(k[1]+" · "+bdShort(l.url))}" aria-label="${escAttr(k[1])}"><i class="ti ti-${k[2]}"></i>${may?`<span class="ed" title="Change or remove" onclick="event.preventDefault();event.stopPropagation();cpLinkForm(event,'${id}',${i})"><i class="ti ti-pencil"></i></span>`:""}</a>`; }).join("");
   return `<tr data-cp="${id}">
     <td class="w-nm">${may?`<input class="vb-ce cp-nm" value="${escAttr(r.name)}" onblur="cpName('${id}',this.value)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.defaultValue;this.blur();}">`:`<span class="cp-nmro">${escHtml(r.name)}</span>`}</td>
     <td class="w-ty"><span class="cp-ty ${r.kind}${may?"":" ro"}"${may?` title="Switch" onclick="cpType('${id}')"`:""}>${CP_T[r.kind]||"Direct"}</span></td>
-    <td><div class="cp-lks">${lk}${may?`<span class="vb-plus" onclick="cpLinkMenu(event,'${id}')">+ link</span>`:(lk?"":`<span class="nsdim">—</span>`)}</div></td>
+    <td class="w-lk"><div class="cp-lks">${lk}${may?`<span class="cp-add" title="Add a link" onclick="cpLinkMenu(event,'${id}')"><i class="ti ti-plus"></i></span>`:(lk?"":`<span class="nsdim">—</span>`)}</div></td>
     <td class="w-mb">${cpMbCell(r)}</td>
     <td class="w-st">${cpStCell(r)}</td>
     <td class="vb-x">${may?`<button class="vb-del" title="Take this off" onclick="cpDel('${id}')">✕</button>`:""}</td></tr>${CP.open===r.id?cpPanelHtml(r):""}`;
@@ -40459,7 +40476,8 @@ function cpHtml(){
   const rows=cpRows(), may=cpMay();
   if(!rows.length&&!may) return `<div class="bd-note" style="margin:6px 0 2px">None yet.</div>`;
   return `<table class="vb-t a3 cp-t"><thead><tr><th>Competitor</th><th>Type</th><th>Links</th><th>Mood board</th><th>Strengths</th><th></th></tr></thead><tbody>
-    ${rows.map(cpRowHtml).join("")}
+    ${(CP.all?rows:rows.slice(0,CP_SHOW)).map(cpRowHtml).join("")}
+    ${rows.length>CP_SHOW?`<tr class="cp-more"><td colspan="6"><span class="cp-morebtn" onclick="CP.all=!CP.all;cpPaint();"><i class="ti ti-chevron-${CP.all?"up":"down"}"></i>${CP.all?"Show fewer":"Show all "+rows.length}</span></td></tr>`:""}
     ${may?`<tr class="vb-new cp-new"><td class="w-nm"><input class="vb-ce" id="cp-new" placeholder="Add a competitor…" onkeydown="if(event.key==='Enter'&&this.value.trim()){event.preventDefault();cpAdd(this.value);}"></td>
       <td class="w-ty">${["direct","aspirational"].map(t=>`<span class="cp-ty ${t}${CP.newT===t?"":" off"}" onclick="CP.newT='${t}';cpPaint();const n=document.getElementById('cp-new');if(n)n.focus();">${CP_T[t]}</span>`).join(" ")}</td><td></td><td></td><td></td><td></td></tr>`:""}
     </tbody></table>`;
@@ -40555,6 +40573,7 @@ async function cpAdd(name){
   const r=await sb.from("brand_competitors").insert([row]).select("*");
   if(r.error){ toast("Not added — "+escHtml(r.error.message),"err"); return; }
   CP.rows.push(((r.data||[]).find?(r.data||[]).find(x=>x.id===row.id):null)||row);
+  if(cpRows().length>CP_SHOW&&cpRows().slice(0,CP_SHOW).every(x=>x.id!==row.id)) CP.all=true;
   cpPaint(); const n2=document.getElementById("cp-new"); if(n2) n2.focus();
 }
 function cpName(id,v){
@@ -40600,7 +40619,7 @@ function cpLinkSave(id,i,kind,off){
       if(w&&!w.querySelector("#bd-cp")){
         w.insertAdjacentHTML("beforeend",`<div class="bd-sec" id="bd-cp"><div class="bd-secnum">01</div><div class="bd-sectitle">Competitors</div><div class="bd-secrule"></div><div class="bd-secsub" id="cp-count"></div></div><div id="cp-host"></div>`);
       }
-      if(CP.bid!==activeBrand){ CP.ok=false; CP.err=""; }
+      if(CP.bid!==activeBrand){ CP.ok=false; CP.err=""; CP.all=false; }
       cpPaint(); cpEnsure(); setTimeout(cpPaint,0);   /* after the arrangement has cleared the heading line */
     }
     return out;
