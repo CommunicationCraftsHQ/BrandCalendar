@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.41 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.42 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -6858,7 +6858,7 @@ function fbPanelHtml(p){
   const reactionBar=c=>{
     const mine=fbReactionsFor(c.id);
     const counts={}; mine.forEach(r=>counts[r.emoji]=(counts[r.emoji]||0)+1);
-    const shown=REACTIONS.filter(e=>counts[e]).map(e=>
+    const shown=REACTIONS_SHOWN.filter(e=>counts[e]).map(e=>
       `<span onclick="fbToggleReaction('${p.id}','${c.id}','${e}')" title="${mine.filter(r=>r.emoji===e).map(r=>escAttr(r.actor_name)).join(", ")}"
          style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;cursor:pointer;
          background:${fbMyReaction(c.id,e)?"rgba(214,40,40,.10)":"var(--surface2)"};color:${fbMyReaction(c.id,e)?"var(--acc)":"var(--muted)"};">
@@ -12055,7 +12055,7 @@ function msgHtml(m,o){
         <button class="btn btn-g btn-sm" onclick="taskCancelEdit()">Cancel</button></div>
     </div></div>`;
   const counts={}; taskRxFor(m.id).forEach(r=>counts[r.emoji]=(counts[r.emoji]||0)+1);
-  const shown=REACTIONS.filter(e=>counts[e]).map(e=>
+  const shown=REACTIONS_SHOWN.filter(e=>counts[e]).map(e=>
     `<span class="has${taskMyRx(m.id,e)?" mine":""}" onclick="taskToggleRx('${escAttr(m.id)}','${e}')"
        title="${taskRxFor(m.id).filter(r=>r.emoji===e).map(r=>escAttr(r.actor_name)).join(", ")}">${e} ${counts[e]}</span>`).join("");
   const add=canComment()?`<span class="th-addrx">${REACTIONS.map(e=>
@@ -13291,7 +13291,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.41 Tbilisi";
+const TOOL_VERSION="V118.42 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -16196,7 +16196,10 @@ function fbIsMine(c){
   return !!me && (String(c.author_email||"").toLowerCase()===me
               || String(c.author_name||"").toLowerCase()===me.split("@")[0]);
 }
-const REACTIONS=["👍","🎉","👀","🙏"];
+const REACTIONS=["👍","❤️","🙏","😠"];
+/* V118.42 — Chirag, 17 Oct: four reactions. 🎉 and 👀 already left on a
+   message keep showing; nobody can add a new one. */
+const REACTIONS_SHOWN=["👍","❤️","🙏","😠","🎉","👀"];
 function fbReactionsFor(id){ return (POSTFB.reactions[id]||[]); }
 function fbMyReaction(id,emoji){
   const me=(ME.email||"").toLowerCase();
@@ -20921,7 +20924,7 @@ function fbPanelHtml(p){
   const rx=c=>{
     const mine=fbReactionsFor(c.id);
     const counts={}; mine.forEach(r=>counts[r.emoji]=(counts[r.emoji]||0)+1);
-    const shown=REACTIONS.filter(e=>counts[e]).map(e=>
+    const shown=REACTIONS_SHOWN.filter(e=>counts[e]).map(e=>
       `<span class="has${fbMyReaction(c.id,e)?" mine":""}" onclick="fbToggleReaction('${p.id}','${c.id}','${e}')"
         title="${mine.filter(r=>r.emoji===e).map(r=>escAttr(r.actor_name)).join(", ")}">${e} ${counts[e]}</span>`).join("");
     const add=canComment()?`<span class="fb-addrx" style="position:relative;">
@@ -42791,6 +42794,68 @@ function buildIoSidebar(){
 .dlv-strip{display:flex;gap:6px;overflow-x:auto;padding:8px 12px;border-bottom:1px solid var(--div);background:#F7F6F2;}
 .dlv-strip .dlv-sc{flex:none;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--div);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;}
 </style>
+<style id="v11842-css">
+/* ══ V118.42 TBILISI — Deliveries, the lifted message, the capsule row ══ */
+/* the delivery card */
+.dlv-c{padding:0;overflow:visible;}
+.dlv-c .d-top{display:flex;align-items:flex-start;gap:8px;padding:10px 11px 0;font-weight:700;font-size:12.5px;line-height:1.3;}
+.dlv-c .d-top .t{flex:1;min-width:0;}
+.dlv-c .d-top .dlv-p{margin-top:1px;}
+.dlv-c .d-meta{display:flex;align-items:center;gap:6px;padding:4px 11px 10px;font-size:11.5px;color:var(--muted);}
+.dlv-c.todo .d-meta{color:var(--subtle);}
+.vchip{display:inline-block;background:var(--text);color:#fff;font-size:10px;font-weight:800;border-radius:4px;padding:1px 5px;line-height:1.35;}
+.dlv-p{display:inline-flex;align-items:center;gap:4px;}
+.dlv-p::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;}
+.dlv-rn{flex:1;min-width:0;height:26px;border:1px solid var(--text);border-radius:7px;padding:0 7px;font:inherit;font-size:12.5px;font-weight:700;}
+.dlv-c .d-act{display:grid;grid-template-columns:1fr 1fr 30px;gap:5px;padding:0 11px 10px;align-items:center;}
+.dlv-c .d-act:not(:has(.ok)){grid-template-columns:30px;justify-content:end;}
+.dlv-c .ab{flex:1;height:30px;display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;border:1px solid var(--div);background:#fff;
+  border-radius:8px;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;color:var(--text);padding:0 4px;min-width:0;}
+.dlv-c .ab i{font-size:14px;}
+.dlv-c .ab.ok{color:#1E6B2E;} .dlv-c .ab.ok.on{background:#EEF7EE;border-color:#BFDCC4;}
+.dlv-c .ab.ch{color:#8A6D00;} .dlv-c .ab.ch.on{background:#FBF3DC;border-color:#EBD9A2;}
+.dlv-c .ab:hover{border-color:#C9C8C3;}
+.dlv-mo{position:relative;flex:none;}
+.dlv-c .ab.more{width:30px;padding:0;color:var(--muted);}
+.dlv-mo .dlv-menu{min-width:150px;top:calc(100% + 4px);}
+.dlv-menu .mi i{font-size:14px;color:var(--muted);}
+.dlv-menu .mi.rm{color:var(--acc);} .dlv-menu .mi.rm i{color:var(--acc);}
+.dlv-c .d-vers{border-top:1px solid var(--div);background:#FBFAF8;padding:6px 11px 8px;border-radius:0 0 10px 10px;}
+.dlv-c .d-vers .lbl{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--subtle);margin:3px 0 4px;}
+.dlv-c .d-vers .vr{display:grid;grid-template-columns:26px 1fr auto 22px;gap:6px;align-items:center;font-size:11.5px;padding:3px 0;}
+.dlv-c .d-vers .dt{color:var(--muted);}
+.dlv-c .d-vers .go{display:grid;place-items:center;width:22px;height:22px;border-radius:6px;color:var(--muted);cursor:pointer;}
+.dlv-c .d-vers .go:hover{background:#F1F0ED;color:var(--text);}
+.dlv-menu .mh{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--subtle);padding:6px 9px 4px;}
+/* the message under the mouse lifts as a card (computer only) */
+#main .br-open:not(.wa) .br-thread .th-m.tm{padding:14px 12px 10px;margin:4px 0 0;border-top:0;border-radius:12px;
+  box-shadow:inset 0 1px 0 #F1EFEA;transition:background 120ms,box-shadow 120ms;}
+#main .br-open:not(.wa) .br-thread .th-m.tm.cont{padding:4px 12px 6px;margin-top:2px;box-shadow:none;}
+#main .br-open:not(.wa) .br-thread .th-m.tm:hover,#main .br-open:not(.wa) .br-thread .th-m.tm:has(> .cap.on){background:#fff;
+  box-shadow:0 2px 10px rgba(13,13,13,.08),0 0 0 1px #E7E5E0;position:relative;z-index:2;}
+#main .br-open:not(.wa) .br-thread .th-m.tm:hover .th-t{background:#F1EFEA;}
+/* the old hover row gives way to the capsule; reactions already left stay under the words */
+#main .br-open:not(.wa) .br-thread .th-m.tm:has(> .cap) .th-acts:not(.always){display:none;}
+#main .br-open:not(.wa) .br-thread .th-m.tm:has(> .cap) .th-addrx,
+#main .br-open:not(.wa) .br-thread .th-m.tm:has(> .cap) .th-acts .rgt{display:none;}
+/* the capsule */
+.br-thread .cap{position:absolute;top:8px;right:10px;display:flex;align-items:center;gap:2px;background:#fff;border:1px solid #E2DFD9;
+  border-radius:999px;padding:3px;box-shadow:0 6px 18px rgba(20,20,26,.10);opacity:0;pointer-events:none;transition:opacity 120ms;z-index:3;}
+.br-thread .th-m.tm.cont > .cap{top:0;}
+.br-thread .th-m.tm:hover > .cap,.br-thread .cap.on{opacity:1;pointer-events:auto;}
+.cap .well{display:flex;background:#F4F3F0;border-radius:999px;padding:0 2px;}
+.cap .b{height:30px;min-width:30px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;background:transparent;
+  cursor:pointer;font:inherit;font-size:12.5px;font-weight:700;color:#55555C;padding:0 6px;}
+.cap .b i{font-size:16px;}
+.cap .emo{font-size:16px;padding:0 4px;transition:transform 120ms;}
+.cap .emo:hover{transform:scale(1.18);}
+.cap .emo.mine{background:rgba(214,40,40,.10);}
+.cap .dlv{background:var(--text);color:#fff;padding:0 12px;margin:0 3px;}
+.cap .dlv i{font-size:15px;}
+.cap .ic:hover{background:#F1F0ED;color:var(--text);}
+.cap .del:hover{background:#FDECEA;color:var(--acc);}
+.cap .dlv-mb .dlv-menu{right:0;top:calc(100% + 6px);min-width:250px;}
+</style>
 <script>
 /* ══ V118.40 TBILISI ═══════════════════════════════════════════════════
    Chirag, 12–17 Oct. Six things, one push:
@@ -42995,7 +43060,7 @@ function pgLinkSync(){
 /* ── 6 · a task's deliverables ────────────────────────────────────── */
 const DLV={brand:null,ok:false,loading:false,list:[],vers:[]};
 let DLV_OPEN=null, DLV_ADD=null, DLV_PICK=null, DLV_MP=null;
-const DLV_WORD={none:"Not delivered",sent:"Sent",approved:"Approved",changes:"Changes asked"};
+const DLV_WORD={none:"Not sent",sent:"Sent",approved:"Approved",changes:"Changes asked"};
 async function dlvLoad(bid){
   DLV.loading=true;
   try{
@@ -43027,35 +43092,61 @@ function dlvLine(d){
 }
 function dlvRailHtml(t){
   const ds=dlvFor(t.id), mayE=dlvMayEdit(t), mayA=dlvMayAnswer(t);
-  const add=DLV_ADD===t.id?`<div class="dlv-f"><input id="dlv-new" maxlength="120" placeholder="Name of the deliverable"
+  const add=DLV_ADD===t.id?`<div class="dlv-f"><input id="dlv-new" maxlength="120" placeholder="Name of the delivery"
       onkeydown="if(event.key==='Enter'){event.preventDefault();dlvCreate('${t.id}');}if(event.key==='Escape'){DLV_ADD=null;render();}">
       <button onclick="dlvCreate('${t.id}')">Add</button></div>`:"";
   const cards=ds.map(d=>{
     const vs=dlvVers(d.id), st=dlvState(d), open=DLV_OPEN===d.id, last=vs[vs.length-1];
-    const x=open?`<div class="dlv-x" onclick="event.stopPropagation()">
-        ${vs.slice().reverse().map(v=>`<div class="vr"><b>v${v.version}</b>${escHtml(DLV_WORD[v.status])}${v.answered_at?" · "+v38Day(v.answered_at):" · "+v38Day(v.created_at)}
-          ${v.message_id?`<span class="go" onclick="dlvJump('${escAttr(v.message_id)}')">Show</span>`:""}</div>`).join("")}
-        <div class="acts">
-          ${last&&mayA&&last.status!=="approved"?`<button class="ok" onclick="dlvAnswer('${last.id}','approved')">Approved</button>`:""}
-          ${last&&mayA&&last.status!=="changes"?`<button class="ch" onclick="dlvAnswer('${last.id}','changes')">Changes asked</button>`:""}
-          ${mayE?`<button class="rm" onclick="dlvRemove('${d.id}')" title="Take this deliverable off the task">Remove</button>`:""}
-        </div></div>`:"";
+    const nm=DLV_REN===d.id
+      ?`<input class="dlv-rn" id="dlv-rn" maxlength="120" value="${escAttr(d.name)}" onclick="event.stopPropagation()"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();dlvRename('${d.id}');}if(event.key==='Escape'){DLV_REN=null;render();}" onblur="dlvRename('${d.id}')">`
+      :`<span class="t">${escHtml(d.name)}</span>`;
+    const meta=last?`<span class="vchip">v${last.version}</span>${escHtml(v38Day(last.created_at))}${dlvSender(last)?" · "+escHtml(dlvSender(last)):""}`
+      :`not sent yet${d.due_date?" · due "+escHtml(v38Day(d.due_date)):""}`;
+    const act=open&&((last&&mayA)||mayE)?`<div class="d-act" onclick="event.stopPropagation()">
+        ${last&&mayA?`<button class="ab ok${last.status==="approved"?" on":""}" onclick="dlvAnswer('${last.id}','approved')" title="Approve v${last.version}"><i class="ti ti-check"></i>Approve</button>
+        <button class="ab ch${last.status==="changes"?" on":""}" onclick="dlvAnswer('${last.id}','changes')" title="Ask for changes on v${last.version}"><i class="ti ti-arrow-back-up"></i>Changes</button>`:""}
+        ${mayE?`<span class="dlv-mo"><button class="ab more" onclick="dlvMore(event,'${d.id}')" title="Rename, remove"><i class="ti ti-dots"></i></button>
+          ${DLV_MORE===d.id?`<div class="dlv-menu"><div class="mi" onclick="dlvRenOpen('${d.id}')"><i class="ti ti-pencil"></i>Rename</div>
+            <div class="mi rm" onclick="dlvRemove('${d.id}')"><i class="ti ti-trash"></i>Remove</div></div>`:""}</span>`:""}
+      </div>`:"";
+    const ver=open&&vs.length?`<div class="d-vers" onclick="event.stopPropagation()"><div class="lbl">Versions</div>
+        ${vs.slice().reverse().map(v=>`<div class="vr"><span class="vchip">v${v.version}</span><span class="dt">${escHtml(v38Day(v.created_at))}</span>
+          <span class="dlv-p s-${v.status}">${escHtml(DLV_WORD[v.status])}</span>
+          ${v.message_id?`<span class="go" onclick="dlvJump('${escAttr(v.message_id)}')" title="Go to the message"><i class="ti ti-arrow-up-right"></i></span>`:`<span></span>`}</div>`).join("")}
+      </div>`:"";
     return `<div class="dlv-c${vs.length?"":" todo"}${open?" open":""}" onclick="dlvCardToggle('${d.id}')">
-      <div class="nm"><span class="t">${escHtml(d.name)}</span><span class="dlv-p s-${st}">${DLV_WORD[st]}</span></div>
-      ${vs.length?`<div class="vers">${vs.map(v=>`<span class="dlv-v${v.status==="approved"?" approved":(v===last?" cur":"")}">v${v.version}${v.status==="approved"?" ✓":""}</span>`).join("")}</div>`:""}
-      <div class="ln">${escHtml(dlvLine(d))}</div>${x}</div>`;
+      <div class="d-top">${nm}<span class="dlv-p s-${st}">${DLV_WORD[st]}</span></div>
+      <div class="d-meta">${meta}</div>${act}${ver}</div>`;
   }).join("");
   return `<div class="dlv-rail">
-    <div class="dlv-h">Deliverables · ${ds.length}${mayE?`<button class="dlv-add" onclick="dlvAddOpen('${t.id}')" title="Add a deliverable"><i class="ti ti-plus"></i></button>`:""}</div>
+    <div class="dlv-h">Deliveries · ${ds.length}${mayE?`<button class="dlv-add" onclick="dlvAddOpen('${t.id}')" title="Add a delivery"><i class="ti ti-plus"></i></button>`:""}</div>
     ${add}${cards||(add?"":`<div class="dlv-empty">${mayE?"Nothing named yet.":"Nothing delivered yet."}</div>`)}</div>`;
 }
+let DLV_MORE=null, DLV_REN=null;
+function dlvSender(v){ return v&&v.created_by?(brPersonName(v.created_by)||(personById(v.created_by)||{}).name||""):""; }
+function dlvMore(ev,did){ if(ev) ev.stopPropagation(); DLV_MORE=DLV_MORE===did?null:did; render(); }
+function dlvRenOpen(did){ DLV_MORE=null; DLV_REN=did; render(); setTimeout(()=>{ const i=document.getElementById("dlv-rn"); if(i){ i.focus(); i.select(); } },40); }
+async function dlvRename(did){
+  if(DLV_REN!==did) return;
+  const d=DLV.list.find(x=>x.id===did), i=document.getElementById("dlv-rn"); DLV_REN=null;
+  const t=d&&BR.tasks.find(x=>x.id===d.task_id);
+  const name=String(i?i.value:"").trim().slice(0,120);
+  if(!d||!dlvMayEdit(t)||!name||name===d.name){ render(); return; }
+  const r=await sb.from("task_deliverables").update({name}).eq("id",did);
+  if(r.error){ toast("Not renamed — "+r.error.message,"err"); render(); return; }
+  d.name=name; render();
+}
+document.addEventListener("click",e=>{
+  if(DLV_MORE&&!(e.target.closest&&e.target.closest(".dlv-mo"))){ DLV_MORE=null; if(view==="branding") render(); }
+},true);
 function dlvAddOpen(tid){ DLV_ADD=DLV_ADD===tid?null:tid; render(); setTimeout(()=>{ const i=document.getElementById("dlv-new"); if(i) i.focus(); },40); }
 function dlvCardToggle(did){ DLV_OPEN=DLV_OPEN===did?null:did; render(); }
 async function dlvCreate(tid,nameIn){
   const t=BR.tasks.find(x=>x.id===tid); if(!dlvMayEdit(t)) return null;
   const el=document.getElementById("dlv-new");
   const name=String(nameIn!=null?nameIn:(el?el.value:"")).trim().slice(0,120);
-  if(!name){ toast("Give the deliverable a name","err"); return null; }
+  if(!name){ toast("Give the delivery a name","err"); return null; }
   const row={id:(crypto.randomUUID?crypto.randomUUID():"d"+Date.now()),task_id:tid,brand_id:t.brand_id||activeBrand,name,
     sort:dlvFor(tid).length,created_by:ME.id||null,created_at:new Date().toISOString(),deleted_at:null};
   const r=await sb.from("task_deliverables").insert([row]);
@@ -43069,7 +43160,7 @@ async function dlvRemove(did){
   const now=new Date().toISOString();
   const r=await sb.from("task_deliverables").update({deleted_at:now}).eq("id",did);
   if(r.error){ toast("Not removed — "+r.error.message,"err"); return; }
-  DLV.list=DLV.list.filter(x=>x.id!==did); DLV_OPEN=null; render();
+  DLV.list=DLV.list.filter(x=>x.id!==did); DLV_OPEN=null; DLV_MORE=null; render();
   toast("Removed "+d.name);
 }
 async function dlvAnswer(vid,status){
@@ -43109,13 +43200,13 @@ function dlvMode(tid){ DLV_PICK=tid?{tid,did:(dlvFor(tid)[0]||{}).id||"__new",na
 function dlvPickSet(v){ if(!DLV_PICK) return; DLV_PICK.did=v; render(); if(v==="__new") setTimeout(()=>{ const i=document.getElementById("dlv-pn"); if(i) i.focus(); },40); }
 function dlvBarHtml(t){
   if(!DLV_PICK||DLV_PICK.tid!==t.id)
-    return `<div class="dlv-bar"><button class="dlv-tg" onclick="dlvMode('${t.id}')" title="Send this as a version of one of the task's deliverables"><i class="ti ti-package-export"></i>Deliver to client</button></div>`;
+    return `<div class="dlv-bar"><button class="dlv-tg" onclick="dlvMode('${t.id}')" title="Send this as a version of one of the task's deliveries"><i class="ti ti-package-export"></i>Deliver to client</button></div>`;
   const ds=dlvFor(t.id), did=DLV_PICK.did, d=ds.find(x=>x.id===did);
   const next=d?((dlvVers(d.id).length?Math.max(...dlvVers(d.id).map(v=>v.version)):0)+1):1;
   return `<div class="dlv-bar on"><b>Deliver</b>
     <select class="cc-stsel" onchange="dlvPickSet(this.value)">${ds.map(x=>`<option value="${x.id}"${x.id===did?" selected":""}>${escHtml(x.name)}</option>`).join("")}
-      <option value="__new"${did==="__new"?" selected":""}>New deliverable…</option></select>
-    ${did==="__new"?`<input id="dlv-pn" maxlength="120" placeholder="Name of the deliverable" value="${escAttr(DLV_PICK.name||"")}" oninput="DLV_PICK.name=this.value">`:""}
+      <option value="__new"${did==="__new"?" selected":""}>New delivery…</option></select>
+    ${did==="__new"?`<input id="dlv-pn" maxlength="120" placeholder="Name of the delivery" value="${escAttr(DLV_PICK.name||"")}" oninput="DLV_PICK.name=this.value">`:""}
     <span class="as">as <b>v${next}</b> · goes to the client's conversation</span>
     <button class="x" onclick="dlvMode(null)" title="Not a delivery">✕</button></div>`;
 }
@@ -43126,7 +43217,7 @@ function dlvBarHtml(t){
     const pick=DLV_PICK&&t&&DLV_PICK.tid===t.id?{...DLV_PICK}:null;
     if(!pick||!DLV.ok) return base.apply(this,arguments);
     if(!brMayWriteClient(t)){ toast("Only the Ac Manager delivers to the client","err"); return; }
-    if(pick.did==="__new"&&!String(pick.name||"").trim()){ toast("Name the new deliverable first","err"); return; }
+    if(pick.did==="__new"&&!String(pick.name||"").trim()){ toast("Name the new delivery first","err"); return; }
     const box=document.getElementById("th-in");
     if(!(box&&rtValue(box))&&!(TASK_STAGED||[]).length){ toast("Write a note or attach the file to deliver","err"); return; }
     const before=new Set((TASK.msgs||[]).map(m=>m.id));
@@ -43205,22 +43296,50 @@ function dlvDress(){
     });
   }
   /* "Deliver" on a message already sent, for whoever may deliver */
-  if(talk&&dlvMayEdit(t)) th&&th.querySelectorAll(".th-m[data-mid] .th-acts .rgt").forEach(r=>{
+  if(talk&&dlvMayEdit(t)&&phone) th&&th.querySelectorAll(".th-m[data-mid] .th-acts .rgt").forEach(r=>{
     if(r.querySelector(".dlv-mb")) return;
     const mid=r.closest(".th-m").getAttribute("data-mid");
     if(DLV.vers.some(v=>v.message_id===mid)) return;
     const open=DLV_MP===mid, ds=dlvFor(t.id);
-    r.insertAdjacentHTML("afterbegin",`<span class="dlv-mb"><button onclick="dlvMsgMenu(event,'${escAttr(mid)}')" title="Record this message as a delivery">Deliver</button>${open?`<div class="dlv-menu" onclick="event.stopPropagation()">
-      ${ds.map(d=>{ const vs=dlvVers(d.id); const nx=(vs.length?Math.max(...vs.map(v=>v.version)):0)+1;
-        return `<div class="mi" onclick="dlvMsgPick('${escAttr(mid)}','${d.id}')">${escHtml(d.name)}<small>as v${nx}</small></div>`; }).join("")}
-      <div class="dlv-f"><input id="dlv-mn" maxlength="120" placeholder="New deliverable" onkeydown="if(event.key==='Enter'){event.preventDefault();dlvMsgPick('${escAttr(mid)}','__new');}"><button onclick="dlvMsgPick('${escAttr(mid)}','__new')">Add</button></div></div>`:""}</span>`);
+    r.insertAdjacentHTML("afterbegin",`<span class="dlv-mb"><button onclick="dlvMsgMenu(event,'${escAttr(mid)}')" title="Record this message as a delivery">Deliver</button>${open?dlvMsgMenuHtml(mid,ds):""}</span>`);
     if(open) setTimeout(()=>{ const i=document.getElementById("dlv-mn"); if(i&&!ds.length) i.focus(); },30);
   });
+  /* V118.42 — on a computer every message gets the capsule row, and the
+     message under the mouse lifts as a card (Chirag, 17 Oct: C and A) */
+  if(talk&&!phone&&th) capDress(th,t);
   /* the message box offers to deliver */
   const wrap=inner.querySelector(".ccm-wrap");
   if(wrap&&dlvMayEdit(t)&&brMayWriteClient(t)&&!brIsClient()&&!wrap.querySelector(".dlv-bar")){
     wrap.insertAdjacentHTML("afterbegin",dlvBarHtml(t));
   }
+}
+function dlvMsgMenuHtml(mid,ds){
+  return `<div class="dlv-menu" onclick="event.stopPropagation()"><div class="mh">Deliver this message as</div>
+    ${ds.map(d=>{ const vs=dlvVers(d.id); const nx=(vs.length?Math.max(...vs.map(v=>v.version)):0)+1;
+      return `<div class="mi" onclick="dlvMsgPick('${escAttr(mid)}','${d.id}')">${escHtml(d.name)}<small>v${nx}</small></div>`; }).join("")}
+    <div class="dlv-f"><input id="dlv-mn" maxlength="120" placeholder="New delivery" onkeydown="if(event.key==='Enter'){event.preventDefault();dlvMsgPick('${escAttr(mid)}','__new');}"><button onclick="dlvMsgPick('${escAttr(mid)}','__new')">Add</button></div></div>`;
+}
+/* the capsule: four reactions in a well, Deliver, then Edit and Delete on
+   your own message. It reads what the message row already decided —
+   whether you may react, whether the message is yours — so it cannot come
+   to disagree with the row it replaces. */
+function capDress(th,t){
+  const mayD=dlvMayEdit(t), ds=dlvFor(t.id);
+  th.querySelectorAll(".th-m.tm[data-mid]").forEach(m=>{
+    if(m.querySelector(":scope > .cap")) return;
+    const mid=m.getAttribute("data-mid"), q=escAttr(mid);
+    const rx=!!m.querySelector(".th-addrx");
+    const own=!!m.querySelector('.th-acts .rgt button[onclick^="taskStartEdit"]');
+    const dl=mayD&&!DLV.vers.some(v=>v.message_id===mid);
+    if(!rx&&!own&&!dl) return;
+    const open=DLV_MP===mid;
+    const well=rx?`<span class="well">${REACTIONS.map(e=>`<button class="b emo${taskMyRx(mid,e)?" mine":""}" onclick="taskToggleRx('${q}','${e}')" title="React ${e}">${e}</button>`).join("")}</span>`:"";
+    const dlv=dl?`<span class="dlv-mb"><button class="b dlv" onclick="dlvMsgMenu(event,'${q}')" title="Record this message as a delivery"><i class="ti ti-package"></i>Deliver</button>${open?dlvMsgMenuHtml(mid,ds):""}</span>`:"";
+    const ed=own?`<button class="b ic" onclick="taskStartEdit('${q}')" title="Edit"><i class="ti ti-pencil"></i></button>
+      <button class="b ic del" onclick="taskDeleteMsg('${q}')" title="Delete"><i class="ti ti-trash"></i></button>`:"";
+    m.insertAdjacentHTML("beforeend",`<div class="cap${open?" on":""}">${well}${dlv}${ed}</div>`);
+    if(open) setTimeout(()=>{ const i=document.getElementById("dlv-mn"); if(i&&!ds.length) i.focus(); },30);
+  });
 }
 function dlvRowsDress(){
   if(view!=="branding"||!DLV.ok||DLV.brand!==activeBrand) return;
