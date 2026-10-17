@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.40 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.41 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -5293,11 +5293,11 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
         <div class="brow" data-need="iolog" id="acct-io-row" onclick="closeAllPops();openIoLog()"><i class="ti ti-arrows-exchange"></i><span class="bnm">Imports &amp; exports</span></div>
         <div class="brow" data-need="trashhist" id="acct-th-row" onclick="closeAllPops();openTrashHistory()"><i class="ti ti-history"></i><span class="bnm">Trash &amp; history</span></div>
         <div class="bpsep"></div>
-        <div class="brow" data-need="staff" id="acct-helpdesk-row" onclick="closeAllPops();window.open('app.html#asks?from=Marketing%20Calendar','_blank')"><i class="ti ti-lifebuoy"></i><span class="bnm">Help desk</span><span id="acct-helpdesk-dot" style="display:none;margin-left:auto;width:7px;height:7px;border-radius:50%;background:var(--acc);flex:none;"></span><i id="acct-helpdesk-ext" class="ti ti-external-link" style="margin-left:auto;font-size:12px;opacity:.5;"></i></div>
+        <div class="brow" data-need="staff" id="acct-helpdesk-row" onclick="closeAllPops();openHelpDesk()"><i class="ti ti-lifebuoy"></i><span class="bnm">Help desk</span><span id="acct-helpdesk-dot" style="display:none;margin-left:auto;width:7px;height:7px;border-radius:50%;background:var(--acc);flex:none;"></span></div>
         <div class="brow" data-need="suitepeople" id="acct-suite-row" onmouseenter="openSuiteFlyout()" onmouseleave="closeSuiteFlyout()"><i class="ti ti-layout-grid"></i><span class="bnm">CC Suite</span><i class="ti ti-chevron-right" style="margin-left:auto;font-size:12px;opacity:.5;"></i></div>
         <div class="bpsep"></div>
         <div class="brow" onclick="closeAllPops();openProfile()"><span id="acct-emoji-row" style="font-size:15px;width:16px;height:16px;text-align:center;line-height:1;display:inline-flex;align-items:center;justify-content:center;">🙂</span><span class="bnm">Your profile</span></div>
-        <div class="brow" onclick="signOut()"><i class="ti ti-logout"></i><span class="bnm">Sign out</span></div>
+        <!-- V118.41 — Sign out lives in Your profile now -->
       </div>
       <!-- MONTREAL — the CC Suite flyout. A SIBLING of #acct-menu, not a child,
            exactly as the kit's AccountMenu builds it: it is positioned against
@@ -6281,7 +6281,7 @@ function syncAccount(){
   const nm=(ME.email||"").split("@")[0].replace(/[._-]+/g," ").replace(/\b\w/g,c=>c.toUpperCase());
   const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
   set("acct-name",nm||"Signed in");
-  set("acct-role",{admin:"Admin",team:"Team",client:"Client",pending:"Awaiting access"}[ME.role]||ME.role||"");
+  set("acct-role",{admin:"Admin",team:"Team",client:"Client",pending:"Awaiting access",helpdesk:"Help desk only"}[ME.role]||ME.role||"");
   /* YOUR OWN BUTTON. textContent everywhere else in syncAccount, so the
      emoji goes in the same way — it is a character, not markup. */
   const av=document.getElementById("acct-av");
@@ -13291,7 +13291,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.40 Tbilisi";
+const TOOL_VERSION="V118.41 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -20083,6 +20083,12 @@ async function resolveAccess(userId, legacyRole){
        This is also the line that makes a new CC mailbox arrive with
        nothing. The migration stops handle_new_user() writing 'team';
        this stops the calendar reading it if anything ever does. */
+    /* V118.41 — Chirag, 17 Oct (option A): a member of staff on another
+       tool but not on the Calendar may open it for the Help desk, and sees
+       nothing else. The database still answers them as having no Calendar
+       role, so every brand, post and task stays out of reach whatever the
+       screen does. */
+    if(!cal&&Object.values(ME.toolRoles).some(r=>r&&!/^client/.test(r))){ ME.role="helpdesk"; ME.hdOnly=true; ME.capsOk=true; ME.accessSource="helpdesk-only"; return; }
     if(!cal){ ME.role="pending"; ME.accessSource="no-grant"; return; }
     const mapped=TOOLROLE_TO_LEGACY[cal.role];
     /* An unknown role used to mean "trust the old one", which is the
@@ -41784,7 +41790,8 @@ function trColFlip(k){
                  objadmin:{label:"Master lists",icon:"ti-list-details"},
                  history:{label:"Trash & history",icon:"ti-history"},
                  trash:{label:"Trash & history",icon:"ti-history"},
-                 iolog:{label:"Imports & exports",icon:"ti-arrows-exchange"}};
+                 iolog:{label:"Imports & exports",icon:"ti-arrows-exchange"},
+                 helpdesk:{label:"Help desk",icon:"ti-lifebuoy"}};   /* V118.41 */
   const BK={prev:null};
   window.BK_STATE=BK;
 
@@ -43260,6 +43267,645 @@ function v38Dress(){
   if(m&&window.MutationObserver) new MutationObserver(()=>v38Soon()).observe(m,{childList:true,subtree:true});
   chLoad().then(()=>{ if(["content","brief"].includes(view)) render(); });
   try{ pgLinkSync(); }catch(e){}
+})();
+</script>
+
+<style id="hd-css">
+/* ══ V118.41 TBILISI · HELP DESK LIVES IN THE CALENDAR ══════════════════
+   Chirag, 17 Oct: "The helpdesk page can be relocated to marketing
+   calendar so there is no need to open a separate platform for this."
+   Mockup 02 approved: Asks · Release notes · Playbooks behind one switch;
+   + Ask is a new row at the top of the list (the row is the form); an
+   ask opens under its own row. Same tables as CC Platform's V4.36 Help
+   desk, so every ask, note and Me too carries over. Sign out moved into
+   Your profile in the same batch. */
+.hd-seg{flex:none;margin-right:4px;}
+.brl.hdl>.brl-hd,.brl.hdl>.brl-tr{grid-template-columns:3px 34px minmax(0,1fr) 84px 130px 96px 74px 118px;}
+.brl.hdr>.brl-hd,.brl.hdr>.brl-tr{grid-template-columns:3px 150px 170px minmax(0,1fr) 110px 90px;}
+.brl.hdp>.brl-hd,.brl.hdp>.brl-tr{grid-template-columns:3px minmax(0,1.6fr) minmax(0,1.4fr) 130px 80px;}
+.brl.hdl .c,.brl.hdr .c,.brl.hdp .c{font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;}
+.brl.hdl .c-r,.brl.hdr .c-r,.brl.hdp .c-r{text-align:right;color:var(--muted);}
+.brl.hdl .c-no{color:var(--subtle);}
+.brl.hdr .brl-tr.unread .brl-sp{background:var(--acc);}
+.hd-tag{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:20px;font-size:11.5px;font-weight:700;background:#F4F4F2;color:#555;white-space:nowrap;}
+.hd-tag.warn{background:#FFF3DC;color:#8A6D00;} .hd-tag.blue{background:#E8F0FB;color:#1F5FAD;} .hd-tag.g{background:#E7F4EA;color:#1E7B3A;}
+.hd-ty{font-size:12px;font-weight:700;} .hd-ty.bug{color:#B3261E;} .hd-ty.change{color:#2D5BB8;} .hd-ty.new{color:#1E7B3A;}
+.hd-me{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 9px;border:1px solid var(--div);border-radius:20px;background:#fff;font:inherit;font-size:12px;font-weight:600;cursor:pointer;color:var(--text);}
+.hd-me.on{background:#0D0D0D;border-color:#0D0D0D;color:#fff;}
+.hd-me i{font-size:13px;}
+.hd-tool{display:inline-flex;align-items:center;gap:6px;} .hd-tool .dot{width:8px;height:8px;border-radius:50%;flex:none;}
+.hd-open{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:22px;padding:16px 18px 18px 58px;background:#FAFAF9;border-bottom:1px solid #F4F4F2;cursor:default;}
+.hd-open .hd-txt{font-size:13.5px;line-height:1.55;overflow-wrap:anywhere;}
+.hd-shots{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.hd-shots a.img{display:block;width:200px;height:120px;border-radius:8px;border:1px solid var(--div);overflow:hidden;background:#F4F4F2;}
+.hd-shots a.img img{width:100%;height:100%;object-fit:cover;display:block;}
+.hd-shots a.file{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;border:1px solid var(--div);border-radius:8px;background:#fff;font-size:12.5px;color:var(--text);text-decoration:none;}
+.hd-thread{margin-top:14px;border-top:1px solid var(--div);padding-top:12px;}
+.hd-sys{font-size:12.5px;color:var(--muted);padding:4px 0 8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.hd-sys b{color:var(--text);}
+.hd-facts{background:#fff;border:1px solid var(--div);border-radius:10px;padding:8px 14px;align-self:start;}
+.hd-fact{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #F4F4F2;font-size:12.5px;}
+.hd-fact:last-child{border-bottom:0;} .hd-fact>span:first-child{color:var(--muted);flex:none;}
+.hd-fact .v{text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hd-fact select.cc-stsel{height:28px;max-width:150px;}
+.brl-tr.hd-draft{background:#FFFCF2;cursor:default;}
+.hd-draft .fi{height:32px;width:100%;font-weight:600;font-size:14px;}
+.hd-draft select.cc-stsel{height:30px;width:100%;}
+.hd-dopen{background:#FFFCF2;border-bottom:1px solid #F4F4F2;padding:4px 18px 16px 58px;}
+.hd-dopen .ccw.rt{min-height:84px;}
+.hd-foot{display:flex;align-items:center;gap:8px;margin-top:10px;}
+.hd-foot .hint{font-size:12px;color:var(--muted);}
+.hd-note{padding:14px 18px 16px 58px;background:#FAFAF9;border-bottom:1px solid #F4F4F2;cursor:default;}
+.hd-note .t{font-weight:700;font-size:14px;margin-bottom:6px;}
+.hd-note .closes{margin-top:12px;font-size:12.5px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.hd-note .closes a{color:var(--text);cursor:pointer;text-decoration:none;border:1px solid var(--div);border-radius:20px;padding:2px 9px;background:#fff;}
+.hd-relform{display:grid;grid-template-columns:150px 170px minmax(0,1fr) 140px;gap:8px;margin-bottom:8px;}
+.hd-relform .fi{height:32px;width:100%;}
+.hd-empty{padding:40px 20px;text-align:center;font-size:13px;color:var(--muted);}
+/* someone with no Calendar role: Help desk and nothing else */
+body.hd-only #brand-sw,body.hd-only #bn-tabs .bntab,body.hd-only #export-btn{display:none!important;}
+body.hd-only .bk-crumb .bk-x{display:none!important;}
+@media(max-width:1180px){
+  .brl.hdl>.brl-hd,.brl.hdl>.brl-tr{grid-template-columns:3px 34px minmax(0,1fr) 84px 96px 74px;}
+  .brl.hdl .c-by,.brl.hdl .c-up{display:none;}
+  .hd-open{grid-template-columns:minmax(0,1fr) 220px;padding-left:24px;}
+}
+@media(max-width:768px){
+  /* the phone turns every list into cards; the Help desk keeps one list,
+     so an opened ask stays directly under its own row */
+  #main .brl.hdl,#main .brl.hdr,#main .brl.hdp{display:block;background:var(--surface);border:1px solid var(--div);border-radius:var(--rc);overflow:hidden;}
+  #main .brl.hdl>.brl-hd,#main .brl.hdr>.brl-hd,#main .brl.hdp>.brl-hd{display:none;}
+  #main .brl.hdl>.brl-tr,#main .brl.hdr>.brl-tr,#main .brl.hdp>.brl-tr{order:0;grid-template-rows:auto;padding:12px 12px 12px 0;}
+  #main .brl.hdl>.brl-tr>*,#main .brl.hdr>.brl-tr>*,#main .brl.hdp>.brl-tr>*{grid-column:auto!important;grid-row:auto!important;}
+  #main .brl.hdl>.brl-tr{grid-template-columns:3px minmax(0,1fr) auto;}
+  #main .brl.hdl>.brl-tr>span.c{display:none;}
+  #main .brl.hdl>.brl-tr>span.c.c-st{display:block;}
+  #main .brl.hdr>.brl-tr,#main .brl.hdp>.brl-tr{grid-template-columns:3px minmax(0,1fr) auto;}
+  #main .brl.hdr>.brl-tr>span.c,#main .brl.hdp>.brl-tr>span.c{display:none;}
+  #main .brl.hdr>.brl-tr>span.c-r,#main .brl.hdp>.brl-tr>span.c-r{display:block;}
+  #main .brl.hdl>.brl-tr.hd-draft{grid-template-columns:3px minmax(0,1fr) 96px;}
+  #main .brl.hdl>.brl-tr.hd-draft>span.c.c-ty{display:block;}
+  .hd-open{grid-template-columns:minmax(0,1fr);padding:14px;}
+  .hd-dopen,.hd-note{padding:4px 14px 14px;}
+  .hd-relform{grid-template-columns:1fr;}
+}
+</style>
+<script>
+/* ══ V118.41 TBILISI · HELP DESK LIVES IN THE CALENDAR ══════════════════ */
+const HD_STATUSES=[["new","New",""],["looking","Looking","warn"],["planned","Planned","blue"],["building","Building","warn"],["live","Live","g"],["not_now","Not now",""]];
+const HD_TYPES=[["bug","Bug"],["change","Change"],["new","New"]];
+const HD_OPEN=["new","looking","planned","building"];
+const HD_BUCKET="post-media";
+const HD={tab:"asks",rows:null,err:"",q:"",f:[],sort:"updated",open:null,th:null,draft:null,staged:[],busy:false,
+  rels:null,since:undefined,relOpen:null,relEdit:null,closes:{},pbs:null,tools:null,dir:null,from:"",load:0};
+function hdStatus(k){ return HD_STATUSES.find(s=>s[0]===k)||[k,k,""]; }
+function hdTag(k){ const [,l,t]=hdStatus(k); return `<span class="hd-tag${t?" "+t:""}">${escHtml(l)}</span>`; }
+function hdTypeHtml(k){ const t=HD_TYPES.find(x=>x[0]===k)||[k,k]; return `<span class="hd-ty ${escAttr(k)}">${escHtml(t[1])}</span>`; }
+function hdHandle(e){ return String(e||"").split("@")[0]||""; }
+function hdAdmin(){ return !!(ME&&ME.toolRoles&&ME.toolRoles.platform==="admin"); }
+function hdTool(k){ return (HD.tools||[]).find(t=>t.key===k)||null; }
+function hdToolName(k){ const t=hdTool(k); return t?t.label:(k||"The suite"); }
+function hdToolHtml(k){ const t=hdTool(k); return `<span class="hd-tool"><span class="dot" style="background:${escAttr((t&&t.colour)||"#AAAAAA")}"></span>${escHtml(hdToolName(k))}</span>`; }
+function hdWhen(iso){ return iso?trWhen(iso):"—"; }
+function hdWhenAt(iso){ if(!iso) return ""; const d=new Date(iso); return d.toLocaleDateString("en-GB",{day:"numeric",month:"short"})+" · "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+function hdBrowser(){
+  const ua=navigator.userAgent||"";
+  const b=/Edg\//.test(ua)?"Edge":/Chrome\//.test(ua)?"Chrome":/Safari\//.test(ua)?"Safari":/Firefox\//.test(ua)?"Firefox":"Browser";
+  const v=(ua.match(/(?:Chrome|Firefox|Version)\/(\d+)/)||[])[1]||"";
+  const os=/Mac/.test(ua)?"Mac":/Windows/.test(ua)?"Windows":/Android/.test(ua)?"Android":/iPhone|iPad/.test(ua)?"iOS":"";
+  return [b+(v?" "+v:""),os].filter(Boolean).join(" · ");
+}
+function hdFace(email){ const k=hdHandle(email)||"?"; return `<span class="nav-av" style="${avatarSkin(k,false)};width:22px;height:22px;font-size:10px;flex:none;">${avatarInner(k,escHtml(k.slice(0,2).toUpperCase()))}</span>`; }
+function hdEmailOf(uid){ const p=(HD.dir||[]).find(x=>x.id===uid); return p?p.email:(uid===ME.id?ME.email:""); }
+
+/* ── where the other tools land: ?p=helpdesk&hd=…&ask=…&from=… ─────── */
+const HD_LS="cc_hd_at_load";
+(function(){
+  try{
+    const q=new URLSearchParams(location.search);
+    if(q.get("p")==="helpdesk") sessionStorage.setItem(HD_LS,JSON.stringify({hd:q.get("hd")||"",ask:q.get("ask")||"",from:q.get("from")||""}));
+  }catch(e){}
+})();
+function hdTakeLink(){
+  try{
+    const s=JSON.parse(sessionStorage.getItem(HD_LS)||"null"); sessionStorage.removeItem(HD_LS);
+    if(!s) return;
+    if(s.hd&&["asks","releases","playbooks"].includes(s.hd)) HD.tab=s.hd;
+    if(s.ask){ HD.tab="asks"; HD.open=s.ask; }
+    if(s.from) HD.from=s.from;
+  }catch(e){}
+}
+
+/* ── reading ─────────────────────────────────────────────────────── */
+async function hdLoadCommon(){
+  if(!HD.tools){ try{ const r=await sb.from("tools").select("key,label,colour,retired_at,sort").order("sort"); HD.tools=(r.data||[]).filter(t=>!t.retired_at); }catch(e){ HD.tools=[]; } }
+  if(!HD.dir){ try{ const r=await sb.from("people_directory").select("id,email,role"); HD.dir=r.data||[]; }catch(e){ HD.dir=[]; } }
+}
+async function hdLoad(){
+  const my=++HD.load;
+  await hdLoadCommon();
+  if(HD.tab==="asks"){
+    const r=await sb.from("helpdesk_ask_list").select("*").order("updated_at",{ascending:false});
+    if(my!==HD.load) return;
+    HD.err=r.error?r.error.message:""; HD.rows=r.data||[];
+    if(HD.open&&!HD.th) hdThLoad(HD.open);
+  } else if(HD.tab==="releases"){
+    if(HD.since===undefined){
+      const s=await sb.from("helpdesk_seen").select("user_id,releases_at").eq("user_id",ME.id);
+      const mine=((s&&s.data)||[]).find(x=>x.user_id===ME.id);
+      HD.since=(mine&&mine.releases_at)||null;
+      /* opening the page is what clears the dot */
+      try{ await sb.from("helpdesk_seen").upsert([{user_id:ME.id,releases_at:new Date().toISOString()}],{onConflict:"user_id"}); }catch(e){}
+      try{ HD_DOT.at=0; HD_DOT.on=false; refreshHelpDeskDot(); }catch(e){}
+    }
+    const r=await sb.from("helpdesk_releases").select("*").is("deleted_at",null).order("released_at",{ascending:false}).order("created_at",{ascending:false});
+    const c=await sb.from("helpdesk_ask_list").select("id,no,title,release_id");
+    if(my!==HD.load) return;
+    HD.err=r.error?r.error.message:""; HD.rels=r.data||[];
+    HD.closes={}; (c.data||[]).forEach(a=>{ if(a.release_id)(HD.closes[a.release_id]=HD.closes[a.release_id]||[]).push(a); });
+  } else {
+    const r=await sb.from("helpdesk_playbooks").select("*").is("deleted_at",null).order("sort");
+    if(my!==HD.load) return;
+    HD.err=r.error?r.error.message:""; HD.pbs=r.data||[];
+  }
+  hdRefresh();
+}
+async function hdSigned(path){ try{ const r=await sb.storage.from(HD_BUCKET).createSignedUrl(path,3600); return (r.data&&r.data.signedUrl)||""; }catch(e){ return ""; } }
+async function hdThLoad(id){
+  HD.th={id,loading:true};
+  hdList();
+  const [a,m,f,t]=await Promise.all([
+    sb.from("helpdesk_asks").select("*").eq("id",id),
+    sb.from("helpdesk_ask_messages").select("*").eq("ask_id",id).is("deleted_at",null).order("created_at"),
+    sb.from("helpdesk_files").select("*").eq("ask_id",id).order("created_at"),
+    sb.from("helpdesk_metoo").select("ask_id,user_id").eq("ask_id",id)
+  ]);
+  const ask=((a&&a.data)||[]).find(x=>x.id===id)||null;
+  if(HD.open!==id) return;
+  if(!ask){ HD.th={id,err:(a&&a.error&&a.error.message)||"That ask is not here"}; hdList(); return; }
+  const files=await Promise.all(((f&&f.data)||[]).filter(x=>x.ask_id===id).map(async x=>({...x,url:await hdSigned(x.storage_path)})));
+  if(HD.open!==id) return;
+  let rels=[];
+  if(hdAdmin()){ const r=await sb.from("helpdesk_releases").select("id,version").is("deleted_at",null).order("created_at",{ascending:false}); rels=(r&&r.data)||[]; }
+  HD.th={id,ask,msgs:((m&&m.data)||[]).filter(x=>x.ask_id===id),files,metoo:((t&&t.data)||[]).filter(x=>x.ask_id===id).map(x=>x.user_id),rels};
+  hdList();
+}
+
+/* ── the page ────────────────────────────────────────────────────── */
+function openHelpDesk(tab){
+  closeAllPops();
+  if(tab) HD.tab=tab;
+  HD.rows=HD.tab==="asks"?HD.rows:HD.rows;
+  setView("helpdesk");
+  const m=document.getElementById("main"); if(m) m.scrollTop=0;
+  hdLoad();
+}
+function hdGo(tab){ if(HD.tab===tab) return; HD.tab=tab; HD.err=""; hdRefresh(); hdLoad(); try{ urlSync(); }catch(e){} }
+function renderHelpDesk(){
+  const mc=document.getElementById("main");
+  mc.innerHTML=`<div style="padding:0 var(--pg-x) 26px;"><div class="fb" id="hd-bar"></div><div id="hd-list"></div></div>`;
+  hdBar(); hdList();
+  if((HD.tab==="asks"&&HD.rows===null)||(HD.tab==="releases"&&HD.rels===null)||(HD.tab==="playbooks"&&HD.pbs===null)) hdLoad();
+}
+function hdRefresh(){ if(view!=="helpdesk") return; buildHdSidebar(); hdBar(); hdList(); hdNavSync(); }
+function hdSwitchHtml(){
+  return `<div class="bh-seg hd-seg">${[["asks","Asks"],["releases","Release notes"],["playbooks","Playbooks"]].map(([k,l])=>
+    `<button class="bh-door${HD.tab===k?" on":""}" data-hd="${k}" aria-pressed="${HD.tab===k}" onclick="hdGo('${k}')">${l}</button>`).join("")}</div>`;
+}
+
+/* ── asks: the kit filter ─────────────────────────────────────────── */
+const HD_FIELDS=[{k:"status",label:"Status",icon:"progress"},{k:"type",label:"Type",icon:"category"},{k:"tool",label:"Tool",icon:"apps"},{k:"by",label:"Raised by",icon:"user"}];
+function hdValsOf(r,k){
+  if(k==="status") return [r.status].concat(HD_OPEN.includes(r.status)?["open"]:[]);
+  if(k==="type") return [r.type];
+  if(k==="tool") return [r.tool||""];
+  if(k==="by") return [hdHandle(r.raised_by_email)];
+  return [];
+}
+function hdOptionsFor(k){
+  const rows=HD.rows||[], srt=(a,b)=>(b[2]-a[2])||String(a[1]).localeCompare(String(b[1]));
+  if(k==="status") return fltCounts(rows,k,hdValsOf,[["open","Open"]].concat(HD_STATUSES.map(s=>[s[0],s[1]])));
+  if(k==="type") return fltCounts(rows,k,hdValsOf,HD_TYPES);
+  if(k==="tool") return fltCounts(rows,k,hdValsOf,[],v=>hdToolName(v)).sort(srt);
+  return fltCounts(rows,k,hdValsOf,[]).sort(srt);
+}
+HD.f=[fltNew("status",["open"])];
+FLT_HOSTS.hd={fields:HD_FIELDS,optionsFor:hdOptionsFor,get:()=>HD.f,set:fs=>{ HD.f=fs; },render:()=>hdRefresh()};
+function hdVisible(){
+  const q=HD.q.trim().toLowerCase();
+  const r=(HD.rows||[]).filter(x=>(!q||[x.no,x.title,hdToolName(x.tool),hdHandle(x.raised_by_email)].join(" ").toLowerCase().includes(q))&&fltKeep(x,HD.f,hdValsOf));
+  const S={updated:(a,b)=>String(b.updated_at).localeCompare(String(a.updated_at)),newest:(a,b)=>Number(b.no)-Number(a.no),
+    metoo:(a,b)=>(Number(b.metoo)-Number(a.metoo))||Number(b.no)-Number(a.no),title:(a,b)=>String(a.title).localeCompare(String(b.title))};
+  return r.sort(S[HD.sort]||S.updated);
+}
+function hdPickSort(k){ HD.sort=k; hdRefresh(); }
+function hdPickStatus(k){
+  HD.f=HD.f.filter(f=>f.k!=="status");
+  if(k!=="all") HD.f.unshift(fltNew("status",[k]));
+  hdRefresh();
+}
+
+function hdBar(){
+  const bar=document.getElementById("hd-bar"); if(!bar) return;
+  if(HD.tab==="asks"){
+    const n=hdVisible().length, all=(HD.rows||[]).length;
+    bar.innerHTML=`${hdSwitchHtml()}
+      <input class="fi fb-q" placeholder="Search asks…" value="${escAttr(HD.q)}" oninput="HD.q=this.value;hdList()" onclick="event.stopPropagation()">
+      ${fltChipsHtml("hd")}
+      <span class="fb-end"><span id="hd-cnt">${fltCountHtml(n,all,"ask")}</span>
+        ${fltSortHtml("hd",[["updated","Updated"],["newest","Newest"],["metoo","Most Me too"],["title","Title"]],HD.sort,"updated","hdPickSort")}</span>`;
+  } else {
+    const rows=HD.tab==="releases"?(HD.rels||[]):(HD.pbs||[]);
+    bar.innerHTML=`${hdSwitchHtml()}
+      <input class="fi fb-q" placeholder="Search ${HD.tab==="releases"?"release notes":"playbooks"}…" value="${escAttr(HD.q)}" oninput="HD.q=this.value;hdList()" onclick="event.stopPropagation()">
+      <span class="fb-end"><span id="hd-cnt">${fltCountHtml(rows.length,rows.length,HD.tab==="releases"?"release note":"playbook")}</span></span>`;
+  }
+}
+function hdList(){
+  const g=document.getElementById("hd-list"); if(!g) return;
+  if(HD.tab==="asks") return hdAsksList(g);
+  if(HD.tab==="releases") return hdRelList(g);
+  return hdPbList(g);
+}
+
+/* ── asks: the list, the new row, the opened ask ─────────────────── */
+function hdAsksList(g){
+  const c=document.getElementById("hd-cnt"); if(c) c.innerHTML=fltCountHtml(hdVisible().length,(HD.rows||[]).length,"ask");
+  const keepT=document.getElementById("hdn-title"), keepB=document.getElementById("hdn-in"), keepR=document.getElementById("hdc-in");
+  const kept={t:keepT?keepT.value:null,b:keepB?keepB.innerHTML:null,r:keepR?keepR.innerHTML:null,focus:document.activeElement&&document.activeElement.id};
+  if(HD.rows===null){ g.innerHTML=`<div class="brl hdl"><div class="hd-empty">Loading…</div></div>`; return; }
+  const rows=hdVisible();
+  const head=`<div class="brl-hd"><span></span><span>#</span><span>Ask</span><span class="c c-ty">Type</span><span class="c c-by">Raised by</span><span>Status</span><span class="c c-me">Me too</span><span class="c c-up c-r">Updated</span></div>`;
+  const body=rows.map(hdRowHtml).join("")||`<div class="hd-empty">${(HD.rows||[]).length?"No ask matches.":"No asks yet — press + Ask in the black bar."}</div>`;
+  g.innerHTML=`<div class="brl hdl" data-gate="asks">${head}${HD.draft?hdDraftHtml():""}${body}</div>${HD.err?`<div class="tr-foot" style="padding:8px 2px;">${escHtml(HD.err)}</div>`:""}
+    <input type="file" id="hd-files" multiple hidden onchange="hdStage(this.files);this.value=''">`;
+  /* what was being typed survives a redraw */
+  const t=document.getElementById("hdn-title"); if(t&&kept.t!==null) t.value=kept.t;
+  const b=document.getElementById("hdn-in"); if(b&&kept.b) b.innerHTML=kept.b;
+  const r=document.getElementById("hdc-in"); if(r&&kept.r) r.innerHTML=kept.r;
+  if(kept.focus){ const f=document.getElementById(kept.focus); if(f) try{ f.focus(); }catch(e){} }
+  hdHydrate(g);
+}
+function hdRowHtml(r){
+  const open=HD.open===r.id, mine=!!(HD.th&&HD.th.id===r.id&&HD.th.metoo&&HD.th.metoo.includes(ME.id));
+  return `<div class="brl-tr${open?" opened":""}" data-ask="${escAttr(r.id)}" data-no="${r.no}" onclick="hdToggle(event,'${escAttr(r.id)}')">
+    <div class="brl-sp"></div>
+    <span class="c c-no">${r.no}</span>
+    <div class="brl-nm"><span class="nmt" title="${escAttr(r.title)}">${escHtml(r.title)}</span></div>
+    <span class="c c-ty">${hdTypeHtml(r.type)}</span>
+    <span class="c c-by" style="display:inline-flex;align-items:center;gap:7px;">${hdFace(r.raised_by_email)}<span style="overflow:hidden;text-overflow:ellipsis">${escHtml(hdHandle(r.raised_by_email)||"someone")}</span></span>
+    <span class="c c-st">${hdTag(r.status)}</span>
+    <span class="c c-me"><button class="hd-me${mine?" on":""}" data-metoo onclick="event.stopPropagation();hdMetoo('${escAttr(r.id)}')" title="${r.raised_by===ME.id?"Your own ask":"I see this too"}"><i class="ti ti-hand-stop"></i>${Number(r.metoo)||0}</button></span>
+    <span class="c c-up c-r">${escHtml(hdWhen(r.updated_at))}</span>
+  </div>${open?hdOpenHtml(r):""}`;
+}
+function hdToggle(e,id){
+  if(e&&e.target&&e.target.closest&&e.target.closest(".hd-open,button,select,a,input,.ccw")) return;
+  if(HD.open===id){ HD.open=null; HD.th=null; hdList(); return; }
+  HD.open=id; HD.staged=[]; hdThLoad(id);
+}
+function hdFilesHtml(list){
+  if(!list.length) return "";
+  return `<div class="hd-shots">${list.map(f=>/^image\//.test(f.mime||"")&&f.url
+    ?`<a class="img" href="${escAttr(f.url)}" target="_blank" rel="noopener" title="${escAttr(f.filename)}"><img src="${escAttr(f.url)}" alt="${escAttr(f.filename)}"></a>`
+    :`<a class="file" href="${escAttr(f.url||"#")}" target="_blank" rel="noopener"><i class="ti ti-paperclip"></i>${escHtml(f.filename)}</a>`).join("")}</div>`;
+}
+function hdStagedHtml(){
+  return HD.staged.length?`<span class="stagedfs">${HD.staged.map((f,i)=>`<span class="stagedf" title="${escAttr(f.name)}"><span class="sfn">${escHtml(f.name)}</span><b>${kbmb(f.size)}</b><i onclick="hdUnstage(${i})" title="Remove">&times;</i></span>`).join("")}</span>`:"";
+}
+function hdComposer(id,ph,send){
+  return `<div class="ccm-wrap" data-drop="hd:${id}">
+      <div class="ccm">${brFace(ME.id,"ccm-av")}
+        <div id="${id}" class="ccw rt" contenteditable="true" data-ph="${escAttr(ph)}" data-att="hd" data-nodraft="1"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey&&${send?"true":"false"}){event.preventDefault();${send||""}}"
+          onfocus="rtFocus(this)" onblur="mpBarHide()"></div>
+        ${send?`<button class="ccm-send" onclick="${send}" title="Post"><i class="ti ti-arrow-up"></i></button>`:""}
+      </div>${hdStagedHtml()}</div>`;
+}
+function hdOpenHtml(r){
+  const T=HD.th&&HD.th.id===r.id?HD.th:{loading:true};
+  if(T.loading) return `<div class="hd-open"><div class="hd-txt" style="color:var(--muted)">Loading the ask…</div><div></div></div>`;
+  if(T.err) return `<div class="hd-open"><div class="hd-txt" style="color:var(--muted)">${escHtml(T.err)}</div><div></div></div>`;
+  const a=T.ask, admin=hdAdmin(), mine=T.metoo.includes(ME.id);
+  const filesOf=mid=>T.files.filter(f=>(f.message_id||null)===mid);
+  const name=uid=>escHtml(hdHandle(hdEmailOf(uid))||"someone");
+  const thread=T.msgs.map(m=>m.kind==="status"
+      ?`<div class="hd-sys" data-gate="sys-status"><b>${name(m.author_id)}</b> moved it to ${hdTag(m.to_status)}<span>· ${escHtml(hdWhenAt(m.created_at))}</span></div>`
+    :m.kind==="metoo"
+      ?`<div class="hd-sys" data-gate="sys-metoo"><b>${name(m.author_id)}</b> pressed Me too<span>· ${escHtml(hdWhenAt(m.created_at))}</span></div>`
+    :`<div class="th-m" data-gate="msg">${hdFace(hdEmailOf(m.author_id))}<div class="th-b"><div class="th-h"><b>${name(m.author_id)}</b><span class="th-when">${escHtml(hdWhenAt(m.created_at))}</span></div>
+        ${m.body?`<div class="th-t">${wRender(m.body)}</div>`:""}${hdFilesHtml(filesOf(m.id))}</div></div>`).join("");
+  return `<div class="hd-open" data-gate="ask" data-status="${escAttr(a.status)}">
+    <div>
+      ${a.body?`<div class="hd-txt">${wRender(a.body)}</div>`:""}
+      ${hdFilesHtml(filesOf(null))}
+      <div class="hd-thread">${thread}${hdComposer("hdc-in","Write a message",`hdPost('${escAttr(a.id)}')`)}</div>
+    </div>
+    <div class="hd-facts">
+      <div class="hd-fact"><span>Status</span><span class="v">${admin
+        ?`<select class="fi cc-stsel" data-gate="status-select" onchange="hdMove('${escAttr(a.id)}',this.value)">${HD_STATUSES.map(([v,l])=>`<option value="${v}"${a.status===v?" selected":""}>${l}</option>`).join("")}</select>`
+        :hdTag(a.status)}</span></div>
+      <div class="hd-fact"><span>Type</span><span class="v">${hdTypeHtml(a.type)}</span></div>
+      <div class="hd-fact"><span>Tool</span><span class="v">${hdToolHtml(a.tool)}</span></div>
+      <div class="hd-fact"><span>Shipped in</span><span class="v">${admin
+        ?`<select class="fi cc-stsel" data-gate="shipped-select" onchange="hdShipped('${escAttr(a.id)}',this.value)"><option value="">—</option>${T.rels.map(x=>`<option value="${escAttr(x.id)}"${a.release_id===x.id?" selected":""}>${escHtml(x.version)}</option>`).join("")}</select>`
+        :escHtml(a.shipped_in||"—")}</span></div>
+      <div class="hd-fact"><span>Me too</span><span class="v"><button class="hd-me${mine?" on":""}" onclick="hdMetoo('${escAttr(a.id)}')"><i class="ti ti-hand-stop"></i>${T.metoo.length}</button></span></div>
+      <div class="hd-fact"><span>Raised</span><span class="v">${escHtml(hdHandle(hdEmailOf(a.raised_by))||"someone")} · ${escHtml(hdWhenAt(a.created_at))}</span></div>
+      ${a.page?`<div class="hd-fact"><span>Page</span><span class="v" title="${escAttr(a.page)}">${escHtml(a.page)}</span></div>`:""}
+      ${a.browser?`<div class="hd-fact"><span>Browser</span><span class="v">${escHtml(a.browser)}</span></div>`:""}
+    </div>
+  </div>`;
+}
+function hdDraftHtml(){
+  const d=HD.draft;
+  return `<div class="brl-tr hd-draft" data-gate="draft"><div class="brl-sp"></div><span class="c c-no">—</span>
+    <div><input class="fi" id="hdn-title" placeholder="What is it, in one line" value="${escAttr(d.title||"")}"
+      oninput="HD.draft.title=this.value" onkeydown="if(event.key==='Escape'){hdCancel();}"></div>
+    <span class="c c-ty"><select class="fi cc-stsel" id="hdn-type" onchange="HD.draft.type=this.value">${HD_TYPES.map(([v,l])=>`<option value="${v}"${d.type===v?" selected":""}>${l}</option>`).join("")}</select></span>
+    <span class="c c-by" style="display:inline-flex;align-items:center;gap:7px;">${hdFace(ME.email)}${escHtml(hdHandle(ME.email))}</span>
+    <span class="c">${hdTag("new")}</span><span class="c c-me" style="color:var(--subtle)">—</span><span class="c c-up c-r">now</span>
+  </div>
+  <div class="hd-dopen">
+    ${hdComposer("hdn-in","Say what happened, or what you need. Paste a screenshot straight in.","")}
+    <div class="hd-foot"><span class="hint">${escHtml(hdToolName(d.tool))} · ${escHtml(hdBrowser())}</span><span style="flex:1"></span>
+      <button class="btn btn-s btn-sm" onclick="hdCancel()">Cancel</button>
+      <button class="btn btn-p btn-sm" data-gate="ask-save" onclick="hdRaise()">${HD.busy?"Saving…":"Raise it"}</button></div>
+  </div>`;
+}
+function hdNew(){
+  if(HD.tab!=="asks"){ HD.tab="asks"; HD.err=""; }
+  if(!HD.draft){
+    /* the tool and page fill themselves: a tool that sent you here says
+       so on the link; from inside the Calendar it is the page you were on */
+    const fromTool=(HD.tools||[]).find(t=>HD.from&&HD.from.toLowerCase().startsWith(String(t.label).toLowerCase()));
+    const prev=window.BK_STATE&&BK_STATE.prev&&BK_STATE.prev.view;
+    HD.draft={title:"",type:"bug",tool:fromTool?fromTool.key:"calendar",
+      page:HD.from||("Marketing Calendar"+(prev&&IO_PAGE_OF[prev]?" › "+IO_PAGE_OF[prev]:""))};
+    HD.staged=[];
+  }
+  if(view!=="helpdesk") openHelpDesk("asks"); else hdRefresh();
+  setTimeout(()=>{ const t=document.getElementById("hdn-title"); if(t) t.focus(); },30);
+}
+function hdCancel(){ HD.draft=null; HD.staged=[]; hdList(); }
+function hdStage(files){
+  const seen=new Set(HD.staged.map(f=>f.name+"|"+f.size));
+  [...(files||[])].forEach(f=>{ const k=f.name+"|"+f.size; if(!seen.has(k)){ seen.add(k); HD.staged.push(f); } });
+  hdList();
+}
+function hdUnstage(i){ HD.staged.splice(i,1); hdList(); }
+async function hdPut(askId,messageId,file){
+  if(file.size>50*1024*1024) return file.name+" — over 50 MB. Attach a smaller file.";
+  const safe=file.name.replace(/[^\w.\-]+/g,"_");
+  const path=`helpdesk/${askId}/${Date.now().toString(36)}_${safe}`;
+  const up=await sb.storage.from(HD_BUCKET).upload(path,file,{upsert:false,contentType:file.type});
+  if(up&&up.error) return file.name+" — "+up.error.message;
+  const ins=await sb.from("helpdesk_files").insert([{ask_id:askId,message_id:messageId,storage_path:path,filename:file.name,mime:file.type||"",bytes:file.size}]);
+  if(ins&&ins.error) return file.name+" — "+ins.error.message;
+  return null;
+}
+async function hdRaise(){
+  const d=HD.draft; if(!d||HD.busy) return;
+  const t=document.getElementById("hdn-title"); if(t) d.title=t.value;
+  if(!String(d.title||"").trim()){ toast("Give it a one-line title first","err"); if(t) t.focus(); return; }
+  const box=document.getElementById("hdn-in");
+  HD.busy=true; hdList();
+  try{
+    const row={title:d.title.trim(),body:box?rtValue(box):"",tool:d.tool||"calendar",type:d.type||"bug",page:d.page||"",browser:hdBrowser()};
+    const r=await sb.from("helpdesk_asks").insert([row]).select("id").single();
+    if(r.error||!r.data){ toast("Not raised — "+escHtml((r.error&&r.error.message)||"try again"),"err"); return; }
+    const staged=HD.staged; HD.staged=[]; HD.draft=null;
+    for(const f of staged){ const e=await hdPut(r.data.id,null,f); if(e) toast(e,"err"); }
+    HD.open=r.data.id; HD.th=null;
+    toast("Raised");
+    await hdLoad();
+  }finally{ HD.busy=false; hdList(); }
+}
+async function hdPost(id){
+  if(HD.busy) return;
+  const box=document.getElementById("hdc-in"), body=box?rtValue(box):"";
+  if(!body&&!HD.staged.length) return;
+  HD.busy=true;
+  try{
+    const r=await sb.from("helpdesk_ask_messages").insert([{ask_id:id,body}]).select("id").single();
+    if(r.error||!r.data){ toast("Not posted — "+escHtml((r.error&&r.error.message)||"try again"),"err"); return; }
+    if(box) rtClear(box);
+    const staged=HD.staged; HD.staged=[];
+    for(const f of staged){ const e=await hdPut(id,r.data.id,f); if(e) toast(e,"err"); }
+  }finally{ HD.busy=false; }
+  await hdThLoad(id); hdLoad();
+}
+async function hdMetoo(id){
+  const row=(HD.rows||[]).find(x=>x.id===id);
+  if(row&&row.raised_by===ME.id){ toast("It is your own ask."); return; }
+  let mine=null;
+  if(HD.th&&HD.th.id===id&&HD.th.metoo) mine=HD.th.metoo.includes(ME.id);
+  else { const r=await sb.from("helpdesk_metoo").select("ask_id,user_id").eq("ask_id",id); mine=((r&&r.data)||[]).some(x=>x.ask_id===id&&x.user_id===ME.id); }
+  if(mine){
+    const r=await sb.from("helpdesk_metoo").delete().eq("ask_id",id).eq("user_id",ME.id);
+    if(r&&r.error){ toast(r.error.message,"err"); return; }
+  } else {
+    const r=await sb.from("helpdesk_metoo").insert([{ask_id:id}]);
+    if(r&&r.error){ toast(r.error.message,"err"); return; }
+    await sb.from("helpdesk_ask_messages").insert([{ask_id:id,kind:"metoo"}]);
+  }
+  if(HD.open===id) await hdThLoad(id);
+  hdLoad();
+}
+async function hdMove(id,to){
+  if(!hdAdmin()||!HD.th||!HD.th.ask) return;
+  const from=HD.th.ask.status; if(to===from) return;
+  const r=await sb.from("helpdesk_asks").update({status:to}).eq("id",id);
+  if(r&&r.error){ toast(r.error.message,"err"); return; }
+  await sb.from("helpdesk_ask_messages").insert([{ask_id:id,kind:"status",from_status:from,to_status:to}]);
+  await hdThLoad(id); hdLoad();
+}
+async function hdShipped(id,relId){
+  if(!hdAdmin()||!HD.th) return;
+  const rel=(HD.th.rels||[]).find(x=>x.id===relId);
+  const r=await sb.from("helpdesk_asks").update({release_id:rel?rel.id:null,shipped_in:rel?rel.version:""}).eq("id",id);
+  if(r&&r.error){ toast(r.error.message,"err"); return; }
+  await hdThLoad(id); hdLoad();
+}
+async function hdHydrate(){ /* signed urls are fetched with the thread */ }
+
+/* ── release notes ───────────────────────────────────────────────── */
+function hdRelVisible(){
+  const q=HD.q.trim().toLowerCase();
+  return (HD.rels||[]).filter(r=>!q||[r.version,r.title,hdToolName(r.tool)].join(" ").toLowerCase().includes(q));
+}
+function hdUnread(r){ return HD.since!==undefined&&(!HD.since||String(r.created_at)>String(HD.since)); }
+function hdRelList(g){
+  if(HD.rels===null){ g.innerHTML=`<div class="brl hdr"><div class="hd-empty">Loading…</div></div>`; return; }
+  const rows=hdRelVisible();
+  const head=`<div class="brl-hd"><span></span><span class="c c-tool">Tool</span><span class="c c-ver">Version</span><span>What changed</span><span class="c c-closes">Closes</span><span class="c-r">Date</span></div>`;
+  const body=rows.map(r=>{
+    const open=HD.relOpen===r.id, cl=HD.closes[r.id]||[];
+    return `<div class="brl-tr${hdUnread(r)?" unread":""}${open?" opened":""}" data-rel="${escAttr(r.id)}" data-unread="${hdUnread(r)?1:0}" onclick="hdRelToggle(event,'${escAttr(r.id)}')">
+      <div class="brl-sp"></div><span class="c c-tool">${hdToolHtml(r.tool)}</span>
+      <span class="c c-ver" style="font-weight:700">${escHtml(r.version)}</span>
+      <div class="brl-nm" style="font-size:14px"><span class="nmt">${escHtml(r.title||"")}</span></div>
+      <span class="c c-closes" style="color:var(--muted)">${cl.length?cl.map(a=>"#"+a.no).join(", "):"—"}</span>
+      <span class="c c-r">${r.released_at?escHtml(new Date(r.released_at).toLocaleDateString("en-GB",{day:"numeric",month:"short"})):"—"}</span>
+    </div>${open?hdNoteHtml(r):""}`;
+  }).join("")||`<div class="hd-empty">${(HD.rels||[]).length?"No note matches.":"No release notes yet."}</div>`;
+  g.innerHTML=`${HD.relEdit&&!HD.relEdit.id?`<div class="brl hdr" style="margin-bottom:10px">${hdRelFormHtml()}</div>`:""}<div class="brl hdr" data-gate="releases">${head}${body}</div>`;
+}
+function hdRelToggle(e,id){
+  if(e&&e.target&&e.target.closest&&e.target.closest(".hd-note,button,input,select,a,.ccw")) return;
+  HD.relOpen=HD.relOpen===id?null:id; if(HD.relEdit&&HD.relEdit.id) HD.relEdit=null; hdList();
+}
+function hdNoteHtml(r){
+  if(HD.relEdit&&HD.relEdit.id===r.id) return hdRelFormHtml();
+  const cl=HD.closes[r.id]||[];
+  return `<div class="hd-note" data-gate="note">
+    ${r.title?`<div class="t">${escHtml(r.title)}</div>`:""}
+    <div class="hd-txt">${wRender(r.body||"")}</div>
+    ${cl.length?`<div class="closes"><span>Closes</span>${cl.map(a=>`<a onclick="hdOpenAsk('${escAttr(a.id)}')"><b>#${a.no}</b> ${escHtml(a.title)}</a>`).join("")}</div>`:""}
+    ${hdAdmin()?`<div class="hd-foot"><button class="btn btn-s btn-sm" data-gate="edit-release" onclick="hdRelEdit('${escAttr(r.id)}')"><i class="ti ti-pencil"></i> Edit</button></div>`:""}
+  </div>`;
+}
+function hdOpenAsk(id){ HD.tab="asks"; HD.f=[]; HD.open=id; HD.th=null; hdRefresh(); hdLoad(); }
+function hdRelNew(){ if(!hdAdmin()) return; HD.tab="releases"; HD.relEdit={tool:"calendar",version:"",title:"",body:"",released_at:new Date().toISOString().slice(0,10)}; hdRefresh(); if(HD.rels===null) hdLoad(); }
+function hdRelEdit(id){ const r=(HD.rels||[]).find(x=>x.id===id); if(!r) return; HD.relEdit={...r,released_at:String(r.released_at||"").slice(0,10)}; hdList(); }
+function hdRelFormHtml(){
+  const r=HD.relEdit;
+  return `<div class="hd-note" data-gate="release-form">
+    <div class="hd-relform">
+      <select class="fi cc-stsel" id="hdr-tool">${(HD.tools||[]).map(t=>`<option value="${escAttr(t.key)}"${r.tool===t.key?" selected":""}>${escHtml(t.label)}</option>`).join("")}</select>
+      <input class="fi" id="hdr-ver" placeholder="V118.41 Tbilisi" value="${escAttr(r.version||"")}">
+      <input class="fi" id="hdr-title" placeholder="What changed, in one line" value="${escAttr(r.title||"")}">
+      <input class="fi" id="hdr-date" type="date" value="${escAttr(r.released_at||"")}">
+    </div>
+    <div class="ccw rt" id="hdr-body" contenteditable="true" data-ph="New: … Fixed: …" data-nodraft="1" style="min-height:110px;background:#fff;border:1px solid var(--div);border-radius:10px;padding:10px 12px;" onfocus="rtFocus(this)" onblur="mpBarHide()">${r.body||""}</div>
+    <div class="hd-foot"><span style="flex:1"></span><button class="btn btn-s btn-sm" onclick="HD.relEdit=null;hdList()">Cancel</button>
+      <button class="btn btn-p btn-sm" data-gate="release-save" onclick="hdRelSave()">Save</button></div>
+  </div>`;
+}
+async function hdRelSave(){
+  if(!hdAdmin()||!HD.relEdit) return;
+  const v=id=>(document.getElementById(id)||{}).value||"";
+  const row={tool:v("hdr-tool"),version:v("hdr-ver").trim(),title:v("hdr-title").trim(),
+    body:rtValue(document.getElementById("hdr-body")),released_at:v("hdr-date")||new Date().toISOString().slice(0,10)};
+  if(!/^V\d+\.\d+ [A-Za-z]+$/.test(row.version)){ toast("Version reads like V118.41 Tbilisi","err"); return; }
+  const id=HD.relEdit.id;
+  const r=id?await sb.from("helpdesk_releases").update(row).eq("id",id):await sb.from("helpdesk_releases").insert([row]);
+  if(r&&r.error){ toast(r.error.message,"err"); return; }
+  HD.relEdit=null; toast("Saved"); hdLoad();
+}
+
+/* ── playbooks ───────────────────────────────────────────────────── */
+function hdPbList(g){
+  if(HD.pbs===null){ g.innerHTML=`<div class="brl hdp"><div class="hd-empty">Loading…</div></div>`; return; }
+  const q=HD.q.trim().toLowerCase();
+  const rows=(HD.pbs||[]).filter(r=>!q||[r.title,r.lives_in].join(" ").toLowerCase().includes(q));
+  const head=`<div class="brl-hd"><span></span><span>Playbook</span><span>Lives in</span><span>Required</span><span></span></div>`;
+  g.innerHTML=`<div class="brl hdp" data-gate="playbooks">${head}${rows.map(r=>`<div class="brl-tr" style="cursor:default"><div class="brl-sp"></div>
+    <div class="brl-nm" style="font-size:14px"><span class="nmt">${escHtml(r.title)}</span></div>
+    <span class="c">${hdToolHtml(r.tool)}${r.lives_in?`<span style="color:var(--muted)"> › ${escHtml(String(r.lives_in).split("›").slice(1).join("›").trim()||r.lives_in)}</span>`:""}</span>
+    <span class="c" style="color:var(--muted)">${escHtml(r.required_for||"—")}</span>
+    <span class="c c-r">${r.url?`<a class="btn btn-s btn-sm" href="${escAttr(r.url)}" target="_blank" rel="noopener">Open</a>`:"—"}</span></div>`).join("")
+    ||`<div class="hd-empty">No playbooks yet.</div>`}</div>`;
+}
+
+/* ── the left panel ──────────────────────────────────────────────── */
+function buildHdSidebar(){
+  const st=document.getElementById("sb-stats"); if(st) st.innerHTML="";
+  const sm=document.getElementById("sb-months"); if(!sm) return;
+  if(HD.tab!=="asks"){ sm.innerHTML=""; return; }
+  const rows=HD.rows||[], n={}; rows.forEach(r=>n[r.status]=(n[r.status]||0)+1);
+  const sf=HD.f.find(f=>f.k==="status"), cur=sf&&sf.vals.size===1?[...sf.vals][0]:(sf?"":"all");
+  const row=(k,l,c)=>`<div class="mdb-trow${cur===k?" on":""}" data-st="${k}" onclick="hdPickStatus('${k}')"><span class="nm">${l}</span><span class="ct">${c}</span></div>`;
+  sm.innerHTML=`<div class="s-lbl">Status</div>`+row("open","Open",rows.filter(r=>HD_OPEN.includes(r.status)).length)
+    +HD_STATUSES.map(([k,l])=>row(k,l,n[k]||0)).join("")+row("all","All asks",rows.length);
+}
+
+/* ── + Ask in the black bar, beside the bell ─────────────────────── */
+function hdNavSync(){
+  let b=document.getElementById("hd-new");
+  if(!b){
+    const nw=document.getElementById("brk-new")||document.getElementById("export-btn");
+    if(nw){ (nw.closest(".bsw")||nw).insertAdjacentHTML("afterend",`<button class="nav-btn red" id="hd-new" style="display:none;" onclick="hdNavNew()"><i class="ti ti-plus"></i> <span id="hd-new-l">Ask</span></button>`);
+            b=document.getElementById("hd-new"); }
+  }
+  if(!b) return;
+  const on=view==="helpdesk"&&(HD.tab==="asks"||(HD.tab==="releases"&&hdAdmin()));
+  b.style.display=on?"":"none";
+  const l=document.getElementById("hd-new-l"); if(l) l.textContent=HD.tab==="releases"?"Release note":"Ask";
+}
+function hdNavNew(){ if(HD.tab==="releases") hdRelNew(); else hdNew(); }
+
+/* ── the message box's clip, drop and paste know the Help desk ───── */
+(function(){
+  const baseAtt=mpAttachOpen;
+  mpAttachOpen=function(ev){
+    const f=wBarField();
+    if(f&&f.dataset&&f.dataset.att==="hd"){
+      if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+      const inp=document.getElementById("hd-files"); if(inp) inp.click(); return false;
+    }
+    return baseAtt.apply(this,arguments);
+  };
+  const baseDz=dzRoute;
+  dzRoute=function(el,files){ if(String(el.dataset.drop||"").split(":")[0]==="hd") return hdStage(files); return baseDz.apply(this,arguments); };
+  const baseIn=mbInputFor;
+  mbInputFor=function(f){ if(f&&f.dataset&&f.dataset.att==="hd") return document.getElementById("hd-files"); return baseIn.apply(this,arguments); };
+})();
+
+/* ── the route, the name, the address ─────────────────────────────── */
+(function(){
+  const base=viewRoute;
+  viewRoute=function(v){
+    if(v==="helpdesk") return {render:renderHelpDesk,sidebar:buildHdSidebar};
+    return base(v);
+  };
+  PAGE_NAME.helpdesk="Help desk";
+  IO_PAGE_OF.helpdesk="Help desk";
+  const baseState=urlState;
+  urlState=function(){ const q=baseState.apply(this,arguments); if(view==="helpdesk"&&HD.tab!=="asks") q.set("hd",HD.tab); return q; };
+  const baseSet=setView;
+  setView=function(v){
+    if(ME&&ME.hdOnly&&v!=="helpdesk") v="helpdesk";
+    if(v!=="helpdesk"){ HD.draft=HD.draft&&String(HD.draft.title||"").trim()?HD.draft:null; }
+    return baseSet.call(this,v,arguments[1]);
+  };
+  const baseRender=render;
+  render=function(){
+    if(ME&&ME.hdOnly&&view!=="helpdesk") view="helpdesk";
+    document.body.classList.toggle("hd-only",!!(ME&&ME.hdOnly));
+    const out=baseRender.apply(this,arguments);
+    try{ hdNavSync(); }catch(e){}
+    return out;
+  };
+})();
+
+/* ── Sign out lives in Your profile ──────────────────────────────── */
+(function(){
+  const base=pfEnsure;
+  pfEnsure=function(){
+    const out=base.apply(this,arguments);
+    try{
+      const foot=document.querySelector("#ov-prof .modal-foot");
+      if(foot&&!foot.querySelector("[data-signout]")){
+        foot.insertAdjacentHTML("afterbegin",`<button class="btn btn-s" data-signout style="color:var(--acc);" onclick="signOut()"><i class="ti ti-logout"></i> Sign out</button>`);
+        const c=[...foot.querySelectorAll("button")].find(b=>/Cancel/.test(b.textContent)); if(c) c.style.marginLeft="auto";
+        const s=document.getElementById("pf-save"); if(s) s.style.marginLeft="8px";
+      }
+    }catch(e){}
+    return out;
+  };
+})();
+
+/* ── arriving: a link from another tool, or someone with Help desk only ── */
+(function(){
+  const go=()=>{
+    if(!ME||!ME.id) return false;
+    hdTakeLink();
+    if(ME.hdOnly||view==="helpdesk"){ if(view!=="helpdesk") setView("helpdesk"); else render(); hdLoad(); }
+    return true;
+  };
+  let tries=0;
+  const t=setInterval(()=>{ if(go()||++tries>120) clearInterval(t); },250);
 })();
 </script>
 
