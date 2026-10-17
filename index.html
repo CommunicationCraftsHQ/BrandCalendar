@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.36 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.37 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13323,7 +13323,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.36 Tbilisi";
+const TOOL_VERSION="V118.37 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -35577,11 +35577,39 @@ function urlState(){
   return q;
 }
 let URL_HOLD=false;            /* true while restoring — nothing is written over the copy */
+/* ══ V118.37 TBILISI — BACK WORKS INSIDE THE TOOL ══════════════════════
+   The team, 17 Oct: "when you are inside Tasks, go to Posts and hit the
+   browser's Back, it doesn't respond the way you want." It left the
+   tool, because every write above was a replace. Now a change of PAGE,
+   BRAND or OPEN THREAD (task, meeting, promotion) is a history entry;
+   a month opened on Plan or Posts, or a year, still overwrites — Back
+   should not walk through every month you glanced at. Back and Forward
+   land on urlApply, the same code a reload uses, so there is one way to
+   restore a place, not two. Closing a thread whose opening made the
+   entry steps back instead of pushing — Back after a ✕ does not reopen
+   what you just closed. The first write after boot is still a replace:
+   a fresh open keeps one Back to leave the tool. */
+const URL_KEYS=["b","p","task","meeting","pr"];
+let URL_WROTE=false, URL_SETTLING=false;
+function urlEntryOf(q){ return URL_KEYS.map(k=>q.get(k)||"").join("|"); }
 function urlSync(){
   if(URL_HOLD||!ME||!ME.id||!history.replaceState) return;
   try{
-    const next="?"+urlState().toString();
-    if(location.search!==next) history.replaceState(null,"",location.pathname+next);
+    const q=urlState(), next="?"+q.toString();
+    if(location.search===next) return;
+    const here=new URLSearchParams(location.search);
+    const moved=URL_WROTE&&!URL_SETTLING&&urlEntryOf(here)!==urlEntryOf(q);
+    const thread=q.get("task")||q.get("meeting")||q.get("pr")||null;
+    const hadThread=here.get("task")||here.get("meeting")||here.get("pr")||null;
+    const depth=(history.state&&history.state.cc&&history.state.n)||0;
+    /* a thread closed whose opening is the entry on top: step back to it
+       — only when that entry was pushed by us (n>0), never out of the tool */
+    if(moved&&hadThread&&!thread&&depth>0&&history.state.waTask===here.get("task")&&urlEntryOf(here).replace(hadThread,"")===urlEntryOf(q)){
+      URL_SETTLING=true; history.back(); return;
+    }
+    if(moved) history.pushState({cc:1,n:depth+1,waTask:q.get("task")||null},"",location.pathname+next);
+    else history.replaceState({cc:1,n:depth,waTask:q.get("task")||null},"",location.pathname+next);
+    URL_WROTE=true;
   }catch(e){}
 }
 async function urlRestore(){
@@ -35591,9 +35619,25 @@ async function urlRestore(){
   const q=new URLSearchParams(raw);
   /* a shared link names its own thread and openDeepLink has taken it */
   if(q.get("task")||q.get("meeting")||q.get("post")) return;
+  await urlApply(q);
+}
+/* Back / Forward: the address is the place; put the tool there */
+window.addEventListener("popstate",()=>{
+  if(!ME||!ME.id) return;
+  const q=new URLSearchParams(location.search);
+  if(!q.get("p")) return;
+  URL_SETTLING=true;
+  urlApply(q,true).catch(()=>{}).finally(()=>{ setTimeout(()=>{ URL_SETTLING=false; },400); });
+});
+async function urlApply(q,viaHistory){
   const p=q.get("p")||"", b=q.get("b")||"", y=parseInt(q.get("y")||"",10), m=parseInt(q.get("m")||"",10)||0;
   URL_HOLD=true;
   try{
+    if(viaHistory){
+      /* an open thread that the address no longer names is closed first */
+      if(typeof BR_OPEN!=="undefined"&&BR_OPEN&&!q.get("task")) BR_OPEN=null;
+      if(typeof PR!=="undefined"&&PR&&PR.open&&!q.get("pr")){ PR.open=null; PR.creative=null; }
+    }
     if(b&&brands[b]&&activeBrand!==b) pickBrand(b);
     if(y&&y!==YEAR&&y>2000&&y<2100) setYear(y);
     const hasBrand=!!(activeBrand&&brands[activeBrand]);
@@ -35609,7 +35653,12 @@ async function urlRestore(){
     }
     else if(p==="numbers"&&hasBrand&&typeof navNumbers==="function"){ await navNumbers(); }
     else if(p&&p!==view&&viewRoute(p)){ setView(p); }
-  }finally{ URL_HOLD=false; urlSync(); }
+    if(viaHistory){
+      if(q.get("task")&&hasBrand&&typeof goToTask==="function"&&BR_OPEN!==q.get("task")) await goToTask(activeBrand,q.get("task"));
+      if(q.get("meeting")&&hasBrand&&typeof plMeetOpen==="function"){ const k=activeBrand+"|"+YEAR; if(typeof PLD!=="undefined"&&PLD.key!==k&&typeof plLoad==="function") await plLoad(k); plMeetOpen(q.get("meeting")); }
+      if(typeof render==="function") render();
+    }
+  }finally{ URL_HOLD=false; const was=URL_SETTLING; URL_SETTLING=true; try{ urlSync(); }finally{ URL_SETTLING=was; } }
 }
 (function(){
   const baseRender=render;
@@ -35785,10 +35834,10 @@ function waSegs(t){
   openTaskScreen=function(id){
     const was=BR_OPEN; WA_MORE=false;
     const out=baseOpenScreen.apply(this,arguments);
-    if(waOn()&&!was){ try{ history.pushState({waTask:id},""); }catch(e){} }
+    /* V118.37 — the history entry is urlSync's now, on every layout */
     return out;
   };
-  window.addEventListener("popstate",()=>{ if(BR_OPEN&&waOn()){ BR_OPEN=null; WA_MORE=false; render(); } });
+  window.addEventListener("popstate",()=>{ if(waOn()) WA_MORE=false; });
 })();
 function waBack(){ if(history.state&&history.state.waTask){ history.back(); return; } BR_OPEN=null; WA_MORE=false; render(); }
 function waMore(e){ if(e){ e.preventDefault(); e.stopPropagation(); } WA_MORE=!WA_MORE; render(); }
