@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.37 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.38 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -10666,11 +10666,15 @@ function brNavSync(canE){
   if(ex){
     if(!ex.dataset.orig) ex.dataset.orig=ex.innerHTML;
     const io=brIoOn();
-    const want=io?'<i class="ti ti-upload"></i><i class="ti ti-download"></i>':ex.dataset.orig;
+    /* V118.38 — the Strategy page imports and never exports: one upload
+       icon for whoever may edit it, and no button at all for anyone else */
+    const sio=!io&&typeof stIoOn==="function"&&stIoOn();
+    const want=io?'<i class="ti ti-upload"></i><i class="ti ti-download"></i>':(sio?'<i class="ti ti-upload"></i>':ex.dataset.orig);
     if(ex.innerHTML!==want) ex.innerHTML=want;
-    ex.classList.toggle("brk-io",io);
-    ex.title=io?"Import / Export":"";
-    if(io) ex.setAttribute("aria-label","Import / Export"); else ex.removeAttribute("aria-label");
+    ex.classList.toggle("brk-io",io||sio);
+    ex.title=io?"Import / Export":(sio?"Import":"");
+    if(io||sio) ex.setAttribute("aria-label",io?"Import / Export":"Import"); else ex.removeAttribute("aria-label");
+    ex.style.display=(view==="brief"&&!sio)?"none":"";
   }
 }
 function brRowHtml(t,showTag){
@@ -12638,6 +12642,7 @@ function buildExportPanel(){
      and live here. Import WRITES, so it keeps its own confirm step — the
      menu entry is shared, the safety is not. */
   const isBrief=!!document.querySelector(".bd-wrap");
+  if(view==="brief"){ el.innerHTML=(typeof stIoOn==="function"&&stIoOn())?stIoMenu():""; return; }
   if(brIoOn()){
     const n=(typeof brVisibleRows==="function"?brVisibleRows():null);
     el.innerHTML=`<div class="brk-ioh"><i class="ti ti-upload"></i>Import</div>
@@ -13323,7 +13328,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.37 Tbilisi";
+const TOOL_VERSION="V118.38 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -33430,6 +33435,9 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     const host = document.getElementById("vb-host");
     if (host) host.innerHTML = html();
   }
+  /* V118.38 — the Strategy import reads and writes these rows by the same rules */
+  window.tgIo = { vb: () => VB, load: vbLoad, paint: () => vbPaint(),
+    listOf: (g) => LISTED[g] ? (VB[LISTED[g]] || []) : null, segsOf, hasNotes, notesOf, noteFor };
 
   /* ── WRITING ──────────────────────────────────────────────────────
      Every control writes at once and puts itself back if the write
@@ -40620,7 +40628,585 @@ function cpLinkSave(id,i,kind,off){
     return out;
   };
 })();
+/* ══ V118.38 TBILISI · STRATEGY IMPORT · COMPETITORS AND TARGET GROUPS ══
+   Chirag, 17 Oct: "I want an import functionality… for the competitors and
+   the Target group sections. So I can download a template add data in it
+   and import it. In most cases I will be doing the research using Claude
+   or other AI tool." Then, on mockup 04 at 16:59: "we will go for option
+   A, but this particular page should not have any export functionality.
+   Nobody can export anything from this page."
+
+   · The black bar's Export button becomes Import only on this page (one
+     upload icon); the old calendar "Excel sheet" export is gone here.
+   · One block per list: Import · Blank template · Claude prompt.
+   · A sheet another AI rebuilt may lose the hidden tab, so the file is
+     recognised by its tab and its column names, not only by the stamp.
+   · Rows match by name (competitors) and by group + segment (target
+     groups). A blank cell keeps what is there; one dash empties a text
+     field. Nothing is ever taken off by a sheet.
+   · Every import is recorded in strategy_imports so it can be undone.   */
+const STI_MAGIC="CC-STRATEGY-LISTS-V1";
+const STI_TAB={cp:"Competitors",tg:"Target groups"};
+const STI_NAME={cp:"competitors",tg:"target groups"};
+const STI_CP_COLS=["Competitor","Type","Website","Instagram","Facebook","LinkedIn","YouTube","X","Other link","Mood board tag","Strengths","What we should adopt"];
+const STI_CP_LINK=[["Website","website"],["Instagram","instagram"],["Facebook","facebook"],["LinkedIn","linkedin"],["YouTube","youtube"],["X","x"],["Other link","other"]];
+const STI_TG_COLS=["Target group","Segment","Segment note","Objectives","Objective notes","Talking points"];
+var STI=null;
+
+function stIoOn(){
+  return view==="brief"&&!!activeBrand&&!!brands[activeBrand]&&!brIsClient()&&canEditVision();
+}
+function stIoMenu(){
+  const blk=(k,ic,lbl)=>`<div class="brk-ioh"><i class="ti ti-${ic}"></i>${lbl}</div>
+    <div class="brow act" onclick="closeAllPops();stPick('${k}')"><i class="ti ti-file-upload"></i><span class="bnm">Import ${STI_NAME[k]}</span></div>
+    <div class="brow act" onclick="closeAllPops();stTemplate('${k}')"><i class="ti ti-file-spreadsheet"></i><span class="bnm">Blank ${STI_NAME[k]} template</span></div>
+    <div class="brow act" onclick="closeAllPops();stPrompt('${k}')"><i class="ti ti-sparkles"></i><span class="bnm">Claude prompt for ${STI_NAME[k]}</span></div>`;
+  return blk("cp","swords","Competitors")+`<div class="brk-iosep"></div>`+
+    blk("tg","users-group","Target groups")+`<div class="brk-iosep"></div>
+    <div class="brow act" onclick="closeAllPops();stHistory()"><i class="ti ti-history"></i><span class="bnm">Past imports</span></div>`;
+}
+
+/* ── small helpers ──────────────────────────────────────────────────── */
+const stLow=s=>String(s==null?"":s).replace(/\s+/g," ").trim().toLowerCase();
+const stOne=s=>String(s==null?"":s).replace(/\s+/g," ").trim();
+const stClear=v=>/^[-–—]$/.test(String(v==null?"":v).trim());
+/* one point per line, with any bullet or number an AI put in front taken off */
+function stLines(v){
+  return String(v==null?"":v).split(/\r?\n|•/).map(x=>x.replace(/^\s*(?:[-*•·]|\d{1,2}[.)])\s+/,"").replace(/\s+/g," ").trim()).filter(Boolean);
+}
+function stCell(v,link){
+  if(v==null) return "";
+  if(v instanceof Date) return "";
+  if(typeof v==="object"){
+    if(Array.isArray(v.richText)) return v.richText.map(t=>t.text||"").join("").trim();
+    if(link&&v.hyperlink) return String(v.hyperlink).replace(/^mailto:/,"").trim();
+    if(v.text!=null) return (typeof v.text==="object"?stCell(v.text):String(v.text)).trim();
+    if(v.result!=null) return String(v.result).trim();
+    return "";
+  }
+  return String(v).trim();
+}
+const stUrlOk=u=>/^(https?:\/\/)?[^\s/]+\.[^\s]{2,}/i.test(u)&&!/\s/.test(u);
+const stUrl=u=>/^https?:\/\//i.test(u)?u:"https://"+u;
+async function stReady(k){
+  const bid=activeBrand;
+  if(k==="cp"){
+    if(!(CP.ok&&CP.bid===bid)){ CP.ok=false; CP.err=""; CP.busy=false; CP.bid=null; await cpEnsure(); }
+    if(!(MDB.ok&&MDB.bid===bid)) await mdbLoad(bid);
+    return CP.ok&&CP.bid===bid;
+  }
+  const T=window.tgIo; if(!T) return false;
+  if(T.vb().key!==bid||T.vb().err) await T.load(bid);
+  return T.vb().key===bid&&!T.vb().err;
+}
+function stBox(html,wide){
+  let ov=document.getElementById("ov-sti");
+  if(!ov){
+    ov=document.createElement("div"); ov.className="overlay"; ov.id="ov-sti";
+    ov.onclick=e=>{ if(e.target===ov) closeM("sti"); };
+    ov.innerHTML=`<div class="modal"><div id="sti-body"></div></div>`;
+    document.body.appendChild(ov);
+  }
+  ov.querySelector(".modal").style.maxWidth=wide?"720px":"560px";
+  document.getElementById("sti-body").innerHTML=html;
+  openM("sti");
+}
+function stRefuse(title,detail){
+  STI=null;
+  stBox(`<div class="modal-top"><div><div class="modal-title">Import stopped</div></div>
+     <button class="modal-x" onclick="closeM('sti')">✕</button></div>
+   <div class="modal-body" style="padding:6px 20px 18px;">
+     <div style="font-size:13.5px;font-weight:600;color:#C62828;">${escHtml(title)}</div>
+     ${detail?`<div style="font-size:12.5px;color:var(--muted);margin-top:6px;">${escHtml(detail)}</div>`:""}
+   </div>
+   <div style="display:flex;justify-content:flex-end;padding:12px 20px 18px;border-top:1px solid var(--div);">
+     <button class="btn btn-g" onclick="closeM('sti')">Close</button>
+   </div>`);
+}
+
+/* ── the words a sheet may use, read live from this brand ───────────── */
+function stWords(k){
+  if(k==="cp") return {types:["Direct","Aspirational"],
+    tags:(MDB.bid===activeBrand?MDB.tags:[]).filter(t=>!t.deleted_at).map(t=>t.name).sort((a,b)=>a.localeCompare(b))};
+  const T=window.tgIo, V=T.vb();
+  const groups=V.segs.map(s=>({key:s.key,label:s.label,listed:T.listOf(s.key)}));
+  return {groups,
+    objectives:V.objs.map(o=>vbObjWords(o.key).label),
+    lists:groups.filter(g=>g.listed).map(g=>({label:g.label,words:g.listed.map(o=>o.label)}))};
+}
+
+/* ── THE TEMPLATE ───────────────────────────────────────────────────── */
+async function stTemplate(k){
+  if(!stIoOn()) return capDenied("Downloading the template");
+  const b=brands[activeBrand]||{};
+  try{
+    if(!(await stReady(k))) return toast("Could not read the "+STI_NAME[k]+" yet — try again","err");
+    const EJ=await loadExportLib("exceljs");
+    const wb=new EJ.Workbook();
+    const ws=wb.addWorksheet(STI_TAB[k],{views:[{state:"frozen",ySplit:1}]});
+    const aw=wb.addWorksheet("Allowed words");
+    const lk=wb.addWorksheet("_lists"); lk.state="veryHidden";
+    lk.getCell(1,5).value=STI_MAGIC; lk.getCell(2,5).value=activeBrand; lk.getCell(3,5).value=k;
+    const W=stWords(k);
+    const col=(n,head,vals)=>{ aw.getCell(1,n).value=head; aw.getCell(1,n).font={bold:true};
+      vals.forEach((v,i)=>aw.getCell(i+2,n).value=v); aw.getColumn(n).width=Math.max(18,head.length+4); };
+    const L=n=>String.fromCharCode(64+n);
+    const last=200;
+    if(k==="cp"){
+      ws.columns=STI_CP_COLS.map(h=>({header:h,width:/Strengths|adopt/.test(h)?46:(h==="Competitor"?26:(h==="Mood board tag"?20:24))}));
+      col(1,"Type",W.types); col(2,"Mood board tags",W.tags);
+      for(let n=2;n<=last;n++){
+        ws.getCell(n,2).dataValidation={type:"list",allowBlank:true,formulae:["='Allowed words'!$A$2:$A$3"]};
+        ws.getCell(n,11).alignment={wrapText:true,vertical:"top"};
+        ws.getCell(n,12).alignment={wrapText:true,vertical:"top"};
+      }
+    }else{
+      ws.columns=STI_TG_COLS.map(h=>({header:h,width:h==="Talking points"?48:(h==="Objective notes"?40:(h==="Segment note"?34:22))}));
+      col(1,"Target group",W.groups.map(g=>g.label));
+      col(2,"Objectives",W.objectives);
+      W.lists.forEach((x,i)=>col(3+i,x.label+" segments",x.words));
+      const nG=Math.max(1,W.groups.length);
+      for(let n=2;n<=last;n++){
+        ws.getCell(n,1).dataValidation={type:"list",allowBlank:true,formulae:[`='Allowed words'!$A$2:$A$${nG+1}`]};
+        [4,5,6].forEach(c=>ws.getCell(n,c).alignment={wrapText:true,vertical:"top"});
+      }
+    }
+    ws.getRow(1).font={bold:true};
+    const how=wb.addWorksheet("How to fill");
+    (k==="cp"?[
+      "One competitor per row. Keep the column names as they are.",
+      "Type: Direct or Aspirational.",
+      "Links: the full web address.",
+      "Mood board tag: an existing tag, or a new name to create one.",
+      "Strengths and What we should adopt: one point per line.",
+      "A competitor already on the page is matched by its name and updated.",
+      "A blank cell keeps what is there. A single dash (-) empties it."
+    ]:[
+      "One segment per row. Keep the column names as they are.",
+      "Target group, objectives and listed segments: use the words on the Allowed words tab.",
+      "Objectives: separate them with commas.",
+      "Objective notes: one per line, as  Objective: note.",
+      "Talking points: one per line.",
+      "A segment already on the page is matched by its target group and name, and updated.",
+      "A blank cell keeps what is there. A single dash (-) empties a note."
+    ]).forEach((t,i)=>how.getCell(i+1,1).value=t);
+    how.getColumn(1).width=90;
+    const buf=await wb.xlsx.writeBuffer();
+    dlBlob(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),
+      seHandle(b.name)+"-"+(k==="cp"?"competitors":"target-groups")+"-template.xlsx");
+  }catch(e){ toast("Download failed: "+(e.message||""),"err"); }
+}
+
+/* ── THE PROMPT ─────────────────────────────────────────────────────── */
+function stPromptText(k){
+  const b=brands[activeBrand]||{}, br=b.brief||{};
+  const W=stWords(k), nm=b.name||"the brand";
+  const about=[br.tagline,br.positioning].map(stOne).filter(Boolean).join(" — ");
+  const L=[];
+  L.push(`I am attaching a blank Excel template for the brand "${nm}".${about?" About the brand: "+about+".":""}`);
+  if(k==="cp"){
+    const have=cpRows().map(r=>r.name);
+    L.push(`Research this brand's competitors and fill the "Competitors" tab, one competitor per row.`);
+    L.push("");
+    L.push("Rules:");
+    L.push("- Keep the tabs and column names exactly as they are. Do not add, rename or move columns or tabs.");
+    L.push("- Type: Direct (sells the same thing to the same buyers) or Aspirational (a brand to learn from). Nothing else.");
+    L.push("- Website, Instagram, Facebook, LinkedIn, YouTube, X, Other link: the full web address, only if you are sure it is the competitor's official page.");
+    L.push(`- Mood board tag: a short name for this competitor's mood board, usually its name.${W.tags.length?" Tags already in use: "+W.tags.join(", ")+".":""}`);
+    L.push("- Strengths: what this competitor does well in its marketing and communication. Short points, one per line.");
+    L.push("- What we should adopt: what this brand should take from them. Short points, one per line.");
+    L.push("- Leave a cell empty when you are not sure. Never invent a link.");
+    if(have.length) L.push(`- Already on the list: ${have.join(", ")}. Use the same names if you add information about them.`);
+  }else{
+    L.push(`Fill the "Target groups" tab with the audiences this brand should talk to, one segment per row.`);
+    L.push("");
+    L.push("Rules:");
+    L.push("- Keep the tabs and column names exactly as they are. Do not add, rename or move columns or tabs.");
+    L.push(`- Target group: one of ${W.groups.map(g=>g.label).join(", ")}.`);
+    W.lists.forEach(x=>L.push(`- Segment for ${x.label}: one of ${x.words.join(", ")}.`));
+    L.push(`- Segment for any other target group: a short name of the audience.`);
+    L.push("- Segment note: one short line about this segment.");
+    L.push(`- Objectives: one or more of ${W.objectives.join(", ")}, separated by commas.`);
+    L.push("- Objective notes: one per line, written as  Objective: note.");
+    L.push("- Talking points: what to say to this segment. Short points, one per line.");
+    L.push("- Use only the words listed on the Allowed words tab. Leave a cell empty when you are not sure.");
+  }
+  L.push("");
+  L.push("Send back the filled .xlsx file.");
+  return L.join("\n");
+}
+async function stPrompt(k){
+  if(!stIoOn()) return capDenied("The Claude prompt");
+  if(!(await stReady(k))) return toast("Could not read the "+STI_NAME[k]+" yet — try again","err");
+  const t=stPromptText(k);
+  let done=false;
+  try{ if(navigator.clipboard&&navigator.clipboard.writeText){ await navigator.clipboard.writeText(t); done=true; } }catch(e){}
+  if(done) return toast("Prompt copied — paste it into Claude with the blank template");
+  stBox(`<div class="modal-top"><div><div class="modal-title">Claude prompt for ${STI_NAME[k]}</div></div>
+     <button class="modal-x" onclick="closeM('sti')">✕</button></div>
+   <div class="modal-body" style="padding:6px 20px 18px;">
+     <textarea id="sti-pr" readonly style="width:100%;box-sizing:border-box;min-height:300px;font:inherit;font-size:12.5px;line-height:1.5;border:1px solid var(--div);border-radius:9px;padding:10px 12px;">${escHtml(t)}</textarea>
+   </div>
+   <div style="display:flex;justify-content:flex-end;padding:12px 20px 18px;border-top:1px solid var(--div);">
+     <button class="btn btn-p" onclick="const a=document.getElementById('sti-pr');a.select();try{document.execCommand('copy');toast('Prompt copied');}catch(e){}">Copy</button>
+   </div>`);
+}
+
+/* ── READING ────────────────────────────────────────────────────────── */
+function stPick(k){
+  if(!stIoOn()) return capDenied("Importing "+STI_NAME[k]);
+  const inp=document.createElement("input");
+  inp.type="file"; inp.accept=".xlsx";
+  inp.onchange=()=>{ if(inp.files&&inp.files[0]) stRead(k,inp.files[0]); };
+  inp.click();
+}
+/* the header row, read by name: an AI that moved a column has not broken it */
+function stHeads(ws){
+  const H={}; const r=ws.getRow(1);
+  for(let c=1;c<=Math.max(ws.columnCount||0,30);c++){ const v=stLow(stCell(r.getCell(c).value)); if(v&&!(v in H)) H[v]=c; }
+  return H;
+}
+function stRowsOf(ws,cols){
+  const H=stHeads(ws), out=[];
+  const n=ws.rowCount||ws.actualRowCount||0;
+  for(let i=2;i<=n;i++){
+    const r=ws.getRow(i), o={_row:i}; let any=false;
+    cols.forEach(h=>{ const c=H[stLow(h)]; const v=c?stCell(r.getCell(c).value,/link|website|instagram|facebook|linkedin|youtube|^x$/i.test(h)):"";
+      o[h]=v; if(v) any=true; });
+    if(any) out.push(o);
+  }
+  return out;
+}
+async function stRead(k,file){
+  try{
+    if(!(await stReady(k))) return stRefuse("The "+STI_NAME[k]+" could not be read.","Reload the page and try again.");
+    const wb=await xlRead(file);
+    const lk=wb.getWorksheet("_lists");
+    if(lk&&String(lk.getCell(1,5).value||"")===STI_MAGIC){
+      const bId=String(lk.getCell(2,5).value||"");
+      if(bId&&bId!==activeBrand)
+        return stRefuse("That sheet belongs to a different brand.",
+          "It was made for “"+((brands[bId]||{}).name||bId)+"”. Open that brand and import it there.");
+    }
+    const other=k==="cp"?"tg":"cp";
+    const find=(kk)=>wb.worksheets.find(w=>stLow(w.name)===stLow(STI_TAB[kk]))||
+      wb.worksheets.find(w=>{ const H=stHeads(w); return kk==="cp"?("competitor" in H):(("target group" in H)&&("segment" in H)); });
+    const ws=find(k);
+    if(!ws){
+      if(find(other)) return stRefuse("This is the "+STI_NAME[other]+" sheet.","Use Import "+STI_NAME[other]+" for it.");
+      return stRefuse("That file has no "+STI_TAB[k]+" tab.","Download the blank "+STI_NAME[k]+" template, fill it in, then import it.");
+    }
+    const rows=stRowsOf(ws,k==="cp"?STI_CP_COLS:STI_TG_COLS);
+    STI=Object.assign({k,file:file.name},k==="cp"?stScanCp(rows):stScanTg(rows));
+    stRender();
+  }catch(e){ stRefuse("That file could not be read.",e.message||""); }
+}
+
+/* ── THE RULES · competitors ────────────────────────────────────────
+   Split from the file reader so a gate can hand it plain rows. */
+function stScanCp(rows){
+  const add=[],upd=[],skip=[]; let same=0;
+  const seen={};
+  const have=cpRows();
+  const tagBy={}; (MDB.bid===activeBrand?MDB.tags:[]).filter(t=>!t.deleted_at).forEach(t=>tagBy[stLow(t.name)]=t);
+  for(const o of rows){
+    const name=stOne(o["Competitor"]);
+    if(!name){ skip.push({row:o._row,why:"No competitor name"}); continue; }
+    const key=stLow(name);
+    if(seen[key]){ skip.push({row:o._row,why:"“"+name+"” is already on row "+seen[key]}); continue; }
+    seen[key]=o._row;
+    const cur=have.find(r=>stLow(r.name)===key)||null;
+    const w={}; const why=[];
+    /* type */
+    const ty=stLow(o["Type"]);
+    if(ty){ if(ty==="direct"||ty==="aspirational") w.kind=ty; else why.push("Type must be Direct or Aspirational"); }
+    /* links: the sheet's address replaces that kind's; a dash takes it off */
+    const links=cur?cpLinksOf(cur).map(l=>({kind:l.kind,url:l.url})):[];
+    let lchg=false;
+    for(const [h,kind] of STI_CP_LINK){
+      const v=stOne(o[h]); if(!v) continue;
+      if(stClear(v)){ const n0=links.length; for(let i=links.length-1;i>=0;i--) if(links[i].kind===kind) links.splice(i,1); if(links.length!==n0) lchg=true; continue; }
+      if(!stUrlOk(v)){ why.push(h+" is not a web address"); continue; }
+      const u=stUrl(v), kk=(kind==="other"||kind==="website")?bfKindFromUrl(u,kind):kind;
+      const i=links.findIndex(l=>l.kind===kk);
+      if(i>=0){ if(links[i].url!==u){ links[i].url=u; lchg=true; } }
+      else { links.push({kind:kk,url:u}); lchg=true; }
+    }
+    if(lchg) w.links=links;
+    /* mood board tag */
+    const tg=stOne(o["Mood board tag"]);
+    if(tg){
+      if(stClear(tg)){ if(cur&&cur.mood_tag_id) w.mood_tag_id=null; }
+      else { const t=tagBy[stLow(tg)];
+        if(t){ if(!cur||cur.mood_tag_id!==t.id) w.mood_tag_id=t.id; }
+        else w.newTag=tg; }
+    }
+    /* the two briefs */
+    [["Strengths","strengths"],["What we should adopt","adopt"]].forEach(([h,f])=>{
+      const v=String(o[h]||"").trim(); if(!v) return;
+      const t=stClear(v)?"":stLines(v).join("\n");
+      if(String((cur&&cur[f])||"")!==t) w[f]=t;
+    });
+    if(why.length){ skip.push({row:o._row,why:name+" — "+why.join(" · ")}); continue; }
+    if(!cur){ add.push({row:o._row,name,want:w}); continue; }
+    if(w.kind===cur.kind) delete w.kind;
+    if(!Object.keys(w).length){ same++; continue; }
+    upd.push({row:o._row,name:cur.name,id:cur.id,cur,want:w});
+  }
+  return {add,upd,skip,same};
+}
+
+/* ── THE RULES · target groups ──────────────────────────────────────── */
+function stScanTg(rows){
+  const T=window.tgIo, V=T.vb();
+  const add=[],upd=[],skip=[]; let same=0; const seen={};
+  const grpBy={}; V.segs.forEach(s=>{ grpBy[stLow(s.label)]=s; grpBy[stLow(s.key)]=s; });
+  const objBy={}; V.objs.forEach(o=>{ const w=vbObjWords(o.key); objBy[stLow(w.label)]=o.key; objBy[stLow(w.master)]=o.key; objBy[stLow(o.key)]=o.key; });
+  const objName=s=>objBy[stLow(s)]||null;
+  for(const o of rows){
+    const gw=stOne(o["Target group"]), sw=stOne(o["Segment"]);
+    if(!gw){ skip.push({row:o._row,why:"No target group"}); continue; }
+    const g=grpBy[stLow(gw)];
+    if(!g){ skip.push({row:o._row,why:"“"+gw+"” is not a target group"}); continue; }
+    if(!sw){ skip.push({row:o._row,why:"No segment"}); continue; }
+    let seg=sw, lkey="";
+    const list=T.listOf(g.key);
+    if(list){ const hit=list.find(x=>stLow(x.label)===stLow(sw));
+      if(!hit){ skip.push({row:o._row,why:"“"+sw+"” is not on the Lists page under "+g.label}); continue; }
+      seg=hit.label; lkey=hit.key; }
+    const key=g.key+"|"+stLow(seg);
+    if(seen[key]){ skip.push({row:o._row,why:g.label+" · "+seg+" is already on row "+seen[key]}); continue; }
+    seen[key]=o._row;
+    const why=[];
+    const objsIn=String(o["Objectives"]||"").split(/[,\n;]/).map(stOne).filter(Boolean);
+    const objs=[]; objsIn.forEach(x=>{ const k=objName(x); if(!k) why.push("“"+x+"” is not an objective"); else if(!objs.includes(k)) objs.push(k); });
+    const onotes={}; let oclear=[];
+    stLines(o["Objective notes"]).forEach(ln=>{
+      const m=/^([^:–—]+)[:–—]\s*(.*)$/.exec(ln);
+      if(!m){ why.push("Objective notes need  Objective: note"); return; }
+      const k=objName(m[1]); if(!k){ why.push("“"+stOne(m[1])+"” is not an objective"); return; }
+      const t=stOne(m[2]).slice(0,160);
+      if(!t||stClear(t)) oclear.push(k); else onotes[k]=t;
+      if(!objs.includes(k)) objs.push(k);
+    });
+    const snRaw=String(o["Segment note"]||"").trim();
+    const tps=stLines(o["Talking points"]);
+    if(why.length){ skip.push({row:o._row,why:g.label+" · "+seg+" — "+[...new Set(why)].join(" · ")}); continue; }
+    const cur=V.bsegs.find(r=>r.segment_key===g.key&&T.segsOf(r).some(x=>stLow(x)===stLow(seg)))||null;
+    if(!cur){
+      add.push({row:o._row,g,seg,lkey,objs,onotes,sn:stClear(snRaw)?"":stOne(snRaw).slice(0,160),tps});
+      continue;
+    }
+    seg=T.segsOf(cur).find(x=>stLow(x)===stLow(seg))||seg;   /* the page's spelling, not the sheet's */
+    const w={};
+    const curO=(cur.objective_keys||[]).slice();
+    const addO=objs.filter(k=>!curO.includes(k));
+    if(addO.length) w.objective_keys=curO.concat(addO);
+    const curT=(cur.talking_points||[]).slice();
+    const addT=tps.filter(t=>!curT.some(x=>stLow(x)===stLow(t)));
+    if(addT.length) w.talking_points=curT.concat(addT);
+    if(T.hasNotes(cur,"segment_notes")&&snRaw){
+      const t=stClear(snRaw)?"":stOne(snRaw).slice(0,160);
+      if(t!==T.noteFor(cur,"segment_notes",seg)){
+        const sn={}; Object.keys(T.notesOf(cur,"segment_notes")).forEach(x=>{ if(stLow(x)!==stLow(seg)) sn[x]=T.notesOf(cur,"segment_notes")[x]; });
+        if(t) sn[T.segsOf(cur).find(x=>stLow(x)===stLow(seg))||seg]=t;
+        w.segment_notes=sn;
+      }
+    }
+    if(T.hasNotes(cur,"objective_notes")&&(Object.keys(onotes).length||oclear.length)){
+      const on=Object.assign({},T.notesOf(cur,"objective_notes")); let ch=false;
+      Object.keys(onotes).forEach(k=>{ if(on[k]!==onotes[k]){ on[k]=onotes[k]; ch=true; } });
+      oclear.forEach(k=>{ if(on[k]){ delete on[k]; ch=true; } });
+      if(ch) w.objective_notes=on;
+    }
+    if(!Object.keys(w).length){ same++; continue; }
+    upd.push({row:o._row,g,seg,id:cur.id,cur,want:w,addO,addT});
+  }
+  return {add,upd,skip,same};
+}
+
+/* ── THE CHECK ──────────────────────────────────────────────────────── */
+function stRender(){
+  if(!STI) return;
+  const k=STI.k, T=window.tgIo;
+  const chip=(t,c)=>`<span class="sti-chip ${c}">${t}</span>`;
+  const sub=s=>s?`<div class="sti-sub">${s}</div>`:"";
+  const objW=keys=>keys.map(x=>escHtml(vbObjWords(x).label)).join(", ");
+  let body="";
+  const line=(c,lbl,title,detail)=>`<div class="sti-row">${chip(lbl,c)}<div class="sti-main"><div class="sti-t">${title}</div>${sub(detail)}</div></div>`;
+  const cpDetail=w=>{ const d=[];
+    if(w.kind) d.push(CP_T[w.kind]);
+    if(w.links) d.push(w.links.length?w.links.map(l=>escHtml(bfKind(l.kind)[1])).join(", "):"no links");
+    if(w.newTag) d.push("new tag “"+escHtml(w.newTag)+"”");
+    else if(w.mood_tag_id) d.push("tag “"+escHtml((mdbTag(w.mood_tag_id)||{}).name||"")+"”");
+    else if("mood_tag_id" in w) d.push("tag unlinked");
+    if("strengths" in w) d.push(w.strengths?stLines(w.strengths).length+" strength"+(stLines(w.strengths).length===1?"":"s"):"strengths emptied");
+    if("adopt" in w) d.push(w.adopt?stLines(w.adopt).length+" to adopt":"to adopt emptied");
+    return d.join(" · "); };
+  STI.add.forEach(a=>{ body+=k==="cp"
+    ? line("add","Add",escHtml(a.name),cpDetail(Object.assign({kind:a.want.kind||"direct"},a.want)))
+    : line("add","Add",escHtml(a.g.label)+" · "+escHtml(a.seg),[a.objs.length?objW(a.objs):"",a.tps.length?a.tps.length+" talking point"+(a.tps.length===1?"":"s"):"",a.sn?"note":""].filter(Boolean).join(" · ")); });
+  STI.upd.forEach(u=>{ body+=k==="cp"
+    ? line("upd","Update",escHtml(u.name),cpDetail(u.want))
+    : line("upd","Update",escHtml(u.g.label)+" · "+escHtml(u.seg),[u.addO.length?"+ "+objW(u.addO):"",u.addT.length?"+ "+u.addT.length+" talking point"+(u.addT.length===1?"":"s"):"",
+        u.want.segment_notes?"segment note":"",u.want.objective_notes?"objective notes":""].filter(Boolean).join(" · ")); });
+  STI.skip.forEach(s=>{ body+=line("skip","Skip","Row "+s.row,escHtml(s.why)); });
+  const n=STI.add.length+STI.upd.length;
+  const foot=[STI.same?STI.same+" already match":"",STI.skip.length?STI.skip.length+" skipped":""].filter(Boolean).join(" · ");
+  stBox(`<div class="modal-top"><div>
+      <div class="modal-title">Import ${STI_NAME[k]}</div>
+      <div class="modal-sub">${escHtml(STI.file||"")}</div></div>
+     <button class="modal-x" onclick="closeM('sti')">✕</button></div>
+   <div class="modal-body sti-list" style="padding:4px 20px 16px;max-height:60vh;overflow:auto;">
+     ${body||'<div style="font-size:13px;color:var(--muted);padding:14px 0;">Nothing in that sheet changes anything here.</div>'}
+   </div>
+   <div style="display:flex;align-items:center;gap:9px;padding:12px 20px 18px;border-top:1px solid var(--div);">
+     <span style="font-size:12.5px;color:var(--muted);">${escHtml(foot)}</span>
+     <span style="margin-left:auto;display:flex;gap:8px;">
+     <button class="btn btn-g" onclick="closeM('sti')">Cancel</button>
+     <button class="btn btn-p" id="sti-go" ${n?"":"disabled style=opacity:.5"} onclick="stSave()">Import ${n} row${n===1?"":"s"}</button></span>
+   </div>`,true);
+}
+
+/* ── WRITING ────────────────────────────────────────────────────────── */
+const STI_CP_F=["name","kind","links","mood_tag_id","strengths","adopt"];
+const STI_TG_F=["objective_keys","talking_points","segment_notes","objective_notes"];
+const stPickF=(r,F)=>{ const o={}; F.forEach(f=>{ if(r&&Object.prototype.hasOwnProperty.call(r,f)) o[f]=r[f]==null?null:JSON.parse(JSON.stringify(r[f])); }); return o; };
+async function stSave(){
+  if(!STI||!stIoOn()) return;
+  const btn=document.getElementById("sti-go"); if(btn){ btn.disabled=true; btn.style.opacity=".5"; }
+  const k=STI.k, out=[], bid=activeBrand; let fails=0;
+  if(k==="cp"){
+    const tagIds=async nm=>{ const ids=await mdbTagIdsFor([nm]); return ids[0]||null; };
+    let sort=cpRows().reduce((m,x)=>Math.max(m,x.sort||0),0);
+    for(const a of STI.add){
+      const w=a.want, id=crypto.randomUUID();
+      const row={id,brand_id:bid,name:a.name,kind:w.kind||"direct",links:w.links||[],sort:(sort+=10),
+        mood_tag_id:w.newTag?await tagIds(w.newTag):(w.mood_tag_id||null),strengths:w.strengths||"",adopt:w.adopt||""};
+      const r=await sb.from("brand_competitors").insert([row]);
+      if(r.error){ fails++; continue; }
+      CP.rows.push(row);
+      out.push({kind:"competitor",row_id:id,made:true,before:null,after:stPickF(row,STI_CP_F)});
+    }
+    for(const u of STI.upd){
+      const w=Object.assign({},u.want);
+      if(w.newTag){ w.mood_tag_id=await tagIds(w.newTag); delete w.newTag; }
+      const before=stPickF(u.cur,Object.keys(w));
+      const r=await sb.from("brand_competitors").update(Object.assign({updated_at:new Date().toISOString()},w)).eq("id",u.id);
+      if(r.error){ fails++; continue; }
+      Object.assign(u.cur,w);
+      out.push({kind:"competitor",row_id:u.id,made:false,before,after:stPickF(u.cur,Object.keys(w))});
+    }
+  }else{
+    const T=window.tgIo, V=T.vb();
+    let sort=V.bsegs.reduce((m,x)=>Math.max(m,x.sort||0),0);
+    for(const a of STI.add){
+      const id=crypto.randomUUID();
+      const row={id,brand_id:bid,segment_key:a.g.key,label:a.seg,list_key:a.lkey||null,labels:[a.seg],list_keys:[a.lkey||""],
+        objective_keys:a.objs,talking_points:a.tps,sway:[],sort:(sort+=10),
+        segment_notes:a.sn?{[a.seg]:a.sn}:{},objective_notes:a.onotes};
+      const r=await sb.from("brand_segments").insert([row]);
+      if(r.error){ fails++; continue; }
+      V.bsegs.push(row);
+      out.push({kind:"segment",row_id:id,made:true,before:null,after:stPickF(row,STI_TG_F)});
+    }
+    for(const u of STI.upd){
+      const before=stPickF(u.cur,Object.keys(u.want));
+      const r=await sb.from("brand_segments").update(u.want).eq("id",u.id);
+      if(r.error){ fails++; continue; }
+      Object.assign(u.cur,u.want);
+      out.push({kind:"segment",row_id:u.id,made:false,before,after:stPickF(u.cur,Object.keys(u.want))});
+    }
+  }
+  try{
+    /* the id is made here, so the rows can point at it without a read back */
+    const iid=crypto.randomUUID();
+    const ins=await sb.from("strategy_imports").insert({id:iid,brand_id:bid,list:k==="cp"?"competitors":"target_groups",file_name:STI.file||"",
+      actor_email:(ME.email||""),actor_name:actorName(),rows_changed:out.length,reverts_id:null});
+    if(ins&&!ins.error&&out.length)
+      await sb.from("strategy_import_rows").insert(out.map(r=>({import_id:iid,brand_id:bid,kind:r.kind,
+        row_id:r.row_id,made:r.made,before:r.before,after:r.after})));
+  }catch(e){}
+  const nA=out.filter(r=>r.made).length, nU=out.length-nA;
+  closeM("sti"); STI=null;
+  await stRefresh(k);
+  toast([nA?nA+" added":"",nU?nU+" updated":"",fails?fails+" not saved":""].filter(Boolean).join(" · ")||"Nothing changed",fails?"err":undefined);
+}
+async function stRefresh(k){
+  if(k==="cp"){ cpPaint(); return; }
+  const T=window.tgIo; if(T) T.paint();
+}
+
+/* ── PAST IMPORTS AND UNDO ─────────────────────────────────────────── */
+const stSameJ=(a,b)=>JSON.stringify(a==null?null:a)===JSON.stringify(b==null?null:b);
+async function stUndo(importId){
+  if(!stIoOn()) return capDenied("Undoing an import");
+  let head=null,rows=[];
+  try{
+    const h=await sb.from("strategy_imports").select("*").eq("id",importId).single(); head=(h&&h.data)||null;
+    const r=await sb.from("strategy_import_rows").select("*").eq("import_id",importId); rows=((r&&r.data)||[]).filter(x=>x.import_id===importId);
+  }catch(e){}
+  if(!head) return toast("Nothing recorded for that import.","err");
+  const k=head.list==="competitors"?"cp":"tg";
+  await stReady(k);
+  const T=window.tgIo, pool=k==="cp"?CP.rows:T.vb().bsegs;
+  const F=k==="cp"?STI_CP_F:STI_TG_F;
+  const kill=[],back=[],kept=[];
+  rows.forEach(r=>{
+    const cur=pool.find(x=>x.id===r.row_id&&!x.deleted_at); if(!cur) return;
+    const a=r.after||{};
+    /* edited in the tool since? then it is somebody's work now, not this import's */
+    if(Object.keys(a).some(f=>F.includes(f)&&!stSameJ(cur[f],a[f]))){ kept.push(cur); return; }
+    if(r.made) kill.push(cur); else back.push({cur,before:r.before||{}});
+  });
+  if(!kill.length&&!back.length) return toast(kept.length?"Everything from that import has been edited since — nothing undone.":"Nothing left from that import to undo.","err");
+  if(!confirm("Undo this import? "+[kill.length?kill.length+" taken off":"",back.length?back.length+" put back":""].filter(Boolean).join(", ")+
+     (kept.length?". "+kept.length+" edited since will be left alone.":"."))) return;
+  const tb=k==="cp"?"brand_competitors":"brand_segments";
+  let n=0;
+  for(const c of kill){ const at=new Date().toISOString();
+    const u=await sb.from(tb).update({deleted_at:at}).eq("id",c.id); if(!u.error){ c.deleted_at=at; n++; } }
+  for(const b of back){ const u=await sb.from(tb).update(b.before).eq("id",b.cur.id); if(!u.error){ Object.assign(b.cur,b.before); n++; } }
+  try{ await sb.from("strategy_imports").insert({brand_id:head.brand_id,list:head.list,file_name:"",
+    actor_email:(ME.email||""),actor_name:actorName(),rows_changed:n,reverts_id:importId}); }catch(e){}
+  closeM("sti");
+  if(k==="tg") T.vb().bsegs=T.vb().bsegs.filter(x=>!x.deleted_at);
+  await stRefresh(k);
+  toast([kill.length?kill.length+" taken off":"",back.length?back.length+" put back":"",kept.length?kept.length+" left alone":""].filter(Boolean).join(" · "));
+}
+async function stHistory(){
+  if(!stIoOn()) return capDenied("Past imports");
+  let list=[];
+  try{ const r=await sb.from("strategy_imports").select("*").eq("brand_id",activeBrand).order("created_at",{ascending:false}).limit(40);
+    list=((r&&r.data)||[]).filter(x=>x.brand_id===activeBrand); }catch(e){}
+  const undone={}; list.forEach(r=>{ if(r.reverts_id) undone[r.reverts_id]=true; });
+  const lbl=l=>l==="competitors"?"Competitors":"Target groups";
+  const body=list.length?list.map(r=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--div);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12.5px;font-weight:600;">${escHtml(lbl(r.list))} · ${r.reverts_id?"Undo":escHtml(r.file_name||"a sheet")}</div>
+        <div style="font-size:11.5px;color:var(--muted);">${escHtml(fbTimeLabel(r.created_at))} · ${escHtml(r.actor_name||r.actor_email||"someone")} · ${r.rows_changed} row${r.rows_changed===1?"":"s"}</div>
+      </div>
+      ${(!r.reverts_id&&!undone[r.id]&&r.rows_changed)
+        ?`<button class="btn btn-s btn-sm" onclick="stUndo('${escAttr(r.id)}')">Undo</button>`
+        :`<span style="font-size:11.5px;color:var(--subtle);">${undone[r.id]?"Undone":""}</span>`}
+    </div>`).join("")
+    :'<div style="font-size:13px;color:var(--muted);padding:14px 0;">No imports yet.</div>';
+  stBox(`<div class="modal-top"><div><div class="modal-title">Past imports</div>
+      <div class="modal-sub">${escHtml((brands[activeBrand]||{}).name||"")}</div></div>
+     <button class="modal-x" onclick="closeM('sti')">✕</button></div>
+   <div class="modal-body" style="padding:4px 20px 16px;max-height:60vh;overflow:auto;">${body}</div>`);
+}
 </script>
+<style>
+/* V118.38 — the Strategy import check */
+.sti-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--div);}
+.sti-row:last-child{border-bottom:0;}
+.sti-chip{flex:0 0 auto;min-width:52px;text-align:center;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;margin-top:1px;}
+.sti-chip.add{background:#E7F4EA;color:#1E7B3A;} .sti-chip.upd{background:#E8F0FB;color:#1F5FAD;} .sti-chip.skip{background:#FFF3DC;color:#8A6D00;}
+.sti-main{min-width:0;flex:1;} .sti-t{font-size:13px;font-weight:600;} .sti-sub{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.45;}
+</style>
+
 <style>
 /* ══ V118.3 TBILISI · THE STRATEGY PAGE, ARRANGED (layout A) ═══════════
    Chirag, 16 Oct: "Give better and more organised way of arranging this
