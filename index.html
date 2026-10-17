@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.43 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.44 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -11648,15 +11648,10 @@ function brRenderEditor(){
       </div>
       <div class="brf one"><div class="fld"><label>Brief</label>
         <div class="brbox">
-          <textarea id="bt-brief" rows="3" placeholder="What the client asked for. Type @ to tag someone."
-                    onkeydown="mentionKeyNav(event)"
-                    oninput="brSet('brief',this.value);fbMentionKey(event,'bt-brief',activeBrand,true)"
-                    onblur="closeMentionBox()">${escHtml(BT.brief)}</textarea>
-          <div class="brbar">
-            <button class="brchip" onclick="mentionStart('bt-brief')">@ Tag someone</button>
-            <button class="brchip" onclick="toast('Files on a brief are the next piece of work')">Attach a file</button>
-            <button class="brchip" onclick="toast('Links on a brief are the next piece of work')">Add a link</button>
-          </div>
+          <div id="bt-brief" class="fi ta rt v44-ta" contenteditable="true" data-nodraft="1" data-ph="What the client asked for. Type @ to tag someone."
+               onkeydown="mentionKeyNav(event)"
+               oninput="brSet('brief',mpClean(this.innerHTML).trim());fbMentionKey(event,'bt-brief',activeBrand,true)"
+               onfocus="rtFocus(this)" onblur="mpBarHide();setTimeout(closeMentionBox,150)">${wRender(BT.brief||"")}</div>
         </div></div></div>
       <div class="brm-h"><b>Milestones</b><small>optional — add them when you know them</small>
         <button class="brm-add" onclick="brMsAdd()"><i class="ti ti-plus"></i> Add</button></div>
@@ -13291,7 +13286,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.43 Tbilisi";
+const TOOL_VERSION="V118.44 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -29222,7 +29217,7 @@ function prCrNew(pid,sid){
     <div class="modal-body">
       <div class="field"><label class="fl">Name</label><input class="fi" id="prc-title" maxlength="120"></div>
       <div class="field"><label class="fl">Format</label><select class="fi" id="prc-fmt">${PR_FMT.map(f=>`<option>${escHtml(f)}</option>`).join("")}</select></div>
-      <div class="field"><label class="fl">Brief</label><textarea class="fi" id="prc-brief" rows="4" style="height:auto;padding:10px 12px;"></textarea></div>
+      <div class="field"><label class="fl">Brief</label><div class="fi ta rt v44-ta" id="prc-brief" contenteditable="true" data-nodraft="1" data-ph="What this creative has to say" onfocus="rtFocus(this)" onblur="mpBarHide()"></div></div>
     </div>
     <div class="modal-foot"><span style="flex:1"></span>
       <button class="btn btn-s" onclick="closeM('promo')">Cancel</button>
@@ -29235,7 +29230,7 @@ async function prCrCreate(pid,sid){
   if(!title){ toast("Give the creative a name","err"); g("prc-title").focus(); return; }
   const btn=g("prc-save"); btn.disabled=true;
   const r=await sb.from("ad_creatives").insert([{brand_id:activeBrand,promotion_id:pid,stream_id:sid,
-    title,format:g("prc-fmt").value,brief:g("prc-brief").value.trim(),status:"drafting",created_by:ME.id||null}]).select("id");
+    title,format:g("prc-fmt").value,brief:v44Val("prc-brief"),status:"drafting",created_by:ME.id||null}]).select("id");
   if(r.error||!r.data||!r.data.length){ toast("Could not add it — "+(r.error?r.error.message:"not allowed"),"err"); btn.disabled=false; return; }
   const id=r.data[0].id;
   await prLog(id,"added the creative");
@@ -29382,7 +29377,7 @@ function prCreativeHtml(p,c){
           <div class="tk-k"><span>Added by</span><b>${escHtml(who?(who.name||who.email):"—")}</b></div>
         </div>
         <div class="tk-card"><div class="tk-lbl">Brief</div>
-          ${canE?`<textarea class="fi" id="prc-brief-ed" rows="5" style="height:auto;padding:10px 12px;">${escHtml(c.brief||"")}</textarea>
+          ${canE?`<div class="fi ta rt v44-ta" id="prc-brief-ed" contenteditable="true" data-nodraft="1" data-ph="What this creative has to say" onfocus="rtFocus(this)" onblur="mpBarHide()">${wRender(c.brief||"")}</div>
             <button class="btn btn-s" style="margin-top:8px" onclick="prCrBrief('${c.id}')">Save brief</button>`
             :`<div class="th-t">${fbBody(c.brief||"—")}</div>`}
         </div>
@@ -29425,7 +29420,7 @@ async function prCrStatus(cid,st){
   prThLoad(cid);
 }
 async function prCrBrief(cid){
-  const v=document.getElementById("prc-brief-ed").value.trim();
+  const v=v44Val("prc-brief-ed");
   const r=await sb.from("ad_creatives").update({brief:v,updated_at:new Date().toISOString()}).eq("id",cid).select("id");
   if(r.error||!r.data||!r.data.length){ toast("Could not save — "+(r.error?r.error.message:"not allowed"),"err"); return; }
   const c=PR.cr.find(x=>x.id===cid); if(c) c.brief=v;
@@ -42813,6 +42808,16 @@ function buildIoSidebar(){
 .dlv-strip{display:flex;gap:6px;overflow-x:auto;padding:8px 12px;border-bottom:1px solid var(--div);background:#F7F6F2;}
 .dlv-strip .dlv-sc{flex:none;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--div);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;}
 </style>
+<style id="v11844-css">
+/* V118.44 — the shared writing box in a form */
+.v44-ta{min-height:96px;height:auto;padding:10px 12px;line-height:1.55;white-space:normal;overflow-wrap:anywhere;}
+.brbox .v44-ta{border:none!important;border-radius:0!important;}
+/* the lifted message keeps its whole outline and shadow */
+#main .br-open:not(.wa) .br-thread{padding-left:8px;padding-right:8px;}
+/* a closed brief: three whole lines */
+.br-pin.bb .bx.v44-cl{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.6;
+  padding-bottom:0;margin-bottom:12px;max-height:none;}
+</style>
 <style id="v11842-css">
 /* ══ V118.42 TBILISI — Deliveries, the lifted message, the capsule row ══ */
 /* the delivery card */
@@ -43038,7 +43043,7 @@ function finDress(){
 const PG_LINK_VIEWS=["brief","mplan","content","branding","promotions","numbers","meets","mom"];
 function pageLinkUrl(){
   const q=urlState();
-  ["task","meeting","pr","cr","post","c"].forEach(k=>q.delete(k));
+  ["task","pr","cr","post","c"].concat(view==="mom"?[]:["meeting"]).forEach(k=>q.delete(k));   /* V118.44 — a MOM page link names its meeting */
   return location.origin+location.pathname+"?"+q.toString();
 }
 function pageCopyLink(){ v38Copy(pageLinkUrl()); }
@@ -43068,7 +43073,7 @@ function pgLinkSync(){
     try{
       document.querySelectorAll("#bn-tabs .bntab").forEach(b=>{
         const go=b.getAttribute("onclick")||"";
-        if(!/openBrief\(|openMonthPlanView\(/.test(go)||b.querySelector(".beta")) return;
+        if(!/openMonthPlanView\(/.test(go)||b.querySelector(".beta")) return;   /* V118.44 — Strategy is out of beta */
         b.insertAdjacentHTML("beforeend",`<span class="beta">beta</span>`);
       });
     }catch(e){}
@@ -44044,6 +44049,71 @@ function hdNavNew(){ if(HD.tab==="releases") hdRelNew(); else hdNew(); }
   };
   let tries=0;
   const t=setInterval(()=>{ if(go()||++tries>120) clearInterval(t); },250);
+})();
+
+/* ══ V118.44 TBILISI ═══════════════════════════════════════════════════
+   Chirag, 17 Oct, after V118.42 went live:
+     1 · the task form's brief and a promotion creative's brief are the
+         shared writing box (black bar, @ by typing, link, paste as)
+     2 · the lifted message is no longer clipped on its left edge (CSS)
+     3 · Strategy is out of beta (the pill rule above)
+     4 · a closed brief is three clean lines of words, never a chip cut in half
+     5 · a link to one of our own tools says what it points at — a meeting,
+         a task, a page — never "communicationcraftshq.github.io"         */
+function v44Val(id){
+  const e=document.getElementById(id); if(!e) return "";
+  return e.isContentEditable?mpClean(e.innerHTML).trim():String(e.value||"").trim();
+}
+/* the brief is read from the box itself at save — a tag picked from the
+   @ list does not always come through the box's input event */
+(function(){
+  const base=brSaveTask;
+  brSaveTask=async function(){
+    const e=document.getElementById("bt-brief");
+    if(e&&e.isContentEditable&&typeof BT==="object"&&BT) BT.brief=mpClean(e.innerHTML).trim();
+    return base.apply(this,arguments);
+  };
+})();
+/* 4 · a closed brief: plain words, three lines, an ellipsis */
+function v44LinkWord(url){
+  const s=wSuiteLink(url);
+  if(s){ const L=wMentionLook(url,W_MKINDS[s.kind]?s.kind:"web",""); return L.title||"link"; }
+  return wSiteOf(url).name||wLnkHost(url);
+}
+(function(){
+  const base=brBriefPin;
+  brBriefPin=function(t){
+    const h=base.apply(this,arguments);
+    if(!h||BR_BRIEF_OPEN) return h;
+    const words=String(wPlain((t&&t.brief)||"")).replace(/https?:\/\/[^\s<>"]+/g,u=>"["+v44LinkWord(u.replace(/[.,;:)\]]+$/,""))+"]").trim();
+    const txt=escHtml(words).replace(/\n{2,}/g,"\n").replace(/\n/g,"<br>");
+    return h.replace(/<div class="bx">[\s\S]*?<\/div><\/div><div class="br-start">/,()=>`<div class="bx v44-cl">${txt}</div></div><div class="br-start">`);
+  };
+})();
+/* 5 · our own links, written as bare addresses, read as what they are */
+function v44Name(url,s){
+  if(!(typeof WBAR_CFG!=="undefined"&&WBAR_CFG&&WBAR_CFG.nameLink)) return;
+  Promise.resolve(WBAR_CFG.nameLink(url,s)).then(info=>{
+    if(!info||!info.title) return;
+    document.querySelectorAll("a.lmn").forEach(a=>{
+      if(a.getAttribute("href")!==url) return;
+      const tt=a.querySelector(".lmn-t"); if(tt) tt.textContent=String(info.title);
+      const ss=a.querySelector(".lmn-s"); if(ss&&info.sub) ss.textContent=String(info.sub);
+    });
+  }).catch(()=>{});
+}
+(function(){
+  const base=wAutoLink;
+  wAutoLink=function(escaped){
+    return String(escaped==null?"":escaped).replace(W_URL,u=>{
+      const m=/[.,;:)\]]+$/.exec(u), tail=m?m[0]:"";
+      const url=(tail?u.slice(0,-tail.length):u).replace(/&amp;/g,"&");
+      const s=wSuiteLink(url);
+      if(!s) return base(u);
+      v44Name(url,s);
+      return wMentionHtml(url,W_MKINDS[s.kind]?s.kind:"tool","")+tail;
+    });
+  };
 })();
 </script>
 
