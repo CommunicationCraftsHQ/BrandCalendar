@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.21 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.23 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2783,6 +2783,13 @@ select.em2-ce{font-weight:700;font-size:11px;-webkit-appearance:none;appearance:
 .p-cli{background:#E6F1FB;color:#1B5A96}.p-cli i{background:#378ADD}
 .p-close{background:#0D0D0D;color:#fff}.p-close i{background:#F5C518}
 .p-done{background:#F4F4F2;color:#9A9A96}.p-done i{background:#C4C4C4}
+.p-stop{background:#FBEAEA;color:#8A1C1C}.p-stop i{background:#D62828}
+/* V118.23 — the Tasks left panel: the Mood board's rows, with a + on
+   each title and a colour dot on a project. */
+.sb-head{display:flex;align-items:center;justify-content:space-between;padding:0 4px 0 10px;}
+.sb-head .sb-plus{display:inline-flex;margin:0;}
+.sb-dot{width:8px;height:8px;border-radius:50%;flex:none;}
+.mdb-trow.menu .mdb-ren{margin:-2px 0;}
 .brl-sg{display:flex;gap:3px}
 .brl-sg span{width:19px;height:5px;border-radius:3px;background:#E8E8E5}
 .brl-sg span.done{background:#2F7A46}.brl-sg span.now{background:#E8A33D}
@@ -3270,6 +3277,15 @@ body.brcv .brl-lens span.cv.on{background:#378ADD;color:#fff;}
    the gap, so the kit's 20px top padding is not wanted here, and the
    count is the kit's .lc in its bare form. */
 #main .fb{padding-top:0;flex-wrap:nowrap;}
+/* V118.23 — THE ONE ROW FOLDS WHEN A CHIP IS ON IT, not only below
+   1360px. Found 16 Oct: at 1440 one Project chip pushed Sort past the
+   row's right edge. Any filter chip folds the two lens groups into the
+   View chip and narrows search, the way the narrow screen already did. */
+@media(min-width:1361px) and (max-width:1700px){
+  #main .fb:has([data-fb-chip]) .fb-end .brl-lens{display:none;}
+  #main .fb:has([data-fb-chip]) .fb-end .fb-view{display:inline-flex;}
+  #main .fb:has([data-fb-chip]) .fb-q{width:auto;flex:0 1 200px;min-width:34px;}
+}
 @media(min-width:769px) and (max-width:1360px){
   #main .brfb .brfb-end .brl-lens,#main .fb .fb-end .brl-lens{display:none;}
   #main .brfb .brfb-end .brfb-view,#main .fb .fb-end .fb-view{display:inline-flex;}
@@ -6625,7 +6641,93 @@ function socialDateLabel(m,d){
   const dt=new Date(YEAR,m-1,d);
   return `${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getDay()]} ${d} ${(MN[m]||"").slice(0,3)}`;
 }
-const SOCIAL_CHIP={drafting:["#FAEEDA","#854F0B"],review:["#E6F1FB","#185FA5"],approved:["#EAF3DE","#3B6D11"]};
+/* ==CC-STATUS-CORE:BEGIN== */
+
+/* The tones are the Tasks row's pill classes in cc-suite.css: p-plan
+   (grey), p-draft (amber), p-cli (blue), p-int (indigo), p-done (grey,
+   faded), p-stop (red). `dot` is the colour a card uses where it draws
+   a dot instead of a pill. */
+const CC_TONE = {
+  plan:  { cls:"p-plan",  dot:"#C4C4C4", chip:["#F4F4F2","#7A7A7A"] },
+  draft: { cls:"p-draft", dot:"#E8A33D", chip:["#FFF6E8","#7A5312"] },
+  cli:   { cls:"p-cli",   dot:"#378ADD", chip:["#E6F1FB","#1B5A96"] },
+  int:   { cls:"p-int",   dot:"#4F46E5", chip:["#EEF2FF","#3730A3"] },
+  done:  { cls:"p-done",  dot:"#639922", chip:["#EAF3DE","#3B6D11"] },
+  stop:  { cls:"p-stop",  dot:"#D62828", chip:["#FBEAEA","#8A1C1C"] },
+};
+
+const CC_STATUS = {
+  /* A branding task. `closed` stays the stored key for Delivered: the
+     word changed on 16 Oct, the column did not. */
+  task: {
+    order: ["not_started","drafting","with_client","approved_by_client","closed","cancelled"],
+    word:  { not_started:"Not started", drafting:"In progress", with_client:"With client",
+             approved_by_client:"Approved by client", closed:"Delivered", cancelled:"Cancelled" },
+    tone:  { not_started:"plan", drafting:"draft", with_client:"cli", approved_by_client:"int", closed:"done", cancelled:"stop" },
+    settled: ["closed","cancelled"],
+    was: { internal_review:"drafting", needs_closing:"with_client" },
+    first: "not_started",
+  },
+  /* A social post. `approved` means approved by the client, as it
+     always has; `review` (79 rows on 17 Oct) was folded into drafting
+     by the migration because both now read In progress. */
+  post: {
+    order: ["not_started","drafting","approved_internally","approved","posted"],
+    word:  { not_started:"Not started", drafting:"In progress", approved_internally:"Approved internally",
+             approved:"Approved by client", posted:"Published" },
+    tone:  { not_started:"plan", drafting:"draft", approved_internally:"cli", approved:"int", posted:"done" },
+    settled: ["posted"],
+    was: { review:"drafting" },
+    first: "drafting",
+  },
+  /* A month plan. `approved` was the only step after drafted; Chirag
+     made it the internal approval and added the client's. */
+  plan: {
+    order: ["not_started","drafted","approved","approved_by_client"],
+    word:  { not_started:"Not started", drafted:"In progress", approved:"Approved internally", approved_by_client:"Approved by client" },
+    tone:  { not_started:"plan", drafted:"draft", approved:"cli", approved_by_client:"int" },
+    settled: ["approved_by_client"],
+    was: {},
+    first: "drafted",
+  },
+  /* An influencer line on a month plan. */
+  influencer: {
+    order: ["pending","approved_internally","approved","briefed","content_approved","published","cancelled"],
+    word:  { pending:"Approval awaited", approved_internally:"Approved internally", approved:"Approved by client",
+             briefed:"Briefed", content_approved:"Content approved", published:"Published", cancelled:"Cancelled" },
+    tone:  { pending:"plan", approved_internally:"cli", approved:"int", briefed:"draft", content_approved:"draft", published:"done", cancelled:"stop" },
+    settled: ["published","cancelled"],
+    was: {},
+    first: "pending",
+  },
+};
+
+/* The key as it should be read: an old key maps forward, an unknown or
+   empty one is the kind's first stop. */
+function ccStatusKey(kind, key){
+  const k = CC_STATUS[kind]; if(!k) return key || "";
+  const v = k.was[key] || key;
+  return k.word[v] ? v : k.first;
+}
+function ccStatusWord(kind, key){ const k = CC_STATUS[kind]; return k ? k.word[ccStatusKey(kind, key)] : String(key || ""); }
+function ccStatusTone(kind, key){ const k = CC_STATUS[kind]; return CC_TONE[k ? k.tone[ccStatusKey(kind, key)] : "plan"] || CC_TONE.plan; }
+/* [[key, word], …] in journey order — for a dropdown or a filter's list */
+function ccStatusList(kind){ const k = CC_STATUS[kind]; return k ? k.order.map(x => [x, k.word[x]]) : []; }
+function ccStatusSettled(kind, key){ const k = CC_STATUS[kind]; return !!k && k.settled.includes(ccStatusKey(kind, key)); }
+/* journey position, for sorting a list the way the work flows */
+function ccStatusIndex(kind, key){ const k = CC_STATUS[kind]; return k ? k.order.indexOf(ccStatusKey(kind, key)) : -1; }
+const ccStEsc = s => String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+/* The pill itself: the Tasks row's `.brl-pill`. `may` makes it a control
+   (hover ring, caret); `onclick` is the host's opener. A screen that may
+   not change the status gets the same pill without the caret — the
+   journey is universal, the right to move along it is not. */
+function ccStatusPillHtml(kind, key, o){
+  o = o || {};
+  const t = ccStatusTone(kind, key), w = ccStatusWord(kind, key);
+  return `<span class="brl-pill ${t.cls}${o.may ? " may" : ""}"${o.may && o.onclick ? ` onclick="${ccStEsc(o.onclick)}"` : ""}${o.title ? ` title="${ccStEsc(o.title)}"` : ""}><i></i>${ccStEsc(w)}${o.may ? "<b>▾</b>" : ""}</span>`;
+}
+/* ==CC-STATUS-CORE:END== */
+const SOCIAL_CHIP=Object.fromEntries(CC_STATUS.post.order.map(k=>[k,ccStatusTone("post",k).chip]));
 function setContentMonth(delta){ let m=(contentMonth||curMonth||1)+delta; if(m<1)m=1; if(m>12)m=12; contentMonth=m; renderSocial(); }
 function setContentMode(mode){ contentMode=mode; renderSocial(); }
 let socialSaveTimers={};
@@ -7101,17 +7203,17 @@ function variantFields(p,platform){
     })()}`;
 }
 function statusChipEditable(p){
-  const st=SOCIAL_STATUS[p.status]||["","#888"];
+  const st=SOCIAL_STATUS[ccStatusKey("post",p.status)]||["","#888"];
   return `<div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 4px 0 10px;border-radius:7px;border:1px solid var(--div);background:var(--surface);">
     <span id="stdot-${p.id}" style="width:7px;height:7px;border-radius:50%;background:${st[1]};flex-shrink:0;"></span>
-    <select onchange="socialStatusEdit('${p.id}',this.value)" style="border:none;background:transparent;font-size:12px;font-weight:700;color:var(--text);font-family:inherit;cursor:pointer;outline:none;">${Object.entries(SOCIAL_STATUS).map(([k,v])=>`<option value="${k}" ${p.status===k?"selected":""}>${v[0]}</option>`).join("")}</select>
+    <select onchange="socialStatusEdit('${p.id}',this.value)" style="border:none;background:transparent;font-size:12px;font-weight:700;color:var(--text);font-family:inherit;cursor:pointer;outline:none;">${Object.entries(SOCIAL_STATUS).map(([k,v])=>`<option value="${k}" ${ccStatusKey("post",p.status)===k?"selected":""}>${v[0]}</option>`).join("")}</select>
   </div>`;
 }
 function statusChipSm(p){
-  const st=SOCIAL_STATUS[p.status]||["","#888"]; const chip=SOCIAL_CHIP[p.status]||["#F1EFE8","#5F5E5A"];
+  const st=SOCIAL_STATUS[ccStatusKey("post",p.status)]||["","#888"]; const chip=SOCIAL_CHIP[ccStatusKey("post",p.status)]||["#F1EFE8","#5F5E5A"];
   return `<span style="height:20px;padding:0 8px 0 6px;border-radius:999px;background:${chip[0]};display:flex;align-items:center;gap:4px;">
     <span id="stdot-${p.id}" style="width:5px;height:5px;border-radius:50%;background:${st[1]};flex-shrink:0;"></span>
-    <select class="cc-stsel" onchange="socialStatusEdit('${p.id}',this.value)" style="border:none;background-color:transparent;font-size:11px;font-weight:700;color:${chip[1]};outline:none;padding:0 16px 0 0;background-position:right 2px center;background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${encodeURIComponent(chip[1])}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');">${Object.entries(SOCIAL_STATUS).map(([k,v])=>`<option value="${k}" ${p.status===k?"selected":""}>${v[0]}</option>`).join("")}</select>
+    <select class="cc-stsel" onchange="socialStatusEdit('${p.id}',this.value)" style="border:none;background-color:transparent;font-size:11px;font-weight:700;color:${chip[1]};outline:none;padding:0 16px 0 0;background-position:right 2px center;background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${encodeURIComponent(chip[1])}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');">${Object.entries(SOCIAL_STATUS).map(([k,v])=>`<option value="${k}" ${ccStatusKey("post",p.status)===k?"selected":""}>${v[0]}</option>`).join("")}</select>
   </span>`;
 }
 /* ══ v82.3 — THE BRIEF BLOCK, CLEANED ═══════════════════════════════
@@ -7385,12 +7487,12 @@ function buildContentSidebar(){
   const m=contentMonth||curMonth||1;
   const posts=socialForBrandYear(activeBrand,YEAR).filter(p=>p.month===m);
   const total=posts.length;
-  const by={drafting:0,review:0,approved:0};
-  posts.forEach(p=>{by[p.status]=(by[p.status]||0)+1;});
+  const by={}; CC_STATUS.post.order.forEach(k=>by[k]=0);
+  posts.forEach(p=>{const k=ccStatusKey("post",p.status); by[k]=(by[k]||0)+1;});
   document.getElementById("sb-stats").innerHTML="";
   const mp=monthPlanFor(activeBrand,YEAR,m);
   const goals=(mp.items||[]).filter(i=>i.category==="goal").sort((a,b2)=>(a.sort_order||0)-(b2.sort_order||0));
-  const rows=[["drafting","Drafting","#EF9F27"],["review","Review","#378ADD"],["approved","Approved","#639922"]];
+  const rows=ccStatusList("post").map(([k,w])=>[k,w,ccStatusTone("post",k).dot]);
   const monthGrid=`<div class="s-lbl">Month</div>`+
     `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:6px 0 2px;">`+
     Array.from({length:12},(_,i)=>i+1).map(mm=>`<span onclick="setContentMonthTo(${mm})" style="text-align:center;font-size:11px;font-weight:700;padding:5px 0;border-radius:6px;cursor:pointer;${mm===m?"background:var(--text);color:#fff;":"background:var(--surface);border:1px solid var(--div);color:var(--muted);"}">${MN[mm].slice(0,3)}</span>`).join("")+
@@ -7445,7 +7547,7 @@ function renderSocial(){
   const canE=canEdit();
   let posts=socialForBrandYear(activeBrand,YEAR).filter(p=>p.month===contentMonth);
   const monthTotal=posts.length;
-  if(contentStatusFilter) posts=posts.filter(p=>p.status===contentStatusFilter);
+  if(contentStatusFilter) posts=posts.filter(p=>ccStatusKey("post",p.status)===contentStatusFilter);
   if(contentFormatFilter) posts=posts.filter(p=>(p.format||"static")===contentFormatFilter);
   posts.sort((a,b2)=>a.date-b2.date||String(a.time||"").localeCompare(String(b2.time||"")));
   const modeSeg=(mm,icon,label)=>`<span onclick="setContentMode('${mm}')" style="height:30px;box-sizing:border-box;padding:0 12px;border-radius:6px;display:flex;align-items:center;gap:5px;font-size:13px;font-weight:${contentMode===mm?"700":"600"};cursor:pointer;${contentMode===mm?"background:#fff;color:#0D0D0D;box-shadow:0 1px 2px rgba(0,0,0,.08);":"color:var(--muted);"}"><i class="ti ${icon}" style="font-size:13px;"></i> ${label}</span>`;
@@ -10129,6 +10231,7 @@ const BR_FIELDS=[
   {k:"status",  label:"Status",     icon:"circle-dot"},
   {k:"owner",   label:"Ac Manager", icon:"user"},
   {k:"project", label:"Project",    icon:"folder"},
+  {k:"tag",     label:"Tag",        icon:"tag"},
   {k:"late",    label:"Late",       icon:"alarm"},
   {k:"unread",  label:"Unread",     icon:"mail"},
   {k:"archived",label:"Archived",   icon:"archive"},
@@ -10138,6 +10241,7 @@ function brValsOf(t,k){
   if(k==="status")   return brStatusOf(t);
   if(k==="owner")    return t.owner_id||null;
   if(k==="project")  return t.project_id||null;
+  if(k==="tag")      return brTagIds(t);
   if(k==="late")     return brIsLate(t)?"yes":"no";
   if(k==="unread")   return brUnreadFor(t.id)>0?"yes":"no";
   if(k==="archived") return t.archived_at?"yes":"no";
@@ -10157,7 +10261,10 @@ function brOptionsFor(k){
   const base=brBaseRows();
   if(k==="status") return fltCounts(base,k,brValsOf,BR_ORDER.map(x=>[x,BR_STATUS[x]]));
   if(k==="owner")  return fltCounts(base,k,brValsOf,[],v=>brPersonName(v)).sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
-  if(k==="project")return fltCounts(base,k,brValsOf,[],v=>((brProject(v)||{}).name||"(a project)")).sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
+  /* V118.23 — every project and tag is offered, a new one with 0, so a
+     chip picked from the panel always carries its name */
+  if(k==="project")return fltCounts(base,k,brValsOf,(BR.projects||[]).map(p=>[p.id,p.name]),v=>((brProject(v)||{}).name||"(a project)")).sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
+  if(k==="tag")    return fltCounts(base,k,brValsOf,(BR.tags||[]).map(t=>[t.id,t.name]),v=>((brTag(v)||{}).name||"(a tag)")).sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
   /* V117.5 — the archive counts over EVERY task. The base list leaves
      archived tasks out until an Archived filter asks for them, so a count
      over the base would always read 0, and a yes/no field that reads 0
@@ -10172,19 +10279,24 @@ FLT_HOSTS.tasks={
 };
 
 async function loadBranding(brandId){
-  if(!brandId){ BR={brand:null,tasks:[],ms:[],projects:[],types:[],ok:false,err:"",loading:false}; return; }
+  if(!brandId){ BR={brand:null,tasks:[],ms:[],projects:[],types:[],tags:[],ok:false,err:"",loading:false}; return; }
   try{
-    const [t,m,p,ty]=await Promise.all([
+    const [t,m,p,ty,tg]=await Promise.all([
       sb.from("branding_tasks").select("*").eq("brand_id",brandId).is("deleted_at",null),
       sb.from("branding_milestones").select("*").eq("brand_id",brandId).is("deleted_at",null),
       sb.from("branding_projects").select("*").eq("brand_id",brandId).is("deleted_at",null),
       sb.from("branding_types").select("*").eq("active",true).order("sort"),
+      /* V118.23 — the brand's task tags. Before the migration runs the
+         table is missing; that must not take the Tasks page down. */
+      sb.from("task_tags").select("*").eq("brand_id",brandId).is("deleted_at",null),
     ]);
     const bad=[t,m,p,ty].find(r=>r.error);
-    if(bad){ BR={brand:brandId,tasks:[],ms:[],projects:[],types:[],ok:false,err:bad.error.message,loading:false}; return; }
-    BR={brand:brandId,tasks:t.data||[],ms:m.data||[],projects:p.data||[],types:ty.data||[],ok:true,err:"",loading:false};
-  }catch(e){ BR={brand:brandId,tasks:[],ms:[],projects:[],types:[],ok:false,err:String(e&&e.message||e),loading:false}; }
+    if(bad){ BR={brand:brandId,tasks:[],ms:[],projects:[],types:[],tags:[],ok:false,err:bad.error.message,loading:false}; return; }
+    BR={brand:brandId,tasks:t.data||[],ms:m.data||[],projects:p.data||[],types:ty.data||[],tags:(tg&&!tg.error&&tg.data)||[],ok:true,err:"",loading:false};
+  }catch(e){ BR={brand:brandId,tasks:[],ms:[],projects:[],types:[],tags:[],ok:false,err:String(e&&e.message||e),loading:false}; }
 }
+function brTag(id){ return (BR.tags||[]).find(t=>t.id===id)||null; }
+function brTagIds(t){ return (t.tag_ids||[]).filter(id=>!!brTag(id)); }
 
 /* ══ V108.5 · FOUR WORDS, NOT SIX ═════════════════════════════════
    Chirag, 22 Sep: three of the six said the same thing — somebody here
@@ -10195,17 +10307,21 @@ async function loadBranding(brandId){
    `BR_WAS` reads a row written before the migration as what it became.
    The app half is therefore safe to deploy BEFORE the migration runs,
    which is the order this suite has been burnt by twice. */
-const BR_STATUS={
-  not_started:"Not started", drafting:"In progress",
-  with_client:"With client", closed:"Done"};
-const BR_WAS={internal_review:"drafting", needs_closing:"with_client"};
-const brStatusOf=t=>{ const k=(t&&t.status)||"not_started"; return BR_WAS[k]||k; };
+/* V118.23 — the words come from the kit's status file (CC_STATUS.task):
+   Not started · In progress · With client · Approved by client ·
+   Delivered · Cancelled. `closed` is still the stored key for Delivered. */
+const BR_STATUS=CC_STATUS.task.word;
+const BR_WAS=CC_STATUS.task.was;
+const brStatusOf=t=>ccStatusKey("task",t&&t.status);
+/* a task that is Delivered, Cancelled or archived is settled — nothing
+   is late about it and a project holding only such tasks may be deleted */
+const brSettled=t=>!!t&&(!!t.archived_at||ccStatusSettled("task",t.status));
 /* THE FLAG THAT REPLACED "NEEDS CLOSING". Every step approved and
    nobody has set it to Done: the work is finished and the task is not.
    Derived on every draw, never stored, so it cannot disagree with the
    milestones it is about. */
 function brNeedsClosing(t){
-  if(!t||brStatusOf(t)==="closed") return false;
+  if(!t||ccStatusSettled("task",t.status)) return false;
   const ms=brMsFor(t.id);
   return ms.length>0 && ms.every(m=>m.status==="approved");
 }
@@ -10232,7 +10348,7 @@ function brNum(iso){ if(!iso) return 0; const p=String(iso).slice(0,10).split("-
   return (+p[0])*10000+(+p[1])*100+(+p[2]); }
 function brIsLate(t){
   const d=brNum(t.delivery_date);
-  return !!d && d<brToday() && brStatusOf(t)!=="closed";
+  return !!d && d<brToday() && !ccStatusSettled("task",t.status);
 }
 
 /* brOpenTask lives with the editor, further down. It was declared here
@@ -10244,8 +10360,7 @@ function brIsLate(t){
 
 
 /* ── the list: v4's row, three lenses, one fixed grid ─────────────── */
-const BR_PILL={not_started:'p-plan',drafting:'p-draft',
-               with_client:'p-cli',closed:'p-done'};
+const BR_PILL=Object.fromEntries(CC_STATUS.task.order.map(k=>[k,ccStatusTone("task",k).cls]));
 /* ══ V108.5 · ONE SET OF COLUMNS, AND THEY DO NOT SWAP ════════════
    Timing / Work / People is retired. It swapped these three columns for
    three others, and two of the nine cells it could show have never held
@@ -10531,7 +10646,7 @@ function brNavSync(canE){
 function brRowHtml(t,showTag){
   const pj=brProject(t.project_id), pr=brProgress(t), ms=brMsFor(t.id);
   const st=brStatusOf(t);
-  const dim=(st==='not_started'||st==='closed');
+  const dim=(st==='not_started'||ccStatusSettled("task",st));
   const open=(BR_OPEN===t.id);
   const unread=brUnreadFor(t.id);
   let segs='';
@@ -10725,8 +10840,8 @@ function brRowMenu(t){
   if(TASK_SEEN[t.id]) L.push(`<div onclick="brMenuDo(event,'unread','${t.id}')"><span class="ic">◷</span>Mark unread</div>`);
   if(may) L.push(`<div onclick="brMenuDo(event,'cvhide','${t.id}')"><span class="ic"><i class="ti ti-${t.client_hidden?"eye":"eye-off"}"></i></span>${t.client_hidden?"Show to client":"Hide from client"}</div>`);
   if(may&&t.archived_at) L.push(`<div class="sep" onclick="brMenuDo(event,'restore','${t.id}')"><span class="ic">↩</span>Restore</div>`);
-  else if(may&&st==="closed") L.push(`<div class="sep" onclick="brMenuDo(event,'reopen','${t.id}')"><span class="ic">↩</span>Reopen</div>`);
-  if(brCanArchive(t)&&!t.archived_at) L.push(`<div class="${(may&&st==="closed")?'':'sep'}" onclick="brMenuDo(event,'archive','${t.id}')"><span class="ic">▽</span>Archive<small>keeps the status</small></div>`);
+  else if(may&&ccStatusSettled("task",st)) L.push(`<div class="sep" onclick="brMenuDo(event,'reopen','${t.id}')"><span class="ic">↩</span>Reopen</div>`);
+  if(brCanArchive(t)&&!t.archived_at) L.push(`<div class="${(may&&ccStatusSettled("task",st))?'':'sep'}" onclick="brMenuDo(event,'archive','${t.id}')"><span class="ic">▽</span>Archive<small>keeps the status</small></div>`);
   if(may) L.push(`<div class="warn" onclick="brMenuDo(event,'del','${t.id}')"><span class="ic">🗑</span>Delete</div>`);
   return `<span class="brl-dots on" onclick="brOpenMenu(event,'${t.id}')" title="More">···</span>
     <div class="brl-menu">${L.join('')}</div>`;
@@ -11162,19 +11277,243 @@ async function brReopen(id){
   logTask(id,"reopened the task");
 }
 
+/* ══ V118.23 · THE TASKS LEFT PANEL — PROJECTS AND TAGS ════════════
+   Chirag, 16 Oct: "The left panel in the tasks page should have two
+   lists which are applicable: a list of projects and a list of tags.
+   Each task can be allocated to a project and can be allocated to
+   multiple tags." Built the way the Mood board's panel is built, with
+   the same rows, the same ··· menu and the same box to rename in.
+
+   V108.5 emptied this panel because two places to filter from is how
+   the two come to disagree. This panel does not filter on its own: a
+   click writes the same kit filter the + Filter door writes, so the
+   bar, the count and the panel are always one answer.
+
+   The + on a title makes a project or a tag here; the task form adds
+   tags to a task and makes new ones on Enter. A project may be deleted
+   only when every task in it is Delivered, Cancelled or archived. */
+let BTS={menu:null,merge:false,ren:null,add:null};
+function btsMay(){ return !!activeBrand&&canEdit()&&!brCV()&&can("task_create"); }
+function btsSel(k){ const f=(brFilter.f||[]).find(f=>f.k===k&&f.op==="is"); return f?[...f.vals]:[]; }
+function btsEmptySel(k){ return !!(brFilter.f||[]).find(f=>f.k===k&&f.op==="is empty"); }
 function buildBrandingSidebar(){
-  /* V108.5 — EMPTY ON PURPOSE. This drew a status list, an overdue row
-     and an archive door down the left-hand side; all three are chips in
-     the filter row now, which is where the Portfolio keeps them and
-     where Chirag asked for them on 22 Sep. Two places to filter from is
-     how the two come to disagree about what is on screen. */
   const el=document.getElementById("sb-stats"); if(el) el.innerHTML="";
-  const sm=document.getElementById("sb-months"); if(sm) sm.innerHTML="";
+  const sm=document.getElementById("sb-months"); if(!sm) return;
+  if(!BR||!BR.ok||!activeBrand){ sm.innerHTML=""; return; }
+  const may=btsMay(), base=brBaseRows();
+  const pc=new Map(), tc=new Map(); let none=0;
+  base.forEach(t=>{ if(t.project_id) pc.set(t.project_id,(pc.get(t.project_id)||0)+1); else none++;
+                    brTagIds(t).forEach(id=>tc.set(id,(tc.get(id)||0)+1)); });
+  const pSel=btsSel("project"), tSel=btsSel("tag"), pNone=btsEmptySel("project");
+  const clear=!pSel.length&&!tSel.length&&!pNone;
+  const row=(kind,x,c,on)=>{
+    if(BTS.ren===x.id) return `<div class="mdb-trow menu" onclick="event.stopPropagation()"><input class="mdb-ren" id="bts-ren" value="${escAttr(x.name)}"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();btsRename('${kind}','${x.id}',this.value);}if(event.key==='Escape'){BTS.ren=null;buildBrandingSidebar();}"
+        onblur="btsRename('${kind}','${x.id}',this.value)"></div>`;
+    const m=BTS.menu===x.id;
+    return `<div class="mdb-trow${on?" on":""}${m?" menu":""}" data-${kind}="${x.id}" onclick="btsPick(event,'${kind}','${x.id}')">
+      ${kind==="project"?`<span class="sb-dot" style="background:${escAttr(x.colour||"#7C3AED")}"></span>`:""}<span class="nm">${escHtml(x.name)}</span><span class="ct${may?" hasm":""}">${c}</span>
+      ${may?`<button class="mdb-tmb" title="${escAttr(x.name)} options" onclick="btsMenu(event,'${x.id}')"><i class="ti ti-dots"></i></button>`:""}
+      ${m?btsMenuHtml(kind,x,c):""}</div>`;
+  };
+  const addRow=kind=>BTS.add===kind?`<div class="mdb-trow menu" onclick="event.stopPropagation()"><input class="mdb-ren" id="bts-add" placeholder="${kind==="project"?"New project…":"New tag…"}"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();btsAdd('${kind}',this.value);}if(event.key==='Escape'){BTS.add=null;buildBrandingSidebar();}"
+        onblur="if(!this.value.trim()){BTS.add=null;buildBrandingSidebar();}"></div>`:"";
+  const head=(kind,title)=>`<div class="s-lbl sb-head"${kind==="tag"?' style="margin-top:18px"':""}><span>${title}</span>${may?`<button class="mdb-tmb sb-plus" title="New ${kind}" onclick="btsAddOpen(event,'${kind}')"><i class="ti ti-plus"></i></button>`:""}</div>`;
+  const projects=(BR.projects||[]).slice().sort((a,b)=>(pc.get(b.id)||0)-(pc.get(a.id)||0)||a.name.localeCompare(b.name));
+  const tags=(BR.tags||[]).slice().sort((a,b)=>(tc.get(b.id)||0)-(tc.get(a.id)||0)||a.name.localeCompare(b.name));
+  sm.innerHTML=head("project","Projects")+addRow("project")+
+    `<div class="mdb-trow${clear?" on":""}" onclick="btsClear()"><span class="nm">All tasks</span><span class="ct">${base.length}</span></div>`+
+    projects.map(p=>row("project",p,pc.get(p.id)||0,pSel.includes(p.id))).join("")+
+    (none?`<div class="mdb-trow${pNone?" on":""}" onclick="btsPickNone()"><span class="nm">No project</span><span class="ct">${none}</span></div>`:"")+
+    head("tag","Tags")+addRow("tag")+
+    (tags.length?tags.map(t=>row("tag",t,tc.get(t.id)||0,tSel.includes(t.id))).join("")
+                :`<div class="mdb-trow" style="color:var(--subtle);cursor:default">No tags yet</div>`);
+  const r=document.getElementById("bts-ren")||document.getElementById("bts-add"); if(r){ r.focus(); if(r.id==="bts-ren") r.select(); }
 }
+function btsMenuHtml(kind,x,c){
+  const others=(kind==="project"?BR.projects:BR.tags).filter(y=>y.id!==x.id).sort((a,b)=>a.name.localeCompare(b.name));
+  if(BTS.merge) return `<div class="mdb-menu" onclick="event.stopPropagation()"><div class="brfb-top">Merge “${escHtml(x.name)}” into</div>
+    ${others.map(y=>`<div class="mdb-mi" onclick="btsMerge('${kind}','${x.id}','${y.id}')"><span style="flex:1">${escHtml(y.name)}</span></div>`).join("")||`<div class="mdb-mi">No other ${kind}s</div>`}</div>`;
+  return `<div class="mdb-menu" onclick="event.stopPropagation()">
+    <div class="mdb-mi" onclick="btsCopyLink('${kind}','${x.id}')"><i class="ti ti-link"></i>Copy link</div>
+    <div class="mdb-msep"></div>
+    <div class="mdb-mi" onclick="BTS.menu=null;BTS.ren='${x.id}';buildBrandingSidebar()"><i class="ti ti-pencil"></i>Rename</div>
+    <div class="mdb-mi" onclick="BTS.merge=true;buildBrandingSidebar()"><i class="ti ti-arrow-merge"></i>Merge into…</div>
+    <div class="mdb-msep"></div>
+    <div class="mdb-mi red" onclick="btsAskDelete('${kind}','${x.id}',${c})"><i class="ti ti-trash"></i>Delete ${kind}</div></div>`;
+}
+function btsMenu(e,id){ e.stopPropagation(); BTS.menu=BTS.menu===id?null:id; BTS.merge=false; buildBrandingSidebar(); }
+function btsAddOpen(e,kind){ e.stopPropagation(); BTS.add=kind; BTS.menu=null; buildBrandingSidebar(); }
+document.addEventListener("click",e=>{
+  if(view!=="branding") return;
+  if((BTS.menu||BTS.merge)&&!(e.target.closest&&e.target.closest(".mdb-menu"))){ BTS.menu=null; BTS.merge=false; buildBrandingSidebar(); }
+});
+/* ── the clicks write the kit's filter ───────────────────────────── */
+function btsRefresh(){ FLT_UI={id:null,open:null,term:""}; render(); urlSync(); }
+function btsPick(e,kind,id){
+  if(e) e.stopPropagation();
+  brFilter.f=(brFilter.f||[]).filter(f=>!(f.k===kind&&f.op==="is empty"));
+  let f=brFilter.f.find(f=>f.k===kind&&f.op==="is"); if(!f){ f=fltNew(kind); brFilter.f.push(f); }
+  f.vals.has(id)?f.vals.delete(id):f.vals.add(id);
+  if(!f.vals.size) brFilter.f=brFilter.f.filter(x=>x!==f);
+  BTS.menu=null; btsRefresh();
+}
+function btsPickNone(){
+  const had=btsEmptySel("project");
+  brFilter.f=(brFilter.f||[]).filter(f=>f.k!=="project");
+  if(!had) brFilter.f.push({k:"project",op:"is empty",vals:new Set()});
+  btsRefresh();
+}
+function btsClear(){ brFilter.f=(brFilter.f||[]).filter(f=>f.k!=="project"&&f.k!=="tag"); btsRefresh(); }
+/* a shared link: ?p=branding&project=<id> or &tag=<id> */
+function btsFromUrl(q){
+  const pj=q.get("project"), tg=q.get("tag"); if(!pj&&!tg) return;
+  brFilter.f=(brFilter.f||[]).filter(f=>f.k!=="project"&&f.k!=="tag");
+  if(pj) brFilter.f.push(fltNew("project",[pj]));
+  if(tg) brFilter.f.push(fltNew("tag",[tg]));
+  render();
+}
+function btsCopyLink(kind,id){
+  BTS.menu=null; buildBrandingSidebar();
+  const x=(kind==="project"?brProject(id):brTag(id)); if(!x) return;
+  const url=location.origin+location.pathname+"?b="+encodeURIComponent(activeBrand)+"&p=branding&"+kind+"="+encodeURIComponent(id);
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(()=>toast(`Link to “${escHtml(x.name)}” copied`),()=>toast(url));
+  } else toast(url);
+}
+/* ── making, renaming, merging, deleting ─────────────────────────── */
+function btsList(kind){ return kind==="project"?BR.projects:BR.tags; }
+async function btsAdd(kind,v){
+  v=String(v||"").trim(); if(!v){ BTS.add=null; buildBrandingSidebar(); return; }
+  if(!btsMay()) return;
+  if(btsList(kind).some(x=>x.name.toLowerCase()===v.toLowerCase())){ toast(`There is already a ${kind} called “${escHtml(v)}”`,"err"); return; }
+  const x=kind==="project"?await brMakeProject(v):(await brTagIdsFor([v]),brTag((BR.tags.find(t=>t.name.toLowerCase()===v.toLowerCase())||{}).id));
+  BTS.add=null;
+  if(x){ toast(`${kind==="project"?"Project":"Tag"} “${escHtml(v)}” made`); btsPick(null,kind,x.id); } else buildBrandingSidebar();
+}
+async function brMakeProject(name){
+  const row={id:crypto.randomUUID(),brand_id:activeBrand,name,colour:BR_PROJECT_COLOURS[BR.projects.length%BR_PROJECT_COLOURS.length]};
+  const r=await sb.from("branding_projects").insert([row]).select("*");
+  if(r.error){ dbErr(r); return null; }
+  const p=(r.data&&r.data.find&&r.data.find(x=>x.id===row.id))||row;
+  BR.projects.push(p); return p;
+}
+async function brTagIdsFor(names){
+  const out=[];
+  for(const raw of names){
+    const nm=String(raw||"").trim(); if(!nm) continue;
+    let t=(BR.tags||[]).find(x=>x.name.toLowerCase()===nm.toLowerCase());
+    if(!t){
+      const row={id:crypto.randomUUID(),brand_id:activeBrand,name:nm,created_by:ME.id||null};
+      const r=await sb.from("task_tags").insert([row]).select("*");
+      if(r.error){ toast("Tag “"+escHtml(nm)+"” was not made — "+escHtml(r.error.message),"err"); continue; }
+      t=(r.data&&r.data.find&&r.data.find(x=>x.id===row.id))||row; BR.tags=(BR.tags||[]).concat(t);
+    }
+    if(!out.includes(t.id)) out.push(t.id);
+  }
+  return out;
+}
+async function btsRename(kind,id,v){
+  if(BTS.ren!==id) return; BTS.ren=null;
+  const x=btsList(kind).find(y=>y.id===id); v=String(v||"").trim();
+  if(!x||!v||v===x.name){ buildBrandingSidebar(); return; }
+  if(btsList(kind).some(y=>y.id!==id&&y.name.toLowerCase()===v.toLowerCase())){
+    toast(`There is already a ${kind} called “${escHtml(v)}”. Use Merge into… to combine them.`,"err"); buildBrandingSidebar(); return; }
+  const r=await sb.from(kind==="project"?"branding_projects":"task_tags").update({name:v,updated_at:new Date().toISOString()}).eq("id",id).select("id");
+  if(r.error){ toast("Not renamed — "+escHtml(r.error.message),"err"); buildBrandingSidebar(); return; }
+  x.name=v; render(); toast(`Renamed to “${escHtml(v)}”`);
+}
+async function brWriteTaskTags(changes){
+  const now=new Date().toISOString(); let fail="";
+  for(const c of changes){
+    const r=await sb.from("branding_tasks").update({tag_ids:c.tag_ids,updated_at:now}).eq("id",c.id).select("id");
+    if(r.error){ fail=r.error.message; continue; }
+    const t=BR.tasks.find(x=>x.id===c.id); if(t) t.tag_ids=c.tag_ids;
+  }
+  return fail;
+}
+async function btsMerge(kind,from,into){
+  BTS.menu=null; BTS.merge=false;
+  const a=btsList(kind).find(y=>y.id===from), b=btsList(kind).find(y=>y.id===into); if(!a||!b) return;
+  let n=0;
+  if(kind==="project"){
+    const hit=BR.tasks.filter(t=>t.project_id===from); n=hit.length;
+    const r=await sb.from("branding_tasks").update({project_id:into,updated_at:new Date().toISOString()}).eq("project_id",from).is("deleted_at",null);
+    if(r.error){ dbErr(r); return; }
+    hit.forEach(t=>t.project_id=into);
+  }else{
+    const hit=BR.tasks.filter(t=>(t.tag_ids||[]).includes(from)); n=hit.length;
+    const fail=await brWriteTaskTags(hit.map(t=>({id:t.id,tag_ids:[...new Set((t.tag_ids||[]).map(x=>x===from?into:x))]})));
+    if(fail){ toast("Some tasks were not changed — "+escHtml(fail),"err"); return; }
+  }
+  const r=await sb.from(kind==="project"?"branding_projects":"task_tags").update({deleted_at:new Date().toISOString()}).eq("id",from).select("id");
+  if(r.error){ dbErr(r); return; }
+  if(kind==="project") BR.projects=BR.projects.filter(p=>p.id!==from); else BR.tags=BR.tags.filter(t=>t.id!==from);
+  (brFilter.f||[]).forEach(f=>{ if(f.k===kind) f.vals=new Set([...f.vals].map(v=>v===from?into:v)); });
+  btsRefresh();
+  toast(`Merged “${escHtml(a.name)}” into “${escHtml(b.name)}” on ${n} task${n===1?"":"s"}`);
+}
+function btsAskDelete(kind,id,c){
+  BTS.menu=null; buildBrandingSidebar();
+  const x=btsList(kind).find(y=>y.id===id); if(!x) return;
+  if(kind==="project"){
+    /* Chirag, 16 Oct: a project can only be deleted when all its tasks
+       are Delivered or Cancelled; archived tasks count as settled. */
+    const open=BR.tasks.filter(t=>t.project_id===id&&!brSettled(t));
+    if(open.length){
+      mdbModal(`“${escHtml(x.name)}” still has open tasks`,
+        `<b>${open.length} task${open.length===1?" is":"s are"}</b> not yet Delivered or Cancelled. Finish or cancel them, or move them to another project, and the project can go.`,
+        "Show them",()=>{ brFilter.f=[fltNew("project",[id])]; btsRefresh(); });
+      return;
+    }
+    mdbModal(`Delete the project “${escHtml(x.name)}”?`,
+      `Its <b>${c} settled task${c===1?"":"s"}</b> stay, with no project.`,
+      "Delete project", async()=>{
+        const r1=await sb.from("branding_tasks").update({project_id:null,updated_at:new Date().toISOString()}).eq("project_id",id).is("deleted_at",null);
+        if(r1.error){ dbErr(r1); return; }
+        const r=await sb.from("branding_projects").update({deleted_at:new Date().toISOString()}).eq("id",id).select("id");
+        if(r.error){ dbErr(r); return; }
+        BR.tasks.forEach(t=>{ if(t.project_id===id) t.project_id=null; });
+        BR.projects=BR.projects.filter(p=>p.id!==id);
+        brFilter.f=(brFilter.f||[]).filter(f=>!(f.k==="project"&&f.vals.has(id)));
+        btsRefresh(); toast(`Project “${escHtml(x.name)}” deleted`);
+      });
+    return;
+  }
+  mdbModal(`Delete the tag “${escHtml(x.name)}”?`,
+    `It comes off <b>${c} task${c===1?"":"s"}</b>. The tasks stay.`,
+    "Delete tag", async()=>{
+      const hit=BR.tasks.filter(t=>(t.tag_ids||[]).includes(id));
+      const fail=await brWriteTaskTags(hit.map(t=>({id:t.id,tag_ids:(t.tag_ids||[]).filter(v=>v!==id)})));
+      if(fail){ toast("Some tasks kept the tag — "+escHtml(fail),"err"); return; }
+      const r=await sb.from("task_tags").update({deleted_at:new Date().toISOString()}).eq("id",id).select("id");
+      if(r.error){ dbErr(r); return; }
+      BR.tags=BR.tags.filter(t=>t.id!==id);
+      (brFilter.f||[]).forEach(f=>{ if(f.k==="tag") f.vals.delete(id); }); brFilter.f=brFilter.f.filter(f=>f.k!=="tag"||f.vals.size);
+      btsRefresh(); toast(`Tag “${escHtml(x.name)}” deleted`);
+    });
+}
+/* ── the task form's Tags field — the Mood board's box ────────────── */
+function brDrawerTagsHtml(){
+  const ids=(BT.tag_ids||[]).filter(id=>!!brTag(id));
+  return `<div class="mdb-tags">${ids.map(id=>{const t=brTag(id);
+      return `<span class="mdb-tag">${escHtml(t.name)}<i class="ti ti-x" title="Take this tag off" onclick="brDrawerUntag('${t.id}')"></i></span>`;}).join("")}
+    <input class="mdb-addtag" placeholder="+ Add tag" list="bt-taglist" onkeydown="if(event.key==='Enter'){event.preventDefault();brDrawerTagOne(this.value);this.value='';}" onchange="brDrawerTagOne(this.value);this.value=''">
+    <datalist id="bt-taglist">${(BR.tags||[]).filter(t=>!ids.includes(t.id)).map(t=>`<option value="${escAttr(t.name)}">`).join("")}</datalist></div>`;
+}
+function brDrawerTagsDraw(){ const el=document.getElementById("bt-tags"); if(el) el.innerHTML=brDrawerTagsHtml(); const i=el&&el.querySelector(".mdb-addtag"); if(i) i.focus(); }
+async function brDrawerTagOne(name){
+  const ids=await brTagIdsFor([name]); if(!ids.length) return;
+  BT.tag_ids=(BT.tag_ids||[]); if(!BT.tag_ids.includes(ids[0])) BT.tag_ids.push(ids[0]);
+  brDrawerTagsDraw();
+}
+function brDrawerUntag(id){ BT.tag_ids=(BT.tag_ids||[]).filter(x=>x!==id); brDrawerTagsDraw(); }
+
 function brNewTask(){
   if(!can("task_create")||!activeBrand) return;
   BT={id:null,title:"",brief:"",project_id:"",owner_id:null,delivery_date:"",
-      status:"not_started",ms:[]};
+      status:"not_started",ms:[],tag_ids:[]};
   brRenderEditor(); openM("br-task");
 }
 function brOpenTask(id){
@@ -11182,7 +11521,7 @@ function brOpenTask(id){
   if(!t){ setView("branding"); return; }
   BT={id:t.id,title:t.title||"",brief:t.brief||"",project_id:t.project_id||"",
       owner_id:t.owner_id||null,delivery_date:String(t.delivery_date||"").slice(0,10),
-      status:t.status||"not_started",
+      status:t.status||"not_started",tag_ids:brTagIds(t),
       ms:brMsFor(t.id).map(m=>({id:m.id,name:m.name||"",
         due_date:String(m.due_date||"").slice(0,10),status:m.status||"not_started"}))};
   brRenderEditor(); openM("br-task");
@@ -11213,7 +11552,7 @@ function brDuplicateTask(id){
       project_id:t.project_id||"",
       owner_id:t.owner_id||null,
       delivery_date:"",
-      status:"not_started",
+      status:"not_started",tag_ids:brTagIds(t),
       /* id:null on every one, or brSaveTask would UPDATE the original's
          milestones instead of inserting new ones — it keys on m.id. */
       ms:brMsFor(id).map(m=>({id:null,name:m.name||"",due_date:"",status:"not_started"}))};
@@ -11303,6 +11642,8 @@ function brRenderEditor(){
         <div class="fld"><label>Ac Manager</label>
           <div class="bt-ownw" id="bt-own">${brDrawerOwnerHtml()}</div></div>
       </div>
+      <div class="brf one"><div class="fld"><label>Tags <em>optional</em></label>
+        <div id="bt-tags">${brDrawerTagsHtml()}</div></div></div>
       <div class="brf">
         <div class="fld"><label>Delivery to client</label>
           <input type="date" value="${escAttr(BT.delivery_date)}" onchange="brSet('delivery_date',this.value)"></div>
@@ -11355,6 +11696,7 @@ async function brSaveTask(){
   const row={brand_id:activeBrand, title,
     brief:BT.brief||"", project_id:uuidOrNull(BT.project_id), owner_id:uuidOrNull(BT.owner_id),
     delivery_date:BT.delivery_date||null, status:BT.status||"not_started",
+    tag_ids:(BT.tag_ids||[]).filter(id=>!!brTag(id)),
     updated_at:new Date().toISOString()};
   let taskId=BT.id;
   if(taskId){
@@ -11985,7 +12327,7 @@ async function taskSetStatus(sel){
   await loadBranding(activeBrand); await loadThread(t.id); render();
   toast("Status updated");
 }
-const BR_ORDER=["not_started","drafting","with_client","closed"];
+const BR_ORDER=CC_STATUS.task.order;
 
 async function logTask(taskId,action){
   const r=await sb.from("post_activity").insert([{
@@ -12951,7 +13293,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.21 Tbilisi";
+const TOOL_VERSION="V118.23 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -12978,7 +13320,7 @@ function showDiag(){
     const el=tip();
     const lines=(t.getAttribute("data-tip")||"").split("\n");
     const socCount=lines.filter(l=>l.indexOf("S|")===0).length;
-    const stShortMap={drafting:"Draft",review:"Review",approved:"Approved"};
+    const stShortMap=CC_STATUS.post.word;
     let html="", campHdr=false, socHdr=false, prodHdr=false, meetHdr=false;
     lines.forEach(ln=>{
       if(ln.startsWith("C|")){
@@ -14067,7 +14409,10 @@ async function dbTrashSocialPost(id){ if(!canCap("delete_post")) return; rtGRemo
   logAppEvent("post_deleted",{post_id:id,brand:(brands[activeBrand]||{}).name||""}); }
 
 // ── MONTH PLAN: Key Theme, Goals, Influencer Marketing, Production ──
-const INFLUENCER_STAGES={pending:["Pending","#AAAAAA"],approved:["Approved","#378ADD"],briefed:["Briefed","#8B5CF6"],content_approved:["Content OK","#0E8A8A"],published:["Published","#639922"]};
+/* V118.23 — the kit's journey for an influencer line: Approval awaited ·
+   Approved internally · Approved by client · Briefed · Content approved ·
+   Published · Cancelled. [word, colour] as the card has always read it. */
+const INFLUENCER_STAGES=Object.fromEntries(CC_STATUS.influencer.order.map(k=>[k,[CC_STATUS.influencer.word[k],ccStatusTone("influencer",k).dot]]));
 const PRODUCTION_STAGES={pending:["Pending","#AAAAAA"],moodboard_shared:["Moodboard shared","#378ADD"],complete:["Complete","#639922"]};
 function monthPlanFor(brandId,year,month){
   const b=brands[brandId]; if(!b) return {id:null,key_theme:"",objective_line:"",status:"drafted",influencer_target:0,items:[]};
@@ -18950,7 +19295,10 @@ function bdImportXLSX(){
 }
 
 // ── SOCIAL POST EDITOR ──────────────────────────────────────
-const SOCIAL_STATUS={drafting:["Drafting","#EF9F27"],review:["Review","#378ADD"],approved:["Approved","#639922"]};
+/* V118.23 — the kit's journey: Not started · In progress · Approved
+   internally · Approved by client · Published. [word, dot colour] as the
+   editor has always read it. */
+const SOCIAL_STATUS=Object.fromEntries(CC_STATUS.post.order.map(k=>[k,[CC_STATUS.post.word[k],ccStatusTone("post",k).dot]]));
 const SOCIAL_FORMATS=["static","carousel","reel","story","video"];
 const seEsc=s=>escAttr(s);
 const sePad=n=>String(n).padStart(2,"0");
@@ -20415,7 +20763,6 @@ async function waSend(id){
   window.open("https://wa.me/?text="+encodeURIComponent(waMessage(p,waUrlFor(r.data))),
               "_blank","noopener");
   await logActivity(id,"sent the post to the client on WhatsApp");
-  if(p.status==="drafting") socialStatusEdit(id,"review");
   await loadShareLinks();
   renderSocial();
 }
@@ -24708,8 +25055,8 @@ function mpvStatusCtl(m,mp,canE){
   const st=mp.status==="approved";
   return canE
     ?`<select class="mp-status cc-stsel" onchange="mpvSetStatus(this.value,${m})" style="appearance:none;-webkit-appearance:none;border:none;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border-radius:999px;padding:5px 24px 5px 10px;color:${st?"#791F1F":"#854F0B"};background-color:${st?"#FCEBEB":"#FAEEDA"};background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${st?"%23791F1F":"%23854F0B"}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 9px center;">
-        <option value="drafted"${st?"":" selected"}>Drafted</option><option value="approved"${st?" selected":""}>Approved</option></select>`
-    :`<span class="mp-status" style="font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px;color:${st?"#791F1F":"#854F0B"};background:${st?"#FCEBEB":"#FAEEDA"};">${st?"Approved":"Drafted"}</span>`;
+        ${ccStatusList("plan").map(([k,w])=>`<option value="${k}"${ccStatusKey("plan",mp.status)===k?" selected":""}>${w}</option>`).join("")}</select>`
+    :`<span class="mp-status" style="font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px;color:${st?"#791F1F":"#854F0B"};background:${st?"#FCEBEB":"#FAEEDA"};">${ccStatusWord("plan",mp.status)}</span>`;
 }
 
 /* ══ MINSK — THE PRODUCTION SECTION IS THE REAL SHOOTS ═══════════════
@@ -26224,8 +26571,8 @@ function monthPlanCardHtml(m){
   const hasPlan=!!mp.id||monthPlanHasData(activeBrand,YEAR,m)||infl.length||targets.length||(mp.influencer_target>0);
   const statusCtl=!hasPlan?"":canE
     ?`<select class="mp-status cc-stsel" onchange="mpCardSetStatus(this.value)" style="appearance:none;-webkit-appearance:none;border:none;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border-radius:999px;padding:5px 24px 5px 10px;color:${st?"#791F1F":"#854F0B"};background-color:${st?"#FCEBEB":"#FAEEDA"};background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${st?"%23791F1F":"%23854F0B"}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 9px center;">
-        <option value="drafted"${st?"":" selected"}>Drafted</option><option value="approved"${st?" selected":""}>Approved</option></select>`
-    :`<span class="mp-status" style="font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px;color:${st?"#791F1F":"#854F0B"};background:${st?"#FCEBEB":"#FAEEDA"};">${st?"Approved":"Drafted"}</span>`;
+        ${ccStatusList("plan").map(([k,w])=>`<option value="${k}"${ccStatusKey("plan",mp.status)===k?" selected":""}>${w}</option>`).join("")}</select>`
+    :`<span class="mp-status" style="font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px;color:${st?"#791F1F":"#854F0B"};background:${st?"#FCEBEB":"#FAEEDA"};">${ccStatusWord("plan",mp.status)}</span>`;
   const editBtn=canE?`<span class="mp-edit" onclick="mpvStart(${m})" title="Open the full month plan" style="width:26px;height:26px;border-radius:50%;border:1px solid var(--div);background:var(--surface);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;"><i class="ti ti-pencil" style="font-size:13px;"></i></span>`:"";
   const lbl=t=>`<div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);margin-bottom:6px;">${t}</div>`;
   const empty=!hasPlan;
@@ -29725,7 +30072,7 @@ function plMonthLineHtml(m){
   const hasPlan=!!mp.id||monthPlanHasData(activeBrand,YEAR,m)||infl.length||targets.length||(mp.influencer_target>0);
   const pill=!hasPlan
     ? `<span class="pl-mst none">Not started</span>`
-    : `<span class="pl-mst${st?" ok":""}">${st?"Approved":"Drafted"}</span>`;
+    : `<span class="pl-mst${st?" ok":""}">${ccStatusWord("plan",mp.status)}</span>`;
   return `<div class="pl-mline${mpIsNowMonth(m)?" now":""}" onclick="plMonthToggle(${m})"
       title="Open ${MN[m]} ${YEAR}">
     <div class="mvn"><b>${MN[m]}</b><span>${YEAR}</span></div>
@@ -34270,7 +34617,7 @@ function mpTasks(m){
     if(t.archived_at) return false;
     const d=brNum(t.delivery_date);
     if(d>=lo&&d<=hi) return true;
-    return now && !!d && d<lo && brStatusOf(t)!=="closed";
+    return now && !!d && d<lo && !ccStatusSettled("task",t.status);
   }).sort((a,b)=>(brNum(a.delivery_date)||99999999)-(brNum(b.delivery_date)||99999999));
 }
 function mpTaskLate(t,m){
@@ -34299,15 +34646,12 @@ function mpPostWhere(p){
 }
 function mpTaskState(t){
   const k=brStatusOf(t);
-  return {not_started:["Not started","#EFEDF6","#5C5077"],
-          drafting:["In progress","#FCF0E3","#8A5413"],
-          with_client:["With client","#F1ECFA","#5A4796"],
-          closed:["Done","#EAF3DE","#3B6D11"]}[k]||["Not started","#EFEDF6","#5C5077"];
+  const tn=ccStatusTone("task",k);
+  return [ccStatusWord("task",k),tn.chip[0],tn.chip[1]];
 }
 function mpPostState(p){
-  return {drafting:["Drafting","#FCF0E3","#8A5413"],
-          review:["Review","#E8F0FE","#1D4ED8"],
-          approved:["Approved","#EAF3DE","#3B6D11"]}[p.status]||["Drafting","#FCF0E3","#8A5413"];
+  const tn=ccStatusTone("post",p.status);
+  return [ccStatusWord("post",p.status),tn.chip[0],tn.chip[1]];
 }
 /* + Add on the Tasks card opens the Tasks page's own box, with the
    month's last day already in the delivery field. It does not leave
@@ -34876,8 +35220,8 @@ monthPlanCardHtml=function(m,opt){
 
   const statusCtl=!hasPlan?"":canE
     ?`<select class="mp-status cc-stsel" onchange="mpCardSetStatus(this.value)" style="appearance:none;-webkit-appearance:none;border:none;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border-radius:999px;padding:5px 24px 5px 10px;color:${st?"#791F1F":"#854F0B"};background-color:${st?"#FCEBEB":"#FAEEDA"};background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22%3E%3Cpath d=%22M1 1l4 4 4-4%22 stroke=%22${st?"%23791F1F":"%23854F0B"}%22 stroke-width=%221.5%22 fill=%22none%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 9px center;">
-        <option value="drafted"${st?"":" selected"}>Drafted</option><option value="approved"${st?" selected":""}>Approved</option></select>`
-    :`<span class="mp-status" style="font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px;color:${st?"#791F1F":"#854F0B"};background:${st?"#FCEBEB":"#FAEEDA"};">${st?"Approved":"Drafted"}</span>`;
+        ${ccStatusList("plan").map(([k,w])=>`<option value="${k}"${ccStatusKey("plan",mp.status)===k?" selected":""}>${w}</option>`).join("")}</select>`
+    :`<span class="mp-status" style="font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px;color:${st?"#791F1F":"#854F0B"};background:${st?"#FCEBEB":"#FAEEDA"};">${ccStatusWord("plan",mp.status)}</span>`;
   /* the pencil puts the caret in the objective, where it is standing.
      It used to open the Plan page, which is the jump Chirag asked to
      stop — the block is editable where you are looking at it. */
@@ -35106,7 +35450,7 @@ function mfSync(){
    whose date is today or gone, or a delivery date that has arrived. A
    task that is Done owes nothing. */
 function mfTaskToday(t){
-  if(!t||brStatusOf(t)==="closed") return false;
+  if(!t||ccStatusSettled("task",t.status)) return false;
   const today=brToday();
   const m=brMsFor(t.id).find(x=>x.status!=="approved"&&x.due_date);
   if(m&&brNum(m.due_date)<=today) return true;
@@ -35248,7 +35592,7 @@ async function urlRestore(){
     const hasBrand=!!(activeBrand&&brands[activeBrand]);
     if(p==="mplan"&&hasBrand){ if(m&&typeof plMonthSet==="function") plMonthSet(m); openMonthPlanView(m||0); }
     else if(p==="content"&&hasBrand){ socialLayer=true; if(m) contentMonth=m; setView("content"); }
-    else if(p==="branding"&&hasBrand){ navTasks(); }
+    else if(p==="branding"&&hasBrand){ navTasks(); if(typeof btsFromUrl==="function") btsFromUrl(q); }
     else if(p==="brief"&&hasBrand){ openBrief(); }
     else if(p==="meets"&&hasBrand){ setView("meets"); }
     else if(p==="promotions"&&hasBrand){
@@ -35319,7 +35663,7 @@ function waKeep(t){
   if(WA_CHIP==="mine")   return t.owner_id===ME.id;
   if(WA_CHIP==="client") return brStatusOf(t)==="with_client";
   if(WA_CHIP==="week"){
-    if(brStatusOf(t)==="closed") return false;
+    if(ccStatusSettled("task",t.status)) return false;
     const wk=new Date(); wk.setDate(wk.getDate()+7);
     const lim=wk.getFullYear()*10000+(wk.getMonth()+1)*100+wk.getDate();
     const m=brMsFor(t.id).find(x=>x.status!=="approved"&&x.due_date);
@@ -35931,8 +36275,8 @@ function mfSheetPaint(){
         .map(([k,l])=>ch(MF_PQK===k,l,`mfPQuick('${k}')`)).join("")+`</div>`;
       const mPosts=socialForBrandYear(activeBrand,YEAR).filter(p=>p.month===contentMonth);
       const cnt=f=>mPosts.filter(f).length;
-      h+=`<h4>Status</h4><div class="row">`+[["drafting","Drafting"],["review","In review"],["approved","Approved"]]
-        .map(([k,l])=>ch(contentStatusFilter===k,l,`mfPStatus('${k}')`,cnt(p=>p.status===k))).join("")+`</div>`;
+      h+=`<h4>Status</h4><div class="row">`+ccStatusList("post")
+        .map(([k,l])=>ch(contentStatusFilter===k,l,`mfPStatus('${k}')`,cnt(p=>ccStatusKey("post",p.status)===k))).join("")+`</div>`;
       h+=`<h4>Format</h4><div class="row">`+SOCIAL_FORMATS
         .map(f=>ch(contentFormatFilter===f,f.charAt(0).toUpperCase()+f.slice(1),`mfPFormat('${f}')`,cnt(p=>(p.format||"static")===f))).join("")+`</div>`;
     }else{
@@ -40271,7 +40615,7 @@ function cpLinkSave(id,i,kind,off){
     const r=await fetch(MDB_FN,{method:"POST",
       headers:{authorization:"Bearer "+(session.access_token||""),"content-type":"application/json"},
       body:JSON.stringify({url,title_only:true})});
-    if(!r.ok) return null;
+    if(!r.ok) throw new Error("reader "+r.status);   /* V118.22 — an error is forgotten */
     const out=await r.json().catch(()=>null);
     /* V118.21 — a sign-in wall answers with just the site's name
        ("Instagram", "Login • Instagram"). That is no title: say so, so it
@@ -40282,14 +40626,15 @@ function cpLinkSave(id,i,kind,off){
     if(!t||x===site.toLowerCase()||/^(log ?in|sign ?in|sign ?up)\b/.test(x)) return null;
     return {title:String(out.title)};
   }
-  /* V118.19 — a failed or empty answer is NOT remembered: the same
-     link pasted again asks again. */
+  /* V118.19 — a failed answer is NOT remembered: the same link asks
+     again. V118.22 — but a page that ANSWERED with no name (Instagram's
+     sign-in wall) is remembered until the page is reloaded, so a thread
+     that redraws does not ask Instagram again and again. */
   const ASKED={};
   function nameLink(url,s){
     if(ASKED[url]) return ASKED[url];
     ASKED[url]=(s?suiteName(s):webName(url)).then(info=>{
       if(info&&info.title&&s) wLinkName(url,info);
-      if(!info||!info.title) delete ASKED[url];
       return info;
     }).catch(()=>{ delete ASKED[url]; return null; });
     return ASKED[url];
