@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.34 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.35 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13323,7 +13323,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.34 Tbilisi";
+const TOOL_VERSION="V118.35 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -37241,6 +37241,7 @@ async function mdbLoad(bid){
   }catch(e){ MDB.err=String(e&&e.message||e); }
   MDB.loading=false;
   if(view==="mood"||view==="brief") render();
+  if(view==="brief"&&typeof cpPaint==="function") cpPaint();
 }
 function mdbEnsure(){
   if(!activeBrand||!brands[activeBrand]) return;
@@ -40359,6 +40360,33 @@ function hmGoPromo(bid,id){ try{ closeM("day-pop"); }catch(e){} pickBrand(bid); 
 .cp-ty.aspirational{background:#EFE7F7;color:#5A4796;}
 .cp-ty.off{opacity:.45;}
 .cp-ty.ro{cursor:default;}
+/* V118.35 — a competitor's mood board and strengths (Chirag, 17 Oct 12:18) */
+.cp-t td.w-mb{width:210px;}
+.cp-t td.w-st{width:200px;}
+.cp-mb{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--div,#e3e0da);background:#fff;
+  font-size:12px;font-weight:600;color:var(--text);cursor:pointer;white-space:nowrap;max-width:200px;position:relative;}
+.cp-mb:hover{border-color:#c9c5bd;}
+.cp-mb > i{font-size:13px;}
+.cp-mb .nm{overflow:hidden;text-overflow:ellipsis;}
+.cp-mb .th{display:inline-flex;margin-left:4px;}
+.cp-mb .th img,.cp-mb .th .none{width:18px;height:18px;border-radius:4px;border:1.5px solid #fff;margin-left:-6px;object-fit:cover;background:var(--surface2);display:inline-block;}
+.cp-mb .th .none i{display:none;}
+.cp-mb .n{color:var(--muted);font-weight:600;}
+.cp-mb .ed{display:none;align-items:center;justify-content:center;width:20px;height:20px;margin:0 -5px 0 0;border-radius:6px;color:var(--muted);}
+.cp-mb:hover .ed{display:inline-flex;} .cp-mb .ed:hover{background:var(--surface2);color:var(--text);}
+.cp-sx{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--div,#e3e0da);background:#fff;
+  font-size:12px;font-weight:600;color:var(--text);cursor:pointer;white-space:nowrap;user-select:none;}
+.cp-sx i{font-size:13px;} .cp-sx .n{color:var(--muted);}
+.cp-sx.on{background:var(--text);border-color:var(--text);color:#fff;} .cp-sx.on .n{color:rgba(255,255,255,.6);}
+.cp-t tr.cp-open > td{padding:0 0 10px !important;border-top:0 !important;}
+.cp-panel{display:grid;grid-template-columns:1fr 1fr;gap:22px;padding:14px 18px 18px;background:var(--bg2,#faf9f7);border-radius:10px;margin:0 6px;}
+.cp-lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 6px;}
+.cp-ta{width:100%;box-sizing:border-box;min-height:92px;border:1px solid var(--div,#e3e0da);border-radius:9px;padding:9px 11px;font:inherit;font-size:13.5px;
+  line-height:1.5;color:var(--text);background:#fff;resize:vertical;}
+.cp-ta:focus{outline:none;border-color:#c9c5bd;}
+.cp-pts{margin:0;padding:9px 11px 9px 29px;border:1px solid var(--div,#e3e0da);border-radius:9px;background:#fff;font-size:13.5px;line-height:1.5;min-height:92px;box-sizing:border-box;}
+.cp-mbm .bf-mi .ct{margin-left:auto;color:var(--muted);font-size:12px;}
+.cp-mbm .bf-mi.on{font-weight:700;}
 .cp-new .vb-ce{border:1px dashed #D8D7D2 !important;background:#fff !important;}
 </style>
 <script>
@@ -40387,26 +40415,96 @@ function cpRowHtml(r){
     <td class="w-nm">${may?`<input class="vb-ce cp-nm" value="${escAttr(r.name)}" onblur="cpName('${id}',this.value)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.defaultValue;this.blur();}">`:`<span class="cp-nmro">${escHtml(r.name)}</span>`}</td>
     <td class="w-ty"><span class="cp-ty ${r.kind}${may?"":" ro"}"${may?` title="Switch" onclick="cpType('${id}')"`:""}>${CP_T[r.kind]||"Direct"}</span></td>
     <td><div class="cp-lks">${lk}${may?`<span class="vb-plus" onclick="cpLinkMenu(event,'${id}')">+ link</span>`:(lk?"":`<span class="nsdim">—</span>`)}</div></td>
-    <td class="vb-x">${may?`<button class="vb-del" title="Take this off" onclick="cpDel('${id}')">✕</button>`:""}</td></tr>`;
+    <td class="w-mb">${cpMbCell(r)}</td>
+    <td class="w-st">${cpStCell(r)}</td>
+    <td class="vb-x">${may?`<button class="vb-del" title="Take this off" onclick="cpDel('${id}')">✕</button>`:""}</td></tr>${CP.open===r.id?cpPanelHtml(r):""}`;
 }
 function cpHtml(){
   if(!CP.ok) return `<div class="bd-note" style="margin:0">${CP.err?"Could not load the competitors — "+escHtml(CP.err):"Loading…"}</div>`;
   const rows=cpRows(), may=cpMay();
   if(!rows.length&&!may) return `<div class="bd-note" style="margin:6px 0 2px">None yet.</div>`;
-  return `<table class="vb-t a3 cp-t"><thead><tr><th>Competitor</th><th>Type</th><th>Links</th><th></th></tr></thead><tbody>
+  return `<table class="vb-t a3 cp-t"><thead><tr><th>Competitor</th><th>Type</th><th>Links</th><th>Mood board</th><th>Strengths</th><th></th></tr></thead><tbody>
     ${rows.map(cpRowHtml).join("")}
     ${may?`<tr class="vb-new cp-new"><td class="w-nm"><input class="vb-ce" id="cp-new" placeholder="Add a competitor…" onkeydown="if(event.key==='Enter'&&this.value.trim()){event.preventDefault();cpAdd(this.value);}"></td>
-      <td class="w-ty">${["direct","aspirational"].map(t=>`<span class="cp-ty ${t}${CP.newT===t?"":" off"}" onclick="CP.newT='${t}';cpPaint();const n=document.getElementById('cp-new');if(n)n.focus();">${CP_T[t]}</span>`).join(" ")}</td><td></td><td></td></tr>`:""}
+      <td class="w-ty">${["direct","aspirational"].map(t=>`<span class="cp-ty ${t}${CP.newT===t?"":" off"}" onclick="CP.newT='${t}';cpPaint();const n=document.getElementById('cp-new');if(n)n.focus();">${CP_T[t]}</span>`).join(" ")}</td><td></td><td></td><td></td><td></td></tr>`:""}
     </tbody></table>`;
 }
 function cpPaint(){
   const h=document.getElementById("cp-host"); if(!h) return;
   const keep=document.getElementById("cp-new"), typed=keep?keep.value:"", focus=keep&&document.activeElement===keep;
   h.innerHTML=cpHtml();
+  if(typeof mdbSign==="function") mdbSign(h);
   const n=document.getElementById("cp-new"); if(n&&typed){ n.value=typed; } if(n&&focus) n.focus();
   const c=CP.ok?cpRows().length:0;
   const sub=document.getElementById("cp-count"); if(sub) sub.textContent=CP.ok&&c?c+" brand"+(c===1?"":"s"):"";
   const sc=document.querySelector('#sb-months [data-tgt="bd-cp"] .ct'); if(sc) sc.textContent=CP.ok&&c?c:"";
+}
+/* ══ V118.35 — A COMPETITOR'S MOOD BOARD AND STRENGTHS ════════════════
+   Chirag, 17 Oct 12:18: one row per competitor, as before, with two more
+   columns. Mood board: the competitor is linked to one tag of this
+   brand's mood board; the chip opens the Mood board with that tag picked.
+   Strengths: opens the row in place — what they do well, and what we
+   should adopt. One point per line, stored as plain text. */
+function cpTag(r){ return (r.mood_tag_id&&MDB.bid===CP.bid&&MDB.ok)?mdbTag(r.mood_tag_id):null; }
+function cpTagItems(t){ return t?mdbNewest().filter(x=>mdbTagIds(x).includes(t.id)):[]; }
+function cpPts(v){ return String(v||"").split(/\n/).map(x=>x.replace(/^[\s•\-*]+/,"").trim()).filter(Boolean); }
+function cpMbCell(r){
+  const id=escAttr(r.id), may=cpMay(), t=cpTag(r);
+  if(t){ const it=cpTagItems(t);
+    return `<span class="cp-mb" title="Open in the mood board" onclick="cpMbOpen('${id}')"><i class="ti ti-mood-heart"></i><span class="nm">${escHtml(t.name)}</span>${it.length?`<span class="th">${it.slice(0,3).map(mdbImgTag).join("")}</span>`:""}<span class="n">${it.length}</span>${may?`<span class="ed" title="Change" onclick="event.stopPropagation();cpMbMenu(event,'${id}')"><i class="ti ti-pencil"></i></span>`:""}</span>`; }
+  return may?`<span class="vb-plus" onclick="cpMbMenu(event,'${id}')">+ mood board</span>`:`<span class="nsdim">—</span>`;
+}
+function cpStCell(r){
+  const id=escAttr(r.id), may=cpMay(), a=cpPts(r.strengths).length, b=cpPts(r.adopt).length, on=CP.open===r.id;
+  if(a||b||on) return `<span class="cp-sx${on?" on":""}" onclick="cpStToggle('${id}')"><i class="ti ti-chevron-${on?"up":"down"}"></i>Strengths <span class="n">${a} · adopt ${b}</span></span>`;
+  return may?`<span class="vb-plus" onclick="cpStToggle('${id}')">+ strengths</span>`:`<span class="nsdim">—</span>`;
+}
+function cpPanelHtml(r){
+  const id=escAttr(r.id), may=cpMay();
+  const box=(k,label)=>{ const v=String(r[k]||"");
+    return `<div><div class="cp-lbl">${label}</div>${may
+      ?`<textarea class="cp-ta" data-k="${k}" rows="${Math.max(4,v.split("\n").length+1)}" onblur="cpSt('${id}','${k}',this.value)">${escHtml(v)}</textarea>`
+      :(cpPts(v).length?`<ul class="cp-pts">${cpPts(v).map(x=>`<li>${escHtml(x)}</li>`).join("")}</ul>`:`<div class="cp-pts nsdim">—</div>`)}</div>`; };
+  return `<tr class="cp-open" data-cpo="${id}"><td colspan="6"><div class="cp-panel">${box("strengths","Strengths")}${box("adopt","What we should adopt")}</div></td></tr>`;
+}
+function cpStToggle(id){
+  CP.open=CP.open===id?null:id; cpPaint();
+  if(CP.open&&cpMay()){ const r=CP.rows.find(x=>x.id===id); const t=document.querySelector(`tr[data-cpo="${id}"] textarea[data-k="${r&&!String(r.strengths||"").trim()?"strengths":"adopt"}"]`);
+    if(t&&!String(t.value).trim()) t.focus(); }
+}
+async function cpSt(id,k,v){
+  const r=CP.rows.find(x=>x.id===id); if(!r) return;
+  const t=String(v||"").replace(/\r/g,"").replace(/\s+$/,"");
+  if(t===String(r[k]||"")) return;
+  const old=r[k]; r[k]=t;
+  const cell=document.querySelector(`tr[data-cp="${id}"] td.w-st`); if(cell) cell.innerHTML=cpStCell(r);
+  const u=await sb.from("brand_competitors").update({[k]:t,updated_at:new Date().toISOString()}).eq("id",id);
+  if(u.error){ r[k]=old; toast("Not saved — "+escHtml(u.error.message),"err"); cpPaint(); }
+}
+function cpMbMenu(ev,id){
+  const r=CP.rows.find(x=>x.id===id); if(!r) return;
+  if(MDB.bid!==CP.bid||!MDB.ok){ mdbEnsure(); toast("The mood board is still loading","err"); return; }
+  const cur=cpTag(r), same=MDB.tags.find(t=>t.name.toLowerCase()===String(r.name).toLowerCase());
+  const n=t=>MDB.items.filter(x=>mdbTagIds(x).includes(t.id)).length;
+  bfPop(ev,`<div class="bf-menu cp-mbm">
+    ${same?"":`<div class="bf-mi" onclick="cpMbNew('${escAttr(id)}')"><i class="ti ti-plus"></i>New tag “${escHtml(r.name)}”</div>`}
+    ${MDB.tags.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(t=>`<div class="bf-mi${cur&&cur.id===t.id?" on":""}" onclick="cpMbSet('${escAttr(id)}','${escAttr(t.id)}')"><i class="ti ti-${cur&&cur.id===t.id?"check":"tag"}"></i>${escHtml(t.name)}<span class="ct">${n(t)}</span></div>`).join("")}
+    ${cur?`<div class="bf-mi" onclick="cpMbSet('${escAttr(id)}',null)"><i class="ti ti-unlink"></i>Unlink</div>`:""}</div>`);
+}
+async function cpMbSet(id,tid){
+  bfPopClose(); const r=CP.rows.find(x=>x.id===id); if(!r) return;
+  if((r.mood_tag_id||null)===(tid||null)) return;
+  cpWrite(r,{mood_tag_id:tid||null},{mood_tag_id:r.mood_tag_id||null});
+}
+async function cpMbNew(id){
+  bfPopClose(); const r=CP.rows.find(x=>x.id===id); if(!r||MDB.bid!==CP.bid) return;
+  const ids=await mdbTagIdsFor([r.name]); if(!ids.length) return;
+  cpWrite(r,{mood_tag_id:ids[0]},{mood_tag_id:r.mood_tag_id||null});
+}
+function cpMbOpen(id){
+  const r=CP.rows.find(x=>x.id===id), t=r&&cpTag(r); if(!t) return;
+  MDB.f=MDB.f.filter(f=>f.k!=="tag"); MDB.f.push(fltNew("tag",[t.id])); MDB.q="";
+  mdbGo();
 }
 async function cpWrite(r,patch,undo){
   Object.assign(r,patch); cpPaint();
