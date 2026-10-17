@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.24 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.25 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -5520,7 +5520,7 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
           <input class="fi" id="bf-name" type="text" placeholder="e.g. your client's brand name"/>
         </div>
         <div class="field">
-          <label class="fl">Industries *</label>
+          <label class="fl">Industries</label>
           <div id="bf-ind-grid" style="margin-top:4px;"></div>
         </div>
         <div class="field"><label class="fl">Part of</label>
@@ -6089,7 +6089,7 @@ function initEvs(){
       const rel={};
       if(e.relevance){
         Object.entries(e.relevance).forEach(([label,level])=>{
-          const id=IND_LABEL_MAP[label]||((INDS.find(x=>x.label===label)||{}).id)||(INDS.some(x=>x.id===label)?label:null);
+          const id=((INDS.find(x=>x.label===label)||{}).id)||(INDS.some(x=>x.id===label)?label:null)||IND_LABEL_MAP[label];  /* V118.25 — live tree first */
           if(id) rel[id]=level;
         });
       }
@@ -8646,7 +8646,34 @@ function renderBM(){
   buildBfIndGrid();
 }
 
+/* V118.25 — A BRAND'S INDUSTRIES COME FROM THE PORTFOLIO. `brand_industries`
+   is what the Portfolio's Clients screen writes, on the new tree. The
+   Calendar used to read its own `brands.inds`, which nothing kept up to
+   date and which still held the 14 retired ids, so automatic events
+   matched almost nobody. Non-fatal: if the read fails, the old column
+   stands in rather than every brand going blank. */
+async function loadBrandInds(){
+  try{ const r=await sb.from("brand_industries").select("brand_id,industry_id");
+       return r.error?null:(r.data||[]); }catch(e){ return null; }
+}
+function applyPortfolioInds(){
+  if(!G||!Array.isArray(G.bInds)) return;
+  const by={}; G.bInds.forEach(r=>{(by[r.brand_id]=by[r.brand_id]||[]).push(r.industry_id);});
+  Object.entries(brands).forEach(([id,b])=>{ b.inds=by[id]||[]; });
+}
+const PORTFOLIO_CLIENTS_URL="https://communicationcraftshq.github.io/BrandCalendar/portfolio/#clients";
 function buildBfIndGrid(){
+  /* V118.25 — read-only here. Industries are set once, in the Portfolio,
+     and every tool reads that one answer. */
+  const g=document.getElementById("bf-ind-grid"); if(!g) return;
+  const chips=bmInds.map(id=>{const ind=indById(id);
+    return `<span class="bfi-chip" style="cursor:default">${escAttr(ind?ind.label:id)}</span>`;}).join("");
+  g.innerHTML=`<div class="bfi-chips">${chips||`<span class="bfi-none">No industry set yet.</span>`}</div>
+    <a class="bfi-none" href="${PORTFOLIO_CLIENTS_URL}" target="_blank" rel="noopener"
+       style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;color:var(--accent,#C8102E);text-decoration:none;">
+       Change in Portfolio <i class="ti ti-external-link"></i></a>`;
+}
+function buildBfIndGrid_retired(){
   /* ══ VERONA — ONE LINE INSTEAD OF A WALL ═══════════════════════════
      Forty-five chips in one wrap, sectors and industries in the same
      shape, and the one you had chosen somewhere in the middle of them.
@@ -8745,7 +8772,7 @@ function startNewBrand(){
   buildBfIndGrid(); renderAudTags(); renderBpList(); buildBfParentSel();
   const more=document.getElementById("bf-more"); if(more){ more.hidden=true;
     const t=document.getElementById("bf-more-t"); if(t) t.innerHTML="More options &#9662;"; }
-  document.getElementById("bm-form-sub").textContent="Name it, pick its industries, and the calendar fills in automatically";
+  document.getElementById("bm-form-sub").textContent="Name it here, then set its industries in the Portfolio";
   openM("brand-form");
 }
 
@@ -8772,7 +8799,6 @@ function cancelBrand(){
 function saveBrand(){
   const name=document.getElementById("bf-name").value.trim();
   if(!name){toast("Brand name required","err");return;}
-  if(!bmInds.length){toast("Select at least one industry","err");return;}
   const k=bmKey||crypto.randomUUID();
   if(!bmKey) newBrandIds.add(k);   // created here, so: active
   const existing=brands[k]||{};
@@ -13202,7 +13228,7 @@ function importEvents(input){
       for(let m=1;m<=12;m++)(p.raw[m]||[]).forEach(e=>{
         const rel={};
         Object.entries(e.relevance||{}).forEach(([label,level])=>{
-          const id=IND_LABEL_MAP[label]||((INDS.find(x=>x.label===label)||{}).id)||(INDS.some(x=>x.id===label)?label:null);
+          const id=((INDS.find(x=>x.label===label)||{}).id)||(INDS.some(x=>x.id===label)?label:null)||IND_LABEL_MAP[label];  /* V118.25 — live tree first */
           if(id&&(level==="high"||level==="medium")) rel[id]=level;
         });
         all.push({id:e.id||evtId(m,e.date,e.name,null),year:e.year||YEAR,month:m,date:e.date,name:e.name,
@@ -13293,7 +13319,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.24 Tbilisi";
+const TOOL_VERSION="V118.25 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -14086,6 +14112,7 @@ async function loadAll(showToast){
   const err=[inds,evts,brs,bevs,prefs,posts,briefs,social,monthPlans,monthItems].find(r=>r.error);
   if(err){toast(err.error.message,"err");await side;return;}
   G={inds:inds.data,evts:evts.data,brs:brs.data,bevs:bevs.data,prefs:prefs.data||[],posts:posts.data,briefs:briefs.data,social:social.data,monthPlans:monthPlans.data,monthItems:monthItems.data};
+  G.bInds=await loadBrandInds();   /* V118.25 */
   /* Minsk, Cadence, Wasp, the bell (Atlas) and Cape Town's tasks — all
      non-fatal, all started above, all back before anything is drawn */
   await side;
@@ -14166,6 +14193,7 @@ function buildYearView(){
   (G.social||[]).forEach(p=>{if(brands[p.brand_id])brands[p.brand_id].social.push(normalizeSocial(p));});
   (G.monthPlans||[]).forEach(r=>{const b=brands[r.brand_id]; if(!b) return; b.monthPlans[r.year+"_"+r.month]={id:r.id,key_theme:r.key_theme||"",objective_line:r.objective_line||"",status:r.status||"drafted",influencer_target:r.influencer_target||0,items:[],_uat:r.updated_at||null};});
   (G.monthItems||[]).forEach(r=>{const b=brands[r.brand_id]; if(!b) return; const key=r.year+"_"+r.month; if(!b.monthPlans[key]) b.monthPlans[key]={id:null,key_theme:"",objective_line:"",status:"drafted",influencer_target:0,items:[]}; b.monthPlans[key].items.push({id:r.id,category:r.category,label:r.label||"",status:r.status||"",sort_order:r.sort_order||0,link_instagram:r.link_instagram||"",link_facebook:r.link_facebook||"",link_youtube:r.link_youtube||"",discipline:r.discipline||null,value:r.value||"",_uat:r.updated_at||null});});
+  applyPortfolioInds();   /* V118.25 — before anything matches events */
   initEvs(); mergeCustom(); refreshAllBrandEvIds(); sanitizeBrands();
 }
 
@@ -14310,7 +14338,8 @@ function dbSyncBrandData(){ // debounced sync of brands + their events/tags/post
            Calendar would quietly undo a move made in the other tool. The
            parent is written by the brand form alone — dbWriteBrandParent.
            Same rule Salzburg reached for a service's position. */
-                                             inds:b.inds||[],audience:b.audience||[],brief:b.brief||{}},
+                                             /* V118.25 — no inds: the Portfolio owns them */
+                                             audience:b.audience||[],brief:b.brief||{}},
                                             newBrandIds.has(id)?{status:"active"}:{})));
       const customIds=new Set();
       const bevRows=[];
@@ -17815,6 +17844,7 @@ async function rtRefetchCalendar(){
     ]);
     if(!G||evts.error||brs.error||bevs.error||prefs.error) return;
     G.evts=evts.data; G.brs=brs.data; G.bevs=bevs.data; G.prefs=prefs.data||[];
+    const bi=await loadBrandInds(); if(bi) G.bInds=bi;   /* V118.25 */
     buildYearView();
     rtRender("full");
   }catch(e){}
