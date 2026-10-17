@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.32 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.33 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -5307,7 +5307,7 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
              History holds everything that changed or vanished by any route,
              including routes with no Trash of their own. -->
         <div class="brow" data-need="admin" onclick="closeAllPops();openHistory()"><i class="ti ti-history"></i><span class="bnm">History &amp; restore</span></div>
-        <div class="brow" data-need="edit" onclick="closeAllPops();openTrash()"><i class="ti ti-trash"></i><span class="bnm">Trash</span></div>
+        <div class="brow" data-need="trash_view" onclick="closeAllPops();openTrash()"><i class="ti ti-trash"></i><span class="bnm">Trash</span></div>
         <div class="bpsep"></div>
         <!-- The calendar's own People screen is GONE. It wrote the old field,
              which is now only a fallback, so changes made there were silently
@@ -13323,7 +13323,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.32 Tbilisi";
+const TOOL_VERSION="V118.33 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -40764,7 +40764,16 @@ function trPostName(r){
   const when=r.date&&r.month?`${r.date} ${(MN[r.month]||"").slice(0,3)}`:"";
   return (trPlain(cap)||"Post")+(when?` — ${when}`:"");
 }
-function trMay(){ return typeof canEdit==="function"&&canEdit()&&ME.role!=="client"&&ME.role!=="pending"; }
+/* V118.33 — THE RIGHTS COME FROM THE GRID. Chirag, 17 Oct: "is there a
+   way in the CC Platform's permissions to define role-wise who can do
+   what in Trash?" Three rows on the Calendar's grid now decide it —
+   trash_view, trash_restore, trash_purge — switched per role on the
+   Platform's Permissions page. can() falls back to admin-only when a
+   row is missing, so an unrun migration locks Trash to admins rather
+   than opening it. Master events and brands stay admin-only inside. */
+function trMay(){ return ME.role!=="client"&&ME.role!=="pending"&&can("trash_view"); }
+function trMayRestore(){ return trMay()&&can("trash_restore"); }
+function trMayPurge(){ return trMay()&&can("trash_purge"); }
 function trAdmin(){ return ME.role==="admin"; }
 function trBrandName(r){ if(!r.brand_id) return r._t==="events"?"All brands":"—"; const b=brands[r.brand_id]; return b?b.name:"(brand not visible)"; }
 function trWhoKey(r){ const w=TR.who[r._t+"|"+r.id]; return w?String(w.actor_email||"").toLowerCase().split("@")[0]:""; }
@@ -40851,7 +40860,7 @@ function trPickSort(k){ TR.sort=k; trRefresh(); }
 function trPickKind(k){ TR.kind=k; TR.open=null; trRefresh(); }
 /* ── the page ─────────────────────────────────────────────────────── */
 function openTrash(){
-  if(!trMay()){ toast("View-only account","err"); return; }
+  if(!trMay()){ capDenied("Trash"); return; }
   closeAllPops(); TR.menu=null;
   setView("trash");
   const m=document.getElementById("main"); if(m) m.scrollTop=0;
@@ -40902,9 +40911,10 @@ function trRowHtml(r){
 }
 function trMenuHtml(r){
   return `<div class="brl-menu tr-menu" onclick="event.stopPropagation()">
-    <div class="mi" onclick="trRestore('${escAttr(r._t)}','${escAttr(r.id)}')"><i class="ti ti-arrow-back-up"></i>Restore</div>
+    ${trMayRestore()?`<div class="mi" onclick="trRestore('${escAttr(r._t)}','${escAttr(r.id)}')"><i class="ti ti-arrow-back-up"></i>Restore</div>`:""}
     ${trAdmin()?`<div class="mi" onclick="trHistory('${escAttr(r._t)}')"><i class="ti ti-history"></i>Open in History</div>`:""}
-    ${trAdmin()?`<div class="tr-sep"></div><div class="mi red" onclick="trPurge('${escAttr(r._t)}','${escAttr(r.id)}')"><i class="ti ti-trash-x"></i>Delete forever</div>`:""}
+    ${trMayPurge()?`<div class="tr-sep"></div><div class="mi red" onclick="trPurge('${escAttr(r._t)}','${escAttr(r.id)}')"><i class="ti ti-trash-x"></i>Delete forever</div>`:""}
+    ${!trMayRestore()&&!trAdmin()&&!trMayPurge()?`<div class="mi" style="color:var(--muted);cursor:default">Nothing you may do here</div>`:""}
   </div>`;
 }
 function trMenu(e,id){ e.stopPropagation(); TR.menu=TR.menu===id?null:id; trList(); }
@@ -40945,8 +40955,8 @@ function trOpenHtml(r){
     <div class="br-tabs">
       <span class="on">As it was</span>
       <span class="br-gap"></span>
-      <button class="br-ico" onclick="event.stopPropagation();trRestore('${escAttr(r._t)}','${escAttr(r.id)}')" title="Put it back" aria-label="Put it back"><i class="ti ti-arrow-back-up"></i></button>
-      ${trAdmin()?`<button class="br-ico" onclick="event.stopPropagation();trPurge('${escAttr(r._t)}','${escAttr(r.id)}')" title="Delete forever" aria-label="Delete forever"><i class="ti ti-trash-x"></i></button>`:""}
+      ${trMayRestore()?`<button class="br-ico" onclick="event.stopPropagation();trRestore('${escAttr(r._t)}','${escAttr(r.id)}')" title="Put it back" aria-label="Put it back"><i class="ti ti-arrow-back-up"></i></button>`:""}
+      ${trMayPurge()?`<button class="br-ico" onclick="event.stopPropagation();trPurge('${escAttr(r._t)}','${escAttr(r.id)}')" title="Delete forever" aria-label="Delete forever"><i class="ti ti-trash-x"></i></button>`:""}
     </div>
     <div class="tr-body" onclick="event.stopPropagation()">
       <div class="tr-line"><b>Deleted</b> ${escHtml(trWhen(trAt(r)))} by ${escHtml(trWhoName(r))} · from ${escHtml(K.page)}</div>
@@ -40957,7 +40967,7 @@ function trOpenHtml(r){
 }
 /* ── the two acts ──────────────────────────────────────────────────── */
 async function trRestore(table,id){
-  if(!trMay()) return;
+  if(!trMayRestore()){ capDenied("Restoring from Trash"); return; }
   TR.menu=null;
   const r=await sb.from(table).update({deleted_at:null}).eq("id",id);
   if(r.error){ toast(r.error.message,"err"); return; }
@@ -40967,7 +40977,7 @@ async function trRestore(table,id){
   if(view==="trash") trRefresh();
 }
 async function trPurge(table,id){
-  if(!trAdmin()){ toast("Only an admin can delete forever","err"); return; }
+  if(!trMayPurge()){ capDenied("Delete forever"); return; }
   TR.menu=null;
   await purgeTrash(table,id);
 }
@@ -41013,7 +41023,7 @@ function trColFlip(k){
 (function(){
   const base=viewRoute;
   viewRoute=function(v){
-    if(v==="trash") return {render:renderTrashPage,sidebar:buildTrashSidebar,needs:"edit"};
+    if(v==="trash") return {render:renderTrashPage,sidebar:buildTrashSidebar,needs:"trash_view"};
     return base(v);
   };
   PAGE_NAME.trash="Trash";
