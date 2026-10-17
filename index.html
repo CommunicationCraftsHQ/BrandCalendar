@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.29 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.31 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -5838,19 +5838,7 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
 
 <!-- MONTH PLAN: Key Theme, Goals, Influencer Marketing, Production -->
 
-<!-- TRASH -->
-<div class="overlay" id="ov-trash" onclick="if(event.target===this)closeM('trash')">
-  <div class="modal wide">
-    <div class="modal-top">
-      <div><div class="modal-title">Trash</div><div class="modal-sub">Deleted items are kept for 30 days, then removed forever</div></div>
-      <button class="modal-x" onclick="closeM('trash')">✕</button>
-    </div>
-    <div class="modal-body" style="padding-bottom:0;">
-      <div id="trash-list" style="max-height:420px;overflow-y:auto;border:1px solid var(--div);border-radius:var(--rc);"></div>
-    </div>
-    <div class="modal-foot"><button class="btn btn-g" onclick="closeM('trash')">Done</button></div>
-  </div>
-</div>
+<!-- TRASH — V118.31: a page now, see the TRASH-PAGE block at the end of the file -->
 
 <!-- REYKJAVIK 4b: the restore preview. It exists so that no restore is
      ever one click. The extra step IS the feature. -->
@@ -6039,6 +6027,9 @@ function visibleMonths(){
   const start=t.getMonth()+1;
   return Array.from({length:12-start+1},(_,i)=>start+i);
 }
+/* V118.30 — stand-ins until the month control's block loads at the end of the file */
+function mcSpan(){ return visibleMonths().map(m=>[YEAR,m]); }
+function mcWith(y,fn){ return fn(); }
 function setFromNow(v){
   fromNow=v;
   const vm=visibleMonths(); if(!vm.includes(curMonth)) curMonth=vm[0];
@@ -6272,7 +6263,7 @@ function buildFilterGroups(){
   const cats=Object.entries(CATS).filter(([k])=>k!=="post");
   const catBody=cats.map(([k,c])=>{
     const prev=[...selCats]; selCats=[k];
-    let cnt=0; for(const m of visibleMonths()) cnt+=filtered(m).filter(e=>!e._isPost).length;
+    let cnt=0; for(const [yy,m] of mcSpan()) cnt+=mcWith(yy,()=>filtered(m).filter(e=>!e._isPost).length);
     selCats=prev;
     const on=selCats.length===1&&selCats[0]===k;
     return `<div class="s-month${on?" on":""}" style="margin-bottom:2px;" onclick="selCats=${on?"[]":"['"+k+"']"};render();">
@@ -6359,9 +6350,8 @@ function buildSidebar(){
   const vm=new Set(visibleMonths());
   // Distinct events, split master vs brand campaigns (a multi-day campaign counts once)
   let masterTot=0, campTot=0, postTot=0;
-  for(let m=1;m<=12;m++){
-    if(!vm.has(m)) continue;
-    const f=filtered(m);
+  for(const [yy,m] of mcSpan()){   /* V118.30 */
+    const f=mcWith(yy,()=>filtered(m));
     masterTot+=f.filter(e=>!e._isPost&&gc(e)!=="cat5").length;
     campTot+=f.filter(e=>!e._isPost&&gc(e)==="cat5").length;
     postTot+=f.filter(e=>e._isPost).length;
@@ -8253,12 +8243,12 @@ function renderList(){
   /* one pass over the visible months — the Past months toggle in the
      black bar governs this list exactly as it governs the calendar */
   const rows=[]; const q=evQ.trim().toLowerCase();
-  for(const m of visibleMonths())(evs[m]||[]).forEach(e=>{
+  for(const [ry,m] of mcSpan()) mcWith(ry,()=>(evs[m]||[]).forEach(e=>{   /* V118.30 — across years */
     if(e._isPost) return;
     if(e._custom&&(!b||e._brandId&&e._brandId!==activeBrand&&e._brandOnly)) return;
     if(e._custom&&b&&!(b.evIds||[]).includes(e.id)&&e._brandId!==activeBrand) return;
-    rows.push({m,e});
-  });
+    rows.push({y:ry,m,e});
+  }));
   const stateOf=({e})=>{
     if(!b) return "";
     if(e._custom) return "custom";
@@ -8331,23 +8321,23 @@ function renderList(){
   const wrap=document.createElement("div"); wrap.className="evl-wrap";
   const cols=b?5:6;
   let body="", lastM=0;
-  shown.slice().sort((a,c)=>(a.m-c.m)||(a.e.date-c.e.date)||String(a.e.name).localeCompare(String(c.e.name))).forEach(r=>{
-    if(r.m!==lastM){ lastM=r.m; body+=`<tr><td class="evl-mth" colspan="${cols}">${MN[r.m]} ${YEAR}</td></tr>`; }
+  shown.slice().sort((a,c)=>((a.y*12+a.m)-(c.y*12+c.m))||(a.e.date-c.e.date)||String(a.e.name).localeCompare(String(c.e.name))).forEach(r=>{
+    if(r.y*12+r.m!==lastM){ lastM=r.y*12+r.m; body+=`<tr><td class="evl-mth" colspan="${cols}">${MN[r.m]} ${r.y}</td></tr>`; }
     const st=stateOf(r); const off=b&&!(st==="auto"||st==="added"||st==="custom");
     const d2=r.e.endDate&&r.e.endDate!==r.e.date?"–"+r.e.endDate:"";
-    const dow=DOW[new Date(YEAR,r.m-1,r.e.date).getDay()]||"";
+    const dow=DOW[new Date(r.y,r.m-1,r.e.date).getDay()]||"";
     /* v82.3 — four fixed slots so 4, 14, ~14 and 23–25 all line up; the
        tentative box is the year view's dashed amber cell, not a new sign */
     const dCell=`<td class="evl-d"><span class="din"><span class="dbox${r.e.tentative?" tent":""}"><span class="day">${r.e.date}</span><span class="sfx">${d2}</span></span><span class="dow">${dow}</span></span></td>`;
     body+=b
-      ?`<tr class="evl-row${off?" off":""}" data-ev="${r.e.id}" onclick="evlOpenMaster('${r.e.id}',${r.m})">
+      ?`<tr class="evl-row${off?" off":""}" data-ev="${r.e.id}" data-y="${r.y}" onclick="evlOpenMaster('${r.e.id}',${r.m})">
       ${dCell}
       <td class="evl-nm">${escAttr(r.e.name)}${r.e.mega?" ⭐":""}<div class="evl-foldcat">${catChip(r.e)}</div></td>
       <td class="evl-tglc">${tglCell(r)}</td>
       <td class="evl-catc">${catChip(r.e)}</td>
       <td class="evl-srcc">${srcCell(r)}</td>
     </tr>`
-      :`<tr class="evl-row" data-ev="${r.e.id}" onclick="evlOpenMaster('${r.e.id}',${r.m})">
+      :`<tr class="evl-row" data-ev="${r.e.id}" data-y="${r.y}" onclick="evlOpenMaster('${r.e.id}',${r.m})">
       ${dCell}
       <td class="evl-nm">${escAttr(r.e.name)}${r.e.mega?" ⭐":""}</td>
       <td>${catChip(r.e)}</td>
@@ -9001,7 +8991,7 @@ let dpMonth=new Date().getMonth()+1, dpYear=2026, dpSelected=new Set();
 
 function openDatePicker(){
   // Start on current month, preserve any already-selected dates
-  dpMonth=new Date().getMonth()+1;
+  dpMonth=new Date().getMonth()+1; dpYear=YEAR;   /* V118.30 — was fixed at 2026 */
   dpSelected=new Set(bmPosts.map(p=>`${p.month}-${p.date}-${p.type||"Post"}`));
   // Pre-populate selected with existing posts
   dpSelected=new Set(); // fresh selection for this session
@@ -9289,7 +9279,7 @@ function popOpen(id,e){
 
 /* ── brand switcher: picker AND manager in one control ── */
 function brandCount(k){
-  if(!k) { let n=0; for(const m of visibleMonths()) n+=filtered(m).filter(e=>!e._isPost).length; return n; }
+  if(!k) { let n=0; for(const [yy,m] of mcSpan()) n+=mcWith(yy,()=>filtered(m).filter(e=>!e._isPost).length); return n; }
   const b=brands[k]; if(!b) return 0;
   return (b.evIds?b.evIds.length:0)+((b.posts||[]).length);
 }
@@ -13333,7 +13323,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.29 Tbilisi";
+const TOOL_VERSION="V118.31 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -19653,64 +19643,7 @@ async function carryForward(){
 }
 
 // ── TRASH ───────────────────────────────────────────────────
-async function openTrash(){
-  if(!canEdit()){toast("View-only account","err");return;}
-  renderTrashLoading(); openM("trash");
-  /* ══ LIMA · STAGE 1 — OPENING TRASH NO LONGER DESTROYS ANYTHING ════
-
-     A 30-day auto-purge used to run right here, as the first thing
-     openTrash() did. Not on a schedule — as a SIDE EFFECT OF LOOKING.
-
-     On 22 August the live database held 87 deleted master events, 21
-     campaigns and 9 brands, and 82 of those rows were already past the
-     cutoff. The next person to open this modal would have destroyed all
-     82 permanently: no confirmation, no record, no way back, and no way
-     for them to know it had happened. Somebody opening Trash to CHECK
-     WHETHER SOMETHING COULD BE RESTORED would have been the person who
-     made it unrestorable.
-
-     Two more things were wrong with it. It ran for anyone who could
-     edit, so a Creator glancing at Trash triggered an admin's
-     housekeeping. And it covered three tables out of the nineteen in
-     this suite that soft-delete, so posts, tasks and comments were
-     never purged at all — they simply accumulated forever, which is the
-     other half of the same fault.
-
-     The sweep comes back in stage 6: reading a retention policy you can
-     see and edit, running on an admin's sign-in rather than on a glance,
-     and only after stage 5 lets you watch what it is about to take.
-     Until then NOTHING here destroys anything. Trash reads and restores;
-     that is all it does.
-     ═══════════════════════════════════════════════════════════════════ */
-  const [ev,bev,br]=await Promise.all([
-    sb.from("events").select("*").not("deleted_at","is",null),
-    sb.from("brand_events").select("*").not("deleted_at","is",null),
-    sb.from("brands").select("*").not("deleted_at","is",null),
-  ]);
-  renderTrash(ev.data||[],bev.data||[],br.data||[]);
-}
-function renderTrashLoading(){document.getElementById("trash-list").innerHTML='<div style="padding:20px;font-size:13px;color:var(--muted);">Loading…</div>';}
-function renderTrash(evts,bevs,brs){
-  const list=document.getElementById("trash-list"); list.innerHTML="";
-  if(!evts.length&&!bevs.length&&!brs.length){list.innerHTML='<div style="padding:20px;text-align:center;font-size:13px;color:var(--muted);">Trash is empty.</div>';return;}
-  const row=(label,sub,table,id)=>{
-    const d=document.createElement("div"); d.className="em-ev-row";
-    d.innerHTML=`<div class="em-ev-name">${label}<div style="font-size:11px;color:var(--muted);font-weight:400;">${sub}</div></div>
-      <div class="em-ev-acts">
-        <button class="btn btn-s btn-sm" onclick="restoreTrash('${table}','${id}')">Restore</button>
-        <button class="btn btn-d btn-sm" onclick="purgeTrash('${table}','${id}')">Delete forever</button>
-      </div>`;
-    list.appendChild(d);
-  };
-  brs.forEach(b=>row("🏷 "+b.name,"Brand (its campaigns & links restore with it)","brands",b.id));
-  evts.forEach(e=>row(e.name,(e.year||2026)+" · "+e.date+" "+MN[e.month]+" · master event","events",e.id));
-  bevs.forEach(e=>row(e.name,(e.year||2026)+" · "+e.date+" "+MN[e.month]+" · brand campaign","brand_events",e.id));
-}
-async function restoreTrash(table,id){
-  const r=await sb.from(table).update({deleted_at:null}).eq("id",id);
-  if(r.error){toast(r.error.message,"err");return;}
-  toast("Restored"); await loadAll(); openTrash();
-}
+/* openTrash, renderTrash and restoreTrash moved to the TRASH-PAGE block (V118.31) */
 /* ══ UTRECHT — CLEARING A BRAND, AND WHY IT IS NOT CALLED DELETING ══
    A brand is not the calendar's to destroy. `productions.brand_id` is
    NOT NULL, so a Production Planner shoot cannot exist without its
@@ -19869,7 +19802,7 @@ async function sweepOrphans(){
 
 async function purgeTrash(table,id){
   if(table==="brands"){
-    if(await clearBrandFromCalendar(id)){ await loadAll(); openTrash(); }
+    if(await clearBrandFromCalendar(id)){ await loadAll(); if(view==="trash") trLoad(); else openTrash(); }
     return;
   }
   if(!confirm("Delete forever? This cannot be undone.")) return;
@@ -19890,7 +19823,7 @@ async function purgeTrash(table,id){
   }
   const r=await sb.from(table).delete().eq("id",id);
   if(r.error){toast(r.error.message,"err");return;}
-  toast("Deleted forever"); openTrash();
+  toast("Deleted forever"); if(view==="trash") trLoad(); else openTrash();
 }
 
 // ── DUPLICATE BRAND ─────────────────────────────────────────
@@ -40254,20 +40187,20 @@ let HM_NOCAMP=false;
 function hmHome(){ return !(activeBrand&&brands[activeBrand]); }
 function hmCamps(){ return typeof canCap==="function"&&canCap("view_promotions"); }
 function hmOn(k){ return !!HM_LAY[k]&&(k!=="camp"||hmCamps()); }
-function hmReady(){ return HM.key===String(YEAR); }
+function hmReady(){ return HM.key==="all"; }
 function hmFlip(k){ HM_LAY[k]=!HM_LAY[k]; try{ localStorage.setItem("cc-home-layers",JSON.stringify(HM_LAY)); }catch(e){} render(); }
 async function hmLoad(){
-  const k=String(YEAR); if(HM.loading||HM.key===k||typeof sb==="undefined"||!sb) return;
+  const k="all"; if(HM.loading||HM.key===k||typeof sb==="undefined"||!sb) return;
   HM.loading=true;
   const from=k+"-01-01", to=(YEAR+1)+"-01-01";
   try{
     const [m,p]=await Promise.all([
-      sb.from("brand_meetings").select("id,brand_id,held_on,topic").is("deleted_at",null).gte("held_on",from).lt("held_on",to),
-      hmCamps()?sb.from("promotions").select("id,brand_id,name,starts_on,ends_on").is("deleted_at",null).lt("starts_on",to)
+      sb.from("brand_meetings").select("id,brand_id,held_on,topic").is("deleted_at",null),
+      hmCamps()?sb.from("promotions").select("id,brand_id,name,starts_on,ends_on").is("deleted_at",null)
                :Promise.resolve({data:[]})
     ]);
     HM.meets=((m&&m.data)||[]).filter(x=>x&&brands[x.brand_id]&&x.held_on);
-    HM.promos=((p&&p.data)||[]).filter(x=>x&&brands[x.brand_id]&&x.starts_on&&(!x.ends_on||x.ends_on>=from));
+    HM.promos=((p&&p.data)||[]).filter(x=>x&&brands[x.brand_id]&&x.starts_on);
   }catch(e){ HM.meets=[]; HM.promos=[]; }
   HM.key=k; HM.loading=false;
   if(hmHome()&&view==="year") render();
@@ -40770,6 +40703,317 @@ function cpLinkSave(id,i,kind,off){
 </script>
 
 <style>
+/* ══ V118.31 TBILISI · TRASH IS A PAGE ════════════════════════════════
+   Chirag, 17 Oct: "When I open the trash it is very confusing to
+   understand what has come to that page and how." It was a pop-up
+   reading three tables out of the twelve that soft-delete, with no
+   date, no name, no brand, and a subtitle promising a 30-day purge
+   that was switched off in August. It is a page now, in the listing
+   standard, reading all twelve, with who and when from the change log. */
+.brl.trl>.brl-hd,.brl.trl>.brl-tr{grid-template-columns:3px 20px minmax(0,1fr) var(--tr-b,170px) var(--tr-w,170px) var(--tr-d,130px) 30px;}
+.brl.trl .c-brand{font-size:13px;color:var(--text);text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.brl.trl .c-who{font-size:13px;display:inline-flex;align-items:center;gap:7px;min-width:0;}
+.brl.trl .c-who .nav-av{width:22px;height:22px;font-size:10px;flex:none;}
+.brl.trl .c-who .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.brl.trl .c-when{text-align:right;color:var(--muted);font-size:13px;white-space:nowrap;}
+.brl.trl .brl-hd .c-brand,.brl.trl .brl-hd .c-who{text-align:left;}
+.brl.trl.h-b .c-brand,.brl.trl.h-w .c-who,.brl.trl.h-d .c-when{display:none;}
+.brl.trl.h-b{--tr-b:0px;} .brl.trl.h-w{--tr-w:0px;} .brl.trl.h-d{--tr-d:0px;}
+.tr-kind{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--muted);background:#F4F4F2;border-radius:6px;padding:2px 7px;flex:none;}
+.tr-kind i{font-size:12px;}
+.brl.trl .brl-tr.opened .brl-car{color:var(--text);}
+.tr-body{padding:14px 18px 16px;}
+.tr-line{font-size:12.5px;color:var(--muted);margin-bottom:12px;} .tr-line b{color:var(--text);}
+.tr-fact{display:grid;grid-template-columns:120px 1fr;gap:12px;font-size:13.5px;line-height:1.5;padding:6px 0;border-top:1px solid #F4F4F2;overflow-wrap:anywhere;}
+.tr-fact>span:first-child{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);padding-top:3px;}
+.tr-fact .brl-pill{justify-self:start;}
+.tr-foot{margin-top:12px;font-size:12.5px;color:var(--muted);}
+.tr-empty{padding:40px 20px;text-align:center;font-size:13px;color:var(--muted);}
+.tr-menu{position:absolute;right:14px;top:40px;z-index:40;background:#fff;border:1px solid var(--div);border-radius:10px;box-shadow:0 10px 26px rgba(0,0,0,.14);padding:4px;min-width:200px;}
+.tr-menu .mi{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;}
+.tr-menu .mi:hover{background:#F4F4F2;} .tr-menu .mi.red{color:#D62828;} .tr-menu .tr-sep{height:1px;background:var(--div);margin:4px 2px;}
+.tr-sbhead{display:flex;align-items:center;justify-content:space-between;padding:0 4px 0 10px;}
+</style>
+<script>
+/* ==TRASH-PAGE:BEGIN== */
+const TR={rows:[],ok:false,err:"",busy:false,q:"",f:[],sort:"newest",kind:"all",open:null,menu:null,who:{},load:0};
+const TR_HIDE=new Set(JSON.parse((()=>{ try{ return localStorage.getItem("cc-tr-cols")||"[]"; }catch(e){ return "[]"; } })()));
+/* THE TWELVE KINDS. One line each: the table, the word, how a row is
+   named, and which page it lived on. Anything not here is not in Trash
+   (History still has it). `admin` = only an admin sees these at all. */
+const TR_KINDS={
+  social_posts:    {label:"Post",        plural:"Posts",        icon:"photo",          page:"Posts",       name:r=>trPostName(r)},
+  branding_tasks:  {label:"Task",        plural:"Tasks",        icon:"checklist",      page:"Tasks",       name:r=>r.title},
+  post_comments:   {label:"Comment",     plural:"Comments",     icon:"message",        page:"a conversation", name:r=>trPlain(r.body)},
+  branding_projects:{label:"Project",    plural:"Projects",     icon:"folder",         page:"Tasks",       name:r=>r.name},
+  task_tags:       {label:"Tag",         plural:"Tags",         icon:"tag",            page:"Tasks",       name:r=>r.name},
+  brand_events:    {label:"Campaign",    plural:"Campaigns",    icon:"speakerphone",   page:"Plan",        name:r=>r.name},
+  events:          {label:"Master event",plural:"Master events",icon:"calendar-event", page:"Event Manager", name:r=>r.name, admin:true},
+  brand_meetings:  {label:"Meeting",     plural:"Meetings",     icon:"users",          page:"Plan",        name:r=>r.topic},
+  brand_links:     {label:"Link",        plural:"Links",        icon:"link",           page:"Strategy",    name:r=>r.label||r.url},
+  mood_items:      {label:"Mood item",   plural:"Mood items",   icon:"mood-heart",     page:"Mood board",  name:r=>r.title||trPlain(r.note)||r.source_url},
+  promotions:      {label:"Promotion",   plural:"Promotions",   icon:"ad",             page:"Promotions",  name:r=>r.name},
+  brands:          {label:"Brand",       plural:"Brands",       icon:"building-store", page:"the brand switcher", name:r=>r.name, admin:true},
+};
+const TR_ORDER=Object.keys(TR_KINDS);
+/* fields nobody needs to read back; everything else the row holds is shown as it was */
+const TR_SKIP=new Set(["id","brand_id","deleted_at","created_at","updated_at","created_by","entered_by","owner_id","author_id","post_id","task_id","parent_id","event_id","project_id","meeting_id","brand_segment_id","current_round_id","tag_ids","sort","sort_order","synced","archived_at","deleted_by","industry_id","segment_key","objective_key","source_url","pin_url","kind","content","cc_people","client_contact_ids","file_url","photo"]);
+function trPlain(h){ const d=document.createElement("div"); d.innerHTML=String(h||""); return (d.textContent||"").replace(/\s+/g," ").trim().slice(0,90); }
+function trPostName(r){
+  const c=r.content||{}, cap=(c.instagram&&c.instagram.caption)||(c.facebook&&c.facebook.caption)||c.concept||"";
+  const when=r.date&&r.month?`${r.date} ${(MN[r.month]||"").slice(0,3)}`:"";
+  return (trPlain(cap)||"Post")+(when?` — ${when}`:"");
+}
+function trMay(){ return typeof canEdit==="function"&&canEdit()&&ME.role!=="client"&&ME.role!=="pending"; }
+function trAdmin(){ return ME.role==="admin"; }
+function trBrandName(r){ if(!r.brand_id) return r._t==="events"?"All brands":"—"; const b=brands[r.brand_id]; return b?b.name:"(brand not visible)"; }
+function trWhoKey(r){ const w=TR.who[r._t+"|"+r.id]; return w?String(w.actor_email||"").toLowerCase().split("@")[0]:""; }
+function trWhoName(r){ const k=trWhoKey(r); return k||"someone"; }
+function trAt(r){ const w=TR.who[r._t+"|"+r.id]; return (w&&w.at)||r.deleted_at||""; }
+function trWhen(iso){
+  if(!iso) return "—";
+  const d=new Date(iso), now=new Date(), day=x=>new Date(x.getFullYear(),x.getMonth(),x.getDate()).getTime();
+  const hm=d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+  const diff=Math.round((day(now)-day(d))/864e5);
+  if(diff===0) return "Today, "+hm;
+  if(diff===1) return "Yesterday, "+hm;
+  if(diff<7) return d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
+  return d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:d.getFullYear()===now.getFullYear()?undefined:"numeric"});
+}
+/* ── reading it ───────────────────────────────────────────────────── */
+async function trLoad(){
+  const my=++TR.load; TR.busy=true; TR.err=""; trList();
+  const tables=TR_ORDER.filter(t=>!TR_KINDS[t].admin||trAdmin());
+  const reads=tables.map(t=>sb.from(t).select("*").not("deleted_at","is",null).order("deleted_at",{ascending:false}).limit(500).then(r=>({t,r})));
+  const since=new Date(Date.now()-180*864e5).toISOString();
+  const logRead=sb.from("change_log").select("table_name,row_id,at,actor_email,new_row").in("table_name",tables).gte("at",since).order("at",{ascending:false}).limit(3000);
+  const [outs,log]=await Promise.all([Promise.all(reads),logRead]);
+  if(my!==TR.load) return;
+  const rows=[], errs=[];
+  outs.forEach(({t,r})=>{
+    if(r.error){ errs.push(TR_KINDS[t].plural+": "+r.error.message); return; }
+    (r.data||[]).filter(x=>x.deleted_at).forEach(x=>{
+      /* only what this person can see: a brand they have, or the brand-less admin kinds */
+      if(x.brand_id&&!brands[x.brand_id]&&!trAdmin()) return;
+      rows.push({...x,_t:t});
+    });
+  });
+  TR.who={};
+  if(!log.error) (log.data||[]).forEach(l=>{
+    const n=l.new_row||{}; if(!n.deleted_at) return;
+    const k=l.table_name+"|"+l.row_id; if(!TR.who[k]) TR.who[k]=l;   /* newest first — the first seen is the deletion that stands */
+  });
+  TR.rows=rows; TR.ok=true; TR.busy=false; TR.err=errs.join(" · ");
+  if(TR.open&&!rows.some(r=>r.id===TR.open)) TR.open=null;
+  trRefresh();
+}
+/* ── the kit filter ───────────────────────────────────────────────── */
+const TR_FIELDS=[
+  {k:"kind", label:"Kind",       icon:"category"},
+  {k:"brand",label:"Brand",      icon:"building-store"},
+  {k:"who",  label:"Deleted by", icon:"user"},
+];
+function trValsOf(r,k){
+  if(k==="kind") return [r._t];
+  if(k==="brand") return [r.brand_id||(r._t==="events"?"all":"none")];
+  if(k==="who") return [trWhoKey(r)||"?"];
+  return [];
+}
+function trOptionsFor(k){
+  const rows=TR.rows;
+  if(k==="kind") return fltCounts(rows,k,trValsOf,TR_ORDER.map(t=>[t,TR_KINDS[t].plural])).filter(o=>o[2]>0);
+  if(k==="brand") return fltCounts(rows,k,trValsOf,[],v=>v==="all"?"All brands":v==="none"?"—":(brands[v]||{}).name||"(brand not visible)").sort((a,b)=>(b[2]-a[2])||String(a[1]).localeCompare(String(b[1])));
+  return fltCounts(rows,k,trValsOf,[],v=>v==="?"?"Unknown":v).sort((a,b)=>(b[2]-a[2])||String(a[1]).localeCompare(String(b[1])));
+}
+FLT_HOSTS.trash={fields:TR_FIELDS,optionsFor:trOptionsFor,get:()=>TR.f,set:fs=>{ TR.f=fs; },render:()=>trRefresh()};
+function trVisible(){
+  const q=TR.q.trim().toLowerCase();
+  const r=TR.rows.filter(x=>(TR.kind==="all"||x._t===TR.kind)
+    &&(!q||[TR_KINDS[x._t].name(x),trBrandName(x),trWhoName(x),TR_KINDS[x._t].label].join(" ").toLowerCase().includes(q))
+    &&fltKeep(x,TR.f,trValsOf));
+  const by=(a,b)=>String(trAt(b)).localeCompare(String(trAt(a)));
+  if(TR.sort==="oldest") return r.sort((a,b)=>-by(a,b));
+  if(TR.sort==="name") return r.sort((a,b)=>String(TR_KINDS[a._t].name(a)||"").localeCompare(String(TR_KINDS[b._t].name(b)||""),undefined,{sensitivity:"base"}));
+  if(TR.sort==="kind") return r.sort((a,b)=>(TR_ORDER.indexOf(a._t)-TR_ORDER.indexOf(b._t))||by(a,b));
+  return r.sort(by);
+}
+function trPickSort(k){ TR.sort=k; trRefresh(); }
+function trPickKind(k){ TR.kind=k; TR.open=null; trRefresh(); }
+/* ── the page ─────────────────────────────────────────────────────── */
+function openTrash(){
+  if(!trMay()){ toast("View-only account","err"); return; }
+  closeAllPops(); TR.menu=null;
+  setView("trash");
+  const m=document.getElementById("main"); if(m) m.scrollTop=0;
+  trLoad();
+}
+function renderTrashPage(){
+  const mc=document.getElementById("main");
+  mc.innerHTML=`<div style="padding:0 var(--pg-x) 26px;">
+      <div class="fb" id="tr-bar"></div>
+      <div id="tr-list"></div>
+    </div>`;
+  trBar(); trList();
+}
+function trRefresh(){ if(view!=="trash") return; buildTrashSidebar(); trBar(); trList(); trColsSync(); }
+function trCntHtml(){ const base=TR.kind==="all"?TR.rows.length:TR.rows.filter(r=>r._t===TR.kind).length; return fltCountHtml(trVisible().length,base,"deleted item"); }
+function trBar(){
+  const bar=document.getElementById("tr-bar"); if(!bar) return;
+  bar.innerHTML=`
+    <input class="fi fb-q" placeholder="Search the trash…" value="${escAttr(TR.q)}" oninput="TR.q=this.value;trList()" onclick="event.stopPropagation()">
+    ${fltChipsHtml("trash")}
+    <span class="fb-end">
+      <span id="tr-cnt">${trCntHtml()}</span>
+      ${fltSortHtml("trash",[["newest","Deleted, newest first"],["oldest","Deleted, oldest first"],["name","Name"],["kind","Kind"]],TR.sort,"newest","trPickSort")}
+    </span>`;
+}
+function trList(){
+  const g=document.getElementById("tr-list"); if(!g) return;
+  const c=document.getElementById("tr-cnt"); if(c) c.innerHTML=trCntHtml();
+  const cls="brl trl"+(TR_HIDE.has("brand")?" h-b":"")+(TR_HIDE.has("who")?" h-w":"")+(TR_HIDE.has("when")?" h-d":"");
+  if(TR.busy&&!TR.ok){ g.innerHTML=`<div class="${cls}"><div class="tr-empty">Loading…</div></div>`; return; }
+  const rows=trVisible();
+  const head=`<div class="brl-hd"><span></span><span></span><span>Item</span><span class="c c-brand">Brand</span><span class="c c-who">Deleted by</span><span class="c c-when">Deleted</span><span></span></div>`;
+  const body=rows.map(trRowHtml).join("")||`<div class="tr-empty">${TR.rows.length?"Nothing matches.":"Trash is empty."}</div>`;
+  g.innerHTML=`<div class="${cls}">${head}${body}</div>${TR.err?`<div class="tr-foot" style="padding:8px 2px;">Some kinds could not be read — ${escHtml(TR.err)}</div>`:""}`;
+}
+function trRowHtml(r){
+  const K=TR_KINDS[r._t], open=TR.open===r.id, who=trWhoName(r), k=trWhoKey(r);
+  return `<div class="brl-tr${open?" opened":""}" data-tr="${escAttr(r.id)}" onclick="trToggle(event,'${escAttr(r.id)}')">
+    <div class="brl-sp"></div>
+    <span class="brl-car">${open?"⌄":"›"}</span>
+    <div class="brl-nm"><span class="nmt" title="${escAttr(K.name(r)||"")}">${escHtml(K.name(r)||"(no name)")}</span><span class="tr-kind"><i class="ti ti-${K.icon}"></i>${K.label}</span></div>
+    <span class="c c-brand" title="${escAttr(trBrandName(r))}">${escHtml(trBrandName(r))}</span>
+    <span class="c c-who"><span class="nav-av" style="${avatarSkin(k,false)}">${avatarInner(k,escHtml((k||"?").slice(0,2).toUpperCase()))}</span><span class="nm">${escHtml(who)}</span></span>
+    <span class="c c-when" title="${escAttr(trAt(r))}">${escHtml(trWhen(trAt(r)))}</span>
+    <span class="brl-dots" onclick="trMenu(event,'${escAttr(r.id)}')" title="More">···</span>
+    ${TR.menu===r.id?trMenuHtml(r):""}
+  </div>${open?trOpenHtml(r):""}`;
+}
+function trMenuHtml(r){
+  return `<div class="brl-menu tr-menu" onclick="event.stopPropagation()">
+    <div class="mi" onclick="trRestore('${escAttr(r._t)}','${escAttr(r.id)}')"><i class="ti ti-arrow-back-up"></i>Restore</div>
+    ${trAdmin()?`<div class="mi" onclick="trHistory('${escAttr(r._t)}')"><i class="ti ti-history"></i>Open in History</div>`:""}
+    ${trAdmin()?`<div class="tr-sep"></div><div class="mi red" onclick="trPurge('${escAttr(r._t)}','${escAttr(r.id)}')"><i class="ti ti-trash-x"></i>Delete forever</div>`:""}
+  </div>`;
+}
+function trMenu(e,id){ e.stopPropagation(); TR.menu=TR.menu===id?null:id; trList(); }
+function trToggle(e,id){ if(e.target.closest&&e.target.closest(".tr-menu,.brl-dots,.br-open")) return; TR.menu=null; TR.open=TR.open===id?null:id; trList(); }
+document.addEventListener("click",e=>{ if(TR.menu&&!(e.target.closest&&e.target.closest(".tr-menu,.brl-dots"))){ TR.menu=null; if(view==="trash") trList(); } },true);
+/* ── the open card: the row as it was ──────────────────────────────── */
+function trFactVal(k,v,r){
+  if(v==null||v===""||(Array.isArray(v)&&!v.length)) return "";
+  if(k==="status"){
+    const kind=r._t==="social_posts"?"post":r._t==="branding_tasks"?"task":null;
+    if(kind) return ccStatusPillHtml(kind,v,{});
+  }
+  if(k==="month"&&MN[v]) return escHtml(MN[v]);
+  if(/_url$|^url$/.test(k)) return `<a href="${escAttr(v)}" target="_blank" rel="noopener">${escHtml(v)}</a>`;
+  if(typeof v==="object") return escHtml(JSON.stringify(v));
+  if(typeof v==="boolean") return v?"Yes":"No";
+  if(/^\d{4}-\d{2}-\d{2}/.test(String(v))&&String(v).length<=10) return escHtml(fmtShort?fmtShort(v):v);
+  return (k==="body"||k==="notes"||k==="brief"||k==="caption")?wRender(String(v)):escHtml(String(v));
+}
+function trOpenHtml(r){
+  const K=TR_KINDS[r._t];
+  const facts=[];
+  if(r._t==="social_posts"){
+    const c=r.content||{};
+    facts.push(["Date",`${r.date||""} ${MN[r.month]||""} ${r.year||""}`.trim()],["Format",escHtml(String(r.format||"").replace(/^./,c=>c.toUpperCase()))],["Status",ccStatusPillHtml("post",r.status,{})]);
+    if(c.instagram&&c.instagram.caption) facts.push(["Caption",wRender(String(c.instagram.caption))]);
+    if(c.concept) facts.push(["Concept",escHtml(c.concept)]);
+    if(r.notes) facts.push(["Notes",wRender(String(r.notes))]);
+  } else {
+    Object.keys(r).filter(k=>!k.startsWith("_")&&!TR_SKIP.has(k)).forEach(k=>{ const v=trFactVal(k,r[k],r); if(v) facts.push([histField(k),v]); });
+  }
+  const own=r.owner_id?personById(r.owner_id):null;
+  if(own) facts.push(["Owner",escHtml(own.name||own.email||"")]);
+  const back=r._t==="brands"?"Restore and the brand returns to the switcher with its campaigns and links."
+    :r._t==="events"?"Restore and it returns to the master calendar for every brand."
+    :`Restore and it returns to ${escHtml(trBrandName(r))}'s ${escHtml(K.page)} page${r.status?" with the status it had":""}.`;
+  return `<div class="br-open" style="--brpj:#0D0D0D"><div class="br-in">
+    <div class="br-tabs">
+      <span class="on">As it was</span>
+      <span class="br-gap"></span>
+      <button class="br-ico" onclick="event.stopPropagation();trRestore('${escAttr(r._t)}','${escAttr(r.id)}')" title="Put it back" aria-label="Put it back"><i class="ti ti-arrow-back-up"></i></button>
+      ${trAdmin()?`<button class="br-ico" onclick="event.stopPropagation();trPurge('${escAttr(r._t)}','${escAttr(r.id)}')" title="Delete forever" aria-label="Delete forever"><i class="ti ti-trash-x"></i></button>`:""}
+    </div>
+    <div class="tr-body" onclick="event.stopPropagation()">
+      <div class="tr-line"><b>Deleted</b> ${escHtml(trWhen(trAt(r)))} by ${escHtml(trWhoName(r))} · from ${escHtml(K.page)}</div>
+      ${facts.map(([k,v])=>`<div class="tr-fact"><span>${escHtml(k)}</span><div>${v}</div></div>`).join("")||`<div class="tr-fact"><span>Fields</span><div>Nothing else was written on it.</div></div>`}
+      <div class="tr-foot">${back}</div>
+    </div>
+  </div></div>`;
+}
+/* ── the two acts ──────────────────────────────────────────────────── */
+async function trRestore(table,id){
+  if(!trMay()) return;
+  TR.menu=null;
+  const r=await sb.from(table).update({deleted_at:null}).eq("id",id);
+  if(r.error){ toast(r.error.message,"err"); return; }
+  toast("Restored");
+  TR.rows=TR.rows.filter(x=>x.id!==id); if(TR.open===id) TR.open=null; trRefresh();
+  try{ await loadAll(); }catch(e){}
+  if(view==="trash") trRefresh();
+}
+async function trPurge(table,id){
+  if(!trAdmin()){ toast("Only an admin can delete forever","err"); return; }
+  TR.menu=null;
+  await purgeTrash(table,id);
+}
+function trHistory(table){ if(typeof openHistory!=="function") return; openHistory(); histTable=table; histMode="deletions"; histRange="30"; histOpen=null; HIST=[]; try{ loadHistory(); }catch(e){} }
+/* ── the left panel: kinds with counts ─────────────────────────────── */
+function buildTrashSidebar(){
+  const st=document.getElementById("sb-stats"); if(st) st.innerHTML="";
+  const sm=document.getElementById("sb-months"); if(!sm) return;
+  const n={}; TR.rows.forEach(r=>n[r._t]=(n[r._t]||0)+1);
+  const row=(k,label,ct)=>`<div class="mdb-trow${TR.kind===k?" on":""}" data-kind="${k}" onclick="trPickKind('${k}')"><span class="nm">${escHtml(label)}</span><span class="ct">${ct}</span></div>`;
+  sm.innerHTML=`<div class="s-lbl">Kind</div>`+row("all","All items",TR.rows.length)+TR_ORDER.filter(t=>n[t]).map(t=>row(t,TR_KINDS[t].plural,n[t])).join("");
+}
+/* ── the Columns button in the black bar, as on Tasks and Accounts ─── */
+const TR_COLS=[["brand","Brand"],["who","Deleted by"],["when","Deleted"]];
+function trColsSync(){
+  const on=view==="trash";
+  let w=document.getElementById("tr-cols");
+  if(!w){
+    const ref=document.getElementById("brk-cols");
+    if(ref){ ref.insertAdjacentHTML("afterend",`<div class="bsw mf-hide" id="tr-cols" style="display:none;">
+        <button class="nav-btn brk-colsbtn" id="tr-cols-btn" onclick="trColsOpen(event)" title="Columns" aria-label="Columns"><i class="ti ti-columns-3"></i><span id="tr-cn"></span></button>
+        <div class="bpanel right" id="tr-cols-panel"></div></div>`);
+      w=document.getElementById("tr-cols"); }
+  }
+  if(w) w.style.display=on?"":"none";
+  const cn=document.getElementById("tr-cn"); if(cn) cn.textContent=`${1+TR_COLS.length-TR_HIDE.size}/${1+TR_COLS.length}`;
+  const ex=document.getElementById("export-btn"); if(ex&&ex.parentElement&&on) ex.parentElement.style.display="none";
+}
+function trColsFill(){
+  const el=document.getElementById("tr-cols-panel"); if(!el) return;
+  el.innerHTML=`<div class="brk-ioh">Columns</div>
+    <div class="brow brk-lock"><span class="brk-bx on"><i class="ti ti-lock"></i></span><span class="bnm">Item</span></div>`+
+    TR_COLS.map(([k,l])=>`<div class="brow" onclick="trColFlip('${k}')"><span class="brk-bx${TR_HIDE.has(k)?"":" on"}">${TR_HIDE.has(k)?"":"✓"}</span><span class="bnm">${l}</span></div>`).join("")+
+    (TR_HIDE.size?`<div class="brk-reset" onclick="trColFlip('')">Show all</div>`:"");
+}
+function trColsOpen(e){ trColsFill(); popOpen("tr-cols-panel",e); }
+function trColFlip(k){
+  if(!k) TR_HIDE.clear(); else if(TR_HIDE.has(k)) TR_HIDE.delete(k); else TR_HIDE.add(k);
+  try{ localStorage.setItem("cc-tr-cols",JSON.stringify([...TR_HIDE])); }catch(e){}
+  trList(); trColsSync(); trColsFill();
+}
+/* ── the route and the page's name ─────────────────────────────────── */
+(function(){
+  const base=viewRoute;
+  viewRoute=function(v){
+    if(v==="trash") return {render:renderTrashPage,sidebar:buildTrashSidebar,needs:"edit"};
+    return base(v);
+  };
+  PAGE_NAME.trash="Trash";
+  const baseRender=render;
+  render=function(){ const out=baseRender.apply(this,arguments); try{ trColsSync(); }catch(e){} return out; };
+})();
+/* ==TRASH-PAGE:END== */
+</script>
+
+<style>
 /* ══ V118.24 TBILISI · ONE WAY BACK ═══════════════════════════════════
    Chirag, 17 Oct: one standard for "back" on every page one step down.
    A page under a tab: the parent tab stays as the way back and the page
@@ -40809,7 +41053,8 @@ function cpLinkSave(id,i,kind,off){
   /* from the account menu */
   const STEPPED={evmgr:{label:"Event Manager",icon:"ti-calendar-cog"},
                  objadmin:{label:"Lists",icon:"ti-target-arrow"},
-                 history:{label:"History & restore",icon:"ti-history"}};
+                 history:{label:"History & restore",icon:"ti-history"},
+                 trash:{label:"Trash",icon:"ti-trash"}};
   const BK={prev:null};
   window.BK_STATE=BK;
 
@@ -40860,6 +41105,317 @@ function cpLinkSave(id,i,kind,off){
   const baseRender=render;
   render=function(){ const out=baseRender.apply(this,arguments); try{ paint(); }catch(e){} return out; };
   try{ paint(); }catch(e){}
+})();
+</script>
+
+<style id="mc-css">
+/* ══ V118.30 TBILISI · ONE MONTH CONTROL ═══════════════════════════════
+   Chirag, 17 Oct: one way to move through months wherever a calendar
+   appears. The Plan page's own control (‹ label ▾ ›) is the standard;
+   Today sits beside it. The year arrows and Past months retire. */
+#year-step,#past-tog{display:none!important;}
+.mc-today{height:32px;padding:0 12px;border:1px solid var(--div);border-radius:8px;background:var(--surface);
+  color:var(--text);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex:none;}
+.mc-today:hover{background:var(--surface2);}
+.mc-today.at{color:var(--subtle);font-weight:600;}
+.mc-yr{color:var(--subtle);font-weight:500;margin-left:6px;}
+.mc-host{display:flex;align-items:center;gap:8px;flex:none;}
+#mc-row{display:none;}
+@media(max-width:768px){
+  #mc-row{display:flex;align-items:center;gap:8px;padding:10px 12px 2px;}
+  #mc-row .pl-tc{flex:1;justify-content:space-between;height:40px;border-radius:10px;}
+  #mc-row .pl-tc .arw{width:38px;height:34px;font-size:17px;}
+  #mc-row .pl-tc .lbl{height:34px;font-size:14px;}
+  #mc-row .mc-tday{width:40px;height:40px;flex:none;border:1px solid var(--div);border-radius:10px;background:var(--surface);
+    color:var(--text);font-size:19px;display:inline-flex;align-items:center;justify-content:center;padding:0;}
+  #mc-row .mc-tday.at{color:var(--subtle);}
+  #mc-row .pl-pick{position:fixed!important;width:auto!important;left:0!important;right:0!important;top:auto!important;bottom:0!important;
+    max-height:70vh;overflow-y:auto;border-radius:16px 16px 0 0!important;padding:14px 14px calc(16px + var(--mf-safe,0px))!important;
+    z-index:700!important;box-shadow:0 -14px 44px rgba(13,13,13,.22)!important;}
+}
+</style>
+<script>
+/* ══ V118.30 TBILISI · ONE MONTH CONTROL ═══════════════════════════════
+   Where it drives:
+     year / list without a brand, or for someone who cannot edit the
+       brand  → a window of months that runs across years (MC)
+     content (Posts) and numbers → one month of YEAR, crossing years
+     Plan (editors) keeps plStep, gains Today and loses the year limit.
+   Months of another year are drawn by lending the page that year's
+   events for the length of one card (mcWith), never by rebuilding the
+   brands, so nothing a person is editing is touched. */
+const MC={y:new Date().getFullYear(), m:new Date().getMonth()+1, cols:3, pickY:0, pick:false};
+const MCY={};                                  // year → that year's evs, rebuilt lazily
+function mcNow(){ const t=new Date(); return [t.getFullYear(), t.getMonth()+1]; }
+function mcAdd(y,m,d){ const i=y*12+(m-1)+d; return [Math.floor(i/12), ((i%12)+12)%12+1]; }
+function mcPhone(){ return typeof mfNarrow==="function"&&mfNarrow(); }
+function mcActive(){
+  if(view==="year"||view==="list"){
+    if(activeBrand&&brands[activeBrand]&&typeof plMerged==="function"&&plMerged()) return null;
+    return view;
+  }
+  if(view==="content"&&activeBrand&&brands[activeBrand]) return "content";
+  if(view==="numbers") return "numbers";
+  return null;
+}
+function mcCount(a){ return a==="list"?12:(mcPhone()?3:Math.max(1,MC.cols)*2); }
+function mcMonths(a){
+  const n=mcCount(a), out=[];
+  for(let i=0;i<n;i++) out.push(mcAdd(MC.y,MC.m,i));
+  return out;
+}
+/* the months the side panel and the counts should speak for */
+function mcSpan(){
+  const a=mcActive();
+  if(a==="year"||a==="list") return mcMonths(a);
+  return visibleMonths().map(m=>[YEAR,m]);
+}
+function mcEvsFor(y){
+  if(y===YEAR) return evs;
+  if(MCY[y]) return MCY[y];
+  const s={Y:YEAR,R:RAW,C:CUSTOM,E:evs};
+  try{
+    YEAR=y; computeCal(); RAW={}; CUSTOM={}; evs={};
+    (G&&G.evts||[]).forEach(r=>{
+      if((r.year||2026)!==y||r.deleted_at) return;
+      (RAW[r.month]=RAW[r.month]||[]).push({id:r.id,date:r.date,name:r.name,cat:r.cat,notes:r.notes,relevance:r.relevance,mega:r.mega,
+        shopping:!!r.shopping,tentative:!!r.tentative,endMonth:r.end_month||undefined,endDate:r.end_date||undefined,_uat:r.updated_at||null});
+    });
+    (G&&G.bevs||[]).forEach(r=>{
+      if((r.year||2026)!==y) return;
+      (CUSTOM[r.month]=CUSTOM[r.month]||[]).push({id:r.id,date:r.date,name:r.name,cat:r.cat,notes:r.notes,
+        relevance:r.relevance,industries:Object.entries(r.relevance||{}).filter(([,v])=>v==="high"||v==="medium").map(([k])=>k),
+        mega:r.mega,_brandOnly:r.brand_only,endMonth:r.end_month||undefined,endDate:r.end_date||undefined,
+        type:"custom",_custom:true,_brandId:r.brand_id,_uat:r.updated_at||null});
+    });
+    initEvs();
+    /* not mergeCustom(): with no customs it reads the 2026 browser cache */
+    for(let m=1;m<=12;m++) if(CUSTOM[m]&&CUSTOM[m].length) evs[m]=[...(evs[m]||[]),...CUSTOM[m]];
+    MCY[y]=evs;
+  } finally { YEAR=s.Y; RAW=s.R; CUSTOM=s.C; evs=s.E; computeCal(); }
+  return MCY[y];
+}
+function mcWith(y,fn){
+  if(y===YEAR) return fn();
+  const e=mcEvsFor(y), sY=YEAR, sE=evs;
+  try{ YEAR=y; evs=e; computeCal(); return fn(); }
+  finally{ YEAR=sY; evs=sE; computeCal(); }
+}
+(function(){
+  const base=buildYearView;
+  buildYearView=function(){ for(const k in MCY) delete MCY[k]; return base.apply(this,arguments); };
+})();
+
+/* ── the label ── */
+function mcAnchor(a){
+  if(a==="year"||a==="list") return [MC.y,MC.m];
+  if(a==="content") return [YEAR,contentMonth||curMonth||1];
+  return [YEAR,curMonth||1];
+}
+function mcLabel(a){
+  const [y,m]=mcAnchor(a), s=x=>MN[x].slice(0,3);
+  if(a==="list") return `From ${s(m)} ${y}`;
+  if(a==="year"){
+    const ms=mcMonths(a), [y1,m1]=ms[0], [y2,m2]=ms[ms.length-1];
+    if(ms.length===1) return `${MN[m1]} ${y1}`;
+    return y1===y2 ? `${s(m1)} – ${s(m2)} ${y2}` : `${s(m1)} ${String(y1).slice(2)} – ${s(m2)} ${String(y2).slice(2)}`;
+  }
+  return `${MN[m]} ${y}`;
+}
+function mcAtNow(a){ const [y,m]=mcAnchor(a), [ty,tm]=mcNow(); return y===ty&&m===tm; }
+function mcTcHtml(a){
+  return `<div class="pl-tc mc-tc"><button class="arw" onclick="mcStep(-1)" title="Earlier" aria-label="Earlier">`+
+    `<i class="ti ti-chevron-left"></i></button><button class="lbl" id="mc-lbl" onclick="mcPickToggle(event)">${mcLabel(a)} `+
+    `<i class="ti ti-chevron-down"></i></button><button class="arw" onclick="mcStep(1)" title="Later" aria-label="Later">`+
+    `<i class="ti ti-chevron-right"></i></button></div>`;
+}
+function mcClear(){
+  document.querySelectorAll(".mc-host,#mc-row").forEach(x=>x.remove());
+  MC.pick=false;
+}
+function mcMount(){
+  mcClear();
+  const a=mcActive(); if(!a) return;
+  const at=mcAtNow(a);
+  if(mcPhone()){
+    const sub=document.getElementById("mf-sub");
+    const html=`<div id="mc-row">${mcTcHtml(a)}<button class="mc-tday${at?" at":""}" onclick="mcToday()" title="Today" aria-label="Today">`+
+      `<i class="ti ti-calendar-dot"></i></button></div>`;
+    if(sub) sub.insertAdjacentHTML("afterend",html);
+    return;
+  }
+  const html=`<div class="mc-host">${mcTcHtml(a)}<button class="mc-today${at?" at":""}" onclick="mcToday()">Today</button></div>`;
+  const main=document.getElementById("main"); if(!main) return;
+  if(a==="year"||a==="list"){
+    const strip=main.querySelector("#calstrip"); if(!strip) return;
+    const lay=document.getElementById("lay-grp");
+    if(lay&&lay.parentElement===strip) lay.insertAdjacentHTML("afterend",html);
+    else strip.insertAdjacentHTML("beforeend",html);
+  } else if(a==="content"){
+    const bar=main.querySelector(".pgbar"); if(!bar) return;
+    const t=bar.firstElementChild;
+    if(t){ const sp=t.querySelector("span"); if(sp) sp.remove(); t.style.flex="0 0 auto"; t.insertAdjacentHTML("afterend",html);
+      const h=bar.querySelector(".mc-host"); if(h){ h.style.marginLeft="16px"; h.style.marginRight="auto"; } }
+  } else if(a==="numbers"){
+    let row=main.querySelector(".prnum-row");
+    if(!row){ const ph=main.querySelector(":scope > .ph"); const r=`<div class="pgbar prnum-row"></div>`;
+      if(ph) ph.insertAdjacentHTML("afterend",r); else main.insertAdjacentHTML("afterbegin",r); row=main.querySelector(".prnum-row"); }
+    row.insertAdjacentHTML("beforeend",html);
+  }
+}
+
+/* ── moving ── */
+async function mcLoadYear(){
+  /* Posts and month plans are read for one year at a time; landing on a
+     different year reads that year's, without a full reload. */
+  if(!G||(G._mcSocY===undefined?true:G._mcSocY===YEAR)||typeof sb==="undefined"||!sb) return;
+  const y=YEAR;
+  try{
+    const [s,p]=await Promise.all([
+      sb.from("social_posts").select("*").eq("year",y).is("deleted_at",null).is("archived_at",null),
+      sb.from("social_month_plan").select("*").eq("year",y)]);
+    if(s.error||p.error||y!==YEAR) return;
+    G.social=s.data||[]; G.monthPlans=p.data||[]; G._mcSocY=y;
+    buildYearView(); render();
+  }catch(e){}
+}
+function mcGoYM(y,m){
+  const a=mcActive(); mcPickClose();
+  if(a==="year"||a==="list"){ MC.y=y; MC.m=m; render(); return; }
+  if(y!==YEAR){ YEAR=y; computeCal(); if(G) buildYearView(); }
+  curMonth=m; if(a==="content") contentMonth=m;
+  render();
+  if(a==="content"){ try{ buildContentSidebar(); }catch(e){} }
+  mcLoadYear();
+}
+function mcStep(d){
+  const a=mcActive(); if(!a) return;
+  if(a==="year"){ const [y,m]=mcAdd(MC.y,MC.m,d*(mcPhone()?1:Math.max(1,MC.cols))); mcGoYM(y,m); return; }
+  if(a==="list"){ const [y,m]=mcAdd(MC.y,MC.m,d); mcGoYM(y,m); return; }
+  const [y0,m0]=mcAnchor(a), [y,m]=mcAdd(y0,m0,d); mcGoYM(y,m);
+}
+function mcToday(){
+  const [y,m]=mcNow(), a=mcActive();
+  /* Today means now everywhere: a day opened on next year's card moved the page's year, and Today brings it back */
+  if((a==='year'||a==='list')&&YEAR!==y){ YEAR=y; computeCal(); if(G) buildYearView(); }
+  mcGoYM(y,m);
+}
+
+/* ── the picker: the Plan page's own, pointed at this control ── */
+function mcPickClose(){ MC.pick=false; const p=document.getElementById("mc-pick"); if(p) p.remove(); }
+function mcPickToggle(ev){
+  if(ev) ev.stopPropagation();
+  if(MC.pick){ mcPickClose(); return; }
+  MC.pick=true; MC.pickY=mcAnchor(mcActive())[0]; mcPickDraw();
+}
+function mcPickYear(d){ MC.pickY+=d; mcPickDraw(); }
+function mcPickDraw(){
+  const host=document.querySelector(".mc-tc"); if(!host) return;
+  const old=document.getElementById("mc-pick"); if(old) old.remove();
+  if(!MC.pick) return;
+  const a=mcActive(), [ay,am]=mcAnchor(a), y=MC.pickY;
+  const inWin=new Set(a==="year"?mcMonths(a).map(([yy,mm])=>yy+"-"+mm):[]);
+  let g="";
+  for(let m=1;m<=12;m++){
+    const cls=(y===ay&&m===am)?"on":(inWin.has(y+"-"+m)?"in":"");
+    g+=`<button class="${cls}" onclick="mcGoYM(${y},${m})">${MN[m].slice(0,3)}</button>`;
+  }
+  host.insertAdjacentHTML("beforeend",`<div class="pl-pick" id="mc-pick" onclick="event.stopPropagation()">
+      <div class="pl-ph"><button onclick="mcPickYear(-1)" aria-label="Previous year">‹</button><b>${y}</b>
+      <button onclick="mcPickYear(1)" aria-label="Next year">›</button></div>
+      <div class="pl-pg">${g}</div></div>`);
+}
+document.addEventListener("click",()=>{ if(MC.pick) mcPickClose(); });
+
+/* ── the calendar: two rows of months, across years ── */
+(function(){
+  const base=renderYear;
+  renderYear=function(){
+    const out=base.apply(this,arguments);
+    if(mcActive()!=="year") return out;
+    const g=document.getElementById("yr-grid"); if(!g) return out;
+    const tracks=getComputedStyle(g).gridTemplateColumns.split(" ").filter(Boolean).length||3;
+    const cols=mcPhone()?1:tracks;
+    const changed=cols!==MC.cols; MC.cols=cols;
+    g.innerHTML="";
+    mcMonths("year").forEach(([y,m],i)=>{
+      const c=mcWith(y,()=>buildMini(m));
+      c.dataset.y=y; c.dataset.m=m;
+      if(i===0||m===1){ const nm=c.querySelector(".mc-name"); if(nm&&!nm.querySelector(".mc-yr")) nm.insertAdjacentHTML("beforeend",`<span class="mc-yr">${y}</span>`); }
+      g.appendChild(c);
+    });
+    if(changed){ try{ buildSidebar(); }catch(e){} }
+    return out;
+  };
+})();
+/* a day on a card from another year opens in that year */
+document.addEventListener("click",e=>{
+  const c=e.target&&e.target.closest&&e.target.closest("#yr-grid > .month-card[data-y], .evl-wrap tr[data-y]");
+  if(!c) return;
+  const y=parseInt(c.dataset.y);
+  if(y&&y!==YEAR){ YEAR=y; computeCal(); buildYearView(); }
+},true);
+let mcRz=null;
+window.addEventListener("resize",()=>{ clearTimeout(mcRz); mcRz=setTimeout(()=>{
+  if(mcActive()!=="year") return;
+  const g=document.getElementById("yr-grid"); if(!g) return;
+  const t=mcPhone()?1:(getComputedStyle(g).gridTemplateColumns.split(" ").filter(Boolean).length||3);
+  if(t!==MC.cols) render(); else mcMount();
+},150); });
+
+/* ── a phone swipes the month on the calendar and the events list ── */
+(function(){
+  let x0=null,y0=null;
+  document.addEventListener("touchstart",e=>{ const a=mcActive(); if(!mcPhone()||!(a==="year"||a==="list")||!e.target.closest("#main")){ x0=null; return; }
+    x0=e.touches[0].clientX; y0=e.touches[0].clientY; },{passive:true});
+  document.addEventListener("touchend",e=>{ if(x0===null) return; const t=e.changedTouches[0], dx=t.clientX-x0, dy=t.clientY-y0; x0=null;
+    if(Math.abs(dx)>70&&Math.abs(dy)<45) mcStep(dx<0?1:-1); },{passive:true});
+})();
+
+/* ── the Plan page: Today beside its control, no year limit ── */
+plCanYear=function(d){ const y=YEAR+d; return y>=2020&&y<=2100; };
+plYearGo=function(d,month){
+  if(!plCanYear(d)) return;
+  plPickClose(); PLSEL=month; PLSELY=YEAR+d; PLWIN=0; PLWINY=0; plArm();
+  setYear(String(YEAR+d)); mcLoadYear();
+};
+plPickNow=function(){
+  const [ty,tm]=mcNow();
+  if(ty===YEAR){ plPick(tm); return; }
+  plPickClose(); PLSEL=tm; PLSELY=ty; PLWIN=0; PLWINY=0; plArm(); setYear(String(ty)); mcLoadYear();
+};
+(function(){
+  const base=plStripExtras;
+  plStripExtras=function(on){
+    const out=base.apply(this,arguments);
+    const strip=document.getElementById("calstrip");
+    document.querySelectorAll(".mc-plt").forEach(x=>{ if(!on||!strip||!strip.contains(x)) x.remove(); });
+    if(on&&strip){
+      const tc=strip.querySelector(".pl-tc:not(.mc-tc)");
+      const [ty,tm]=mcNow(), at=(YEAR===ty&&plSel()===tm);
+      let b=strip.querySelector(".mc-plt");
+      if(!b&&tc){ tc.insertAdjacentHTML("afterend",`<button class="mc-today mc-plt" onclick="plPickNow()">Today</button>`); b=strip.querySelector(".mc-plt"); }
+      if(b) b.classList.toggle("at",at);
+    }
+    return out;
+  };
+})();
+
+/* ── Posts on a phone: the control row replaces the card-head stepper ── */
+xmDress=function(){};
+
+/* ── every draw ends with the control in its place ── */
+(function(){
+  const base=render;
+  render=function(){ const out=base.apply(this,arguments); try{ mcMount(); }catch(e){} return out; };
+  const baseS=renderSocial;
+  renderSocial=function(){ const out=baseS.apply(this,arguments); try{ if(mcActive()==="content") mcMount(); }catch(e){} return out; };
+  const baseN=renderNumbers;
+  renderNumbers=function(){ const out=baseN.apply(this,arguments); try{ if(mcActive()==="numbers") mcMount(); }catch(e){} return out; };
+})();
+(function(){
+  const base=loadAll;
+  loadAll=async function(){ const y=YEAR; const out=await base.apply(this,arguments); if(G) G._mcSocY=y; return out; };
 })();
 </script>
 
