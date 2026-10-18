@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.47 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.48 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -5248,6 +5248,21 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
   .xf-d .mo{flex:none;width:34px;height:34px;border:0;background:none;font-size:20px;color:var(--muted);display:flex;align-items:center;justify-content:center;}
   .xf-none{font-size:13.5px;color:var(--muted);padding:6px 2px;}
   .xt-sh .bft{margin:0;}
+}
+</style>
+<style>
+/* ══ V118.48 TBILISI · IN FRONT OF THE TASK, NOT BEHIND IT ══════════════
+   Chirag, 18 Oct: "The edit task button in the mobile version is not
+   working. Clicking on owner leads nowhere." They worked — the editor
+   opened BEHIND the task. An open task on a phone is a full screen at
+   layer 1500; the editor (600), the photo viewer (900) and the review
+   screen were all drawn under it. Everything a task opens now comes up
+   in front of it; the pop-up sheets stay above those. */
+@media(max-width:768px){
+  body.wa-task .overlay,body.wa-task #mlb,body.wa-task #mrev{z-index:1800!important;}
+  body.wa-task #mention-box,body.wa-task .ms-drop{z-index:1900!important;}
+  body.wa-task #toast-wrap{z-index:2100!important;}
+  body.wa-task .bf-pop,body.wa-task .bfp{z-index:1900!important;}
 }
 </style>
 </head>
@@ -13393,7 +13408,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.47 Tbilisi";
+const TOOL_VERSION="V118.48 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -44806,7 +44821,7 @@ function xtSheet(kind){
     const nC=brMsgsFor("client").length, aud=brPaneAud();
     h=`<div class="hd">${ms.length?`Steps · ${done} of ${ms.length} done`:"Steps"}${close}</div>
       ${rows||(!fin?`<div class="xt-empty">No steps yet.</div>`:"")}${fin}
-      ${mayE?`<button class="li" onclick="xtSheetClose();brOpenSteps(event,'${id}')"><i class="ti ti-list-check"></i>${ms.length?"Edit the steps":"Add a step"}</button>`:""}
+      ${mayE?`<button class="li" onclick="xtSheetClose();brOpenTask('${id}')"><i class="ti ti-list-check"></i>${ms.length?"Edit the steps":"Add a step"}</button>`:""}
       ${cv?"":`<h4>Conversation</h4><div class="xt-seg">
         <button class="${aud==="team"?"on":""}" onclick="xtSheetClose();brTabTo(event,'talk')">Team</button>
         <button class="cl ${aud==="client"?"on":""}" onclick="xtSheetClose();brTabTo(event,'client')">Client${nC?" · "+nC:""}</button></div>`}`;
