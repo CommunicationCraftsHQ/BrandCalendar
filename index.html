@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.46 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.47 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -10736,13 +10736,13 @@ function brNavSync(canE){
     const io=brIoOn();
     /* V118.40 — the Strategy page imports and never exports: one upload
        icon for whoever may edit it, and no button at all for anyone else */
-    const sio=!io&&typeof stIoOn==="function"&&stIoOn();
+    const sio=!io&&((typeof stIoOn==="function"&&stIoOn())||(typeof cplIoOn==="function"&&cplIoOn()));
     const want=io?'<i class="ti ti-upload"></i><i class="ti ti-download"></i>':(sio?'<i class="ti ti-upload"></i>':ex.dataset.orig);
     if(ex.innerHTML!==want) ex.innerHTML=want;
     ex.classList.toggle("brk-io",io||sio);
     ex.title=io?"Import / Export":(sio?"Import":"");
     if(io||sio) ex.setAttribute("aria-label",io?"Import / Export":"Import"); else ex.removeAttribute("aria-label");
-    ex.style.display=(view==="brief"&&!sio)?"none":"";
+    ex.style.display=((view==="brief"||view==="cplay")&&!sio)?"none":"";
   }
 }
 function brRowHtml(t,showTag){
@@ -12706,6 +12706,7 @@ function buildExportPanel(){
      menu entry is shared, the safety is not. */
   const isBrief=!!document.querySelector(".bd-wrap");
   if(view==="brief"){ el.innerHTML=(typeof stIoOn==="function"&&stIoOn())?stIoMenu():""; return; }
+  if(view==="cplay"){ el.innerHTML=(typeof cplIoOn==="function"&&cplIoOn())?cplIoMenu():""; return; }
   if(brIoOn()){
     const n=(typeof brVisibleRows==="function"?brVisibleRows():null);
     el.innerHTML=`<div class="brk-ioh"><i class="ti ti-upload"></i>Import</div>
@@ -13392,7 +13393,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.46 Tbilisi";
+const TOOL_VERSION="V118.47 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -19136,6 +19137,7 @@ function buildBriefSidebar(){
     <div class="s-lbl" style="margin-top:18px;">On this page</div>
     <div class="mdb-trow bd-navi" data-tgt="bd-cp" onclick="bdJump('bd-cp')"><span class="nm">Competitors</span><span class="ct">${cn}</span></div>
     <div class="mdb-trow bd-navi" data-tgt="bd-vb" onclick="bdJump('bd-vb')"><span class="nm">Target groups</span><span class="ct">${tn}</span></div>
+    <div class="mdb-trow bd-navi" data-tgt="bd-in" onclick="bdJump('bd-in')"><span class="nm">Influencers &amp; creators</span><span class="ct">${(typeof BC==="object"&&BC.bid===activeBrand&&BC.ok)?(bcRows().length||""):""}</span></div>
     <div class="mdb-trow bd-navi mdb-navi" data-tgt="bd-s5" onclick="mdbGo()"><span class="nm">Mood board</span><span class="ct mdb-navct">${mn}</span></div>
     <div class="mdb-trow bd-navi bf-navi" data-tgt="bd-s6" onclick="bfGo('all')"><span class="nm">Files</span><span class="ct mdb-navct">${fn}</span></div>`;
 }
@@ -40565,11 +40567,11 @@ function cpLinksOf(r){ return Array.isArray(r.links)?r.links.filter(l=>l&&l.url)
 function cpRowHtml(r){
   const id=escAttr(r.id), may=cpMay();
   const lk=cpLinksOf(r).map((l,i)=>{ const k=bfKind(l.kind);
-    return `<a class="bf-lk cp-lk cp-ic" href="${escAttr(bdHref(l.url))}" target="_blank" rel="noopener" title="${escAttr(k[1]+" · "+bdShort(l.url))}" aria-label="${escAttr(k[1])}"><i class="ti ti-${k[2]}"></i>${may?`<span class="ed" title="Change or remove" onclick="event.preventDefault();event.stopPropagation();cpLinkForm(event,'${id}',${i})"><i class="ti ti-pencil"></i></span>`:""}</a>`; }).join("");
+    return `<a class="bf-lk cp-lk cp-ic" href="${escAttr(bdHref(l.url))}" target="_blank" rel="noopener" title="${escAttr(k[1]+" · "+bdShort(l.url))}" aria-label="${escAttr(k[1])}"><i class="ti ti-${k[2]}"></i></a>`; }).join("");
   return `<tr data-cp="${id}">
     <td class="w-nm">${may?`<input class="vb-ce cp-nm" value="${escAttr(r.name)}" onblur="cpName('${id}',this.value)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.defaultValue;this.blur();}">`:`<span class="cp-nmro">${escHtml(r.name)}</span>`}</td>
     <td class="w-ty"><span class="cp-ty ${r.kind}${may?"":" ro"}"${may?` title="Switch" onclick="cpType('${id}')"`:""}>${CP_T[r.kind]||"Direct"}</span></td>
-    <td class="w-lk"><div class="cp-lks">${lk}${may?`<span class="cp-add" title="Add a link" onclick="cpLinkMenu(event,'${id}')"><i class="ti ti-plus"></i></span>`:(lk?"":`<span class="nsdim">—</span>`)}</div></td>
+    <td class="w-lk"><div class="cp-lks">${lk}${may?(lk?`<span class="cp-add" title="Change or add links" onclick="cpLinksMenu(event,'${id}')"><i class="ti ti-dots"></i></span>`:`<span class="cp-add" title="Add a link" onclick="cpLinkMenu(event,'${id}')"><i class="ti ti-plus"></i></span>`):(lk?"":`<span class="nsdim">—</span>`)}</div></td>
     <td class="w-mb">${cpMbCell(r)}</td>
     <td class="w-st">${cpStCell(r)}</td>
     <td class="vb-x">${may?`<button class="vb-del" title="Take this off" onclick="cpDel('${id}')">✕</button>`:""}</td></tr>${CP.open===r.id?cpPanelHtml(r):""}`;
@@ -40612,7 +40614,8 @@ function cpMbCell(r){
 }
 function cpStCell(r){
   const id=escAttr(r.id), may=cpMay(), a=cpPts(r.strengths).length, b=cpPts(r.adopt).length, on=CP.open===r.id;
-  if(a||b||on) return `<span class="cp-sx${on?" on":""}" onclick="cpStToggle('${id}')"><i class="ti ti-chevron-${on?"up":"down"}"></i>Strengths <span class="n">${a} · adopt ${b}</span></span>`;
+  const pc=typeof cplCount==="function"?cplCount(r.id):0;
+  if(a||b||on||pc) return `<span class="cp-sx${on?" on":""}" onclick="cpStToggle('${id}')"><i class="ti ti-chevron-${on?"up":"down"}"></i>Strengths <span class="n">${a} · adopt ${b}</span>${pc?`<span class="n cpl-n" title="Creator playbook"><i class="ti ti-users-group"></i>${pc}</span>`:""}</span>`;
   return may?`<span class="vb-plus" onclick="cpStToggle('${id}')">+ strengths</span>`:`<span class="nsdim">—</span>`;
 }
 function cpPanelHtml(r){
@@ -40621,7 +40624,7 @@ function cpPanelHtml(r){
     return `<div><div class="cp-lbl">${label}</div>${may
       ?`<textarea class="cp-ta" data-k="${k}" rows="${Math.max(4,v.split("\n").length+1)}" onblur="cpSt('${id}','${k}',this.value)">${escHtml(v)}</textarea>`
       :(cpPts(v).length?`<ul class="cp-pts">${cpPts(v).map(x=>`<li>${escHtml(x)}</li>`).join("")}</ul>`:`<div class="cp-pts nsdim">—</div>`)}</div>`; };
-  return `<tr class="cp-open" data-cpo="${id}"><td colspan="6"><div class="cp-panel">${box("strengths","Strengths")}${box("adopt","What we should adopt")}</div></td></tr>`;
+  return `<tr class="cp-open" data-cpo="${id}"><td colspan="6"><div class="cp-panel three">${box("strengths","Strengths")}${box("adopt","What we should adopt")}${typeof cplBoxHtml==="function"?cplBoxHtml(r):""}</div></td></tr>`;
 }
 function cpStToggle(id){
   CP.open=CP.open===id?null:id; cpPaint();
@@ -41297,8 +41300,490 @@ async function stHistory(){
      <button class="modal-x" onclick="closeM('sti')">✕</button></div>
    <div class="modal-body" style="padding:4px 20px 16px;max-height:60vh;overflow:auto;">${body}</div>`);
 }
+/* ══ V118.47 TBILISI · STRATEGY ADDITIONS ═══════════════════════════════
+   Chirag, 18 Oct 08:40 and 09:17–09:28, picked from the mockups
+   (webapp/01 - Strategy additions - …png, 01 - Influencer map - …png):
+   · 1B  Client team — a button in the links strip, the list in a box.
+         Account managers and administrators only. The rows are the
+         Portfolio's own client contacts (table contacts), so a person
+         entered in either tool shows in both.
+   · 2A  Influencers & creators — a section under Target groups, picked
+         from Roster, with a status.
+   · 3B  A competitor's link icons only open; the dots menu edits.
+   · Creator playbook — door inside the Strengths panel (D2), a page
+         below Strategy with cards, ideas first (P2). Its data comes
+         from the playbook sheet, imported from the black bar.          */
+
+/* ── shared ── */
+const saA=s=>escAttr(s==null?"":String(s));
+const saH=s=>escHtml(s==null?"":String(s));
+function saFollow(n){ n=Number(n); if(!n&&n!==0) return "—"; if(n>=1e6) return (n/1e6).toFixed(n>=1e7?0:1).replace(/\.0$/,"")+"M";
+  if(n>=1e3) return (n/1e3).toFixed(n>=1e5?0:1).replace(/\.0$/,"")+"K"; return String(n); }
+function saInitials(n){ return String(n||"?").trim().split(/\s+/).map(x=>x[0]||"").slice(0,2).join("").toUpperCase()||"?"; }
+function saWa(p){ let d=String(p||"").replace(/\D/g,""); if(d.length===10) d="91"+d; return d.length>=10?"https://wa.me/"+d:""; }
+
+/* ══ 1B · CLIENT TEAM ═══════════════════════════════════════════════ */
+var CT={bid:null,ok:false,busy:false,rows:[],edit:null};
+function ctMay(){ return !!ME&&ME.role!=="client"&&(ME.role==="admin"||["admin","account_manager","super_admin"].includes(ME.toolRole)); }
+function ctRows(){ return CT.rows.filter(r=>r.brand_id===CT.bid&&!r.deleted_at).sort((a,b)=>String(a.created_at||"").localeCompare(String(b.created_at||""))||String(a.name).localeCompare(String(b.name))); }
+async function ctEnsure(){
+  const bid=activeBrand; if(!bid||!ctMay()||CT.busy||(CT.bid===bid&&CT.ok)) return;
+  CT.bid=bid; CT.ok=false; CT.busy=true;
+  try{ const r=await sb.from("contacts").select("*").eq("brand_id",bid).is("deleted_at",null);
+    if(!r.error&&CT.bid===bid){ CT.rows=(r.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at); CT.ok=true; } }catch(e){}
+  CT.busy=false;
+  const lk=document.getElementById("bf-links"); if(lk&&view==="brief") lk.innerHTML=bfLinksHtml();
+}
+function ctBtnHtml(){
+  if(!ctMay()) return "";
+  const n=CT.bid===activeBrand&&CT.ok?ctRows().length:"";
+  return `<span class="bf-lk ct-btn" onclick="ctOpen(event)"><i class="ti ti-address-book"></i>Client team${n!==""?` <span class="n">${n}</span>`:""}<i class="ti ti-lock ct-lock"></i></span>`;
+}
+(function(){ const base=bfLinksHtml; bfLinksHtml=function(){ const h=base.apply(this,arguments);
+  if(!ctMay()||!BF.ok) return h;
+  if(!(CT.bid===activeBrand&&CT.ok)) setTimeout(ctEnsure,0);
+  return h+ctBtnHtml(); }; })();
+function ctPhone(r){ return r.phone_official||r.phone_personal||""; }
+function ctMail(r){ return r.email_official||r.email_personal||""; }
+function ctPopHtml(){
+  const rows=ctRows();
+  const form=(r)=>`<div class="ct-r ct-ed"><input class="fi" id="ct-n" placeholder="Name" value="${saA(r?r.name:"")}">
+      <input class="fi" id="ct-t" placeholder="Designation" value="${saA(r?r.title:"")}">
+      <input class="fi" id="ct-p" placeholder="Phone" value="${saA(r?ctPhone(r):"")}">
+      <input class="fi" id="ct-e" placeholder="Email" value="${saA(r?ctMail(r):"")}">
+      <div class="row"><button class="btn btn-g btn-sm" onclick="CT.edit=null;ctPaintPop()">Cancel</button><span class="sp"></span>
+        <button class="btn btn-p btn-sm" onclick="ctSave('${r?saA(r.id):""}')">${r?"Save":"Add"}</button></div></div>`;
+  return `<div class="ct-pop"><div class="bf-mh" style="padding:2px 2px 6px"><i class="ti ti-address-book"></i> Client team · ${saH((brands[activeBrand]||{}).name)}</div>
+    ${rows.map(r=>CT.edit===r.id?form(r):`<div class="ct-r"><div class="who"><b>${saH(r.name)}</b><span>${saH(r.title||"")}</span></div>
+      <div class="ml">${ctMail(r)?`<a href="mailto:${saA(ctMail(r))}"><i class="ti ti-mail"></i>${saH(ctMail(r))}</a>`:`<span class="nsdim">—</span>`}</div>
+      <div class="ph">${ctPhone(r)?`<a href="tel:${saA(ctPhone(r))}"><i class="ti ti-phone"></i>${saH(ctPhone(r))}</a>`:`<span class="nsdim">—</span>`}</div>
+      <div class="ac">${saWa(ctPhone(r))?`<a class="ct-ic" href="${saA(saWa(ctPhone(r)))}" target="_blank" rel="noopener" title="WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>`:""}
+        <span class="ct-ic" title="Change" onclick="CT.edit='${saA(r.id)}';ctPaintPop()"><i class="ti ti-pencil"></i></span>
+        <span class="ct-ic" title="Take off" onclick="ctDel('${saA(r.id)}')"><i class="ti ti-x"></i></span></div></div>`).join("")}
+    ${!rows.length&&CT.edit!=="new"?`<div class="ct-none">No one yet.</div>`:""}
+    ${CT.edit==="new"?form(null):`<div class="ct-add"><span class="vb-plus" onclick="CT.edit='new';ctPaintPop()">+ person</span></div>`}</div>`;
+}
+function ctPaintPop(){ const p=document.getElementById("bf-pop"); if(!p) return; p.innerHTML=ctPopHtml(); const f=p.querySelector("#ct-n"); if(f) f.focus(); }
+async function ctOpen(ev){
+  if(!ctMay()) return;
+  CT.edit=null;
+  if(!(CT.bid===activeBrand&&CT.ok)) await ctEnsure();
+  bfPop(ev,ctPopHtml());
+}
+async function ctSave(id){
+  const v=k=>String((document.getElementById(k)||{}).value||"").replace(/\s+/g," ").trim();
+  const row={name:v("ct-n"),title:v("ct-t"),phone_official:v("ct-p"),email_official:v("ct-e")};
+  if(!row.name){ toast("Type the name first","err"); return; }
+  if(id){
+    const r=CT.rows.find(x=>x.id===id); if(!r) return;
+    const u=await sb.from("contacts").update(Object.assign({updated_at:new Date().toISOString()},row)).eq("id",id);
+    if(u.error){ toast("Not saved — "+saH(u.error.message),"err"); return; }
+    Object.assign(r,row);
+  }else{
+    const n=Object.assign({id:crypto.randomUUID(),brand_id:activeBrand,source:"calendar",created_at:new Date().toISOString()},row);
+    const u=await sb.from("contacts").insert([n]);
+    if(u.error){ toast("Not added — "+saH(u.error.message),"err"); return; }
+    CT.rows.push(n);
+  }
+  CT.edit=null; ctPaintPop();
+  const lk=document.getElementById("bf-links"); if(lk) lk.innerHTML=bfLinksHtml();
+}
+async function ctDel(id){
+  const r=CT.rows.find(x=>x.id===id); if(!r) return;
+  if(!confirm("Take "+r.name+" off the client team?")) return;
+  const at=new Date().toISOString();
+  const u=await sb.from("contacts").update({deleted_at:at}).eq("id",id);
+  if(u.error){ toast("Not saved — "+saH(u.error.message),"err"); return; }
+  r.deleted_at=at; ctPaintPop();
+  const lk=document.getElementById("bf-links"); if(lk) lk.innerHTML=bfLinksHtml();
+}
+
+/* ══ 2A · INFLUENCERS & CREATORS ════════════════════════════════════ */
+var BC={bid:null,ok:false,busy:false,err:"",rows:[],q:"",res:null,seq:0};
+const BC_ST=[["idea","Idea"],["shortlisted","Shortlisted"],["worked","Worked with"]];
+function bcMay(){ return typeof canEditVision==="function"&&canEditVision(); }
+function bcRows(){ return BC.rows.filter(r=>r.brand_id===BC.bid&&!r.deleted_at).sort((a,b)=>(a.sort||0)-(b.sort||0)||String(a.name).localeCompare(String(b.name))); }
+async function bcEnsure(){
+  const bid=activeBrand; if(!bid||BC.busy||(BC.bid===bid&&(BC.ok||BC.err))) return;
+  BC.bid=bid; BC.ok=false; BC.err=""; BC.rows=[]; BC.busy=true;
+  try{
+    const r=await sb.from("brand_creators").select("*").eq("brand_id",bid).is("deleted_at",null);
+    if(r.error) throw r.error;
+    if(BC.bid===bid){ BC.rows=(r.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at); BC.ok=true; }
+    /* today's followers from Roster, where the creator came from there */
+    const ids=BC.rows.map(x=>x.entry_id).filter(Boolean);
+    if(ids.length){ const f=await sb.rpc("cal_roster_followers",{ids});
+      ((f&&f.data)||[]).forEach(x=>{ BC.rows.filter(r=>r.entry_id===x.entry_id).forEach(r=>{ if(x.followers!=null) r.followers=x.followers; }); }); }
+  }catch(e){ if(BC.bid===bid) BC.err=String(e&&e.message||e); }
+  BC.busy=false; bcPaint();
+}
+function bcHandleUrl(r){ const h=String(r.handle||"").replace(/^@/,""); if(!h) return "";
+  return r.platform==="youtube"?"https://www.youtube.com/@"+h:"https://www.instagram.com/"+h+"/"; }
+function bcRowHtml(r){
+  const id=saA(r.id), may=bcMay(), st=BC_ST.find(s=>s[0]===r.status)||BC_ST[0], u=bcHandleUrl(r);
+  return `<tr data-bc="${id}">
+    <td class="w-nm"><span class="bc-av">${saH(saInitials(r.name||r.handle))}</span><span class="bc-nm">${saH(r.name||r.handle)}</span></td>
+    <td>${r.handle?`<a class="bc-h" href="${saA(u)}" target="_blank" rel="noopener"><i class="ti ti-brand-${r.platform==="youtube"?"youtube":"instagram"}"></i>@${saH(String(r.handle).replace(/^@/,""))}</a>`:`<span class="nsdim">—</span>`}</td>
+    <td class="bc-f">${saH(saFollow(r.followers))}</td>
+    <td>${saH(r.category||"")||`<span class="nsdim">—</span>`}</td>
+    <td><span class="bc-st ${st[0]}${may?"":" ro"}"${may?` title="Change" onclick="bcStatus('${id}')"`:""}>${st[1]}</span></td>
+    <td class="vb-x">${may?`<button class="vb-del" title="Take this off" onclick="bcDel('${id}')">✕</button>`:""}</td></tr>`;
+}
+function bcResHtml(){
+  if(!BC.res) return "";
+  const q=BC.q.trim();
+  const list=BC.res.map((x,i)=>`<div class="bc-ri" onclick="bcPick(${i})"><span class="bc-av sm">${saH(saInitials(x.name))}</span><b>${saH(x.name||x.handle)}</b>
+      <span class="s">${x.handle?"@"+saH(x.handle):""}${x.followers!=null?" · "+saH(saFollow(x.followers)):""}${x.category?" · "+saH(x.category):""}</span></div>`).join("");
+  return `<div class="bc-res">${list||`<div class="bc-ri off">Not in Roster</div>`}
+    ${q?`<div class="bc-ri add" onclick="bcAddHand()"><i class="ti ti-plus"></i>Add “${saH(q)}” by hand</div>`:""}</div>`;
+}
+function bcHtml(){
+  if(!BC.ok) return `<div class="bd-note" style="margin:0">${BC.err?"Could not load them — "+saH(BC.err):"Loading…"}</div>`;
+  const rows=bcRows(), may=bcMay();
+  if(!rows.length&&!may) return `<div class="bd-note" style="margin:6px 0 2px">None yet.</div>`;
+  return `<table class="vb-t a3 cp-t bc-t"><thead><tr><th>Creator</th><th>Handle</th><th>Followers</th><th>Category</th><th>Status</th><th></th></tr></thead><tbody>
+    ${rows.map(bcRowHtml).join("")}
+    ${may?`<tr class="vb-new cp-new"><td colspan="6"><div class="bc-addw"><i class="ti ti-search"></i><input class="vb-ce" id="bc-q" placeholder="Add from Roster — a name or handle…" value="${saA(BC.q)}"
+      oninput="bcFind(this.value)" onkeydown="if(event.key==='Escape'){BC.q='';BC.res=null;bcPaint();}">${bcResHtml()}</div></td></tr>`:""}
+    </tbody></table>`;
+}
+function bcPaint(){
+  const h=document.getElementById("bc-host"); if(!h) return;
+  const keep=document.getElementById("bc-q"), focus=keep&&document.activeElement===keep, pos=keep?keep.selectionStart:0;
+  h.innerHTML=bcHtml();
+  const n=document.getElementById("bc-q"); if(n&&focus){ n.focus(); try{ n.setSelectionRange(pos,pos); }catch(e){} }
+  const c=BC.ok?bcRows().length:0;
+  const sub=document.getElementById("bc-count"); if(sub) sub.textContent=c?c+" creator"+(c===1?"":"s"):"";
+  const sc=document.querySelector('#sb-months [data-tgt="bd-in"] .ct'); if(sc) sc.textContent=c||"";
+}
+let bcT=null;
+function bcFind(v){
+  BC.q=v; clearTimeout(bcT);
+  if(String(v).trim().length<2){ BC.res=null; bcPaint(); return; }
+  const seq=++BC.seq;
+  bcT=setTimeout(async()=>{
+    let rows=[];
+    try{ const r=await sb.rpc("cal_roster_find",{q:String(v).trim()}); rows=(r&&r.data)||[]; }catch(e){}
+    if(seq!==BC.seq) return;
+    const have=new Set(bcRows().map(x=>x.entry_id).filter(Boolean));
+    BC.res=rows.filter(x=>!have.has(x.entry_id)); bcPaint();
+  },250);
+}
+async function bcInsert(row){
+  const r=Object.assign({id:crypto.randomUUID(),brand_id:activeBrand,status:"idea",platform:"instagram",
+    sort:bcRows().reduce((m,x)=>Math.max(m,x.sort||0),0)+10,created_by:(ME&&ME.id)||null},row);
+  const u=await sb.from("brand_creators").insert([r]);
+  if(u.error){ toast("Not added — "+saH(u.error.message),"err"); return; }
+  BC.rows.push(r); BC.q=""; BC.res=null; bcPaint();
+  const n=document.getElementById("bc-q"); if(n) n.focus();
+}
+function bcPick(i){ const x=(BC.res||[])[i]; if(!x) return;
+  bcInsert({entry_id:x.entry_id,name:x.name||"",handle:String(x.handle||"").replace(/^@/,""),platform:x.platform||"instagram",followers:x.followers,category:x.category||""}); }
+function bcAddHand(){ const q=BC.q.trim(); if(!q) return;
+  bcInsert(/^@/.test(q)||/^[a-z0-9._]+$/.test(q)&&!/\s/.test(q)?{name:"",handle:q.replace(/^@/,"")}:{name:q,handle:""}); }
+async function bcWrite(r,patch,undo){
+  Object.assign(r,patch); bcPaint();
+  const u=await sb.from("brand_creators").update(Object.assign({updated_at:new Date().toISOString()},patch)).eq("id",r.id);
+  if(u.error){ Object.assign(r,undo); toast("Not saved — "+saH(u.error.message),"err"); bcPaint(); return false; }
+  return true;
+}
+function bcStatus(id){ const r=BC.rows.find(x=>x.id===id); if(!r) return;
+  const i=BC_ST.findIndex(s=>s[0]===r.status); bcWrite(r,{status:BC_ST[(i+1)%BC_ST.length][0]},{status:r.status}); }
+async function bcDel(id){ const r=BC.rows.find(x=>x.id===id); if(!r) return;
+  if(await bcWrite(r,{deleted_at:new Date().toISOString()},{deleted_at:null})) toast(saH(r.name||"@"+r.handle)+" taken off"); }
+
+/* ══ 3B · A COMPETITOR'S LINKS — the dots menu ══════════════════════ */
+function cpLinksMenu(ev,id){
+  const r=CP.rows.find(x=>x.id===id); if(!r) return;
+  const ls=cpLinksOf(r);
+  if(!ls.length) return cpLinkMenu(ev,id);
+  bfPop(ev,`<div class="bf-menu cp-lmenu"><div class="bf-mh">${saH(r.name)}'s links</div>
+    ${ls.map((l,i)=>{ const k=bfKind(l.kind); return `<div class="bf-mi" onclick="cpLinkForm(event,'${saA(id)}',${i})"><i class="ti ti-${k[2]}"></i>${saH(k[1])}<span class="u">${saH(bdShort(l.url))}</span><i class="ti ti-pencil k"></i></div>`; }).join("")}
+    <div class="bf-mi sep" onclick="cpLinkMenu(event,'${saA(id)}')"><i class="ti ti-plus"></i>Add a link</div></div>`);
+}
+
+/* ══ CREATOR PLAYBOOK ═══════════════════════════════════════════════ */
+var CPL={bid:null,ok:false,busy:false,err:"",rows:[],cid:null};
+function cplIoOn(){ return view==="cplay"&&!!activeBrand&&!brIsClient()&&canEditVision(); }
+function cplRows(cid){ return CPL.rows.filter(r=>r.brand_id===CPL.bid&&!r.deleted_at&&(!cid||r.competitor_id===cid)).sort((a,b)=>(a.sort||0)-(b.sort||0)); }
+function cplCount(cid){ return CPL.bid===activeBrand&&CPL.ok?cplRows(cid).length:0; }
+async function cplEnsure(){
+  const bid=activeBrand; if(!bid||CPL.busy||(CPL.bid===bid&&(CPL.ok||CPL.err))) return;
+  CPL.bid=bid; CPL.ok=false; CPL.err=""; CPL.rows=[]; CPL.busy=true;
+  try{ const r=await sb.from("competitor_creators").select("*").eq("brand_id",bid).is("deleted_at",null);
+    if(r.error) throw r.error;
+    if(CPL.bid===bid){ CPL.rows=(r.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at); CPL.ok=true; } }
+  catch(e){ if(CPL.bid===bid) CPL.err=String(e&&e.message||e); }
+  CPL.busy=false;
+  if(view==="brief"&&typeof cpPaint==="function") cpPaint();
+  if(view==="cplay") render();
+}
+function cplBrandName(){ return (brands[activeBrand]||{}).name||"us"; }
+function cplBoxHtml(r){
+  const n=cplCount(r.id), ideas=cplRows(r.id).filter(x=>String(x.for_us||"").trim()).length;
+  return `<div><div class="cp-lbl">Creator playbook</div><div class="cpl-box">${n
+      ?`<b>${n}</b><div class="s">creator${n===1?"":"s"}, speakers and partners · ${ideas} idea${ideas===1?"":"s"} for ${saH(cplBrandName())}</div>`
+      :`<b class="z">0</b><div class="s">no playbook yet</div>`}
+    <span class="cpl-open" onclick="cplGo('${saA(r.id)}')"><i class="ti ti-arrow-right"></i>Open the creator playbook</span></div></div>`;
+}
+function cplGo(cid){
+  if(!canEdit()){ toast("View-only account","err"); return; }
+  CPL.cid=cid; try{ localStorage.setItem("cc-cpl-"+activeBrand,cid); }catch(e){}
+  closeAllPops(); if(typeof bfPopClose==="function") bfPopClose();
+  setView("cplay"); const m=document.getElementById("main"); if(m) m.scrollTop=0;
+}
+function cplCur(){
+  const rows=(typeof cpRows==="function"&&CP.bid===activeBrand)?cpRows():[];
+  if(!CPL.cid){ try{ CPL.cid=localStorage.getItem("cc-cpl-"+activeBrand)||null; }catch(e){} }
+  let c=rows.find(x=>x.id===CPL.cid);
+  if(!c) c=rows.find(x=>cplCount(x.id))||rows[0]||null;
+  if(c) CPL.cid=c.id;
+  return c;
+}
+function cplLinks(r){ return (Array.isArray(r.post_links)?r.post_links:[]).filter(Boolean)
+  .map(u=>`<a class="cpl-pl" href="${saA(bdHref(u))}" target="_blank" rel="noopener" title="Open the post"><i class="ti ti-external-link"></i></a>`).join(""); }
+function cplHandleUrl(h){ const s=String(h||"").replace(/^@/,""); return s?"https://www.instagram.com/"+s+"/":""; }
+function cplCard(r,full){
+  const may=canEditVision();
+  const who=`<div class="who"><a class="hd" href="${saA(cplHandleUrl(r.handle))}" target="_blank" rel="noopener"><i class="ti ti-brand-instagram"></i>${saH(r.handle)}</a>
+      <span>${saH(r.who||"")}</span><div class="pls">${cplLinks(r)}</div></div>`;
+  const x=may?`<span class="cpl-x" title="Take this off" onclick="cplDel('${saA(r.id)}')">✕</span>`:"";
+  if(!full) return `<div class="cpl-c two">${who}<div><div class="lb">What they posted · the strategy at work</div><p>${saH(r.posted||"")}${r.strategy?" — "+saH(r.strategy):""}</p></div>${x}</div>`;
+  return `<div class="cpl-c">${who}<div><div class="lb">What they posted</div><p>${saH(r.posted||"—")}</p>
+      <div class="lb" style="margin-top:8px">The strategy at work</div><p>${saH(r.strategy||"—")}</p></div>
+    <div class="us"><div class="lb">Strategy for ${saH(cplBrandName())}</div><p>${saH(r.for_us)}</p></div>${x}</div>`;
+}
+function renderCreatorPlaybook(){
+  if(!(CP.bid===activeBrand&&CP.ok)){ const pr=cpEnsure(); if(pr&&pr.then) pr.then(()=>{ if(view==="cplay") render(); }); }
+  cplEnsure();
+  const mc=document.getElementById("main"); if(!mc) return;
+  const c=cplCur();
+  if(!(CP.ok&&CPL.bid===activeBrand&&CPL.ok)){ mc.innerHTML=`<div class="cpl-wrap"><div class="bd-note">${CPL.err?"Could not load the playbook — "+saH(CPL.err):"Loading…"}</div></div>`; return; }
+  if(!c){ mc.innerHTML=`<div class="cpl-wrap"><div class="bd-note">No competitors on this brand yet.</div></div>`; return; }
+  const rows=cplRows(c.id), ideas=rows.filter(r=>String(r.for_us||"").trim()), rest=rows.filter(r=>!String(r.for_us||"").trim());
+  mc.innerHTML=`<div class="cpl-wrap"><div class="cpl-head"><h2>${saH(c.name)}</h2>
+      <span class="s">${rows.length} creator${rows.length===1?"":"s"}, speakers and partners · ${ideas.length} idea${ideas.length===1?"":"s"} for ${saH(cplBrandName())}</span>
+      <span class="sp"></span><span class="cp-ty ${saA(c.kind)} ro">${CP_T[c.kind]||"Direct"}</span></div>
+    ${rows.length?"":`<div class="cpl-c empty">No creators yet.</div>`}
+    ${ideas.length?`<div class="cpl-sec">${ideas.length} with an idea for ${saH(cplBrandName())}</div><div class="cpl-grid">${ideas.map(r=>cplCard(r,true)).join("")}</div>`:""}
+    ${rest.length?`<div class="cpl-sec">${rest.length} noted, no action</div><div class="cpl-grid">${rest.map(r=>cplCard(r,false)).join("")}</div>`:""}
+  </div>`;
+}
+function buildCreatorPlaybookSidebar(){
+  const st=document.getElementById("sb-stats"); if(st) st.innerHTML="";
+  const sm=document.getElementById("sb-months"); if(!sm) return;
+  const rows=(CP.bid===activeBrand&&CP.ok)?cpRows():[];
+  const cur=cplCur();
+  sm.innerHTML=`<div class="mdb-up" onclick="openBrief()"><i class="ti ti-arrow-left"></i> Strategy</div>
+    <div class="s-lbl">Competitors</div>
+    ${rows.map(r=>`<div class="mdb-trow${cur&&cur.id===r.id?" on":""}" onclick="cplGo('${saA(r.id)}')"><span class="nm">${saH(r.name)}</span><span class="ct">${cplCount(r.id)||""}</span></div>`).join("")}`;
+}
+async function cplDel(id){
+  const r=CPL.rows.find(x=>x.id===id); if(!r) return;
+  if(!confirm("Take "+r.handle+" off this playbook?")) return;
+  const at=new Date().toISOString();
+  const u=await sb.from("competitor_creators").update({deleted_at:at}).eq("id",id);
+  if(u.error){ toast("Not saved — "+saH(u.error.message),"err"); return; }
+  r.deleted_at=at; render();
+}
+/* the route, the tab it hangs from */
+(function(){
+  const base=viewRoute;
+  viewRoute=function(v){ if(v==="cplay") return {render:renderCreatorPlaybook,sidebar:buildCreatorPlaybookSidebar,needs:"brand+edit"}; return base(v); };
+  const st=BN_TABS.find(t=>t.k==="brief"); if(st&&st.on.indexOf("cplay")<0) st.on.push("cplay");
+})();
+
+/* ── the playbook sheet: import only, from the black bar ── */
+const CPL_COLS=[["handle","Handle"],["who","Who they are"],["posted","What they posted"],["post_links","Post link(s)"],["strategy","The strategy at work"],["for_us","Strategy for "]];
+function cplIoMenu(){
+  const c=cplCur(); const nm=c?c.name:"";
+  return `<div class="brk-ioh"><i class="ti ti-users-group"></i>Creator playbook${nm?" · "+saH(nm):""}</div>
+    <div class="brow act" onclick="closeAllPops();cplPick()"><i class="ti ti-file-upload"></i><span class="bnm">Import playbook sheet</span></div>
+    <div class="brow act" onclick="closeAllPops();cplTemplate()"><i class="ti ti-file-spreadsheet"></i><span class="bnm">Blank playbook template</span></div>`;
+}
+async function cplTemplate(){
+  if(!cplIoOn()) return capDenied("Downloading the template");
+  const c=cplCur();
+  try{
+    const EJ=await loadExportLib("exceljs");
+    const wb=new EJ.Workbook();
+    const ws=wb.addWorksheet((c?c.name:"Competitor").slice(0,24)+" creators",{views:[{state:"frozen",ySplit:1}]});
+    ws.columns=CPL_COLS.map(([k,h])=>({header:k==="for_us"?h+cplBrandName():h,width:k==="handle"?22:(k==="post_links"?36:40)}));
+    ws.getRow(1).font={bold:true};
+    for(let n=2;n<=120;n++) for(let col=2;col<=6;col++) ws.getCell(n,col).alignment={wrapText:true,vertical:"top"};
+    const buf=await wb.xlsx.writeBuffer();
+    dlBlob(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),
+      seHandle(cplBrandName())+"-"+seHandle(c?c.name:"competitor")+"-creator-playbook-template.xlsx");
+  }catch(e){ toast("Download failed: "+(e.message||""),"err"); }
+}
+function cplPick(){
+  if(!cplIoOn()) return capDenied("Importing a playbook");
+  const inp=document.createElement("input"); inp.type="file"; inp.accept=".xlsx";
+  inp.onchange=()=>{ if(inp.files&&inp.files[0]) cplRead(inp.files[0]); };
+  inp.click();
+}
+/* the columns are found by their names, so a sheet with its own order still reads */
+function cplHeads(ws){
+  const H={}; const r=ws.getRow(1);
+  for(let c=1;c<=Math.max(ws.columnCount||0,20);c++){
+    const v=stLow(stCell(r.getCell(c).value)); if(!v) continue;
+    const k=v==="handle"||v==="handles"?"handle":/^who/.test(v)?"who":/posted/.test(v)?"posted":/^post link|^links?$|^post url/.test(v)?"post_links"
+      :/strategy at work|^the strategy$/.test(v)?"strategy":/^strategy for|^for /.test(v)?"for_us":null;
+    if(k&&!(k in H)) H[k]=c;
+  }
+  return H;
+}
+async function cplRead(file){
+  try{
+    const c=cplCur(); if(!c) return stRefuse("Pick a competitor first.","");
+    const wb=await xlRead(file);
+    const ws=wb.worksheets.find(w=>"handle" in cplHeads(w));
+    if(!ws) return stRefuse("That file has no Handle column.","Use the playbook sheet: Handle, Who they are, What they posted, Post link(s), The strategy at work, Strategy for "+cplBrandName()+".");
+    const H=cplHeads(ws), rows=[];
+    for(let i=2;i<=(ws.rowCount||0);i++){
+      const r=ws.getRow(i), o={_row:i}; let any=false;
+      Object.keys(H).forEach(k=>{ const v=stCell(r.getCell(H[k]).value,k==="post_links"); o[k]=v; if(v) any=true; });
+      if(any) rows.push(o);
+    }
+    STI=Object.assign({k:"pb",file:file.name,cid:c.id,cname:c.name},cplScan(c.id,rows));
+    cplCheck();
+  }catch(e){ stRefuse("That file could not be read.",e.message||""); }
+}
+function cplScan(cid,rows){
+  const have=cplRows(cid), add=[],upd=[],skip=[]; let same=0; const seen={};
+  const F=["who","posted","strategy","for_us"];
+  for(const o of rows){
+    let h=stOne(o.handle||"");
+    if(!h){ skip.push({row:o._row,why:"No handle"}); continue; }
+    if(!/^@/.test(h)) h="@"+h.replace(/^https?:\/\/(www\.)?instagram\.com\//i,"").replace(/\/.*$/,"");
+    const key=h.toLowerCase();
+    if(seen[key]){ skip.push({row:o._row,why:h+" is already on row "+seen[key]}); continue; }
+    seen[key]=o._row;
+    const w={};
+    F.forEach(f=>{ const v=String(o[f]||"").trim(); if(!v) return; w[f]=stClear(v)?"":v.replace(/[ \t]+/g," "); });
+    const lk=String(o.post_links||"").trim();
+    if(lk) w.post_links=stClear(lk)?[]:lk.split(/\s+/).filter(u=>/^https?:\/\//i.test(u));
+    const cur=have.find(x=>String(x.handle).toLowerCase()===key);
+    if(!cur){ add.push({row:o._row,handle:h,want:w}); continue; }
+    Object.keys(w).forEach(f=>{ if(JSON.stringify(cur[f]==null?(f==="post_links"?[]:""):cur[f])===JSON.stringify(w[f])) delete w[f]; });
+    if(!Object.keys(w).length){ same++; continue; }
+    upd.push({row:o._row,handle:cur.handle,id:cur.id,cur,want:w});
+  }
+  return {add,upd,skip,same};
+}
+function cplCheck(){
+  if(!STI) return;
+  const chip=(t,c)=>`<span class="sti-chip ${c}">${t}</span>`;
+  const line=(c,l,t,d)=>`<div class="sti-row">${chip(l,c)}<div class="sti-main"><div class="sti-t">${t}</div>${d?`<div class="sti-sub">${d}</div>`:""}</div></div>`;
+  const what=w=>[w.who!=null?"who":"",w.posted!=null?"post":"",w.post_links?w.post_links.length+" link"+(w.post_links.length===1?"":"s"):"",w.strategy!=null?"strategy":"",w.for_us?"idea for "+saH(cplBrandName()):""].filter(Boolean).join(" · ");
+  let body="";
+  STI.add.forEach(a=>body+=line("add","Add",saH(a.handle),saH(String(a.want.who||""))+(what(a.want)?(a.want.who?" — ":"")+what(a.want):"")));
+  STI.upd.forEach(u=>body+=line("upd","Update",saH(u.handle),what(u.want)));
+  STI.skip.forEach(s=>body+=line("skip","Skip","Row "+s.row,saH(s.why)));
+  const n=STI.add.length+STI.upd.length;
+  const foot=[STI.same?STI.same+" already match":"",STI.skip.length?STI.skip.length+" skipped":""].filter(Boolean).join(" · ");
+  stBox(`<div class="modal-top"><div><div class="modal-title">Creator playbook · ${saH(STI.cname)}</div><div class="modal-sub">${saH(STI.file||"")}</div></div>
+     <button class="modal-x" onclick="closeM('sti')">✕</button></div>
+   <div class="modal-body sti-list" style="padding:4px 20px 16px;max-height:60vh;overflow:auto;">${body||'<div style="font-size:13px;color:var(--muted);padding:14px 0;">Nothing in that sheet changes this playbook.</div>'}</div>
+   <div style="display:flex;align-items:center;gap:9px;padding:12px 20px 18px;border-top:1px solid var(--div);">
+     <span style="font-size:12.5px;color:var(--muted);">${saH(foot)}</span>
+     <span style="margin-left:auto;display:flex;gap:8px;"><button class="btn btn-g" onclick="closeM('sti')">Cancel</button>
+     <button class="btn btn-p" id="sti-go" ${n?"":"disabled style=opacity:.5"} onclick="cplSave()">Import ${n} row${n===1?"":"s"}</button></span></div>`,true);
+}
+async function cplSave(){
+  if(!STI||STI.k!=="pb"||!cplIoOn()) return;
+  const b=document.getElementById("sti-go"); if(b){ b.disabled=true; b.style.opacity=".5"; }
+  let sort=cplRows(STI.cid).reduce((m,x)=>Math.max(m,x.sort||0),0), nA=0, nU=0, fails=0;
+  for(const a of STI.add){
+    const row=Object.assign({id:crypto.randomUUID(),brand_id:activeBrand,competitor_id:STI.cid,handle:a.handle,
+      who:"",posted:"",post_links:[],strategy:"",for_us:"",sort:(sort+=10)},a.want);
+    const r=await sb.from("competitor_creators").insert([row]);
+    if(r.error){ fails++; continue; } CPL.rows.push(row); nA++;
+  }
+  for(const u of STI.upd){
+    const r=await sb.from("competitor_creators").update(Object.assign({updated_at:new Date().toISOString()},u.want)).eq("id",u.id);
+    if(r.error){ fails++; continue; } Object.assign(u.cur,u.want); nU++;
+  }
+  closeM("sti"); STI=null; render();
+  toast([nA?nA+" added":"",nU?nU+" updated":"",fails?fails+" not saved":""].filter(Boolean).join(" · ")||"Nothing changed",fails?"err":undefined);
+}
+
+/* ── drawn into the Strategy page: the creators section, and the loads ── */
+(function(){
+  const baseBrief=renderBrief;
+  renderBrief=function(){
+    const out=baseBrief.apply(this,arguments);
+    if(!briefEdit){
+      const w=document.querySelector("#main .bd-wrap");
+      if(w&&!w.querySelector("#bd-in")){
+        w.insertAdjacentHTML("beforeend",`<div class="bd-sec" id="bd-in"><div class="bd-secnum">03</div><div class="bd-sectitle">Influencers &amp; creators</div><div class="bd-secrule"></div><div class="bd-secsub" id="bc-count"></div></div><div id="bc-host"></div>`);
+      }
+      if(BC.bid!==activeBrand){ BC.ok=false; BC.err=""; BC.q=""; BC.res=null; }
+      bcPaint(); bcEnsure(); setTimeout(bcPaint,0);
+      if(CPL.bid!==activeBrand){ CPL.ok=false; CPL.err=""; CPL.cid=null; }
+      cplEnsure();
+      if(CT.bid!==activeBrand){ CT.ok=false; }
+      ctEnsure();
+    }
+    return out;
+  };
+})();
 </script>
 <style>
+/* V118.47 — Strategy additions: client team, influencers & creators, creator playbook */
+.ct-btn{background:var(--text) !important;color:#fff !important;border-color:var(--text) !important;cursor:pointer;}
+.ct-btn .n{opacity:.6;margin-left:2px;} .ct-btn .ct-lock{font-size:12px !important;opacity:.6;margin-left:2px;}
+.ct-pop{width:600px;max-width:calc(100vw - 40px);padding:4px 4px 2px;}
+.ct-r{display:grid;grid-template-columns:1.1fr 1.4fr 1fr auto;gap:10px;align-items:center;padding:9px 2px;border-bottom:1px solid var(--div);font-size:13px;}
+.ct-r .who b{display:block;font-size:13.5px;} .ct-r .who span{color:var(--muted);font-size:12px;}
+.ct-r a{color:var(--text);text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+.ct-r a i{color:var(--muted);font-size:14px;} .ct-r .ac{display:inline-flex;gap:5px;}
+.ct-ic{display:inline-flex !important;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;border:1px solid var(--div,#e3e0da);background:#fff;color:var(--text);cursor:pointer;}
+.ct-ic i{font-size:14px;color:var(--text) !important;} .ct-ic:hover{border-color:#c9c5bd;}
+.ct-ed{grid-template-columns:1fr 1fr;} .ct-ed .row{grid-column:1/-1;display:flex;gap:8px;} .ct-ed .row .sp{flex:1;}
+.ct-none{font-size:13px;color:var(--muted);padding:10px 2px;} .ct-add{padding:9px 2px 4px;}
+.bc-t td{white-space:nowrap;} .bc-t .bc-nm{font-weight:700;font-size:14px;}
+.bc-av{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:999px;background:#E8E3DA;font-size:11px;font-weight:700;margin-right:10px;vertical-align:middle;flex:none;}
+.bc-av.sm{width:24px;height:24px;font-size:10px;margin-right:8px;}
+.bc-h{display:inline-flex;align-items:center;gap:6px;color:var(--text);text-decoration:none;} .bc-h:hover{text-decoration:underline;} .bc-h i{font-size:15px;}
+.bc-f{font-weight:700;}
+.bc-st{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:600;background:var(--surface2);cursor:pointer;user-select:none;}
+.bc-st.shortlisted{background:#FFF3DC;color:#8A6D00;} .bc-st.worked{background:#E7F4EA;color:#1E7B3A;} .bc-st.ro{cursor:default;}
+.bc-addw{position:relative;display:flex;align-items:center;gap:8px;max-width:440px;} .bc-addw > i{color:var(--muted);font-size:15px;}
+.bc-addw .vb-ce{flex:1;border:1px dashed #D8D7D2 !important;background:#fff !important;}
+.bc-res{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:40;background:#fff;border:1px solid var(--div);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.12);padding:6px;max-height:320px;overflow:auto;}
+.bc-ri{display:flex;align-items:center;gap:4px;padding:7px 8px;border-radius:8px;font-size:13px;cursor:pointer;white-space:nowrap;}
+.bc-ri:hover{background:var(--surface2);} .bc-ri .s{color:var(--muted);font-size:12px;margin-left:6px;overflow:hidden;text-overflow:ellipsis;}
+.bc-ri.off{color:var(--muted);cursor:default;} .bc-ri.add{border-top:1px solid var(--div);margin-top:4px;color:var(--text);font-weight:600;gap:8px;}
+.cp-lmenu{min-width:300px;} .cp-lmenu .bf-mi .u{color:var(--muted);font-size:12px;margin-left:auto;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cp-lmenu .bf-mi .k{color:var(--muted);font-size:13px;margin-left:8px;} .cp-lmenu .bf-mi.sep{border-top:1px solid var(--div);margin-top:4px;padding-top:10px;}
+.cp-t td.w-st{width:240px !important;}
+.cpl-n{display:inline-flex;align-items:center;gap:3px;margin-left:6px;} .cpl-n i{font-size:12px !important;}
+.cp-panel.three{grid-template-columns:1fr 1fr 1fr !important;}
+.cpl-box{border:1px solid var(--div,#e3e0da);border-radius:9px;background:#fff;padding:12px;min-height:92px;box-sizing:border-box;}
+.cpl-box b{font-size:22px;display:block;} .cpl-box b.z{color:var(--subtle);} .cpl-box .s{font-size:12.5px;color:var(--muted);margin:2px 0 10px;white-space:normal;}
+.cpl-open{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--text);background:#fff;font-size:12.5px;font-weight:600;cursor:pointer;}
+.cpl-open:hover{background:var(--text);color:#fff;}
+.cpl-wrap{padding:4px 32px 32px;}
+.cpl-head{display:flex;align-items:flex-end;gap:14px;margin:4px 0 14px;flex-wrap:wrap;} .cpl-head h2{margin:0;font-size:22px;}
+.cpl-head .s{color:var(--muted);font-size:13px;padding-bottom:3px;} .cpl-head .sp{flex:1;}
+.cpl-sec{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);font-weight:700;margin:18px 0 8px;}
+.cpl-grid{display:grid;grid-template-columns:1fr;gap:10px;}
+.cpl-c{position:relative;display:grid;grid-template-columns:260px 1fr 1fr;gap:18px;background:#fff;border-radius:14px;padding:14px 18px;}
+.cpl-c.two{grid-template-columns:260px 1fr;} .cpl-c.empty{display:block;color:var(--muted);font-size:13px;}
+.cpl-c .lb{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);font-weight:700;margin-bottom:4px;}
+.cpl-c .us{background:#FBF6EA;border-radius:10px;padding:10px 12px;} .cpl-c .us .lb{color:#8A6D00;}
+.cpl-c .who .hd{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:var(--text);text-decoration:none;} .cpl-c .who .hd:hover{text-decoration:underline;}
+.cpl-c .who span{display:block;color:var(--muted);font-size:12.5px;margin-top:2px;line-height:1.45;}
+.cpl-c p{margin:0;font-size:13px;line-height:1.5;}
+.cpl-c .pls{margin-top:6px;}
+.cpl-pl{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:999px;border:1px solid var(--div);margin:0 4px 0 0;color:var(--text);}
+.cpl-pl:hover{border-color:var(--text);} .cpl-pl i{font-size:13px;}
+.cpl-x{position:absolute;top:8px;right:10px;display:none;cursor:pointer;color:var(--muted);font-size:13px;padding:2px 6px;border-radius:6px;}
+.cpl-c:hover .cpl-x{display:inline-block;} .cpl-x:hover{background:var(--surface2);color:var(--text);}
+@media(max-width:900px){ .cpl-c,.cpl-c.two{grid-template-columns:1fr;} .cp-panel.three{grid-template-columns:1fr !important;} .ct-r{grid-template-columns:1fr;} }
+.pgbar.pgbar-empty:has(+ .cpl-wrap){display:none !important;}
+
 /* V118.40 — the Strategy import check */
 .sti-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--div);}
 .sti-row:last-child{border-bottom:0;}
@@ -41349,8 +41834,8 @@ async function stHistory(){
 <script>
 (function(){
   /* V118.11 — Chirag, 16 Oct: "The order in the strategy page should be: target group. Mood board.. files." */
-  const LATE=["bd-cp","bd-vb","bd-s5","bd-s6"];   /* V118.15 — Competitors first */
-  const NUM={"bd-cp":"01","bd-vb":"02","bd-s5":"03","bd-s6":"04"};
+  const LATE=["bd-cp","bd-vb","bd-in","bd-s5","bd-s6"];   /* V118.15 — Competitors first */
+  const NUM={"bd-cp":"01","bd-vb":"02","bd-in":"03","bd-s5":"04","bd-s6":"05"};
   function tgCount(){
     const el=document.getElementById("tg-count"); if(!el) return;
     const n=document.querySelectorAll("#vb-host tr[data-tg]").length;
@@ -41377,7 +41862,7 @@ async function stHistory(){
       mood.h.insertAdjacentHTML("beforeend",`<span class="mk-lk" onclick="mdbGo()">Open the mood board <i class="ti ti-arrow-right"></i></span>`); }
     if(files) files.h.insertAdjacentHTML("beforeend",`<span class="mk-lk" onclick="bfGo('all')">Open all files <i class="ti ti-arrow-right"></i></span>`);
     if(tg){ const sub=tg.h.querySelector(".bd-secsub"); if(sub) sub.id="tg-count"; }
-    const order=secs.filter(s=>!LATE.includes(s.id)).concat(["bd-cp","bd-vb","bd-s5","bd-s6"].map(S).filter(Boolean));
+    const order=secs.filter(s=>!LATE.includes(s.id)).concat(["bd-cp","bd-vb","bd-in","bd-s5","bd-s6"].map(S).filter(Boolean));
     w.innerHTML=""; lead.forEach(x=>w.appendChild(x));
     order.forEach(s=>{
       if(LATE.includes(s.id)){ const c=document.createElement("div"); c.className="mk-card"; c.appendChild(s.h); s.body.forEach(b=>c.appendChild(b)); w.appendChild(c); }
@@ -41396,7 +41881,7 @@ async function stHistory(){
       const first=document.querySelector("#sb-months .bd-navi"); if(!first) return out;
       const box=first.parentElement;
       const lab={};   /* V118.15 — the panel draws its own names */
-      ["bd-cp","bd-vb","bd-s5","bd-s6"].forEach(id=>{
+      ["bd-cp","bd-vb","bd-in","bd-s5","bd-s6"].forEach(id=>{
         const n=box.querySelector(`.bd-navi[data-tgt="${id}"]`); if(!n) return;
         if(lab[id]){ const ct=n.querySelector(".mdb-navct"); n.textContent=lab[id]+" "; if(ct) n.appendChild(ct); }
         box.appendChild(n);
@@ -41907,7 +42392,8 @@ function trColFlip(k){
 (function(){
   /* under a tab: the page, and the tab it hangs from */
   const UNDER={mood:{parent:"openBrief()",label:"Mood board",icon:"ti-mood-heart"},
-               files:{parent:"openBrief()",label:"Files",icon:"ti-folder"}};
+               files:{parent:"openBrief()",label:"Files",icon:"ti-folder"},
+               cplay:{parent:"openBrief()",label:"Creator playbook",icon:"ti-users-group"}};
   /* from the account menu */
   /* V118.39 — the menu's three places, each named once whichever of its
      pages is open; the switch inside the page picks the page */
