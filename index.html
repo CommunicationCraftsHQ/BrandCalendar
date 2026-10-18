@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.49 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.50 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13408,7 +13408,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.49 Tbilisi";
+const TOOL_VERSION="V118.50 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -40771,6 +40771,9 @@ const STI_CP_LINK=[["Website","website"],["Instagram","instagram"],["Facebook","
 const STI_TG_COLS=["Target group","Segment","Segment note","Objectives","Objective notes","Talking points"];
 var STI=null;
 
+/* V118.50 — an undo runs from the Imports & exports page too, so it asks
+   whether this person may edit this brand's strategy, not which page is open */
+function stMayUndo(){ return !!activeBrand&&!!brands[activeBrand]&&!brIsClient()&&canEditVision(); }
 function stIoOn(){
   return view==="brief"&&!!activeBrand&&!!brands[activeBrand]&&!brIsClient()&&canEditVision();
 }
@@ -41258,7 +41261,7 @@ async function stRefresh(k){
 /* ── PAST IMPORTS AND UNDO ─────────────────────────────────────────── */
 const stSameJ=(a,b)=>JSON.stringify(a==null?null:a)===JSON.stringify(b==null?null:b);
 async function stUndo(importId){
-  if(!stIoOn()) return capDenied("Undoing an import");
+  if(!stMayUndo()) return capDenied("Undoing an import");
   let head=null,rows=[];
   try{
     const h=await sb.from("strategy_imports").select("*").eq("id",importId).single(); head=(h&&h.data)||null;
@@ -41298,7 +41301,7 @@ async function stHistory(){
   try{ const r=await sb.from("strategy_imports").select("*").eq("brand_id",activeBrand).order("created_at",{ascending:false}).limit(40);
     list=((r&&r.data)||[]).filter(x=>x.brand_id===activeBrand); }catch(e){}
   const undone={}; list.forEach(r=>{ if(r.reverts_id) undone[r.reverts_id]=true; });
-  const lbl=l=>l==="competitors"?"Competitors":"Target groups";
+  const lbl=l=>l==="competitors"?"Competitors":l==="influencers"?"Influencers & creators":"Target groups";
   const body=list.length?list.map(r=>`
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--div);">
       <div style="flex:1;min-width:0;">
@@ -43066,7 +43069,7 @@ const IO_SRC={
   vision_imports:   {page:"Strategy",   noun:"field", n:im=>im.fields_changed, undo:()=>"bvUndo"},
   /* V118.40 — the Strategy import (competitors and target groups) */
   strategy_imports: {page:"Strategy",   noun:"row",   n:im=>im.rows_changed,   undo:()=>"stUndo",
-                     pre:im=>im.list==="competitors"?"Competitors · ":im.list==="target_groups"?"Target groups · ":""}
+                     pre:im=>im.list==="competitors"?"Competitors · ":im.list==="target_groups"?"Target groups · ":im.list==="influencers"?"Influencers & creators · ":""}
 };
 async function ioLoad(){
   const my=++IO.load; IO.busy=true; IO.err=""; IO.stale=false; ioList();
@@ -45293,5 +45296,304 @@ tr.sx-before > td{box-shadow:inset 0 2px 0 var(--text);}
 tr.sx-after > td{box-shadow:inset 0 -2px 0 var(--text);}
 #bf-links .ct-btn{margin-left:auto;}
 </style>
+<script>
+/* ══ V118.50 TBILISI · INFLUENCERS & CREATORS FROM A SHEET ══════════════
+   Chirag, 18 Oct 21:33: "the important templates are not updated since it
+   doesn't show options to add influencers." The Strategy page's Import
+   menu gets a third list, built like the other two: Import · Blank
+   template · Claude prompt, recorded in Past imports with Undo.
+   · Rows match by handle (an @ or a profile address is understood).
+   · A handle already in Roster is linked to it, so its followers follow
+     Roster.
+   · A blank cell keeps what is there; one dash empties Category or
+     Followers. Nothing is taken off by a sheet.                        */
+STI_TAB.in="Influencers & creators";
+STI_NAME.in="influencers & creators";
+const STI_IN_COLS=["Creator","Handle","Platform","Followers","Category","Status"];
+const STI_IN_F=["entry_id","name","handle","platform","followers","category","status"];
+const STI_IN_PL=[["instagram","Instagram"],["youtube","YouTube"],["linkedin","LinkedIn"],["facebook","Facebook"],["x","X"]];
+const STI_IN_ST=[["idea","Idea"],["shortlisted","Shortlisted"],["worked","Worked with"]];
+
+/* "@name", "name", or a profile address — the handle and, when it says, the platform */
+function stInHandle(v){
+  let s=stOne(v); if(!s) return {h:"",pl:""};
+  let pl="";
+  const m=/^(?:https?:\/\/)?(?:www\.|m\.)?([a-z0-9.-]+)\/(.*)$/i.exec(s);
+  if(m){
+    const host=m[1].toLowerCase(), path=m[2].split(/[?#]/)[0].replace(/\/+$/,"");
+    if(/instagram\.com$/.test(host)) pl="instagram";
+    else if(/youtube\.com$|youtu\.be$/.test(host)) pl="youtube";
+    else if(/linkedin\.com$/.test(host)) pl="linkedin";
+    else if(/facebook\.com$|fb\.com$/.test(host)) pl="facebook";
+    else if(/(^|\.)x\.com$|twitter\.com$/.test(host)) pl="x";
+    s=path.split("/").filter(Boolean).filter(p=>!/^(in|company|c|user|channel)$/i.test(p)).pop()||"";
+  }
+  return {h:s.replace(/^@+/,"").trim(),pl};
+}
+function stInFollow(v){
+  const s=stOne(v).replace(/,/g,"").toLowerCase(); if(!s) return undefined;
+  const m=/^(\d+(?:\.\d+)?)\s*(k|m|l|lakh|lac|cr|crore)?$/.exec(s); if(!m) return NaN;
+  const n=parseFloat(m[1]), u=m[2]||"";
+  return Math.round(n*(u==="k"?1e3:u==="m"?1e6:/^l/.test(u)?1e5:/^cr/.test(u)?1e7:1));
+}
+const stInKey=h=>String(h||"").replace(/^@+/,"").trim().toLowerCase();
+
+/* ── the menu: a third block, before Past imports ─────────────────── */
+(function(){
+  const baseMenu=stIoMenu;
+  stIoMenu=function(){
+    const out=baseMenu.apply(this,arguments);
+    const blk=`<div class="brk-ioh"><i class="ti ti-user-star"></i>Influencers &amp; creators</div>
+    <div class="brow act" onclick="closeAllPops();stPick('in')"><i class="ti ti-file-upload"></i><span class="bnm">Import influencers &amp; creators</span></div>
+    <div class="brow act" onclick="closeAllPops();stTemplate('in')"><i class="ti ti-file-spreadsheet"></i><span class="bnm">Blank influencers &amp; creators template</span></div>
+    <div class="brow act" onclick="closeAllPops();stPrompt('in')"><i class="ti ti-sparkles"></i><span class="bnm">Claude prompt for influencers &amp; creators</span></div><div class="brk-iosep"></div>`;
+    const at=out.indexOf('<div class="brow act" onclick="closeAllPops();stHistory()"');
+    return at<0?out+`<div class="brk-iosep"></div>`+blk:out.slice(0,at)+blk+out.slice(at);
+  };
+
+  const baseReady=stReady;
+  stReady=async function(k){
+    if(k!=="in") return baseReady.apply(this,arguments);
+    const bid=activeBrand;
+    if(!(BC.ok&&BC.bid===bid)){ BC.ok=false; BC.err=""; BC.busy=false; BC.bid=null; await bcEnsure(); }
+    return BC.ok&&BC.bid===bid;
+  };
+
+  const baseTpl=stTemplate;
+  stTemplate=async function(k){
+    if(k!=="in") return baseTpl.apply(this,arguments);
+    if(!stIoOn()) return capDenied("Downloading the template");
+    const b=brands[activeBrand]||{};
+    try{
+      if(!(await stReady(k))) return toast("Could not read the influencers & creators yet — try again","err");
+      const EJ=await loadExportLib("exceljs");
+      const wb=new EJ.Workbook();
+      const ws=wb.addWorksheet(STI_TAB.in,{views:[{state:"frozen",ySplit:1}]});
+      const aw=wb.addWorksheet("Allowed words");
+      const lk=wb.addWorksheet("_lists"); lk.state="veryHidden";
+      lk.getCell(1,5).value=STI_MAGIC; lk.getCell(2,5).value=activeBrand; lk.getCell(3,5).value="in";
+      ws.columns=STI_IN_COLS.map(h=>({header:h,width:h==="Creator"?28:(h==="Handle"?26:(h==="Category"?24:16))}));
+      ws.getRow(1).font={bold:true};
+      [["Platform",STI_IN_PL.map(x=>x[1])],["Status",STI_IN_ST.map(x=>x[1])]].forEach(([hd,vals],i)=>{
+        aw.getCell(1,i+1).value=hd; aw.getCell(1,i+1).font={bold:true};
+        vals.forEach((v,j)=>aw.getCell(j+2,i+1).value=v); aw.getColumn(i+1).width=18; });
+      for(let n=2;n<=200;n++){
+        ws.getCell(n,3).dataValidation={type:"list",allowBlank:true,formulae:[`='Allowed words'!$A$2:$A$${STI_IN_PL.length+1}`]};
+        ws.getCell(n,6).dataValidation={type:"list",allowBlank:true,formulae:[`='Allowed words'!$B$2:$B$${STI_IN_ST.length+1}`]};
+      }
+      const how=wb.addWorksheet("How to fill");
+      ["One creator per row. Keep the column names as they are.",
+       "Handle: the creator's handle, with or without @, or the address of their profile.",
+       "Platform: Instagram, YouTube, LinkedIn, Facebook or X. Blank means Instagram.",
+       "Followers: a number. 120K, 1.2M or 3 lakh also work.",
+       "Status: Idea, Shortlisted or Worked with. Blank means Idea.",
+       "A creator already on the page is matched by the handle and updated.",
+       "A creator who is in Roster is linked to Roster, and the followers come from there.",
+       "A blank cell keeps what is there. A single dash (-) empties Category or Followers."
+      ].forEach((t,i)=>how.getCell(i+1,1).value=t);
+      how.getColumn(1).width=90;
+      const buf=await wb.xlsx.writeBuffer();
+      dlBlob(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),
+        seHandle(b.name)+"-influencers-template.xlsx");
+    }catch(e){ toast("Download failed: "+(e.message||""),"err"); }
+  };
+
+  const basePrompt=stPromptText;
+  stPromptText=function(k){
+    if(k!=="in") return basePrompt.apply(this,arguments);
+    const b=brands[activeBrand]||{}, br=b.brief||{}, nm=b.name||"the brand";
+    const about=[br.tagline,br.positioning].map(stOne).filter(Boolean).join(" — ");
+    const have=bcRows().map(r=>r.handle?"@"+String(r.handle).replace(/^@/,""):r.name).filter(Boolean);
+    const L=[];
+    L.push(`I am attaching a blank Excel template for the brand "${nm}".${about?" About the brand: "+about+".":""}`);
+    L.push(`Suggest influencers and content creators this brand could work with, and fill the "${STI_TAB.in}" tab, one creator per row.`);
+    L.push("");
+    L.push("Rules:");
+    L.push("- Keep the tabs and column names exactly as they are. Do not add, rename or move columns or tabs.");
+    L.push("- Creator: the person's or the page's name.");
+    L.push("- Handle: their handle on that platform, only if you are sure it is theirs. Never invent a handle.");
+    L.push("- Platform: Instagram, YouTube, LinkedIn, Facebook or X.");
+    L.push("- Followers: a recent number if you know it, otherwise leave it empty.");
+    L.push("- Category: what they make content about, in two or three words.");
+    L.push("- Status: Idea for every new suggestion.");
+    L.push("- Prefer creators whose audience matches this brand's customers and region.");
+    if(have.length) L.push(`- Already on the list: ${have.join(", ")}. Do not repeat them.`);
+    L.push("");
+    L.push("Send back the filled .xlsx file.");
+    return L.join("\n");
+  };
+
+  const baseRead=stRead;
+  stRead=async function(k,file){
+    if(k!=="in") return baseRead.apply(this,arguments);
+    try{
+      if(!(await stReady(k))) return stRefuse("The influencers & creators could not be read.","Reload the page and try again.");
+      const wb=await xlRead(file);
+      const lk=wb.getWorksheet("_lists");
+      if(lk&&String(lk.getCell(1,5).value||"")===STI_MAGIC){
+        const bId=String(lk.getCell(2,5).value||"");
+        if(bId&&bId!==activeBrand) return stRefuse("That sheet belongs to a different brand.",
+          "It was made for “"+((brands[bId]||{}).name||bId)+"”. Open that brand and import it there.");
+      }
+      const ws=wb.worksheets.find(w=>stLow(w.name)===stLow(STI_TAB.in))||
+        wb.worksheets.find(w=>{ const H=stHeads(w); return ("handle" in H)&&("creator" in H); });
+      if(!ws){
+        const cp=wb.worksheets.find(w=>stLow(w.name)===stLow(STI_TAB.cp)||("competitor" in stHeads(w)));
+        const tg=wb.worksheets.find(w=>stLow(w.name)===stLow(STI_TAB.tg)||(("target group" in stHeads(w))&&("segment" in stHeads(w))));
+        if(cp||tg){ const o=cp?"cp":"tg"; return stRefuse("This is the "+STI_NAME[o]+" sheet.","Use Import "+STI_NAME[o]+" for it."); }
+        return stRefuse("That file has no "+STI_TAB.in+" tab.","Download the blank influencers & creators template, fill it in, then import it.");
+      }
+      STI=Object.assign({k:"in",file:file.name},stScanIn(stRowsOf(ws,STI_IN_COLS)));
+      stRender();
+    }catch(e){ stRefuse("That file could not be read.",e.message||""); }
+  };
+
+  const baseRender=stRender;
+  stRender=function(){
+    if(!STI||STI.k!=="in") return baseRender.apply(this,arguments);
+    const chip=(t,c)=>`<span class="sti-chip ${c}">${t}</span>`;
+    const line=(c,lbl,title,detail)=>`<div class="sti-row">${chip(lbl,c)}<div class="sti-main"><div class="sti-t">${title}</div>${detail?`<div class="sti-sub">${detail}</div>`:""}</div></div>`;
+    const det=w=>{ const d=[];
+      if(w.platform) d.push(escHtml((STI_IN_PL.find(x=>x[0]===w.platform)||[,""])[1]));
+      if("followers" in w) d.push(w.followers==null?"followers emptied":escHtml(saFollow(w.followers))+" followers");
+      if("category" in w) d.push(w.category?escHtml(w.category):"category emptied");
+      if(w.status) d.push(escHtml((STI_IN_ST.find(x=>x[0]===w.status)||[,""])[1]));
+      if(w.name) d.push("name “"+escHtml(w.name)+"”");
+      return d.join(" · "); };
+    const who=(nm,h)=>(h?"@"+escHtml(h):"")+(nm?(h?" · ":"")+escHtml(nm):"");
+    let body="";
+    STI.add.forEach(a=>{ body+=line("add","Add",who(a.want.name,a.want.handle),det(Object.assign({},a.want,{name:""}))); });
+    STI.upd.forEach(u=>{ body+=line("upd","Update",who(u.cur.name,u.cur.handle),det(u.want)); });
+    STI.skip.forEach(s=>{ body+=line("skip","Skip","Row "+s.row,escHtml(s.why)); });
+    const n=STI.add.length+STI.upd.length;
+    const foot=[STI.same?STI.same+" already match":"",STI.skip.length?STI.skip.length+" skipped":""].filter(Boolean).join(" · ");
+    stBox(`<div class="modal-top"><div>
+        <div class="modal-title">Import influencers &amp; creators</div>
+        <div class="modal-sub">${escHtml(STI.file||"")}</div></div>
+       <button class="modal-x" onclick="closeM('sti')">✕</button></div>
+     <div class="modal-body sti-list" style="padding:4px 20px 16px;max-height:60vh;overflow:auto;">
+       ${body||'<div style="font-size:13px;color:var(--muted);padding:14px 0;">Nothing in that sheet changes anything here.</div>'}
+     </div>
+     <div style="display:flex;align-items:center;gap:9px;padding:12px 20px 18px;border-top:1px solid var(--div);">
+       <span style="font-size:12.5px;color:var(--muted);">${escHtml(foot)}</span>
+       <span style="margin-left:auto;display:flex;gap:8px;">
+       <button class="btn btn-g" onclick="closeM('sti')">Cancel</button>
+       <button class="btn btn-p" id="sti-go" ${n?"":"disabled style=opacity:.5"} onclick="stSave()">Import ${n} row${n===1?"":"s"}</button></span>
+     </div>`,true);
+  };
+
+  const baseSave=stSave;
+  stSave=async function(){
+    if(!STI||STI.k!=="in") return baseSave.apply(this,arguments);
+    if(!stIoOn()) return;
+    const btn=document.getElementById("sti-go"); if(btn){ btn.disabled=true; btn.style.opacity=".5"; }
+    const bid=activeBrand, out=[]; let fails=0;
+    const roster=async h=>{ try{ const r=await sb.rpc("cal_roster_find",{q:h}); return ((r&&r.data)||[]).find(x=>stInKey(x.handle)===stInKey(h))||null; }catch(e){ return null; } };
+    let sort=bcRows().reduce((m,x)=>Math.max(m,x.sort||0),0);
+    for(const a of STI.add){
+      const w=Object.assign({},a.want), hit=await roster(w.handle);
+      if(hit){ w.entry_id=hit.entry_id; if(!w.name) w.name=hit.name||""; if(!("followers" in a.want)&&hit.followers!=null) w.followers=hit.followers;
+        if(!w.category&&hit.category) w.category=hit.category; }
+      const row=Object.assign({id:crypto.randomUUID(),brand_id:bid,entry_id:null,name:"",platform:"instagram",followers:null,category:"",status:"idea",
+        sort:(sort+=10),created_by:(ME&&ME.id)||null},w);
+      const r=await sb.from("brand_creators").insert([row]);
+      if(r.error){ fails++; continue; }
+      BC.rows.push(row);
+      out.push({kind:"creator",row_id:row.id,made:true,before:null,after:stPickF(row,STI_IN_F)});
+    }
+    for(const u of STI.upd){
+      const w=Object.assign({},u.want);
+      if(!u.cur.entry_id){ const hit=await roster(u.cur.handle); if(hit) w.entry_id=hit.entry_id; }
+      const before=stPickF(u.cur,Object.keys(w));
+      const r=await sb.from("brand_creators").update(Object.assign({updated_at:new Date().toISOString()},w)).eq("id",u.id);
+      if(r.error){ fails++; continue; }
+      Object.assign(u.cur,w);
+      out.push({kind:"creator",row_id:u.id,made:false,before,after:stPickF(u.cur,Object.keys(w))});
+    }
+    try{
+      const iid=crypto.randomUUID();
+      const ins=await sb.from("strategy_imports").insert({id:iid,brand_id:bid,list:"influencers",file_name:STI.file||"",
+        actor_email:(ME.email||""),actor_name:actorName(),rows_changed:out.length,reverts_id:null});
+      if(ins&&!ins.error&&out.length)
+        await sb.from("strategy_import_rows").insert(out.map(r=>({import_id:iid,brand_id:bid,kind:r.kind,
+          row_id:r.row_id,made:r.made,before:r.before,after:r.after})));
+    }catch(e){}
+    const nA=out.filter(r=>r.made).length, nU=out.length-nA;
+    closeM("sti"); STI=null;
+    await stRefresh("in");
+    toast([nA?nA+" added":"",nU?nU+" updated":"",fails?fails+" not saved":""].filter(Boolean).join(" · ")||"Nothing changed",fails?"err":undefined);
+  };
+
+  const baseRefresh=stRefresh;
+  stRefresh=async function(k){
+    if(k!=="in") return baseRefresh.apply(this,arguments);
+    bcPaint(); if(typeof renderBriefSidebar==="function") try{ renderBriefSidebar(); }catch(e){}
+  };
+
+  const baseUndo=stUndo;
+  stUndo=async function(importId){
+    let head=null;
+    try{ const h=await sb.from("strategy_imports").select("*").eq("id",importId).single(); head=(h&&h.data)||null; }catch(e){}
+    if(!head||head.list!=="influencers") return baseUndo.apply(this,arguments);
+    if(!stMayUndo()) return capDenied("Undoing an import");
+    let rows=[];
+    try{ const r=await sb.from("strategy_import_rows").select("*").eq("import_id",importId); rows=((r&&r.data)||[]).filter(x=>x.import_id===importId); }catch(e){}
+    await stReady("in");
+    const kill=[],back=[],kept=[];
+    rows.forEach(r=>{
+      const cur=BC.rows.find(x=>x.id===r.row_id&&!x.deleted_at); if(!cur) return;
+      const a=r.after||{};
+      if(Object.keys(a).some(f=>STI_IN_F.includes(f)&&f!=="followers"&&!stSameJ(cur[f],a[f]))){ kept.push(cur); return; }
+      if(r.made) kill.push(cur); else back.push({cur,before:r.before||{}});
+    });
+    if(!kill.length&&!back.length) return toast(kept.length?"Everything from that import has been edited since — nothing undone.":"Nothing left from that import to undo.","err");
+    if(!confirm("Undo this import? "+[kill.length?kill.length+" taken off":"",back.length?back.length+" put back":""].filter(Boolean).join(", ")+
+       (kept.length?". "+kept.length+" edited since will be left alone.":"."))) return;
+    let n=0;
+    for(const c of kill){ const at=new Date().toISOString();
+      const u=await sb.from("brand_creators").update({deleted_at:at}).eq("id",c.id); if(!u.error){ c.deleted_at=at; n++; } }
+    for(const b of back){ const u=await sb.from("brand_creators").update(b.before).eq("id",b.cur.id); if(!u.error){ Object.assign(b.cur,b.before); n++; } }
+    try{ await sb.from("strategy_imports").insert({brand_id:head.brand_id,list:head.list,file_name:"",
+      actor_email:(ME.email||""),actor_name:actorName(),rows_changed:n,reverts_id:importId}); }catch(e){}
+    closeM("sti");
+    await stRefresh("in");
+    toast([kill.length?kill.length+" taken off":"",back.length?back.length+" put back":"",kept.length?kept.length+" left alone":""].filter(Boolean).join(" · "));
+  };
+})();
+
+/* ── THE RULES · influencers & creators ─────────────────────────────── */
+function stScanIn(rows){
+  const add=[],upd=[],skip=[]; let same=0; const seen={};
+  const have=bcRows();
+  const plBy={}; STI_IN_PL.forEach(([k,l])=>{ plBy[k]=k; plBy[stLow(l)]=k; }); plBy.twitter="x"; plBy.yt="youtube"; plBy.ig="instagram"; plBy.insta="instagram";
+  const stBy={}; STI_IN_ST.forEach(([k,l])=>{ stBy[k]=k; stBy[stLow(l)]=k; }); stBy.worked="worked"; stBy["worked with them"]="worked";
+  for(const o of rows){
+    const nm=stOne(o["Creator"]), hh=stInHandle(o["Handle"]);
+    if(!hh.h){ skip.push({row:o._row,why:(nm?nm+" — ":"")+"No handle"}); continue; }
+    if(!/^[a-z0-9._-]{1,60}$/i.test(hh.h)){ skip.push({row:o._row,why:"“"+stOne(o["Handle"])+"” is not a handle"}); continue; }
+    const key=stInKey(hh.h);
+    if(seen[key]){ skip.push({row:o._row,why:"@"+hh.h+" is already on row "+seen[key]}); continue; }
+    seen[key]=o._row;
+    const why=[], w={};
+    const pw=stLow(o["Platform"]);
+    if(pw){ if(plBy[pw]) w.platform=plBy[pw]; else why.push("Platform must be Instagram, YouTube, LinkedIn, Facebook or X"); }
+    else if(hh.pl) w.platform=hh.pl;
+    const fw=stOne(o["Followers"]);
+    if(fw){ if(stClear(fw)) w.followers=null; else { const n=stInFollow(fw); if(isNaN(n)) why.push("Followers must be a number"); else w.followers=n; } }
+    const cw=stOne(o["Category"]);
+    if(cw) w.category=stClear(cw)?"":cw.slice(0,80);
+    const sw=stLow(o["Status"]);
+    if(sw){ if(stBy[sw]) w.status=stBy[sw]; else why.push("Status must be Idea, Shortlisted or Worked with"); }
+    if(why.length){ skip.push({row:o._row,why:"@"+hh.h+" — "+why.join(" · ")}); continue; }
+    const cur=have.find(r=>stInKey(r.handle)===key)||null;
+    if(!cur){ add.push({row:o._row,want:Object.assign({name:nm,handle:hh.h},w)}); continue; }
+    if(nm&&!stOne(cur.name)) w.name=nm;
+    Object.keys(w).forEach(f=>{ if(stSameJ(cur[f]==null?null:cur[f],w[f]==null?null:w[f])||(f==="category"&&!w[f]&&!cur[f])) delete w[f]; });
+    if(!Object.keys(w).length){ same++; continue; }
+    upd.push({row:o._row,id:cur.id,cur,want:w});
+  }
+  return {add,upd,skip,same};
+}
+</script>
 </body>
 </html>
