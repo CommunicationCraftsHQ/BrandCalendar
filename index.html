@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.50 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.51 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13408,7 +13408,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.50 Tbilisi";
+const TOOL_VERSION="V118.51 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -40893,6 +40893,7 @@ async function stTemplate(k){
       }
     }
     ws.getRow(1).font={bold:true};
+    if(k==="cp"&&typeof stPbSheet==="function") stPbSheet(wb,aw);
     const how=wb.addWorksheet("How to fill");
     (k==="cp"?[
       "One competitor per row. Keep the column names as they are.",
@@ -40901,7 +40902,9 @@ async function stTemplate(k){
       "Mood board tag: an existing tag, or a new name to create one.",
       "Strengths and What we should adopt: one point per line.",
       "A competitor already on the page is matched by its name and updated.",
-      "A blank cell keeps what is there. A single dash (-) empties it."
+      "A blank cell keeps what is there. A single dash (-) empties it.",
+      "Creator playbook tab: one creator per row, for any competitor. Competitor must be a name on the Competitors tab or already on the page.",
+      "Handle: with or without @. Post link(s): one per line. A creator already in that competitor's playbook is matched by the handle and updated."
     ]:[
       "One segment per row. Keep the column names as they are.",
       "Target group, objectives and listed segments: use the words on the Allowed words tab.",
@@ -40937,6 +40940,10 @@ function stPromptText(k){
     L.push("- Strengths: what this competitor does well in its marketing and communication. Short points, one per line.");
     L.push("- What we should adopt: what this brand should take from them. Short points, one per line.");
     L.push("- Leave a cell empty when you are not sure. Never invent a link.");
+    L.push(`- Creator playbook tab: for each competitor, the influencers, creators, speakers and partners it has worked with, one per row.`);
+    L.push(`- Competitor: the name exactly as on the Competitors tab. Handle: their Instagram handle with @, only if you are sure.`);
+    L.push(`- Who they are: one line. What they posted: what they posted with or for the competitor. Post link(s): the post addresses, one per line.`);
+    L.push(`- The strategy at work: why it works for the competitor. Strategy for ${nm}: what ${nm} could do with the same idea, or leave it empty.`);
     if(have.length) L.push(`- Already on the list: ${have.join(", ")}. Use the same names if you add information about them.`);
   }else{
     L.push(`Fill the "Target groups" tab with the audiences this brand should talk to, one segment per row.`);
@@ -41011,14 +41018,19 @@ async function stRead(k,file){
     }
     const other=k==="cp"?"tg":"cp";
     const find=(kk)=>wb.worksheets.find(w=>stLow(w.name)===stLow(STI_TAB[kk]))||
-      wb.worksheets.find(w=>{ const H=stHeads(w); return kk==="cp"?("competitor" in H):(("target group" in H)&&("segment" in H)); });
+      wb.worksheets.find(w=>{ const H=stHeads(w); return kk==="cp"?(("competitor" in H)&&!("handle" in H)):(("target group" in H)&&("segment" in H)); });
     const ws=find(k);
+    if(k==="cp"&&(CPL.bid!==activeBrand||!CPL.ok)){ CPL.ok=false; CPL.err=""; CPL.busy=false; CPL.bid=null; await cplEnsure(); }
+    if(!ws&&k==="cp"&&typeof stPbTab==="function"&&stPbTab(wb)){
+      STI={k,file:file.name,add:[],upd:[],skip:[],same:0}; stPbScan(wb); stRender(); return;
+    }
     if(!ws){
       if(find(other)) return stRefuse("This is the "+STI_NAME[other]+" sheet.","Use Import "+STI_NAME[other]+" for it.");
       return stRefuse("That file has no "+STI_TAB[k]+" tab.","Download the blank "+STI_NAME[k]+" template, fill it in, then import it.");
     }
     const rows=stRowsOf(ws,k==="cp"?STI_CP_COLS:STI_TG_COLS);
     STI=Object.assign({k,file:file.name},k==="cp"?stScanCp(rows):stScanTg(rows));
+    if(k==="cp"&&typeof stPbScan==="function"){ STI._cpws=ws; stPbScan(wb); }
     stRender();
   }catch(e){ stRefuse("That file could not be read.",e.message||""); }
 }
@@ -41239,6 +41251,7 @@ async function stSave(){
       out.push({kind:"segment",row_id:u.id,made:false,before,after:stPickF(u.cur,Object.keys(u.want))});
     }
   }
+  if(k==="cp"&&STI.pb&&typeof stPbSave==="function") fails+=await stPbSave(out);
   try{
     /* the id is made here, so the rows can point at it without a read back */
     const iid=crypto.randomUUID();
@@ -41272,12 +41285,14 @@ async function stUndo(importId){
   await stReady(k);
   const T=window.tgIo, pool=k==="cp"?CP.rows:T.vb().bsegs;
   const F=k==="cp"?STI_CP_F:STI_TG_F;
-  const kill=[],back=[],kept=[];
+  const kill=[],back=[],kept=[], TBX=new Map();
   rows.forEach(r=>{
-    const cur=pool.find(x=>x.id===r.row_id&&!x.deleted_at); if(!cur) return;
+    const isPb=r.kind==="playbook";
+    const cur=(isPb?((typeof CPL==="object"&&CPL.rows)||[]):pool).find(x=>x.id===r.row_id&&!x.deleted_at); if(!cur) return;
+    if(isPb) TBX.set(cur,"competitor_creators");
     const a=r.after||{};
     /* edited in the tool since? then it is somebody's work now, not this import's */
-    if(Object.keys(a).some(f=>F.includes(f)&&!stSameJ(cur[f],a[f]))){ kept.push(cur); return; }
+    if(Object.keys(a).some(f=>(isPb?STI_PB_F:F).includes(f)&&!stSameJ(cur[f],a[f]))){ kept.push(cur); return; }
     if(r.made) kill.push(cur); else back.push({cur,before:r.before||{}});
   });
   if(!kill.length&&!back.length) return toast(kept.length?"Everything from that import has been edited since — nothing undone.":"Nothing left from that import to undo.","err");
@@ -41286,8 +41301,8 @@ async function stUndo(importId){
   const tb=k==="cp"?"brand_competitors":"brand_segments";
   let n=0;
   for(const c of kill){ const at=new Date().toISOString();
-    const u=await sb.from(tb).update({deleted_at:at}).eq("id",c.id); if(!u.error){ c.deleted_at=at; n++; } }
-  for(const b of back){ const u=await sb.from(tb).update(b.before).eq("id",b.cur.id); if(!u.error){ Object.assign(b.cur,b.before); n++; } }
+    const u=await sb.from(TBX.get(c)||tb).update({deleted_at:at}).eq("id",c.id); if(!u.error){ c.deleted_at=at; n++; } }
+  for(const b of back){ const u=await sb.from(TBX.get(b.cur)||tb).update(b.before).eq("id",b.cur.id); if(!u.error){ Object.assign(b.cur,b.before); n++; } }
   try{ await sb.from("strategy_imports").insert({brand_id:head.brand_id,list:head.list,file_name:"",
     actor_email:(ME.email||""),actor_name:actorName(),rows_changed:n,reverts_id:importId}); }catch(e){}
   closeM("sti");
@@ -45594,6 +45609,134 @@ function stScanIn(rows){
   }
   return {add,upd,skip,same};
 }
+</script>
+<script>
+/* ══ V118.51 TBILISI · THE PLAYBOOK RIDES IN THE COMPETITORS SHEET ══════
+   Chirag, 18 Oct 22:08: "Creator playbook on the strategy page should
+   not be a separate upload exercise. It should be part of the
+   competitors page template only." Picked mockup 02 and said build.
+   · The competitors template gets a second tab, Creator playbook:
+     Competitor · Handle · Who they are · What they posted · Post link(s)
+     · The strategy at work · Strategy for <brand>.
+   · Import competitors reads both tabs, shows one check, saves the
+     competitors first and then their creators, and records both as one
+     import, so one Undo takes both back.
+   · A creator's competitor must be on the Competitors tab or already on
+     the page. The playbook page's own import is unchanged.            */
+const STI_PB_TAB="Creator playbook";
+const STI_PB_F=["handle","who","posted","post_links","strategy","for_us"];
+
+function stPbTab(wb){
+  return wb.worksheets.find(w=>stLow(w.name)===stLow(STI_PB_TAB))||
+    wb.worksheets.find(w=>{ const H=stHeads(w); return ("competitor" in H)&&("handle" in H); })||null;
+}
+/* the template's second tab */
+function stPbSheet(wb,aw){
+  const ws=wb.addWorksheet(STI_PB_TAB,{views:[{state:"frozen",ySplit:1}]});
+  const heads=["Competitor"].concat(CPL_COLS.map(([k,h])=>k==="for_us"?h+cplBrandName():h));
+  ws.columns=heads.map((h,i)=>({header:h,width:i===0?24:(i===1?22:(i===4?36:40))}));
+  ws.getRow(1).font={bold:true};
+  const names=cpRows().map(r=>r.name);
+  const col=4; aw.getCell(1,col).value="Competitors on the page"; aw.getCell(1,col).font={bold:true};
+  names.forEach((v,i)=>aw.getCell(i+2,col).value=v); aw.getColumn(col).width=28;
+  for(let n=2;n<=300;n++){
+    if(names.length) ws.getCell(n,1).dataValidation={type:"list",allowBlank:true,showErrorMessage:false,formulae:[`='Allowed words'!$D$2:$D$${names.length+1}`]};
+    for(let c=3;c<=7;c++) ws.getCell(n,c).alignment={wrapText:true,vertical:"top"};
+  }
+  return ws;
+}
+/* read the second tab and line each row up with its competitor */
+function stPbScan(wb){
+  if(!STI||STI.k!=="cp") return;
+  const ws=stPbTab(wb); if(!ws||ws===STI._cpws) return;
+  const HC=stHeads(ws), cc=HC["competitor"], H=cplHeads(ws);
+  if(!cc||!("handle" in H)) return;
+  const groups={}, skip=[];
+  const have=cpRows(), adding=(STI.add||[]).map(a=>a.name);
+  for(let i=2;i<=(ws.rowCount||0);i++){
+    const r=ws.getRow(i), o={_row:i}; let any=false;
+    Object.keys(H).forEach(k=>{ const v=stCell(r.getCell(H[k]).value,k==="post_links"); o[k]=v; if(v) any=true; });
+    const cn=stOne(stCell(r.getCell(cc).value)); if(cn) any=true;
+    if(!any) continue;
+    if(!cn){ skip.push({row:i,why:"No competitor"}); continue; }
+    const cur=have.find(x=>stLow(x.name)===stLow(cn)), nw=adding.find(x=>stLow(x)===stLow(cn));
+    if(!cur&&!nw){ skip.push({row:i,why:"“"+cn+"” is not a competitor"}); continue; }
+    const key=cur?cur.id:"new:"+stLow(nw);
+    (groups[key]=groups[key]||{cid:cur?cur.id:null,cname:cur?cur.name:nw,rows:[]}).rows.push(o);
+  }
+  const pb={add:[],upd:[],skip,same:0};
+  Object.values(groups).forEach(g=>{
+    const s=cplScan(g.cid||"__new__",g.rows);
+    s.add.forEach(a=>pb.add.push(Object.assign({cid:g.cid,cname:g.cname},a)));
+    s.upd.forEach(u=>pb.upd.push(Object.assign({cid:g.cid,cname:g.cname},u)));
+    s.skip.forEach(x=>pb.skip.push({row:x.row,why:g.cname+" — "+x.why}));
+    pb.same+=s.same;
+  });
+  STI.pb=pb;
+}
+/* saving: after the competitors, so a new competitor has its id */
+async function stPbSave(out){
+  const pb=STI&&STI.pb; if(!pb) return 0;
+  let fails=0;
+  if(CPL.bid!==activeBrand||!CPL.ok){ CPL.ok=false; CPL.err=""; CPL.busy=false; CPL.bid=null; await cplEnsure(); }
+  const cidOf=x=>x.cid||((cpRows().find(r=>stLow(r.name)===stLow(x.cname))||{}).id)||null;
+  const sortBy={};
+  for(const a of pb.add){
+    const cid=cidOf(a); if(!cid){ fails++; continue; }
+    if(sortBy[cid]==null) sortBy[cid]=cplRows(cid).reduce((m,x)=>Math.max(m,x.sort||0),0);
+    const row=Object.assign({id:crypto.randomUUID(),brand_id:activeBrand,competitor_id:cid,handle:a.handle,
+      who:"",posted:"",post_links:[],strategy:"",for_us:"",sort:(sortBy[cid]+=10)},a.want);
+    const r=await sb.from("competitor_creators").insert([row]);
+    if(r.error){ fails++; continue; }
+    CPL.rows.push(row);
+    out.push({kind:"playbook",row_id:row.id,made:true,before:null,after:stPickF(row,STI_PB_F)});
+  }
+  for(const u of pb.upd){
+    const before=stPickF(u.cur,Object.keys(u.want));
+    const r=await sb.from("competitor_creators").update(Object.assign({updated_at:new Date().toISOString()},u.want)).eq("id",u.id);
+    if(r.error){ fails++; continue; }
+    Object.assign(u.cur,u.want);
+    out.push({kind:"playbook",row_id:u.id,made:false,before,after:stPickF(u.cur,Object.keys(u.want))});
+  }
+  return fails;
+}
+(function(){
+  /* the check: the playbook rows under the competitors */
+  const baseRender=stRender;
+  stRender=function(){
+    const out=baseRender.apply(this,arguments);
+    try{
+      if(!STI||STI.k!=="cp"||!STI.pb) return out;
+      const pb=STI.pb, list=document.querySelector("#sti-body .sti-list"); if(!list) return out;
+      const chip=(t,c)=>`<span class="sti-chip ${c}">${t}</span>`;
+      const line=(c,l,t,d)=>`<div class="sti-row">${chip(l,c)}<div class="sti-main"><div class="sti-t">${t}</div>${d?`<div class="sti-sub">${d}</div>`:""}</div></div>`;
+      const what=w=>["Creator playbook",w.who?escHtml(String(w.who).slice(0,70)):"",w.post_links&&w.post_links.length?w.post_links.length+" link"+(w.post_links.length===1?"":"s"):"",
+        w.strategy!=null?"strategy":"",w.for_us?"idea for "+escHtml(cplBrandName()):""].filter(Boolean).join(" · ");
+      let h="";
+      pb.add.forEach(a=>h+=line("add","Add",escHtml(a.cname)+" · "+escHtml(a.handle),what(a.want)));
+      pb.upd.forEach(u=>h+=line("upd","Update",escHtml(u.cname)+" · "+escHtml(u.handle),what(u.want)));
+      pb.skip.forEach(s=>h+=line("skip","Skip",STI_PB_TAB+" · row "+s.row,escHtml(s.why)));
+      if(!h) return out;
+      const empty=list.querySelector(":scope > div:not(.sti-row)"); if(empty&&!list.querySelector(".sti-row")) empty.remove();
+      list.insertAdjacentHTML("beforeend",h);
+      const n=STI.add.length+STI.upd.length+pb.add.length+pb.upd.length;
+      const go=document.getElementById("sti-go");
+      if(go){ go.textContent="Import "+n+" row"+(n===1?"":"s"); if(n){ go.disabled=false; go.removeAttribute("style"); } }
+      const foot=go&&go.closest("div[style]")&&go.closest("div[style]").querySelector(":scope > span");
+      if(foot){ const same=STI.same+pb.same, sk=STI.skip.length+pb.skip.length;
+        foot.textContent=[same?same+" already match":"",sk?sk+" skipped":""].filter(Boolean).join(" · "); }
+    }catch(e){}
+    return out;
+  };
+  /* the undo needs the playbook rows in hand */
+  const baseUndo=stUndo;
+  stUndo=async function(){
+    try{ if(activeBrand&&(CPL.bid!==activeBrand||!CPL.ok)){ CPL.ok=false; CPL.err=""; CPL.busy=false; CPL.bid=null; await cplEnsure(); } }catch(e){}
+    const out=await baseUndo.apply(this,arguments);
+    try{ if(typeof cpPaint==="function") cpPaint(); }catch(e){}
+    return out;
+  };
+})();
 </script>
 </body>
 </html>
