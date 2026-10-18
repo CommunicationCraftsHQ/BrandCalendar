@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.55 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.56 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13471,7 +13471,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.55 Tbilisi";
+const TOOL_VERSION="V118.56 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -38916,7 +38916,7 @@ function bfRowHtml(f,showFold){
     <div class="dn">${name}<span>${escHtml(bfSize(f.size_bytes))}</span></div>
     <span class="bf-fold"></span>
     <span class="bf-tk${n?"":" none"}${may?"":" ro"}" ${may?`onclick="bfTaskPick(event,'${f.id}')"`:""}>${n?`Linked to <b>${n} task${n>1?"s":""}</b>`:(may?"Link to a task":"")}</span>
-    <span class="bf-src${f.src==="lead"?" lead":""}">${BF_SRC[f.src]||""}</span>
+    <span class="bf-src${f.src==="lead"?" lead":""}">${((BF.folders||[]).find(x=>x.id===f.folder_id&&x.name.toLowerCase()==="brand assets")?"Brand assets":"")||BF_SRC[f.src]||""}</span>
     <span class="who">${escHtml([who,when].filter(Boolean).join(" · "))}</span>
     <span class="bf-open" onclick="bfOpen('${f.id}')">Open</span>
     ${may?`<button class="bf-dots" title="More" onclick="bfRowMenu(event,'${f.id}')"><i class="ti ti-dots"></i></button>`:"<span></span>"}
@@ -39036,7 +39036,7 @@ function bfAddMenu(ev){
   if(!BF.ok){ toast("The files are still loading","err"); return; }
   const fo=k=>BF.folders.find(f=>f.name.toLowerCase()===(k==="client"?"from the client":"from us"));
   const row=k=>{ const f=fo(k); return f?`<div class="bf-mi" onclick="BF._src='${k}';bfPickFiles('${f.id}')"><i class="ti ti-folder"></i>${escHtml(f.name)}</div>`:""; };
-  bfPop(ev,`<div class="bf-menu" style="min-width:220px">${row("us")}${row("client")}</div>`,true);
+  bfPop(ev,`<div class="bf-menu" style="min-width:220px">${row("us")}${row("client")}${(()=>{ const f=BF.folders.find(x=>x.name.toLowerCase()==="brand assets"); return f?`<div class="bf-mi" onclick="BF._src='us';bfPickFiles('${f.id}')"><i class="ti ti-folder"></i>${escHtml(f.name)}</div>`:""; })()}</div>`,true);
 }
 function bfPickFiles(fid){
   bfPopClose();
