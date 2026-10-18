@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.48 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.49 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13408,7 +13408,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.48 Tbilisi";
+const TOOL_VERSION="V118.49 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -33247,8 +33247,8 @@ window.prSegOpen=function(){ pbOpen("seg"); };
   const grpOrder = () => VB.segs.map(s => s.key);
   function tgRows(){
     const o = grpOrder(), at = (k) => { const i = o.indexOf(k); return i < 0 ? 999 : i; };
-    return VB.bsegs.slice().sort((a, b) => (at(a.segment_key) - at(b.segment_key))
-      || ((a.sort || 0) - (b.sort || 0)) || String(segsOf(a)[0] || "").localeCompare(String(segsOf(b)[0] || "")));
+    return VB.bsegs.slice().sort((a, b) => ((a.sort || 0) - (b.sort || 0))
+      || (at(a.segment_key) - at(b.segment_key)) || String(segsOf(a)[0] || "").localeCompare(String(segsOf(b)[0] || "")));
   }
   const tgUsed = (g, except) => VB.bsegs.filter(r => r.segment_key === g && r.id !== except).flatMap(r => segsOf(r).map(low));
   function tgChoices(g, except){
@@ -33508,7 +33508,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
         : `<b class="ro">${esc(w)}</b>`}</span>${noteBox(r, "s", i, w)}</div>`).join("")}${edit ? `<div class="tg-ln vb-inf"><span class="vb-plus" onclick="tgSegOpen(event,'${id}')">+ segment</span></div>` : (L.length ? "" : `<span class="nsdim">—</span>`)}</div>`;
     const tp = `<span class="a3-tp${n ? "" : " none"}${op ? " open" : ""}" onclick="tgTpToggle('${id}')">${n ? n + " talking point" + (n > 1 ? "s" : "") : (edit ? "Add talking points" : "None")}</span>`;
     const main = `<tr data-tg="${id}">
-        <td class="w-grp">${edit ? grpSel(r.segment_key, `tgGrp('${id}',this.value)`) : `<span class="vb-ro">${esc(mlabel(VB.segs, r.segment_key))}</span>`}</td>
+        <td class="w-grp">${edit && typeof sxGrip === "function" ? sxGrip("tg") : ""}${edit ? grpSel(r.segment_key, `tgGrp('${id}',this.value)`) : `<span class="vb-ro">${esc(mlabel(VB.segs, r.segment_key))}</span>`}</td>
         <td class="w-seg">${segCell}</td>
         <td>${objCell}</td>
         <td class="w-tp">${tp}</td>
@@ -40567,7 +40567,7 @@ const CP_SHOW=7;
 const CP_T={direct:"Direct",aspirational:"Aspirational"};
 function cpMay(){ return typeof bfMayLinks==="function"&&bfMayLinks(); }
 function cpRows(){ return CP.rows.filter(r=>!r.deleted_at&&r.brand_id===CP.bid)
-  .sort((a,b)=>((a.kind==="direct"?0:1)-(b.kind==="direct"?0:1))||((a.sort||0)-(b.sort||0))||String(a.name).localeCompare(String(b.name))); }
+  .sort((a,b)=>((a.sort||0)-(b.sort||0))||((a.kind==="direct"?0:1)-(b.kind==="direct"?0:1))||String(a.name).localeCompare(String(b.name))); }
 async function cpEnsure(){
   const bid=activeBrand; if(!bid||CP.busy||(CP.bid===bid&&(CP.ok||CP.err))) return;
   CP.bid=bid; CP.ok=false; CP.err=""; CP.rows=[]; CP.busy=true;
@@ -40584,7 +40584,7 @@ function cpRowHtml(r){
   const lk=cpLinksOf(r).map((l,i)=>{ const k=bfKind(l.kind);
     return `<a class="bf-lk cp-lk cp-ic" href="${escAttr(bdHref(l.url))}" target="_blank" rel="noopener" title="${escAttr(k[1]+" · "+bdShort(l.url))}" aria-label="${escAttr(k[1])}"><i class="ti ti-${k[2]}"></i></a>`; }).join("");
   return `<tr data-cp="${id}">
-    <td class="w-nm">${may?`<input class="vb-ce cp-nm" value="${escAttr(r.name)}" onblur="cpName('${id}',this.value)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.defaultValue;this.blur();}">`:`<span class="cp-nmro">${escHtml(r.name)}</span>`}</td>
+    <td class="w-nm">${may&&typeof sxGrip==="function"?sxGrip("cp"):""}${may?`<input class="vb-ce cp-nm" value="${escAttr(r.name)}" onblur="cpName('${id}',this.value)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.defaultValue;this.blur();}">`:`<span class="cp-nmro">${escHtml(r.name)}</span>`}</td>
     <td class="w-ty"><span class="cp-ty ${r.kind}${may?"":" ro"}"${may?` title="Switch" onclick="cpType('${id}')"`:""}>${CP_T[r.kind]||"Direct"}</span></td>
     <td class="w-lk"><div class="cp-lks">${lk}${may?(lk?`<span class="cp-add" title="Change or add links" onclick="cpLinksMenu(event,'${id}')"><i class="ti ti-dots"></i></span>`:`<span class="cp-add" title="Add a link" onclick="cpLinkMenu(event,'${id}')"><i class="ti ti-plus"></i></span>`):(lk?"":`<span class="nsdim">—</span>`)}</div></td>
     <td class="w-mb">${cpMbCell(r)}</td>
@@ -40596,8 +40596,8 @@ function cpHtml(){
   const rows=cpRows(), may=cpMay();
   if(!rows.length&&!may) return `<div class="bd-note" style="margin:6px 0 2px">None yet.</div>`;
   return `<table class="vb-t a3 cp-t"><thead><tr><th>Competitor</th><th>Type</th><th>Links</th><th>Mood board</th><th>Strengths</th><th></th></tr></thead><tbody>
-    ${(CP.all?rows:rows.slice(0,CP_SHOW)).map(cpRowHtml).join("")}
-    ${rows.length>CP_SHOW?`<tr class="cp-more"><td colspan="6"><span class="cp-morebtn" onclick="CP.all=!CP.all;cpPaint();"><i class="ti ti-chevron-${CP.all?"up":"down"}"></i>${CP.all?"Show fewer":"Show all "+rows.length}</span></td></tr>`:""}
+    ${((typeof sxOpen==="function"&&!sxOpen("cp"))?rows.slice(0,SX_TOP):rows).map(cpRowHtml).join("")}
+    ${(rows.length>CP_SHOW&&typeof sxOpen!=="function")?`<tr class="cp-more"><td colspan="6"><span class="cp-morebtn" onclick="CP.all=!CP.all;cpPaint();"><i class="ti ti-chevron-${CP.all?"up":"down"}"></i>${CP.all?"Show fewer":"Show all "+rows.length}</span></td></tr>`:""}
     ${may?`<tr class="vb-new cp-new"><td class="w-nm"><input class="vb-ce" id="cp-new" placeholder="Add a competitor…" onkeydown="if(event.key==='Enter'&&this.value.trim()){event.preventDefault();cpAdd(this.value);}"></td>
       <td class="w-ty">${["direct","aspirational"].map(t=>`<span class="cp-ty ${t}${CP.newT===t?"":" off"}" onclick="CP.newT='${t}';cpPaint();const n=document.getElementById('cp-new');if(n)n.focus();">${CP_T[t]}</span>`).join(" ")}</td><td></td><td></td><td></td><td></td></tr>`:""}
     </tbody></table>`;
@@ -45154,5 +45154,144 @@ function xfActBack(){ xtSheet("files"); }
   const baseO=openTaskScreen; openTaskScreen=function(){ XF_F="all"; return baseO.apply(this,arguments); };
 })();
 </script>
+<script>
+/* ══ V118.49 TBILISI · OPEN AND COLLAPSE, MOVE A ROW, CHANNELS FROM LINKS ══
+   Chirag, 18 Oct 20:52 and 20:59, after the mockup:
+     · the Channels buttons leave the top right of the Strategy page; a
+       brand's channels are read from its links instead
+     · Competitors and Target groups each get an Open / Collapse button.
+       Collapsed: three competitors; every target group on one line, the
+       notes and the add buttons hidden. Open: everything.
+     · rows in both lists can be moved by dragging
+     · Client team sits at the right end of the links row */
+const SX_KEY={cp:"cc-sx-cp",vb:"cc-sx-vb"};
+const SX_TOP=3;
+function sxOpen(k){ try{ return localStorage.getItem(SX_KEY[k])==="o"; }catch(e){ return false; } }
+function sxSet(k,on){
+  try{ localStorage.setItem(SX_KEY[k],on?"o":"c"); }catch(e){}
+  if(k==="cp"){ if(!on) CP.open=null; cpPaint(); }
+  else if(window.tgIo) tgIo.paint();
+  sxDress();
+}
+function sxDress(){
+  if(view!=="brief"||(typeof briefEdit!=="undefined"&&briefEdit)) return;
+  [["cp","bd-cp"],["vb","bd-vb"]].forEach(([k,id])=>{
+    const sec=document.getElementById(id); if(!sec) return;
+    const card=sec.closest(".mk-card"); if(!card) return;
+    const on=sxOpen(k);
+    card.classList.add("sx-card"); card.classList.toggle("sx-c",!on); card.classList.toggle("sx-o",on);
+    let b=sec.querySelector(".sx-tog");
+    if(!b){ sec.insertAdjacentHTML("beforeend",`<button class="sx-tog" type="button"></button>`); b=sec.querySelector(".sx-tog"); }
+    b.onclick=()=>sxSet(k,!sxOpen(k));
+    b.innerHTML=on?`<i class="ti ti-chevron-up"></i>Collapse`:`<i class="ti ti-chevron-down"></i>Open`;
+  });
+}
+(function(){
+  const baseBrief=renderBrief;
+  renderBrief=function(){ const out=baseBrief.apply(this,arguments); try{ sxDress(); }catch(e){} return out; };
+  const baseCp=cpPaint;
+  cpPaint=function(){ const out=baseCp.apply(this,arguments); try{ sxDress(); }catch(e){} return out; };
+})();
+
+/* ── moving a row: drag it by its grip ─────────────────────────────── */
+const SXD={el:null,kind:null,over:null,after:false};
+function sxGrip(kind){ return `<span class="sx-grip" draggable="true" data-sxk="${kind}" title="Drag to move" ondragstart="sxStart(event)" ondragend="sxEnd()"><i class="ti ti-grip-vertical"></i></span>`; }
+function sxRowOf(el){ return el&&el.closest&&el.closest("tr[data-cp],tr[data-tg]"); }
+function sxStart(ev){
+  const tr=sxRowOf(ev.target); if(!tr) return;
+  SXD.el=tr; SXD.kind=ev.target.closest(".sx-grip").dataset.sxk;
+  try{ ev.dataTransfer.effectAllowed="move"; ev.dataTransfer.setData("text/plain",""); ev.dataTransfer.setDragImage(tr,24,20); }catch(e){}
+  setTimeout(()=>tr.classList.add("sx-drag"),0);
+}
+function sxClear(){ document.querySelectorAll(".sx-before,.sx-after").forEach(x=>x.classList.remove("sx-before","sx-after")); }
+function sxEnd(){ if(SXD.el) SXD.el.classList.remove("sx-drag"); sxClear(); SXD.el=null; SXD.over=null; }
+document.addEventListener("dragover",ev=>{
+  if(!SXD.el) return;
+  const tr=sxRowOf(ev.target);
+  if(!tr||tr===SXD.el||tr.parentElement!==SXD.el.parentElement) return;
+  ev.preventDefault(); try{ ev.dataTransfer.dropEffect="move"; }catch(e){}
+  const r=tr.getBoundingClientRect(), after=ev.clientY>r.top+r.height/2;
+  if(SXD.over!==tr||SXD.after!==after){ sxClear(); tr.classList.add(after?"sx-after":"sx-before"); SXD.over=tr; SXD.after=after; }
+});
+document.addEventListener("drop",ev=>{
+  if(!SXD.el||!SXD.over) return;
+  ev.preventDefault();
+  const attr=SXD.kind==="cp"?"data-cp":"data-tg";
+  const ids=[...SXD.el.parentElement.querySelectorAll(`tr[${attr}]`)].map(x=>x.getAttribute(attr));
+  const me=SXD.el.getAttribute(attr), at=SXD.over.getAttribute(attr), after=SXD.after, kind=SXD.kind;
+  sxEnd();
+  const rest=ids.filter(x=>x!==me); let i=rest.indexOf(at); if(i<0) return; if(after) i++;
+  rest.splice(i,0,me);
+  if(rest.join()===ids.join()) return;
+  if(kind==="cp") sxSaveCp(rest); else sxSaveTg(rest);
+});
+async function sxWrite(table,rows,order,paint){
+  const was=new Map(rows.map(r=>[r.id,r.sort]));
+  order.forEach((id,i)=>{ const r=rows.find(x=>x.id===id); if(r) r.sort=(i+1)*10; });
+  const ch=rows.filter(r=>r.sort!==was.get(r.id));
+  paint();
+  const res=await Promise.all(ch.map(r=>sb.from(table).update({sort:r.sort}).eq("id",r.id)));
+  const bad=res.find(x=>x&&x.error);
+  if(bad){ rows.forEach(r=>{ if(was.has(r.id)) r.sort=was.get(r.id); }); paint(); toast("Not moved — "+escHtml(bad.error.message),"err"); }
+}
+function sxSaveCp(order){
+  const all=cpRows(); const full=order.concat(all.map(r=>r.id).filter(id=>!order.includes(id)));
+  sxWrite("brand_competitors",all,full,()=>cpPaint());
+}
+function sxSaveTg(order){
+  const V=window.tgIo&&tgIo.vb(); if(!V) return;
+  const all=V.bsegs; const full=order.concat(all.map(r=>r.id).filter(id=>!order.includes(id)));
+  sxWrite("brand_segments",all,full,()=>tgIo.paint());
+}
+
+/* ── a brand's channels come from its links ─────────────────────────
+   Chirag: "These are not required there since we already have a
+   function to manually add the channel." A brand with an Instagram,
+   Facebook or LinkedIn link posts to those; a brand with none keeps
+   what was set before, or Instagram and Facebook. */
+let CHL_BY={}, CHL_OK=false;
+async function chlLoad(){
+  try{
+    const r=await sb.from("brand_links").select("brand_id,kind").is("deleted_at",null).in("kind",CH_ORDER);
+    if(r.error) return;
+    CHL_BY={}; (r.data||[]).forEach(x=>{ if(!x.deleted_at&&CH_ORDER.includes(x.kind)) (CHL_BY[x.brand_id]=CHL_BY[x.brand_id]||new Set()).add(x.kind); });
+    CHL_OK=true;
+  }catch(e){}
+}
+(function(){
+  const baseCh=brandChannels;
+  brandChannels=function(bid){
+    let s=CHL_BY[bid];
+    if(typeof BF==="object"&&BF.ok&&BF.bid===bid) s=new Set(BF.links.filter(l=>!l.deleted_at).map(l=>l.kind).filter(k=>CH_ORDER.includes(k)));
+    if(s&&s.size) return CH_ORDER.filter(k=>s.has(k));
+    return baseCh.apply(this,arguments);
+  };
+  chDress=function(){};
+  try{ if(typeof ME==="object"&&ME&&ME.id) chlLoad(); }catch(e){}
+  const baseCl=chLoad; chLoad=async function(){ const out=await baseCl.apply(this,arguments); await chlLoad(); return out; };
+})();
+</script>
+<style>
+/* V118.49 — open and collapse, move a row, client team on the right */
+#main .chn{display:none !important;}
+.sx-tog{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;margin-left:14px;border-radius:999px;border:1px solid var(--div,#e3e0da);background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--text);cursor:pointer;white-space:nowrap;flex:none;}
+.sx-tog i{font-size:15px;} .sx-tog:hover{border-color:var(--text);}
+.sx-card .bd-sec{align-items:center;}
+.sx-c .vb-new, .sx-c .cp-more{display:none !important;}
+.sx-c .tg-nt, .sx-c .tg-ln.vb-inf{display:none !important;}
+.sx-c .tg-lines{display:flex !important;flex-direction:row !important;flex-wrap:nowrap;gap:6px;overflow:hidden;align-items:center;}
+.sx-c .tg-ln{margin:0 !important;width:auto !important;flex:none !important;display:inline-flex !important;}
+.sx-c tr[data-tg] td{padding-top:8px !important;padding-bottom:8px !important;vertical-align:middle !important;}
+.sx-grip{display:inline-flex;align-items:center;justify-content:center;width:18px;height:28px;margin:0 4px 0 -14px;color:var(--subtle,#aaa);cursor:grab;opacity:0;vertical-align:middle;flex:none;}
+.sx-grip i{font-size:15px;}
+.sx-o tr[data-cp]:hover .sx-grip,.sx-o tr[data-tg]:hover .sx-grip{opacity:1;}
+.sx-c .sx-grip{display:none !important;}
+.sx-o td.w-nm,.sx-o td.w-grp{white-space:nowrap;}
+.sx-o td.w-nm > input,.sx-o td.w-grp > select{display:inline-block;width:calc(100% - 22px) !important;vertical-align:middle;}
+tr.sx-drag{opacity:.35;}
+tr.sx-before > td{box-shadow:inset 0 2px 0 var(--text);}
+tr.sx-after > td{box-shadow:inset 0 -2px 0 var(--text);}
+#bf-links .ct-btn{margin-left:auto;}
+</style>
 </body>
 </html>
