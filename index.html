@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.51 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.52 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -5263,6 +5263,23 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
   body.wa-task #mention-box,body.wa-task .ms-drop{z-index:1900!important;}
   body.wa-task #toast-wrap{z-index:2100!important;}
   body.wa-task .bf-pop,body.wa-task .bfp{z-index:1900!important;}
+}
+</style>
+<style>
+/* ══ V118.52 TBILISI · THE MONTH LIVES IN THE MONTH CARD (Posts, phone) ══
+   Chirag, 18 Oct, on V118.51: the month control's own row under the tile
+   bar "messed up the whole experience … those options should live inside
+   the date pull-out, so it doesn't disturb the rest of the page." On a
+   phone, Posts has no row: the card's head is the month (tap it for the
+   months, Today and the month's plan), and a swipe on the card moves it. */
+@media(max-width:768px){
+  #main .mc-head:has(.xm) > .mc-name{display:none!important;}
+  .xm-today{display:flex;gap:8px;margin-top:10px;}
+  .xm-today button{flex:1;height:42px;border-radius:12px;border:1px solid rgba(13,13,13,.1);background:#fff;font:inherit;font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;justify-content:center;gap:6px;}
+  .xm-today button .ti{font-size:17px;}
+  .xm-grid button.now:not(.on){box-shadow:inset 0 0 0 1.5px #D7262B;}
+  .xm-grid button.on{background:#0D0D0D;color:#fff;border-color:#0D0D0D;}
+  .xm-grid button.on small{color:rgba(255,255,255,.7);}
 }
 </style>
 </head>
@@ -13408,7 +13425,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.51 Tbilisi";
+const TOOL_VERSION="V118.52 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -45735,6 +45752,47 @@ async function stPbSave(out){
     const out=await baseUndo.apply(this,arguments);
     try{ if(typeof cpPaint==="function") cpPaint(); }catch(e){}
     return out;
+  };
+})();
+</script>
+<script>
+/* ══ V118.52 TBILISI · THE MONTH LIVES IN THE MONTH CARD (see the style) ══ */
+let XM_Y=null;
+(function(){
+  const inPosts=()=>typeof mcPhone==="function"&&mcPhone()&&mcActive()==="content";
+  /* no row above the page on Posts; every other page keeps the control */
+  const baseMount=mcMount;
+  mcMount=function(){
+    if(inPosts()){ mcClear(); try{ xmDress(); }catch(e){} return; }
+    return baseMount.apply(this,arguments);
+  };
+  /* the card head: the month name with one faint mark, as Chirag picked on 15 Oct */
+  xmDress=function(){
+    if(!inPosts()) return;
+    const head=document.querySelector("#main .mc-head"); if(!head||head.querySelector(".xm")) return;
+    const m=contentMonth||curMonth||1, t=new Date();
+    const yr=YEAR!==t.getFullYear()?` <small>${YEAR}</small>`:"";
+    head.insertAdjacentHTML("afterbegin",`<div class="xm">
+      <button class="nm" onclick="event.stopPropagation();xmSheet()">${MN[m]}${yr}<i class="ti ti-chevron-down"></i></button></div>`);
+  };
+  /* the swipe and the sheet move through the one month control, so other years load as they should */
+  xmStep=function(d){ mcStep(d); };
+  xmYear=function(d){ XM_Y=(XM_Y||YEAR)+d; xmSheet(true); };
+  xmPick=function(m){ const y=XM_Y||YEAR; XM_Y=null; xnSheetClose(); mcGoYM(y,m); };
+  xmSheet=function(keep){
+    if(!keep) XM_Y=YEAR;
+    const y=XM_Y||YEAR;
+    xnSheetClose(); XN_SHEET="month";
+    const t=new Date(), cur=contentMonth||curMonth||1;
+    const cnt=m=>{ try{ return socialForBrandYear(activeBrand,y).filter(p=>p.month===m).length; }catch(e){ return 0; } };
+    const loaded=y===YEAR;
+    const h=`<div class="hd">Month</div>
+      <div class="xm-yr"><button onclick="xmYear(-1)" aria-label="Previous year"><i class="ti ti-chevron-left"></i></button>${y}<button onclick="xmYear(1)" aria-label="Next year"><i class="ti ti-chevron-right"></i></button></div>
+      <div class="xm-grid">${MN.slice(1,13).map((n,i)=>{ const m=i+1, c=loaded?cnt(m):0;
+        return `<button class="${(m===cur&&y===YEAR)?"on":""}${(y===t.getFullYear()&&m===t.getMonth()+1)?" now":""}" onclick="xmPick(${m})">${n.slice(0,3)}<small>${loaded?(c?c+" post"+(c===1?"":"s"):"—"):"&nbsp;"}</small></button>`; }).join("")}</div>
+      <div class="xm-today"><button onclick="XM_Y=null;xnSheetClose();mcToday()"><i class="ti ti-calendar-dot"></i>Today</button>
+        ${canEdit()?`<button onclick="xnSheetClose();openMonthPlanView(${cur})"><i class="ti ti-calendar-stats"></i>${MN[cur].slice(0,3)} plan</button>`:""}</div>`;
+    document.body.insertAdjacentHTML("beforeend",`<div class="xn-scrim" onclick="event.stopPropagation();xnSheetClose()"></div><div class="xn-sh mfs" onclick="event.stopPropagation()">${h}</div>`);
   };
 })();
 </script>
