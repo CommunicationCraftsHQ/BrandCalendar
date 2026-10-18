@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.52 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.54 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13425,7 +13425,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.52 Tbilisi";
+const TOOL_VERSION="V118.54 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -41492,13 +41492,14 @@ function bcHtml(){
   const rows=bcRows(), may=bcMay();
   if(!rows.length&&!may) return `<div class="bd-note" style="margin:6px 0 2px">None yet.</div>`;
   return `<table class="vb-t a3 cp-t bc-t"><thead><tr><th>Creator</th><th>Handle</th><th>Followers</th><th>Category</th><th>Status</th><th></th></tr></thead><tbody>
-    ${rows.map(bcRowHtml).join("")}
+    ${((typeof sxOpen==="function"&&!sxOpen("in"))?rows.slice(0,SX_TOP):rows).map(bcRowHtml).join("")}
     ${may?`<tr class="vb-new cp-new"><td colspan="6"><div class="bc-addw"><i class="ti ti-search"></i><input class="vb-ce" id="bc-q" placeholder="Add from Roster — a name or handle…" value="${saA(BC.q)}"
       oninput="bcFind(this.value)" onkeydown="if(event.key==='Escape'){BC.q='';BC.res=null;bcPaint();}">${bcResHtml()}</div></td></tr>`:""}
     </tbody></table>`;
 }
 function bcPaint(){
   const h=document.getElementById("bc-host"); if(!h) return;
+  try{ if(typeof sxDress==="function") sxDress(); }catch(e){}
   const keep=document.getElementById("bc-q"), focus=keep&&document.activeElement===keep, pos=keep?keep.selectionStart:0;
   h.innerHTML=bcHtml();
   const n=document.getElementById("bc-q"); if(n&&focus){ n.focus(); try{ n.setSelectionRange(pos,pos); }catch(e){} }
@@ -45199,18 +45200,19 @@ function xfActBack(){ xtSheet("files"); }
        notes and the add buttons hidden. Open: everything.
      · rows in both lists can be moved by dragging
      · Client team sits at the right end of the links row */
-const SX_KEY={cp:"cc-sx-cp",vb:"cc-sx-vb"};
+const SX_KEY={cp:"cc-sx-cp",vb:"cc-sx-vb",in:"cc-sx-in"};   /* V118.54 — Influencers & creators too */
 const SX_TOP=3;
 function sxOpen(k){ try{ return localStorage.getItem(SX_KEY[k])==="o"; }catch(e){ return false; } }
 function sxSet(k,on){
   try{ localStorage.setItem(SX_KEY[k],on?"o":"c"); }catch(e){}
   if(k==="cp"){ if(!on) CP.open=null; cpPaint(); }
+  else if(k==="in"){ if(typeof bcPaint==="function") bcPaint(); }
   else if(window.tgIo) tgIo.paint();
   sxDress();
 }
 function sxDress(){
   if(view!=="brief"||(typeof briefEdit!=="undefined"&&briefEdit)) return;
-  [["cp","bd-cp"],["vb","bd-vb"]].forEach(([k,id])=>{
+  [["cp","bd-cp"],["vb","bd-vb"],["in","bd-in"]].forEach(([k,id])=>{
     const sec=document.getElementById(id); if(!sec) return;
     const card=sec.closest(".mk-card"); if(!card) return;
     const on=sxOpen(k);
@@ -45794,6 +45796,154 @@ let XM_Y=null;
         ${canEdit()?`<button onclick="xnSheetClose();openMonthPlanView(${cur})"><i class="ti ti-calendar-stats"></i>${MN[cur].slice(0,3)} plan</button>`:""}</div>`;
     document.body.insertAdjacentHTML("beforeend",`<div class="xn-scrim" onclick="event.stopPropagation();xnSheetClose()"></div><div class="xn-sh mfs" onclick="event.stopPropagation()">${h}</div>`);
   };
+})();
+</script>
+<style>
+/* ══ V118.53 TBILISI · STRATEGY SUGGESTIONS ═══════════════════════════
+   One card above the Strategy page's lists. Each line is one suggested
+   change; an edit shows what it says now beside what it would say. */
+.ss-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 16px;padding:12px 0;border-bottom:1px solid var(--div);align-items:start;}
+.ss-row:last-child{border-bottom:0;padding-bottom:2px;}
+.ss-hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13.5px;}
+.ss-act{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:#E7E6E1;color:var(--text);}
+.ss-act.add{background:#E3F1E7;color:#1E6B3A;}
+.ss-act.remove{background:#F7E3E1;color:#A1301F;}
+.ss-sec{color:var(--subtle);}
+.ss-nm{font-weight:600;}
+.ss-f{display:grid;grid-template-columns:120px minmax(0,1fr);gap:2px 12px;margin-top:8px;font-size:13px;}
+.ss-f .k{color:var(--subtle);font-size:12px;padding-top:1px;}
+.ss-old{color:var(--subtle);text-decoration:line-through;white-space:pre-line;}
+.ss-new{white-space:pre-line;}
+.ss-why{margin-top:6px;font-size:12.5px;color:var(--muted);}
+.ss-btns{display:flex;gap:6px;white-space:nowrap;}
+.ss-wait{font-size:12px;color:var(--subtle);white-space:nowrap;}
+@media (max-width:720px){ .ss-row{grid-template-columns:1fr;} .ss-f{grid-template-columns:1fr;}
+  #ss-sec{flex-wrap:wrap;row-gap:4px;} #ss-sec .bd-secrule{display:none;} #ss-sec .bd-secsub{white-space:normal;flex:1 0 100%;order:3;} #ss-sec .mk-lk{margin-left:0;margin-right:14px;order:4;} }
+</style>
+<script>
+/* ══ V118.53 TBILISI · STRATEGY SUGGESTIONS ═══════════════════════════
+   Chirag, 18 Oct 2026: research done in other Claude projects reaches a
+   brand's Strategy page through the CC Suite connector as SUGGESTIONS —
+   edits, additions and removals — and "I will be accepting or rejecting
+   those suggestions… I want to build that guardrail for now."
+   Nothing here writes to the lists itself: Accept calls
+   strategy_suggestion_decide(), which refuses anyone not on the
+   deciders list and marks a suggestion stale if its row changed since. */
+var SS={bid:null,ok:false,busy:false,err:"",rows:[],may:null,doing:false};
+const SS_SEC={competitor:"Competitor",competitor_creator:"Competitor's creator",creator:"Influencer",link:"Link",segment:"Target group"};
+const SS_F={name:"Name",kind:"Kind",strengths:"Strengths",adopt:"What we should adopt",links:"Links",handle:"Handle",who:"Who",
+  posted:"Posted",post_links:"Post links",strategy:"Strategy",for_us:"For us",platform:"Platform",followers:"Followers",
+  category:"Category",status:"Status",label:"Label",url:"Address",talking_points:"Talking points"};
+function ssVal(k,v){
+  if(v==null||v==="") return "—";
+  if(k==="links"&&Array.isArray(v)) return v.map(l=>l&&l.url?l.url:"").filter(Boolean).join("\n")||"—";
+  if(Array.isArray(v)) return v.join("\n")||"—";
+  if(k==="followers"&&!isNaN(v)) return Number(v).toLocaleString("en-IN");
+  return String(v);
+}
+async function ssLoad(bid){
+  SS.bid=bid; SS.busy=true; SS.err="";
+  try{
+    if(SS.may===null){ const m=await sb.rpc("strategy_may_decide"); SS.may=!m.error&&m.data===true; }
+    const r=await sb.from("strategy_suggestions").select("*").eq("brand_id",bid).eq("status","open").order("created_at");
+    if(r.error) throw r.error;
+    if(SS.bid===bid){ SS.rows=r.data||[]; SS.ok=true; }
+  }catch(e){ if(SS.bid===bid){ SS.err=String(e&&e.message||e); SS.ok=false; } }
+  SS.busy=false; ssPaint();
+}
+function ssRowHtml(s){
+  const f=s.fields||{}, b=s.before||{}, id=escAttr(s.id);
+  let body="";
+  if(s.action==="edit") body=Object.keys(f).map(k=>`<span class="k">${escHtml(SS_F[k]||k)}</span><span><span class="ss-old">${escHtml(ssVal(k,b[k]))}</span><br><span class="ss-new">${escHtml(ssVal(k,f[k]))}</span></span>`).join("");
+  else if(s.action==="add") body=Object.keys(f).filter(k=>k!=="competitor_id").map(k=>`<span class="k">${escHtml(SS_F[k]||k)}</span><span class="ss-new">${escHtml(ssVal(k,f[k]))}</span>`).join("");
+  const word={add:"Add",edit:"Edit",remove:"Remove"}[s.action]||s.action;
+  const right=SS.may
+    ?`<div class="ss-btns"><button class="btn btn-p btn-sm" ${SS.doing?"disabled":""} onclick="ssDecide('${id}',true)">Accept</button><button class="btn btn-s btn-sm" ${SS.doing?"disabled":""} onclick="ssDecide('${id}',false)">Reject</button></div>`
+    :`<span class="ss-wait">Waiting for a decision</span>`;
+  return `<div class="ss-row" data-ss="${id}"><div>
+      <div class="ss-hd"><span class="ss-act ${escAttr(s.action)}">${word}</span><span class="ss-sec">${escHtml(SS_SEC[s.section]||s.section)}</span><span class="ss-nm">${escHtml(s.row_name||"")}</span></div>
+      ${body?`<div class="ss-f">${body}</div>`:""}
+      ${s.reason?`<div class="ss-why">${escHtml(s.reason)}</div>`:""}
+    </div>${right}</div>`;
+}
+function ssPaint(){
+  const w=document.querySelector("#main .bd-wrap"); if(!w||view!=="brief") return;
+  let c=document.getElementById("ss-card");
+  const n=SS.bid===activeBrand&&SS.ok?SS.rows.length:0;
+  const side=document.querySelector('#sb-months [data-tgt="ss-card"]');
+  if(!n&&!(SS.err&&SS.bid===activeBrand)){ if(c) c.remove(); if(side) side.remove(); return; }
+  if(!c){
+    c=document.createElement("div"); c.className="mk-card"; c.id="ss-card";
+    const first=w.querySelector(".mk-card"); if(first) w.insertBefore(c,first); else w.appendChild(c);
+  }
+  const srcs=[...new Set(SS.rows.map(r=>r.source).filter(Boolean))];
+  c.innerHTML=`<div class="bd-sec" id="ss-sec"><div class="bd-sectitle">Suggestions</div><div class="bd-secrule"></div>
+      <div class="bd-secsub">${n} waiting${srcs.length?" · "+escHtml(srcs.join(", ")):""}</div>
+      ${SS.may&&n>1?`<span class="mk-lk" onclick="ssAll(true)">Accept all</span><span class="mk-lk" onclick="ssAll(false)">Reject all</span>`:""}</div>
+    ${SS.err?`<div class="bd-note" style="margin:0">Could not load the suggestions — ${escHtml(SS.err)}</div>`:SS.rows.map(ssRowHtml).join("")}`;
+  ssSide();
+}
+/* the left panel's line — drawn again whenever the panel is */
+function ssSide(){
+  const n=view==="brief"&&SS.bid===activeBrand&&SS.ok?SS.rows.length:0;
+  const side=document.querySelector('#sb-months [data-tgt="ss-card"]');
+  if(!n){ if(side) side.remove(); return; }
+  if(side){ const ct=side.querySelector(".ct"); if(ct) ct.textContent=n; return; }
+  const first=document.querySelector("#sb-months .bd-navi");
+  if(first) first.insertAdjacentHTML("beforebegin",`<div class="mdb-trow bd-navi" data-tgt="ss-card" onclick="bdJump('ss-card')"><span class="nm">Suggestions</span><span class="ct">${n}</span></div>`);
+}
+/* the lists read again, so an accepted change shows where it landed */
+function ssRefreshLists(){
+  try{ CP.bid=null; }catch(e){}
+  try{ BC.bid=null; }catch(e){}
+  try{ CPL.bid=null; }catch(e){}
+  try{ BF.bid=null; }catch(e){}
+  try{ if(window.tgIo){ window.tgIo.vb().key=null; } }catch(e){}
+  const m=document.getElementById("main"), top=m?m.scrollTop:0;
+  renderBrief();
+  if(m) requestAnimationFrame(()=>{ m.scrollTop=top; });
+}
+async function ssDecideOne(id,yes){
+  const r=await sb.rpc("strategy_suggestion_decide",{p_id:id,p_accept:yes});
+  if(r.error) return {err:r.error.message};
+  return {out:r.data};
+}
+async function ssDecide(id,yes){
+  if(SS.doing) return; SS.doing=true; ssPaint();
+  const r=await ssDecideOne(id,yes);
+  SS.doing=false;
+  if(r.err) toast("Not saved — "+escHtml(r.err),"err");
+  else if(r.out==="stale") toast("That entry was changed after the suggestion was made, so it was left as it is","err");
+  else toast(r.out==="accepted"?"Accepted":"Rejected");
+  const changed=r.out==="accepted";
+  await ssLoad(activeBrand);
+  if(changed) ssRefreshLists();
+}
+async function ssAll(yes){
+  if(SS.doing||!SS.rows.length) return;
+  SS.doing=true; ssPaint();
+  let ok=0, stale=0, bad=0;
+  for(const s of SS.rows.slice()){
+    const r=await ssDecideOne(s.id,yes);
+    if(r.err) bad++; else if(r.out==="stale") stale++; else ok++;
+  }
+  SS.doing=false;
+  toast(`${yes?"Accepted":"Rejected"} ${ok}`+(stale?` · ${stale} left as they are (changed since)`:"")+(bad?` · ${bad} not saved`:""),bad?"err":"");
+  await ssLoad(activeBrand);
+  if(yes&&ok) ssRefreshLists();
+}
+(function(){
+  const baseBrief=renderBrief;
+  renderBrief=function(){
+    const out=baseBrief.apply(this,arguments);
+    if(!briefEdit&&activeBrand){
+      if(SS.bid!==activeBrand){ SS.ok=false; SS.rows=[]; ssLoad(activeBrand); }
+      else { ssPaint(); setTimeout(ssPaint,0); }
+    }
+    return out;
+  };
+  const baseSide=buildBriefSidebar;
+  buildBriefSidebar=function(){ const out=baseSide.apply(this,arguments); try{ ssSide(); }catch(e){} return out; };
 })();
 </script>
 </body>
