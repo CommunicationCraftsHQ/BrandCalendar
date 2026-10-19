@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.60 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.63 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -10140,8 +10140,10 @@ async function brandHide(bid,on){
    day, with a migration that refuses rather than strands. */
 let ASSIGN={};             // brandId -> [user id] explicitly assigned
 let ASSIGN_OK=false;       // false = unreadable; everybody is on everything
+/* V118.62 — brandId -> [user id] named Account manager on that brand's team (Accounts page). */
+let TEAM_AM={};
 async function loadAssignments(){
-  ASSIGN={}; ASSIGN_OK=false;
+  ASSIGN={}; ASSIGN_OK=false; TEAM_AM={};
   try{
     /* V110.0 — READ IN PAGES. Supabase hands back at most 1,000 rows per
        request, and this used to ask once. That was fine while the table
@@ -10152,7 +10154,7 @@ async function loadAssignments(){
     /* SPEED 3 — four pages are asked for at the same time, and four more
        only if the last of them came back full. Measured on the live
        database: asking for the row count first costs more than it saves. */
-    const page=from=>sb.from("user_brands").select("user_id,brand_id")
+    const page=from=>sb.from("user_brands").select("user_id,brand_id,team_role")
       .order("user_id").order("brand_id").range(from,from+PAGE-1);
     for(let from=0;;from+=PAGE*AT_ONCE){
       const got=await Promise.all([...Array(AT_ONCE)].map((_,i)=>page(from+i*PAGE)));
@@ -10160,7 +10162,8 @@ async function loadAssignments(){
       got.forEach(r=>{ rows=rows.concat(r.data||[]); });
       if((got[AT_ONCE-1].data||[]).length<PAGE) break;
     }
-    rows.forEach(x=>{ (ASSIGN[x.brand_id]=ASSIGN[x.brand_id]||[]).push(x.user_id); });
+    rows.forEach(x=>{ (ASSIGN[x.brand_id]=ASSIGN[x.brand_id]||[]).push(x.user_id);
+      if(x.team_role==="account_manager") (TEAM_AM[x.brand_id]=TEAM_AM[x.brand_id]||[]).push(x.user_id); });
     ASSIGN_OK=true;
   }catch(e){}
 }
@@ -12177,7 +12180,19 @@ let TASK={id:null,msgs:[],acts:[],loading:false,err:"",asClient:false,draft:""};
    exactly what it answered yesterday; turning Creator off in the matrix
    is what makes the separation real, and it does it without this line
    moving again. Same shape for archiving and for brand people below. */
-function brIsAM(t){ return !!t && !brCV() && can("task_advance") && (ME.role==="admin" || t.owner_id===ME.id); }
+/* V118.62 — Chirag, 19 Oct: "the brand's account managers count as Ac
+   Manager on every task of that brand." Namita was Ac Manager on Jewelchic's
+   team but owned no task there, so Deliveries, archive and client view were
+   shut to her. The brand team (Accounts page) now counts beside the task's
+   own owner. Read from the Accounts page's own rows when it has loaded them,
+   so a change made there counts without a reload. */
+function brTeamAM(t){
+  if(!t||!ME.id) return false;
+  if(typeof AC!=="undefined"&&AC&&AC.migr&&Array.isArray(AC.team)&&AC.team.length)
+    return AC.team.some(x=>x.brand_id===t.brand_id&&x.user_id===ME.id&&x.team_role==="account_manager");
+  return (TEAM_AM[t.brand_id]||[]).indexOf(ME.id)>-1;
+}
+function brIsAM(t){ return !!t && !brCV() && can("task_advance") && (ME.role==="admin" || t.owner_id===ME.id || brTeamAM(t)); }
 /* V117.2 — WHO MAY MOVE A TASK ON FROM THE ROW. Chirag, 15 Oct: "team
    members are not able to set milestones directly from the listing
    page" — they could not, because the row obeyed the Bologna rule (the
@@ -12186,7 +12201,7 @@ function brIsAM(t){ return !!t && !brCV() && can("task_advance") && (ME.role==="
    says who did. Archive, reopen, delete and what the client sees stay
    with the Ac Manager or an admin (brIsAM). */
 function brMayRow(t){ return !!t && !brCV() && can("task_advance"); }
-function brCanArchive(t){ return !!t && !brCV() && can("task_archive") && (ME.role==="admin" || t.owner_id===ME.id); }
+function brCanArchive(t){ return !!t && !brCV() && can("task_archive") && (ME.role==="admin" || t.owner_id===ME.id || brTeamAM(t)); }
 
 /* ══ JSR · ONE SCREEN, TWO AUDIENCES — 10 October 2026 ═════════════════
    Chirag: "I don't want to maintain two different mechanisms and layouts
@@ -12222,7 +12237,7 @@ function brPaneAud(){ return (brCV()||BR_TAB==="client")?"client":"team"; }
 function brMayWriteClient(t){
   if(!t) return false;
   if(brIsClient()) return canComment();
-  return can("comment") && (ME.role==="admin" || t.owner_id===ME.id);
+  return can("comment") && (ME.role==="admin" || t.owner_id===ME.id || brTeamAM(t));   /* V118.62 — the brand's account managers too */
 }
 function brSetCV(v){
   BR_CV=!!v; closeAllPops(); JSR_PICK=false;
@@ -13698,7 +13713,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.60 Tbilisi";
+const TOOL_VERSION="V118.63 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -14446,6 +14461,22 @@ function prodDayMap(m){
   return map;
 }
 
+/* V118.63 — READ EVERY ROW. Supabase hands back at most 1,000 rows per
+   request. On 19 Oct the year's posts passed that (1,095), so an admin —
+   who sees every brand — got 1,000 of them and Luvaire's 9th, 11th and
+   13th went missing, while people with fewer brands saw them all. Pages
+   of 1,000 in a fixed order, until a page comes back short. */
+async function sbAllRows(make,order){
+  const PAGE=1000, cols=order||["id"]; let out=[];
+  for(let from=0;from<500000;from+=PAGE){
+    let q=make(); cols.forEach(c=>{ q=q.order(c); });
+    const r=await q.range(from,from+PAGE-1);
+    if(r.error) return {data:null,error:r.error};
+    const d=r.data||[]; out=out.concat(d);
+    if(d.length<PAGE) break;
+  }
+  return {data:out,error:null};
+}
 async function loadAll(showToast){
   /* SPEED, 10 Oct — these eight used to run one after another, AFTER the
      calendar's own read below, so a refresh waited through ten rounds of
@@ -14475,7 +14506,7 @@ async function loadAll(showToast){
      be restorable. */
     sb.from("brand_events").select("*").is("deleted_at",null),
     /* the delta model's only stored facts — see effectiveOn() */
-    sb.from("brand_event_prefs").select("*"),
+    sbAllRows(()=>sb.from("brand_event_prefs").select("*"),["brand_id","event_id"]),   /* V118.63 */
     sb.from("brand_posts").select("*"),
     sb.from("brand_briefs").select("*"),
     /* BA4: scoped to the year on screen and to the live (non-archived)
@@ -14484,7 +14515,7 @@ async function loadAll(showToast){
        hundred rows. Posts are per-year and archived work leaves the set,
        which is where the growth actually is. Switching year already
        reloads, so nothing else had to change. */
-    sb.from("social_posts").select("*").eq("year",YEAR).is("deleted_at",null).is("archived_at",null),
+    sbAllRows(()=>sb.from("social_posts").select("*").eq("year",YEAR).is("deleted_at",null).is("archived_at",null)),   /* V118.63 */
     sb.from("social_month_plan").select("*").eq("year",YEAR),
     sb.from("social_month_items").select("*"),
   ]);
@@ -18225,7 +18256,7 @@ async function rtRefetchCalendar(){
      below is deliberately NOT filtered: a lapsed brand still has to
      be restorable. */
       sb.from("brand_events").select("*").is("deleted_at",null),
-      sb.from("brand_event_prefs").select("*"),
+      sbAllRows(()=>sb.from("brand_event_prefs").select("*"),["brand_id","event_id"]),   /* V118.63 */
     ]);
     if(!G||evts.error||brs.error||bevs.error||prefs.error) return;
     G.evts=evts.data; G.brs=brs.data; G.bevs=bevs.data; G.prefs=prefs.data||[];
@@ -42944,7 +42975,7 @@ async function mcLoadYear(){
   const y=YEAR;
   try{
     const [s,p]=await Promise.all([
-      sb.from("social_posts").select("*").eq("year",y).is("deleted_at",null).is("archived_at",null),
+      sbAllRows(()=>sb.from("social_posts").select("*").eq("year",y).is("deleted_at",null).is("archived_at",null)),   /* V118.63 */
       sb.from("social_month_plan").select("*").eq("year",y)]);
     if(s.error||p.error||y!==YEAR) return;
     G.social=s.data||[]; G.monthPlans=p.data||[]; G._mcSocY=y;
@@ -44013,7 +44044,9 @@ async function dlvLoad(bid){
     else{
       DLV.ok=true;
       DLV.list=(d.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at);
-      DLV.vers=(v.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at);
+      /* V118.61 — a version whose delivery was removed is gone with it, so its
+         message can be delivered again */
+      DLV.vers=(v.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at&&DLV.list.some(d=>d.id===x.deliverable_id));
     }
   }catch(e){ DLV.ok=false; }
   DLV.brand=bid; DLV.loading=false;
@@ -44102,7 +44135,11 @@ async function dlvRemove(did){
   const now=new Date().toISOString();
   const r=await sb.from("task_deliverables").update({deleted_at:now}).eq("id",did);
   if(r.error){ toast("Not removed — "+r.error.message,"err"); return; }
-  DLV.list=DLV.list.filter(x=>x.id!==did); DLV_OPEN=null; DLV_MORE=null; render();
+  /* V118.61 — its versions go with it (best effort: the load ignores them anyway) */
+  const rv=await sb.from("deliverable_versions").update({deleted_at:now}).eq("deliverable_id",did);
+  if(rv&&rv.error) console.warn("[v118.61] versions not marked removed",rv.error);
+  DLV.list=DLV.list.filter(x=>x.id!==did); DLV.vers=DLV.vers.filter(v=>v.deliverable_id!==did);
+  DLV_OPEN=null; DLV_MORE=null; render();
   toast("Removed "+d.name);
 }
 async function dlvAnswer(vid,status){
