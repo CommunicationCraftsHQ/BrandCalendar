@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.66 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.67 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13750,7 +13750,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.66 Tbilisi";
+const TOOL_VERSION="V118.67 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -14503,6 +14503,100 @@ function prodDayMap(m){
    who sees every brand — got 1,000 of them and Luvaire's 9th, 11th and
    13th went missing, while people with fewer brands saw them all. Pages
    of 1,000 in a fixed order, until a page comes back short. */
+/* ══ V118.67 TBILISI · SPEED PHASE 2 — A BRAND'S POSTS LOAD WHEN THE BRAND IS OPENED ══
+   Chirag, 20 Oct 2026. Start-up used to read every post of the year for
+   every brand a person can see (1,100 posts for an admin) before drawing
+   anything. Now:
+     · start-up reads only the brand on screen; All brands reads no posts
+       (nothing on All brands draws them)
+     · a brand's last 3 months and everything ahead load first; its older
+       months follow straight after, in the background ("3 months",
+       Chirag, 20 Oct — counted from the end of the month)
+     · nothing is stamped archived — old posts are simply not read until needed
+   SOC_LOADED says what is in memory: "brand|year" -> "recent" | "all". */
+const SOC_KEEP_MONTHS=3;
+let SOC_LOADED={}, SOC_BUSY={};
+function socCut(year){
+  const t=new Date();
+  if(year!==t.getFullYear()) return 1;
+  return Math.max(1,(t.getMonth()+1)-SOC_KEEP_MONTHS);
+}
+async function socRead(bid,year,from,to){
+  const r=await sbAllRows(()=>sb.from("social_posts").select("*").eq("brand_id",bid).eq("year",year)
+    .gte("month",from).lte("month",to).is("deleted_at",null).is("archived_at",null));
+  if(r.error) return r;
+  return {data:(r.data||[]).filter(x=>x&&x.brand_id===bid&&(x.year||2026)===year&&x.month>=from&&x.month<=to&&!x.deleted_at&&!x.archived_at),error:null};
+}
+function socMerge(bid,year,from,to,rows){
+  if(!G) return;
+  const inRange=(x,y)=>(y||2026)===year&&x.month>=from&&x.month<=to;
+  G.social=(G.social||[]).filter(x=>!(x.brand_id===bid&&inRange(x,x.year))).concat(rows);
+  const b=brands[bid]; if(!b) return;
+  b.social=(b.social||[]).filter(x=>!inRange(x,x.year)).concat(rows.map(normalizeSocial));
+}
+/* called inside loadAll's first batch, so the brand on screen costs no extra trip */
+async function socStartRead(){
+  SOC_LOADED={}; SOC_BUSY={};
+  const bid=activeBrand, y=YEAR;
+  if(!bid||typeof sb==="undefined"||!sb) return {data:[],error:null};
+  const r=await socRead(bid,y,socCut(y),12);
+  if(!r.error) SOC_LOADED[bid+"|"+y]="recent";
+  return r;
+}
+function socWaitMark(){
+  const k=activeBrand+"|"+YEAR;
+  document.body.classList.toggle("soc-wait",!!(activeBrand&&SOC_BUSY[k]&&SOC_LOADED[k]!=="recent"&&SOC_LOADED[k]!=="all"));
+}
+function socEnsure(bid,year){
+  year=year||YEAR;
+  if(!bid||!G||typeof sb==="undefined"||!sb||!brands[bid]) return Promise.resolve();
+  const k=bid+"|"+year;
+  if(SOC_LOADED[k]==="all") return Promise.resolve();
+  if(SOC_BUSY[k]) return SOC_BUSY[k];
+  const drawn=()=>{ if(bid===activeBrand&&year===YEAR){ try{ render(); }catch(e){} } };
+  const run=(async()=>{
+    const cut=socCut(year);
+    if(SOC_LOADED[k]!=="recent"){
+      const a=await socRead(bid,year,cut,12); if(a.error) return;
+      socMerge(bid,year,cut,12,a.data); SOC_LOADED[k]="recent"; drawn();
+    }
+    if(cut>1){
+      const o=await socRead(bid,year,1,cut-1); if(o.error) return;
+      socMerge(bid,year,1,cut-1,o.data);
+    }
+    SOC_LOADED[k]="all"; if(cut>1) drawn();
+  })().finally(()=>{ if(SOC_BUSY[k]===run) delete SOC_BUSY[k]; socWaitMark(); });
+  SOC_BUSY[k]=run; socWaitMark();
+  return run;
+}
+/* EVERY ROAD TO A BRAND ENDS IN render(): the switcher, the bell, a link,
+   a reload, a client put on their own brand. So the load is asked for here
+   and nowhere else — a new road cannot forget it. */
+(function(){
+  const base=render;
+  render=function(){
+    const out=base.apply(this,arguments);
+    try{ if(activeBrand&&G&&SOC_LOADED[activeBrand+"|"+YEAR]!=="all") socEnsure(activeBrand,YEAR); socWaitMark(); }catch(e){}
+    return out;
+  };
+})();
+/* THE SPEED BUDGET (rule 6): how long the first screen took, once a day
+   per person, so the 2-second target is measured on real machines. */
+(function(){
+  const base=loadAll; let timed=false;
+  loadAll=async function(){
+    const out=await base.apply(this,arguments);
+    if(!timed&&G){ timed=true;
+      try{
+        const ms=Math.round(performance.now());
+        const day=new Date(Date.now()+330*60000).toISOString().slice(0,10), key="cc_lt:"+day;
+        let done=false; try{ done=!!localStorage.getItem(key); if(!done) localStorage.setItem(key,"1"); }catch(e){}
+        if(!done) logAppEvent("load_timed",{ms,brand:!!activeBrand,posts:(G.social||[]).length,version:TOOL_VERSION});
+      }catch(e){}
+    }
+    return out;
+  };
+})();
 /* V118.65 — PHASE 1 OF THE SPEED RULES. Every list that grows with the
    business goes through sbAllRows: brands, events, brand industries,
    brand segments, comment counts and every "seen" list. A list that can
@@ -14556,7 +14650,7 @@ async function loadAll(showToast){
        hundred rows. Posts are per-year and archived work leaves the set,
        which is where the growth actually is. Switching year already
        reloads, so nothing else had to change. */
-    sbAllRows(()=>sb.from("social_posts").select("*").eq("year",YEAR).is("deleted_at",null).is("archived_at",null)),   /* V118.63 */
+    socStartRead(),   /* V118.67 — only the open brand's posts; the rest load when a brand is opened */
     sb.from("social_month_plan").select("*").eq("year",YEAR),
     sb.from("social_month_items").select("*"),
   ]);
@@ -16601,7 +16695,7 @@ async function fbEnsureLoaded(postId){
     const [c,a,rx]=await Promise.all([
       sb.from("post_comments").select("*").eq("post_id",postId).order("created_at"),
       sb.from("post_activity").select("*").eq("post_id",postId).order("created_at"),
-      sb.from("comment_reactions").select("*")
+      Promise.resolve({data:null,error:{message:"read per thread"}})   /* V118.67 — never the whole table; the reader that replaces this one, further down, reads this thread's reactions */
     ]);
     if(c.error){ FB_LOADED[postId]=false; return; }
     POSTFB.comments[postId]=c.data||[];
@@ -17863,7 +17957,9 @@ async function notifOpen(brandId,kind,postId){
   // BA4: the month comes from the notification row, so this still works even
   // if that post is not in the current working set
   const row=(NOTIF||[]).find(r=>r.post_id===postId);
-  const month=(p&&p.month)||(row&&row.post_month);
+  let month=(p&&p.month)||(row&&row.post_month);
+  /* V118.67 — posts of a brand you are not on are no longer in memory */
+  if(!month){ try{ const q=await sb.from("social_posts").select("month").eq("id",postId).maybeSingle(); if(q&&q.data) month=q.data.month; }catch(e){} }
   if(!month) return;
   notifBrand(brandId,"content");
   socialLayer=true; contentMonth=month; setView("content");
@@ -20234,7 +20330,7 @@ async function sweepOrphans(){
   if(ME.role!=="admin") return capDenied("The storage sweep");
   toast("Reading the bucket…");
   const walk=await listPrefix("");
-  const a=await sb.from("assets").select("storage_path,thumb_path,view_path,poster_path");
+  const a=await sbAllRows(()=>sb.from("assets").select("storage_path,thumb_path,view_path,poster_path"));   /* V118.67 — past 1,000 rows the sweep saw files as unclaimed */
   if(a.error){ toast("Could not read the asset list — not sweeping","err"); return; }
   /* CLAIMED IS BUILT FROM ROWS, AND THE ROWS ARE READ FIRST.
      If this read failed and we treated it as "no rows", every file in
@@ -27476,7 +27572,7 @@ function histSince(){
   return new Date(Date.now()-30*864e5).toISOString();
 }
 function histBase(){
-  let q=sb.from("change_log").select("*",{count:"exact"})
+  let q=sb.from("change_log").select("*",{count:"exact"})   /* paged by the caller */
     .neq("table_name","health_canary").gte("at",histSince());
   if(histTable) q=q.eq("table_name",histTable);
   if(histWho)   q=q.eq("actor_email",histWho);
@@ -43036,10 +43132,10 @@ async function mcLoadYear(){
   const y=YEAR;
   try{
     const [s,p]=await Promise.all([
-      sbAllRows(()=>sb.from("social_posts").select("*").eq("year",y).is("deleted_at",null).is("archived_at",null)),   /* V118.63 */
+      Promise.resolve({data:null,error:null}),   /* V118.67 — posts load per brand (socEnsure) */
       sb.from("social_month_plan").select("*").eq("year",y)]);
     if(s.error||p.error||y!==YEAR) return;
-    G.social=s.data||[]; G.monthPlans=p.data||[]; G._mcSocY=y;
+    G.monthPlans=p.data||[]; G._mcSocY=y;
     buildYearView(); render();
   }catch(e){}
 }
@@ -46772,6 +46868,11 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&BFV){ e.stopPropag
 .bfv-wait{margin:auto;color:#777;font-size:14px;text-align:center;padding:24px;}
 .bfv-wait.err{color:#B3261E;}
 @media (max-width:760px){ .bfv{padding:0;} .bfv-in{width:100vw;height:100vh;border-radius:0;} .bfv-dl{padding:0 9px;} }
+</style>
+<style>
+/* a brand opened for the first time: a thin line while its posts arrive */
+body.soc-wait::after{content:"";position:fixed;left:0;top:0;height:2px;width:30%;background:var(--ink,#1C1B19);z-index:9999;animation:socw 1s ease-in-out infinite;}
+@keyframes socw{0%{left:-30%}100%{left:100%}}
 </style>
 </body>
 </html>
