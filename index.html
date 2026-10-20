@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.64 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.65 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -9028,7 +9028,7 @@ function renderBM(){
    matched almost nobody. Non-fatal: if the read fails, the old column
    stands in rather than every brand going blank. */
 async function loadBrandInds(){
-  try{ const r=await sb.from("brand_industries").select("brand_id,industry_id");
+  try{ const r=await sbAllRows(()=>sb.from("brand_industries").select("brand_id,industry_id"),["brand_id","industry_id"]);
        return r.error?null:(r.data||[]); }catch(e){ return null; }
 }
 function applyPortfolioInds(){
@@ -13750,7 +13750,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.64 Tbilisi";
+const TOOL_VERSION="V118.65 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -14327,8 +14327,8 @@ function commitsForBrandMonth(bid,y,m){
 let PRODFILES={};
 async function loadProductionFiles(){
   try{
-    const r=await sb.from("assets").select("*")
-      .in("owner_kind",["production","production_comment"]).is("deleted_at",null);
+    const r=await sbAllRows(()=>sb.from("assets").select("*")
+      .in("owner_kind",["production","production_comment"]).is("deleted_at",null));   /* V118.65 */
     PRODFILES={};
     (r.data||[]).forEach(a=>{ (PRODFILES[a.owner_id]=PRODFILES[a.owner_id]||[]).push(a); });
   }catch(e){ PRODFILES={}; }
@@ -14443,8 +14443,8 @@ function prodNewsItems(){
 let PRODCOMMENTS={};
 async function loadProductionComments(){
   try{
-    const r=await sb.from("post_comments").select("id,production_id,body,author_name,created_at")
-      .not("production_id","is",null).is("deleted_at",null).order("created_at");
+    const r=await sbAllRows(()=>sb.from("post_comments").select("id,production_id,body,author_name,created_at")
+      .not("production_id","is",null).is("deleted_at",null),["created_at","id"]);   /* V118.65 */
     PRODCOMMENTS={};
     (r.data||[]).forEach(c=>{ (PRODCOMMENTS[c.production_id]=PRODCOMMENTS[c.production_id]||[]).push(c); });
   }catch(e){ PRODCOMMENTS={}; }
@@ -14503,6 +14503,10 @@ function prodDayMap(m){
    who sees every brand — got 1,000 of them and Luvaire's 9th, 11th and
    13th went missing, while people with fewer brands saw them all. Pages
    of 1,000 in a fixed order, until a page comes back short. */
+/* V118.65 — PHASE 1 OF THE SPEED RULES. Every list that grows with the
+   business goes through sbAllRows: brands, events, brand industries,
+   brand segments, comment counts and every "seen" list. A list that can
+   pass 1,000 rows must never be read with one plain request. */
 async function sbAllRows(make,order){
   const PAGE=1000, cols=order||["id"]; let out=[];
   for(let from=0;from<500000;from+=PAGE){
@@ -14531,8 +14535,8 @@ async function loadAll(showToast){
   ].map(p=>Promise.resolve(p).catch(()=>{})));
   const [inds,evts,brs,bevs,prefs,posts,briefs,social,monthPlans,monthItems]=await Promise.all([
     sb.from("industries").select("*").order("pos"),
-    sb.from("events").select("*").is("deleted_at",null),
-    sb.from("brands").select("*").is("deleted_at",null).eq("status","active"),  /* PORTO 3.6 — only the brands we work with now. Portfolio is the
+    sbAllRows(()=>sb.from("events").select("*").is("deleted_at",null)),
+    sbAllRows(()=>sb.from("brands").select("*").is("deleted_at",null).eq("status","active")),  /* PORTO 3.6 — only the brands we work with now. Portfolio is the
      record of every brand there has ever been (400 and counting);
      this switcher wants the 40-50 that are live. `status` is set by
      hand on the Portfolio Clients screen, never derived here.
@@ -15010,7 +15014,7 @@ async function loadPostFeedback(){
   try{
     const me=(ME.email||"").toLowerCase();
     const [sn]=await Promise.all([
-      sb.from("post_seen").select("*").eq("user_email",me),
+      sbAllRows(()=>sb.from("post_seen").select("*").eq("user_email",me),["post_id"]),
 
       loadShareLinks(),
       loadTaskSeen(),
@@ -15051,7 +15055,7 @@ async function loadTaskSeen(){
   TASK_SEEN={}; TASK_SEEN_OK=false;
   try{
     const me=(ME.email||"").toLowerCase(); if(!me) return;
-    const r=await sb.from("task_seen").select("task_id,seen_at").eq("user_email",me);
+    const r=await sbAllRows(()=>sb.from("task_seen").select("task_id,seen_at").eq("user_email",me),["task_id"]);
     if(r.error) return;                       // the table is not there yet
     TASK_SEEN_OK=true;
     (r.data||[]).forEach(x=>{ TASK_SEEN[x.task_id]=x.seen_at; });
@@ -16423,7 +16427,7 @@ let FB_COUNTS={};            // postId -> {comments, open_threads}
 function fbCountFor(postId){ return FB_COUNTS[postId]||{comments:0,open_threads:0}; }
 async function loadCommentCounts(){
   try{
-    const r=await sb.from("post_comment_counts").select("*");
+    const r=await sbAllRows(()=>sb.from("post_comment_counts").select("*"),["post_id"]);
     if(r.error){ FB_COUNTS={}; return; }
     FB_COUNTS={};
     (r.data||[]).forEach(x=>{FB_COUNTS[x.post_id]={comments:x.comments,open_threads:x.open_threads};});
@@ -18282,8 +18286,8 @@ function rtCalendarChange(pl){
 async function rtRefetchCalendar(){
   try{
     const [evts,brs,bevs,prefs]=await Promise.all([
-      sb.from("events").select("*").is("deleted_at",null),
-      sb.from("brands").select("*").is("deleted_at",null).eq("status","active"),  /* PORTO 3.6 — only the brands we work with now. Portfolio is the
+      sbAllRows(()=>sb.from("events").select("*").is("deleted_at",null)),
+      sbAllRows(()=>sb.from("brands").select("*").is("deleted_at",null).eq("status","active")),  /* PORTO 3.6 — only the brands we work with now. Portfolio is the
      record of every brand there has ever been (400 and counting);
      this switcher wants the 40-50 that are live. `status` is set by
      hand on the Portfolio Clients screen, never derived here.
@@ -29757,7 +29761,7 @@ let CR_SEEN={}, CR_SEEN_OK=false;
 async function loadCreativeSeen(){
   try{
     const me=(ME.email||"").toLowerCase(); if(!me) return;
-    const r=await sb.from("creative_seen").select("creative_id,seen_at").eq("user_email",me);
+    const r=await sbAllRows(()=>sb.from("creative_seen").select("creative_id,seen_at").eq("user_email",me),["creative_id"]);
     if(r.error) return;                       // the table is not there yet
     CR_SEEN_OK=true;
     (r.data||[]).forEach(x=>{ CR_SEEN[x.creative_id]=x.seen_at; });
@@ -29779,7 +29783,7 @@ let MEET_SEEN={}, MEET_SEEN_OK=false;
 async function loadMeetingSeen(){
   try{
     const me=(ME.email||"").toLowerCase(); if(!me) return;
-    const r=await sb.from("meeting_seen").select("meeting_id,seen_at").eq("user_email",me);
+    const r=await sbAllRows(()=>sb.from("meeting_seen").select("meeting_id,seen_at").eq("user_email",me),["meeting_id"]);
     if(r.error) return;                       // the table is not there yet
     MEET_SEEN_OK=true;
     (r.data||[]).forEach(x=>{ MEET_SEEN[x.meeting_id]=x.seen_at; });
@@ -32216,7 +32220,7 @@ async function objaLoad(){
       get(sb.from("stream_channel_options").select("key,label,pos,deleted_at")),
       get(sb.from("stream_sway_options").select("key,label,pos,deleted_at")),
       get(sb.from("brand_objectives").select("objective_key")),
-      get(sb.from("brand_segments").select("segment_key,channel,sway").is("deleted_at",null)),
+      get(sbAllRows(()=>sb.from("brand_segments").select("segment_key,channel,sway").is("deleted_at",null))),
       get(sb.from("brand_streams").select("channel,sway").is("deleted_at",null)),
       get(sb.from("hl_lead_streams").select("channel,sway").is("deleted_at",null)),
       get(sb.from("promotions").select("objective_key,segment_key").is("deleted_at",null))
@@ -33476,7 +33480,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
         sb.from("stream_sway_options").select("key,label,pos,deleted_at"),
         sb.from("brand_objectives").select("brand_id,objective_key,label,unit").eq("brand_id", bid),
         sb.from("brand_segments").select("*").eq("brand_id", bid).is("deleted_at", null),
-        sb.from("brand_segments").select("brand_id,segment_key,label,labels").neq("brand_id", bid).is("deleted_at", null),
+        sbAllRows(()=>sb.from("brand_segments").select("id,brand_id,segment_key,label,labels").neq("brand_id", bid).is("deleted_at", null)),
       ]);
       VB.others = (bs2 && !bs2.error) ? (bs2.data || []).filter(r => r.brand_id !== bid && !r.deleted_at) : [];
       const bad = [mo, ms, mc, mw, bo, bs].find(r => r.error);
@@ -39907,7 +39911,7 @@ async function acLoad(force){
       AC.migr=!/team_role/i.test(bad.message||"");
       if(AC.migr) AC.err=bad.message||"could not read";
     }else{ AC.migr=true; AC.team=rows.filter(r=>r&&r.team_role); }
-    const [h,s,bp,ls]=await Promise.all([sb.rpc("account_health",{}), sb.from("brands").select("id,cal_services").is("deleted_at",null),
+    const [h,s,bp,ls]=await Promise.all([sb.rpc("account_health",{}), sbAllRows(()=>sb.from("brands").select("id,cal_services").is("deleted_at",null)),
       sb.rpc("brand_prefs_managed",{}), sb.rpc("account_services",{})]);
     /* V118.13 — the facts the adoption score needs that the page cannot read */
     const ad=await sb.rpc("account_adoption",{});
@@ -43921,7 +43925,7 @@ function chIconsHtml(bid){
 }
 async function chLoad(){
   try{
-    const r=await sb.from("brands").select("id,social_platforms");
+    const r=await sbAllRows(()=>sb.from("brands").select("id,social_platforms").is("deleted_at",null));
     if(r.error) return;
     CH_OK=true;
     (r.data||[]).forEach(x=>{ if(Array.isArray(x.social_platforms)) CH_BY[x.id]=x.social_platforms; });
