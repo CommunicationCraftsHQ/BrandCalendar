@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.74 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.76 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -49,7 +49,7 @@
      byte for byte — they were extracted FROM this file in the first place.
      Loaded ABOVE the block below on purpose, so the calendar's own rules
      still win where they legitimately extend a shared one. -->
-<link rel="stylesheet" href="https://communicationcraftshq.github.io/BrandCalendar/cc-suite.css?v=V70.8"/>
+<link rel="stylesheet" href="https://communicationcraftshq.github.io/BrandCalendar/cc-suite.css?v=V70.9"/>
 <style>
 
 
@@ -13781,7 +13781,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.74 Tbilisi";
+const TOOL_VERSION="V118.76 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -25070,6 +25070,7 @@ function wClean(html){
          nothing that can change is ever stored. */
       const mk=tag==="A"?String(ch.getAttribute("data-m")||""):"";
       const mt=(mk&&ch.querySelector(".lmn-t"))?ch.querySelector(".lmn-t").textContent:null;
+      const mo=mk&&ch.getAttribute("data-o")==="1";   /* V118.76 — a name the writer gave it */
       [...ch.attributes].forEach(a=>ch.removeAttribute(a.name));
       if(tag==="A"){
         if(href&&W_SAFE_HREF.test(String(href).trim())){
@@ -25078,6 +25079,7 @@ function wClean(html){
           ch.setAttribute("rel","noreferrer noopener");
           if(W_MKINDS[mk]){
             ch.setAttribute("data-m",mk);
+            if(mo) ch.setAttribute("data-o","1");
             ch.textContent=String(mt!=null?mt:ch.textContent).replace(/\s+/g," ").trim();
             return;
           }
@@ -25147,7 +25149,7 @@ function wLinkify(html){
       if(ch.nodeType!==1) return;
       if(ch.tagName==="A"&&W_MKINDS[ch.getAttribute("data-m")||""]){   /* V3.45 — a mention */
         const t=doc.createElement("span");
-        t.innerHTML=wMentionHtml(ch.getAttribute("href")||"",ch.getAttribute("data-m"),ch.textContent||"");
+        t.innerHTML=wMentionHtml(ch.getAttribute("href")||"",ch.getAttribute("data-m"),ch.textContent||"",ch.getAttribute("data-o")==="1");
         if(t.firstChild) ch.replaceWith(t.firstChild);
         return;
       }
@@ -25302,15 +25304,19 @@ function wMentionLook(url,kind,title){
   if(sb&&sb.toLowerCase()===t.toLowerCase()) sb="";
   return {icon,title:t,sub:sb};
 }
-function wMentionHtml(url,kind,title){
+/* V118.76 — `own`: the writer named this link ("Name it…"). Their words
+   are the title for everyone, and no lookup ever replaces them. */
+function wMentionHtml(url,kind,title,own){
   let k=W_MKINDS[kind]?kind:"web";
+  own=!!(own&&String(title||"").trim());
   /* V118.66 — a pill saved as "tool" for a page that is not a tool (the
      old rule above) is drawn as a web page, without the wrong name, so
      its own title is read when it is shown */
-  if(k==="tool"&&!wSuiteLink(url)){ k="web"; title=""; }
+  if(k==="tool"&&!wSuiteLink(url)&&!own){ k="web"; title=""; }
   const L=wMentionLook(url,k,title);
+  if(own){ L.title=String(title).replace(/\s+/g," ").trim(); if(L.sub&&L.sub.toLowerCase()===L.title.toLowerCase()) L.sub=""; }
   const href=W_SAFE_HREF.test(String(url||""))?String(url).replace(/"/g,"&quot;"):"#";
-  return '<a class="lmn" data-m="'+k+'" href="'+href+'" target="_blank" rel="noreferrer noopener" title="'+href+'" contenteditable="false">'
+  return '<a class="lmn" data-m="'+k+'"'+(own?' data-o="1"':'')+' href="'+href+'" target="_blank" rel="noreferrer noopener" title="'+href+'" contenteditable="false">'
        + '<i class="ti '+L.icon+'"></i><span class="lmn-t">'+wEsc(L.title)+'</span>'
        + (L.sub?'<span class="lmn-s">'+wEsc(L.sub)+'</span>':'')+'</a>';
 }
@@ -26645,6 +26651,7 @@ function wPasteAsEl(){
   el=document.createElement("div"); el.id="mp-paste"; el.className="ccw-paste";
   document.body.appendChild(el);
   el.addEventListener("mousedown",e=>{
+    if(e.target.tagName==="INPUT") return;           /* V118.76 — the name box takes the click */
     const r=e.target.closest&&e.target.closest("[data-pa]");
     e.preventDefault();
     if(r) wPasteAsPick(Number(r.dataset.pa));
@@ -26656,10 +26663,90 @@ function wPasteAsDraw(){
   const s=wSuiteLink(WPA.url);
   const ic=s?({task:"ti-checkbox",post:"ti-photo",meeting:"ti-notes",mood:"ti-mood-heart",shoot:"ti-camera"}[s.kind]||"ti-apps")
             :wSiteOf(WPA.url).icon;
+  if(WPA.mode==="name") return wNameDraw();
   el.innerHTML='<div class="h">Paste as</div>'
     +'<div class="row'+(WPA.sel===0?' on':'')+'" data-pa="0"><i class="ti '+ic+'"></i>Mention</div>'
-    +'<div class="row'+(WPA.sel===1?' on':'')+'" data-pa="1"><i class="ti ti-link"></i>URL</div>';
+    +'<div class="row'+(WPA.sel===1?' on':'')+'" data-pa="1"><i class="ti ti-link"></i>URL</div>'
+    +'<div class="sep"></div>'
+    +'<div class="row'+(WPA.sel===2?' on':'')+'" data-pa="2"><i class="ti ti-pencil"></i>Name it…</div>';
 }
+/* ══ V118.76 · NAME IT — the writer's own words on a link ══════════════
+   Chirag, 20 Oct (mockup approved): a third choice under Paste as, and a
+   click on any pill in the box, open one small box with the found name
+   filled in. The pill changes as you type; Enter keeps it, Esc goes back.
+   The name is stored with the link (data-o) and no lookup replaces it. */
+function wNameDraw(){
+  const el=wPasteAsEl(); if(!WPA) return;
+  const cur=(WPA.pill&&WPA.pill.querySelector(".lmn-t"))?WPA.pill.querySelector(".lmn-t").textContent:"";
+  el.innerHTML='<div class="h">Name this link</div>'
+    +'<div class="nm"><input id="mp-name" maxlength="80" value="'+wEsc(cur).replace(/"/g,"&quot;")+'">'
+    +'<div class="hint"><span><b>Enter</b> to keep</span><span><b>Esc</b> '+(WPA.fresh?'uses the found name':'leaves it as it was')+'</span></div></div>'
+    +(WPA.fresh?'':'<div class="sep"></div><div class="row" data-pa="9"><i class="ti ti-link"></i>Show as URL instead</div>');
+  const i=document.getElementById("mp-name");
+  if(i){
+    i.addEventListener("input",()=>{ const tt=WPA&&WPA.pill&&WPA.pill.querySelector(".lmn-t"); if(tt) tt.textContent=i.value||WPA.was; });
+    setTimeout(()=>{ try{ i.focus({preventScroll:true}); i.select(); }catch(e){} },0);
+  }
+}
+function wNameOpen(box,pill,fresh){
+  if(!box||!pill) return;
+  const tt=pill.querySelector(".lmn-t");
+  WPA={box,pill,url:pill.getAttribute("href")||"",sel:0,mode:"name",fresh:!!fresh,
+       was:tt?tt.textContent:"",wasOwn:pill.getAttribute("data-o")==="1"};
+  const el=wPasteAsEl(); wNameDraw(); el.classList.add("open");
+  const r=pill.getBoundingClientRect(), vh=window.innerHeight||800, vw=window.innerWidth||1200;
+  const h=el.offsetHeight||110, w=el.offsetWidth||260;
+  const below=vh-r.bottom > h+12;
+  el.style.top=Math.round((below?r.bottom+6:Math.max(8,r.top-h-6))+window.scrollY)+"px";
+  el.style.left=Math.round(Math.max(8,Math.min(r.left,vw-w-8))+window.scrollX)+"px";
+}
+function wNameDone(keep){
+  const P=WPA; if(!P||P.mode!=="name") return;
+  const i=document.getElementById("mp-name");
+  const v=String(i?i.value:"").replace(/\s+/g," ").trim();
+  const tt=P.pill.querySelector(".lmn-t");
+  if(keep&&v&&v!==P.was){
+    if(tt) tt.textContent=v; P.pill.setAttribute("data-o","1");
+    /* the site's name beside the writer's own, as the thread will draw it */
+    const sub=P.pill.getAttribute("data-m")==="web"?wSiteOf(P.url).name:"";
+    if(sub&&!P.pill.querySelector(".lmn-s")&&sub.toLowerCase()!==v.toLowerCase()){
+      const n=document.createElement("span"); n.className="lmn-s"; n.textContent=sub; P.pill.appendChild(n); }
+  }
+  else if(keep&&v&&v===P.was&&P.wasOwn){ /* unchanged, still theirs */ }
+  else { if(tt) tt.textContent=P.was; if(!P.wasOwn) P.pill.removeAttribute("data-o"); }
+  const el=document.getElementById("mp-paste"); if(el) el.classList.remove("open");
+  WPA=null;
+  wNameCaret(P.box,P.pill);
+  try{ P.box.dispatchEvent(new Event("input",{bubbles:true})); }catch(e){}
+}
+function wNameCaret(box,pill){
+  try{
+    let sp=pill.nextSibling;
+    if(!sp||sp.nodeType!==3){ sp=document.createTextNode("\u00a0"); pill.after(sp); }
+    box.focus();
+    const r=document.createRange(); r.setStart(sp,Math.min(1,sp.length)); r.collapse(true);
+    const sel=getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  }catch(e){}
+}
+function wNameToUrl(){
+  const P=WPA; if(!P) return;
+  const el=document.getElementById("mp-paste"); if(el) el.classList.remove("open");
+  WPA=null;
+  const t=document.createElement("span"); t.innerHTML=wLnkTag(P.url,wLnkHost(P.url));
+  const a=t.firstChild; if(!a) return;
+  P.pill.replaceWith(a);
+  wNameCaret(P.box,a);
+  try{ P.box.dispatchEvent(new Event("input",{bubbles:true})); }catch(e){}
+}
+/* a click on a pill inside a box being written renames it */
+document.addEventListener("click",e=>{
+  const a=e.target.closest&&e.target.closest("a.lmn");
+  if(!a) return;
+  const box=a.closest('[contenteditable="true"]');
+  if(!box||!box.isContentEditable) return;
+  e.preventDefault(); e.stopPropagation();
+  wNameOpen(box,a,false);
+},true);
 function wPasteAsOpen(box,chip,url){
   WPA={box,chip,url,sel:0};
   const el=wPasteAsEl(); wPasteAsDraw(); el.classList.add("open");
@@ -26676,9 +26763,11 @@ function wPasteAsClose(){
   WPA=null;
 }
 function wPasteAsPick(i){
+  if(i===9) return wNameToUrl();
   const P=WPA; wPasteAsClose();
-  if(!P||i!==0) return;                 /* URL: the chip is already there */
-  wPasteMention(P.box,P.chip,P.url);
+  if(!P||i===1) return;                 /* URL: the chip is already there */
+  const m=wPasteMention(P.box,P.chip,P.url);
+  if(i===2&&m) wNameOpen(P.box,m,true);
 }
 /* Swap the chip for the mention, put the caret after it, then ask the
    tool for a better name and write it in when it comes. */
@@ -26701,10 +26790,15 @@ function wPasteMention(box,chip,url){
   Promise.resolve().then(()=>WBAR_CFG.nameLink?WBAR_CFG.nameLink(url,s):null).then(info=>{
     if(!info||!info.title||!m.isConnected) return;
     const site=s?"":wSiteOf(url).name;
+    const naming=WPA&&WPA.mode==="name"&&WPA.pill===m;
     const title=s?String(info.title):wTidyTitle(info.title,site);
     if(!title) return;
     if(s) wLinkName(url,{title,sub:info.sub!=null?info.sub:undefined});
-    const tt=m.querySelector(".lmn-t"); if(tt) tt.textContent=title;
+    const tt=m.querySelector(".lmn-t");
+    if(naming){ const i=document.getElementById("mp-name"); if(i&&i.value===WPA.was){ i.value=title; i.select(); } WPA.was=title; }
+    if(tt&&m.getAttribute("data-o")!=="1"&&!naming) tt.textContent=title;
+    else if(tt&&naming&&tt.textContent===title) {}
+    else if(tt&&naming){ const i=document.getElementById("mp-name"); if(i) tt.textContent=i.value||title; }
     const ss=m.querySelector(".lmn-s");
     const sub=info.sub!=null?String(info.sub):(ss?ss.textContent:"");
     if(ss&&sub) ss.textContent=sub;
@@ -26719,14 +26813,22 @@ function wPasteMention(box,chip,url){
 document.addEventListener("keydown",e=>{
   if(!WPA) return;
   const k=e.key;
-  if(k==="ArrowDown"||k==="ArrowUp"){ e.preventDefault(); e.stopPropagation(); WPA.sel=WPA.sel?0:1; wPasteAsDraw(); return; }
+  if(WPA.mode==="name"){                /* V118.76 — the name box keeps its keys */
+    if(k==="Enter"){ e.preventDefault(); e.stopPropagation(); wNameDone(true); return; }
+    if(k==="Escape"){ e.preventDefault(); e.stopPropagation(); wNameDone(false); return; }
+    return;
+  }
+  if(k==="ArrowDown"||k==="ArrowUp"){ e.preventDefault(); e.stopPropagation(); WPA.sel=(WPA.sel+(k==="ArrowDown"?1:2))%3; wPasteAsDraw(); return; }
   if(k==="Enter"||k==="Tab"){ e.preventDefault(); e.stopPropagation(); wPasteAsPick(WPA.sel); return; }
   if(k==="Escape"){ e.preventDefault(); e.stopPropagation(); wPasteAsClose(); return; }
   if(k==="Shift"||k==="Meta"||k==="Control"||k==="Alt") return;
   wPasteAsClose();
 },true);
 document.addEventListener("mousedown",e=>{
-  if(WPA&&!(e.target.closest&&e.target.closest("#mp-paste"))) wPasteAsClose();
+  if(WPA&&!(e.target.closest&&e.target.closest("#mp-paste"))){
+    if(WPA.mode==="name") wNameDone(true);        /* clicking away keeps what was typed */
+    else wPasteAsClose();
+  }
 },true);
 
 
@@ -26747,7 +26849,7 @@ document.addEventListener("keydown",e=>{
 try{
   window.wFmt=wFmt; window.wLink=wLink; window.wAttach=wAttach;
   window.wLinkApply=wLinkApply; window.wLinkClose=wLinkClose;
-  window.wPasteAsPick=wPasteAsPick;
+  window.wPasteAsPick=wPasteAsPick; window.wNameOpen=wNameOpen;
 }catch(e){}
 
 /* ==CC-WRITER-BAR:END== */
@@ -27624,6 +27726,7 @@ const HIST_LABELS={
   brand_tags:  {one:"Event link",     icon:"ti-link"},
   brand_event_prefs:{one:"Event switch", icon:"ti-toggle-right"},
   brand_competitors:{one:"Competitor", icon:"ti-swords"},
+  brand_segments:{one:"Target group", icon:"ti-users-group"},   /* V118.75 — now recorded */
   brand_briefs:{one:"Note",           icon:"ti-note"},
   brand_posts: {one:"Posting slot",   icon:"ti-clock"},
   industries:  {one:"Industry",       icon:"ti-tags"},
@@ -33959,10 +34062,34 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     const u = await sb.from("brand_segments").update(now).eq("id", r.id);
     if (u.error){ Object.assign(r, was); say("Not saved — " + u.error.message, "err"); vbPaint(); }
   }
+  /* V118.75 — Chirag, 20 Oct: "clicking on any target group segment
+     simply deletes it". A click on the chip used to take it off at once,
+     with no word and no way back, and the collapsed view kept that. Now
+     only the small ✕ on the chip (shown on hover, open view only) takes
+     it off, and the message that follows carries Undo. */
+  let TG_UNDO = null;
   window.tgSegOff = function(id, i){
     const r = VB.bsegs.find(x => x.id === id); if (!r) return;
-    const L = segsOf(r), K = keysOf(r); L.splice(i, 1); K.splice(i, 1);
+    const L0 = segsOf(r).slice(), K0 = keysOf(r).slice(), N0 = r.segment_notes ? Object.assign({}, r.segment_notes) : null;
+    const L = L0.slice(), K = K0.slice(), w = L[i]; L.splice(i, 1); K.splice(i, 1);
     tgSegWrite(r, r.segment_key, L, K);
+    TG_UNDO = { kind: "s", id, L: L0, K: K0, N: N0 };
+    say(`“${esc(w)}” taken off · <a class="tg-undo" onclick="tgUndo()">Undo</a>`);
+  };
+  window.tgObjOff = function(id, k){
+    const r = VB.bsegs.find(x => x.id === id); if (!r) return;
+    const N0 = r.objective_notes ? Object.assign({}, r.objective_notes) : null;
+    TG_UNDO = { kind: "o", id, k, N: N0 };
+    tgObj(id, k);
+    say(`“${esc(vbObjWords(k).label)}” taken off · <a class="tg-undo" onclick="tgUndo()">Undo</a>`);
+  };
+  window.tgUndo = async function(){
+    const u = TG_UNDO; TG_UNDO = null; if (!u) return;
+    const r = VB.bsegs.find(x => x.id === u.id); if (!r) return;
+    if (u.kind === "s"){ if (u.N) r.segment_notes = u.N; return tgSegWrite(r, r.segment_key, u.L, u.K); }
+    if ((r.objective_keys || []).includes(u.k)) return;
+    await tgObj(u.id, u.k);
+    if (u.N && u.N[u.k]){ r.objective_notes = u.N; await sb.from("brand_segments").update({ objective_notes: u.N }).eq("id", u.id); vbPaint(); }
   };
   /* moving a row to another group keeps its words, except any the new
      group's list does not have or another row there already holds */
@@ -34077,11 +34204,11 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     const objs = (r.objective_keys || []);
     const edit = may();
     const objCell = `<div class="tg-lines">${objs.map((k, i) => `<div class="tg-ln"><span class="vb-inf tg-obj">${edit
-        ? `<b title="Take it off" onclick="tgObj('${id}','${escA(k)}')">${esc(vbObjWords(k).label)}</b>`
+        ? `<b>${esc(vbObjWords(k).label)}<i class="tg-x" title="Take it off" onclick="event.stopPropagation();tgObjOff('${id}','${escA(k)}')">×</i></b>`
         : `<b class="ro">${esc(vbObjWords(k).label)}</b>`}</span>${noteBox(r, "o", i, k)}</div>`).join("")}${edit ? `<div class="tg-ln vb-inf"><span class="vb-plus" onclick="tgObjOpen(event,'${id}')">+ objective</span></div>` : (objs.length ? "" : `<span class="nsdim">—</span>`)}</div>`;
     const L = segsOf(r);
     const segCell = `<div class="tg-lines">${L.map((w, i) => `<div class="tg-ln"><span class="vb-inf tg-seg">${edit
-        ? `<b title="Take it off" onclick="tgSegOff('${id}',${i})">${esc(w)}</b>`
+        ? `<b>${esc(w)}<i class="tg-x" title="Take it off" onclick="event.stopPropagation();tgSegOff('${id}',${i})">×</i></b>`
         : `<b class="ro">${esc(w)}</b>`}</span>${noteBox(r, "s", i, w)}</div>`).join("")}${edit ? `<div class="tg-ln vb-inf"><span class="vb-plus" onclick="tgSegOpen(event,'${id}')">+ segment</span></div>` : (L.length ? "" : `<span class="nsdim">—</span>`)}</div>`;
     const tp = `<span class="a3-tp${n ? "" : " none"}${op ? " open" : ""}" onclick="tgTpToggle('${id}')">${n ? n + " talking point" + (n > 1 ? "s" : "") : (edit ? "Add talking points" : "None")}</span>`;
     const main = `<tr data-tg="${id}">
@@ -42605,7 +42732,7 @@ async function cplSave(){
       if(!info||!info.title) return;
       const title=wTidyTitle(info.title,site); if(!title) return;
       document.querySelectorAll('a.lmn[data-m="web"]').forEach(b=>{
-        if(b.getAttribute("href")!==href||b.closest('[contenteditable="true"]')) return;
+        if(b.getAttribute("href")!==href||b.closest('[contenteditable="true"]')||b.getAttribute("data-o")==="1") return;
         const bt=b.querySelector(".lmn-t");
         if(bt&&weakTitle(bt.textContent,site)&&title.toLowerCase()!==String(bt.textContent||"").trim().toLowerCase()){
           bt.textContent=title;
@@ -42615,7 +42742,7 @@ async function cplSave(){
     });
   }
   function refresh(){
-    document.querySelectorAll("a.lmn[data-m]:not([data-nm])").forEach(a=>{
+    document.querySelectorAll("a.lmn[data-m]:not([data-nm]):not([data-o])").forEach(a=>{   /* V118.76 — not a name the writer gave */
       a.setAttribute("data-nm","1");
       const href=a.getAttribute("href")||"";
       if(a.closest('[contenteditable="true"]')) return;
@@ -42625,7 +42752,7 @@ async function cplSave(){
       nameLink(href,s).then(info=>{
         if(!info||!info.title) return;
         document.querySelectorAll("a.lmn[data-m]").forEach(b=>{
-          if(b.getAttribute("href")!==href||b.closest('[contenteditable="true"]')) return;
+          if(b.getAttribute("href")!==href||b.closest('[contenteditable="true"]')||b.getAttribute("data-o")==="1") return;
           const t=b.querySelector(".lmn-t"); if(t&&t.textContent!==info.title) t.textContent=info.title;
           const ss=b.querySelector(".lmn-s"); if(ss&&info.sub) ss.textContent=info.sub;
         });
@@ -45316,7 +45443,7 @@ function v44Name(url,s){
   Promise.resolve(WBAR_CFG.nameLink(url,s)).then(info=>{
     if(!info||!info.title) return;
     document.querySelectorAll("a.lmn").forEach(a=>{
-      if(a.getAttribute("href")!==url) return;
+      if(a.getAttribute("href")!==url||a.getAttribute("data-o")==="1") return;
       const tt=a.querySelector(".lmn-t"); if(tt) tt.textContent=String(info.title);
       const ss=a.querySelector(".lmn-s"); if(ss&&info.sub) ss.textContent=String(info.sub);
     });
@@ -45891,6 +46018,17 @@ async function chlLoad(){
 .sx-card .bd-sec{align-items:center;}
 .sx-c .vb-new, .sx-c .cp-more{display:none !important;}
 .sx-c .tg-nt, .sx-c .tg-ln.vb-inf{display:none !important;}
+/* V118.75 — chips: the ✕ on hover takes one off, open view only; the
+   collapsed view is read-only */
+.tg-seg b .tg-x,.tg-obj b .tg-x{display:none;margin-left:6px;font-style:normal;font-weight:600;color:var(--subtle,#999);cursor:pointer;line-height:1;}
+.tg-seg b:hover .tg-x,.tg-obj b:hover .tg-x{display:inline;}
+.tg-seg b .tg-x:hover,.tg-obj b .tg-x:hover{color:var(--acc,#D23B2B);}
+.sx-c .tg-seg b .tg-x,.sx-c .tg-obj b .tg-x{display:none !important;}
+.sx-c .tg-seg b,.sx-c .tg-obj b{cursor:default;}
+.vb-inf.tg-seg b,.vb-inf.tg-obj b{cursor:default;}
+.vb-inf.tg-seg b:hover{border-color:var(--div);color:var(--text);}
+.vb-inf.tg-obj b:hover{color:var(--text);}
+a.tg-undo{color:#fff;text-decoration:underline;font-weight:700;cursor:pointer;margin-left:2px;}
 .sx-c .tg-lines{display:flex !important;flex-direction:row !important;flex-wrap:nowrap;gap:6px;overflow:hidden;align-items:center;}
 .sx-c .tg-ln{margin:0 !important;width:auto !important;flex:none !important;display:inline-flex !important;}
 .sx-c tr[data-tg] td{padding-top:8px !important;padding-bottom:8px !important;vertical-align:middle !important;}
