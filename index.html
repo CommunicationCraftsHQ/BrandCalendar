@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.69 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.70 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3000,7 +3000,7 @@ body.brcv .brl-lens span.cv.on{background:#378ADD;color:#fff;}
 .br-tabs .n{font-size:10.5px;color:#fff;background:var(--acc);border-radius:99px;padding:1px 6px;
   margin-left:6px;font-weight:800;}
 .br-thread{max-height:420px;overflow-y:auto;padding:12px 0 4px;}
-.br-thread .th-m.pend{opacity:.55;transition:opacity .2s;}
+.br-thread .th-m.pend,.th-m.pend{opacity:.55;transition:opacity .2s;}
 .br-files{padding:14px 0;}
 .br-hist{padding:12px 0;font-size:12.5px;color:var(--muted);}
 .br-hist div{padding:6px 0;border-bottom:1px solid #F4F4F2;}
@@ -13750,7 +13750,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.69 Tbilisi";
+const TOOL_VERSION="V118.70 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -17395,6 +17395,30 @@ document.addEventListener("keydown",e=>{
   if(!el||el.id!==mentionInput) return;
   if(mentionKeyNav(e)) e.stopImmediatePropagation();
 },true);
+/* ══ V118.70 TBILISI · SEND AT ONCE BELONGS TO THE BOX TOO ════════════
+   V118.64 made the task box empty and show the message the moment Enter
+   is pressed. Chirag, 20 Oct: the Help desk box still waited "5 seconds".
+   So did the Promotions and Mood board boxes. The pattern is now one
+   shared helper every sender calls:
+     wSendAtOnce({box, show, send, hide})
+       box  — the composer; it is emptied first, its words kept aside
+       show — draw the message now, faint (row._pending=true)
+       send — the database write; returns {error}
+       hide — take the faint message away again on a refusal
+   On a refusal the words go back into the box. Returns the write result. */
+async function wSendAtOnce(o){
+  const box=o.box||null;
+  const keep=box?(box.isContentEditable?box.innerHTML:box.value):"";
+  if(box){ try{ wDraftClear(box); }catch(e){} rtClear(box); }
+  try{ o.show&&o.show(); }catch(e){}
+  let r; try{ r=await o.send(); }catch(e){ r={error:{message:String(e&&e.message||e)}}; }
+  if(r&&r.error){
+    try{ o.hide&&o.hide(); }catch(e){}
+    const b2=box&&box.id?document.getElementById(box.id):box;
+    if(b2&&!rtValue(b2)){ if(b2.isContentEditable) b2.innerHTML=keep; else b2.value=keep; }
+  }
+  return r||{error:null};
+}
 function closeMentionBox(){ if(mentionBox){ mentionBox.remove(); mentionBox=null; }
   mentionHits=[]; mentionInput=null; mentionSel=0; }
 
@@ -29951,7 +29975,7 @@ function prMsgHtml(m){
   const who=escHtml(nameShow(m.author_name,m.author_email,m.author_kind)||brPersonName(m.author_id)||"someone");
   const own=fbIsMine(m)?`<div class="th-acts"><span class="th-rx"></span><span class="rgt">
       <button onclick="prMsgDelete('${escAttr(m.id)}')">Delete</button></span></div>`:"";
-  return `<div class="th-m">${brFace(m.author_id)}
+  return `<div class="th-m${m._pending?" pend":""}">${brFace(m.author_id)}
     <div class="th-b"><div class="th-h"><b>${who}</b><span class="th-kind">Team</span>
       <span class="th-when">${m.created_at?fmtWhen(m.created_at):""}</span></div>
       <div class="th-t">${fbBody(m.body||"")}</div>
@@ -30035,9 +30059,13 @@ async function prPost(){
     const row={id:"c"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36),
       creative_id:cid, brand_id:activeBrand, body, author_kind:"team", author_name:actorName(),
       author_email:ME.email||"", author_id:ME.id||null, mentions:brMentions(body)};
-    const r=await sb.from("post_comments").insert([row]);
+    /* V118.70 — shows at once, faint; the box empties first */
+    const pend={...row,created_at:new Date().toISOString(),_pending:true};
+    const r=await wSendAtOnce({box,
+      show(){ PR.draft=""; if(PR.th&&PR.th.id===cid){ PR.th.msgs=(PR.th.msgs||[]).concat([pend]); if(view==="promotions") render(); } },
+      send(){ return sb.from("post_comments").insert([row]); },
+      hide(){ if(PR.th&&PR.th.msgs){ PR.th.msgs=PR.th.msgs.filter(m=>m!==pend); if(view==="promotions") render(); } }});
     if(r.error){ toast("Could not post — "+r.error.message,"err"); return; }
-    if(box){ wDraftClear(box); rtClear(box); } PR.draft="";
     const staged=PR.staged; PR.staged=[];
     await prThLoad(cid);
     if(staged.length){
@@ -38429,7 +38457,7 @@ function mdbMsgHtml(m){
   const who=escHtml(nameShow(m.author_name,m.author_email,m.author_kind)||brPersonName(m.author_id)||"someone");
   const own=fbIsMine(m)?`<div class="th-acts"><span class="th-rx"></span><span class="rgt">
       <button onclick="mdbMsgDelete('${escAttr(m.id)}')">Delete</button></span></div>`:"";
-  return `<div class="th-m">${brFace(m.author_id)}
+  return `<div class="th-m${m._pending?" pend":""}">${brFace(m.author_id)}
     <div class="th-b"><div class="th-h"><b>${who}</b><span class="th-kind">Team</span>
       <span class="th-when">${m.created_at?fmtWhen(m.created_at):""}</span></div>
       <div class="th-t">${fbBody(m.body||"")}</div>
@@ -38457,9 +38485,13 @@ async function mdbPost(){
     const row={id:"c"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36),
       mood_item_id:id, brand_id:activeBrand, body, author_kind:"team", author_name:actorName(),
       author_email:ME.email||"", author_id:ME.id||null, mentions:brMentions(body)};
-    const r=await sb.from("post_comments").insert([row]);
+    /* V118.70 — shows at once, faint; the box empties first */
+    const pend={...row,created_at:new Date().toISOString(),_pending:true};
+    const r=await wSendAtOnce({box,
+      show(){ if(MDB.th&&MDB.th.id===id){ MDB.th.msgs=(MDB.th.msgs||[]).concat([pend]); if(MDB.open===id) mdbDrawer(); } },
+      send(){ return sb.from("post_comments").insert([row]); },
+      hide(){ if(MDB.th&&MDB.th.msgs){ MDB.th.msgs=MDB.th.msgs.filter(m=>m!==pend); if(MDB.open===id) mdbDrawer(); } }});
     if(r.error){ toast("Could not post — "+escHtml(r.error.message),"err"); return; }
-    if(box){ wDraftClear(box); rtClear(box); }
     const staged=MDB.staged; MDB.staged=[];
     await mdbThLoad(id);
     if(staged.length){
@@ -44876,7 +44908,7 @@ function hdOpenHtml(r){
       ?`<div class="hd-sys" data-gate="sys-status"><b>${name(m.author_id)}</b> moved it to ${hdTag(m.to_status)}<span>· ${escHtml(hdWhenAt(m.created_at))}</span></div>`
     :m.kind==="metoo"
       ?`<div class="hd-sys" data-gate="sys-metoo"><b>${name(m.author_id)}</b> pressed Me too<span>· ${escHtml(hdWhenAt(m.created_at))}</span></div>`
-    :`<div class="th-m" data-gate="msg">${hdFace(hdEmailOf(m.author_id))}<div class="th-b"><div class="th-h"><b>${name(m.author_id)}</b><span class="th-when">${escHtml(hdWhenAt(m.created_at))}</span></div>
+    :`<div class="th-m${m._pending?" pend":""}" data-gate="msg">${hdFace(hdEmailOf(m.author_id))}<div class="th-b"><div class="th-h"><b>${name(m.author_id)}</b><span class="th-when">${escHtml(hdWhenAt(m.created_at))}</span></div>
         ${m.body?`<div class="th-t">${wRender(m.body)}</div>`:""}${hdFilesHtml(filesOf(m.id))}</div></div>`).join("");
   return `<div class="hd-open" data-gate="ask" data-status="${escAttr(a.status)}">
     <div>
@@ -44970,9 +45002,13 @@ async function hdPost(id){
   if(!body&&!HD.staged.length) return;
   HD.busy=true;
   try{
-    const r=await sb.from("helpdesk_ask_messages").insert([{ask_id:id,body}]).select("id").single();
+    /* V118.70 — the message shows at once, faint, and the box empties */
+    const pend={id:"pend"+Date.now().toString(36),ask_id:id,author_id:ME.id,kind:"msg",body,created_at:new Date().toISOString(),_pending:true};
+    const r=await wSendAtOnce({box,
+      show(){ if(HD.th&&HD.th.id===id&&HD.th.msgs){ HD.th.msgs.push(pend); hdList(); } },
+      send(){ return sb.from("helpdesk_ask_messages").insert([{ask_id:id,body}]).select("id").single(); },
+      hide(){ if(HD.th&&HD.th.msgs){ HD.th.msgs=HD.th.msgs.filter(m=>m!==pend); hdList(); } }});
     if(r.error||!r.data){ toast("Not posted — "+escHtml((r.error&&r.error.message)||"try again"),"err"); return; }
-    if(box) rtClear(box);
     const staged=HD.staged; HD.staged=[];
     for(const f of staged){ const e=await hdPut(id,r.data.id,f); if(e) toast(e,"err"); }
   }finally{ HD.busy=false; }
