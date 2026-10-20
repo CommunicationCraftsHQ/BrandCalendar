@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.78 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.79 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12537,7 +12537,9 @@ function msgHtml(m,o){
      Ac Manager types what the client said on a call and the thread then
      claims the client wrote it. The database refuses a client message
      with no entered_by, and this line is why. */
-  const by=client&&m.entered_by&&m.entered_by!==m.author_id?`<span class="th-by">· added by ${escHtml(brPersonName(m.entered_by))}, from a call</span>`:"";
+  const chg=taskReplyOf(m.body).chg;   /* V118.79 — a change note says how it was heard */
+  const by=chg&&m.entered_by?`<span class="th-by">· ${escHtml(DLV_HOW_WORD[chg.how]||"")}, recorded by ${escHtml(brPersonName(m.entered_by))}</span>`
+    :client&&m.entered_by&&m.entered_by!==m.author_id?`<span class="th-by">· added by ${escHtml(brPersonName(m.entered_by))}, from a call</span>`:"";
   /* THE BRIEF IS NOT A MESSAGE. It is drawn at the top of every thread
      out of branding_tasks.brief and has no post_comments row at all, so
      it gets no actions — Edit on it would look like it edits the brief
@@ -12591,7 +12593,7 @@ function msgHtml(m,o){
       <span class="th-kind${client?" cli":""}">${client?"Client":"Team"}</span>
       ${by}<span class="th-when">${when}${m.edited_at?" · edited":""}</span></div>`}
     <div class="tm-b">
-      ${rp.aid?taskReplyQuote(rp.aid):rp.mid?taskReplyQuoteMsg(rp.mid):""}
+      ${rp.aid?taskReplyQuote(rp.aid):rp.mid?taskReplyQuoteMsg(rp.mid):rp.chg?dlvChgQuote(rp.chg):""}
       ${String(rp.rest||"").replace(/<[^>]*>/g,"").trim()||/<img/i.test(rp.rest||"")
         ?`<div class="th-t" title="${escAttr(when)}">${fbBody(rp.rest)}${o.cont&&m.edited_at?` <span class="tm-ed">· edited</span>`:""}</div>`:""}
       ${taskFilesHtml(m)
@@ -12609,11 +12611,14 @@ function msgHtml(m,o){
    very start of its body, [[file:<asset id>]] — no new column, no
    migration. The thread draws it as a quote above the words, and the
    bell strips it. Editing a reply keeps it. */
-const TF_REPLY_RE=/^\[\[(file|msg):([A-Za-z0-9-]+)\]\]/;   /* V118.77 — [[msg:<id>]] quotes a message */
+const TF_REPLY_RE=/^\[\[(file|msg|chg):([A-Za-z0-9-]+)(?:\|([a-z]+))?\]\]/;   /* V118.77 — [[msg:<id>]] quotes a message; V118.79 — [[chg:<version>|<how>]] is the client's change note */
 function taskReplyOf(body){
   const s=String(body==null?"":body), mm=s.match(TF_REPLY_RE);
-  if(!mm) return {aid:null,mid:null,rest:s};
-  return mm[1]==="file"?{aid:mm[2],mid:null,rest:s.slice(mm[0].length)}:{aid:null,mid:mm[2],rest:s.slice(mm[0].length)};
+  if(!mm) return {aid:null,mid:null,chg:null,rest:s};
+  const rest=s.slice(mm[0].length);
+  if(mm[1]==="file") return {aid:mm[2],mid:null,chg:null,rest};
+  if(mm[1]==="msg") return {aid:null,mid:mm[2],chg:null,rest};
+  return {aid:null,mid:null,chg:{vid:mm[2],how:mm[3]||""},rest};
 }
 /* what goes at the start of the body for the reply being written */
 function taskReplyMarker(r){ return !r?"":r.aid?"[[file:"+r.aid+"]]":r.qmid?"[[msg:"+r.qmid+"]]":""; }
@@ -13892,7 +13897,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.78 Tbilisi";
+const TOOL_VERSION="V118.79 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -39672,7 +39677,8 @@ function bfRowHtml(f,showFold){
     ${bfIcon(f.file_name)}
     <div class="dn">${name}<span>${escHtml(bfSize(f.size_bytes))}</span></div>
     <span class="bf-fold"></span>
-    <span class="bf-tk${n?"":" none"}${may?"":" ro"}" ${may?`onclick="bfTaskPick(event,'${f.id}')"`:""}>${n?`Linked to <b>${n} task${n>1?"s":""}</b>`:(may?"Link to a task":"")}</span>
+    ${f.from_version&&bfTiesOf(f.id)[0]?`<span class="bf-tk bf-ft" onclick="openTaskScreen('${escAttr(bfTiesOf(f.id)[0].task_id)}')" title="The task this was approved in"><i class="ti ti-package"></i>Open task</span>`
+    :`<span class="bf-tk${n?"":" none"}${may?"":" ro"}" ${may?`onclick="bfTaskPick(event,'${f.id}')"`:""}>${n?`Linked to <b>${n} task${n>1?"s":""}</b>`:(may?"Link to a task":"")}</span>`}
     <span class="bf-src${f.src==="lead"?" lead":""}">${((BF.folders||[]).find(x=>x.id===f.folder_id&&x.name.toLowerCase()==="brand assets")?"Brand assets":"")||BF_SRC[f.src]||""}</span>
     <span class="who">${escHtml([who,when].filter(Boolean).join(" · "))}</span>
     <span class="bf-open" onclick="bfOpen('${f.id}')">Open</span>
@@ -44253,6 +44259,41 @@ function buildIoSidebar(){
 .dlv-sum span{font-size:10.5px;font-weight:700;border:1px solid var(--div);border-radius:6px;padding:0 6px;color:var(--muted);background:#fff;white-space:nowrap;}
 .dlv-sum span.approved{background:#EEF7EE;color:#1E6B2E;border-color:#BFDCC4;}
 .dlv-sum span.changes{background:#FBF3DC;color:#8A6D00;border-color:#EBD9A2;}
+/* V118.79 — a delivery's three moments */
+.dlv-c .d-act .ab.mail{border-color:#C9D6EA;color:#2B6CB0;}
+.dlv-ln{font-size:11px;color:var(--muted);margin-top:5px;display:flex;align-items:flex-start;gap:5px;line-height:1.35;}
+.dlv-ln i{font-size:12px;flex:none;margin-top:1px;}.dlv-ln > span{min-width:0;}
+.dlv-c .d-act .ab.mail{padding:0 7px;}.dlv-ln.mail{color:#2B6CB0;}.dlv-ln.filed{color:#1E6B2E;}
+.dlv-ln a,.dlv-ln .go{color:inherit;font-weight:700;text-decoration:underline;cursor:pointer;}
+#ov-dlv .modal.dlv-modal{max-width:620px;width:100%;}
+.dlv-form{display:grid;grid-template-columns:72px minmax(0,1fr);gap:10px 12px;align-items:start;padding:14px 22px 6px;}
+.dlv-form > label{font-size:12px;font-weight:700;color:var(--muted);padding-top:8px;}
+.dlv-form input,.dlv-form textarea{width:100%;border:1px solid var(--div);border-radius:9px;padding:7px 10px;font:inherit;font-size:13px;background:#fff;}
+.dlv-form textarea{resize:vertical;min-height:80px;}
+.dlv-form select.cc-stsel{height:32px;border:1px solid var(--div);border-radius:9px;padding:0 28px 0 10px;font:inherit;font-size:13px;background-color:#fff;max-width:100%;}
+.dlv-chips{display:flex;flex-wrap:wrap;gap:5px;align-items:center;min-height:34px;border:1px solid var(--div);border-radius:9px;padding:4px 6px;background:#fff;}
+.dlv-chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px 2px 3px;font-size:12px;font-weight:600;cursor:pointer;
+  background:#F1F0ED;color:var(--subtle);border:1px solid transparent;}
+.dlv-chip .av{width:18px;height:18px;border-radius:50%;background:#C9C8C3;color:#fff;font-size:9px;font-weight:800;display:grid;place-items:center;}
+.dlv-chip small{font-weight:500;color:var(--subtle);}
+.dlv-chip.on{background:#EEF1FB;color:#1C1B19;border-color:#C9D6EA;}.dlv-chip.on .av{background:#2E4FB5;}
+.dlv-chip.fixed{cursor:default;}
+.dlv-addr{flex:1;min-width:110px;border:none!important;height:26px;padding:0 6px!important;font-size:12.5px!important;}
+.dlv-hint{font-size:11.5px;color:var(--subtle);}
+.dlv-how{display:flex;gap:6px;flex-wrap:wrap;padding-top:3px;}
+.dlv-how span{border:1px solid var(--div);border-radius:999px;padding:4px 11px;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);background:#fff;}
+.dlv-how span.on{background:var(--text);color:#fff;border-color:var(--text);}
+.dlv-atts{display:grid;gap:5px;padding-top:2px;}
+.dlv-att{display:flex;align-items:center;gap:9px;border:1px solid var(--div);border-radius:9px;padding:6px 10px;font-size:12.5px;background:#fff;}
+.dlv-att .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;}
+.dlv-att small{color:var(--subtle);}.dlv-att .x{color:var(--subtle);cursor:pointer;}
+.dlv-att.none{color:var(--subtle);border-style:dashed;}
+.dlv-pick{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;padding:4px 2px;}
+.dlv-foot{display:flex;align-items:center;gap:8px;padding:12px 22px 16px;}
+.dlv-foot .dlv-hint{margin-right:auto;}
+.dlv-foot .btn i{margin-right:5px;}
+.tm-q.tm-qc{border-left:3px solid #8A6D00;background:#FBF3DC;color:#5A4300;}
+.bf-tk.bf-ft{color:#2E4FB5;background:#EEF1FB;border-radius:999px;padding:1px 9px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;}
 /* the phone: the rail folds into a strip */
 .dlv-strip{display:flex;gap:6px;overflow-x:auto;padding:8px 12px;border-bottom:1px solid var(--div);background:#F7F6F2;}
 .dlv-strip .dlv-sc{flex:none;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--div);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;}
@@ -44531,18 +44572,20 @@ function pgLinkSync(){
 })();
 
 /* ── 6 · a task's deliverables ────────────────────────────────────── */
-const DLV={brand:null,ok:false,loading:false,list:[],vers:[]};
+const DLV={brand:null,ok:false,loading:false,list:[],vers:[],drafts:[]};
 let DLV_OPEN=null, DLV_ADD=null, DLV_PICK=null, DLV_MP=null;
 const DLV_WORD={none:"Not sent",sent:"Sent",approved:"Approved",changes:"Changes asked"};
 async function dlvLoad(bid){
   DLV.loading=true;
   try{
-    const [d,v]=await Promise.all([
+    const [d,v,dr]=await Promise.all([
       sb.from("task_deliverables").select("*").eq("brand_id",bid),
-      sb.from("deliverable_versions").select("*").eq("brand_id",bid)]);
+      sb.from("deliverable_versions").select("*").eq("brand_id",bid),
+      sb.from("delivery_drafts").select("*").eq("brand_id",bid)]);   /* V118.79 — the Outlook drafts */
     if(d.error||v.error){ DLV.ok=false; }
     else{
       DLV.ok=true;
+      DLV.drafts=dr&&!dr.error?(dr.data||[]).filter(x=>x.brand_id===bid):[];
       DLV.list=(d.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at);
       /* V118.61 — a version whose delivery was removed is gone with it, so its
          message can be delivered again */
@@ -44579,8 +44622,9 @@ function dlvRailHtml(t){
     const meta=last?`<span class="vchip">v${last.version}</span>${escHtml(v38Day(last.created_at))}${dlvSender(last)?" · "+escHtml(dlvSender(last)):""}`
       :`not sent yet${d.due_date?" · due "+escHtml(v38Day(d.due_date)):""}`;
     const act=open&&((last&&mayA)||mayE)?`<div class="d-act" onclick="event.stopPropagation()">
-        ${last&&mayA?`<button class="ab ok${last.status==="approved"?" on":""}" onclick="dlvAnswer('${last.id}','approved')" title="Approve v${last.version}"><i class="ti ti-check"></i>Approve</button>
-        <button class="ab ch${last.status==="changes"?" on":""}" onclick="dlvAnswer('${last.id}','changes')" title="Ask for changes on v${last.version}"><i class="ti ti-arrow-back-up"></i>Changes</button>`:""}
+        ${last&&mayA?`<button class="ab ok${last.status==="approved"?" on":""}" onclick="dlvApprove('${last.id}')" title="Approve v${last.version}"><i class="ti ti-check"></i>Approve</button>
+        <button class="ab ch${last.status==="changes"?" on":""}" onclick="dlvChangesOpen('${last.id}')" title="Record the changes the client asked for on v${last.version}"><i class="ti ti-arrow-back-up"></i>Changes</button>`:""}
+        ${last&&mayE&&!brIsClient()?`<button class="ab mail" onclick="dlvMailOpen('${last.id}')" title="Draft the email in your Outlook, file attached"><i class="ti ti-mail"></i></button>`:""}
         ${mayE?`<span class="dlv-mo"><button class="ab more" onclick="dlvMore(event,'${d.id}')" title="Rename, remove"><i class="ti ti-dots"></i></button>
           ${DLV_MORE===d.id?`<div class="dlv-menu"><div class="mi" onclick="dlvRenOpen('${d.id}')"><i class="ti ti-pencil"></i>Rename</div>
             <div class="mi rm" onclick="dlvRemove('${d.id}')"><i class="ti ti-trash"></i>Remove</div></div>`:""}</span>`:""}
@@ -44592,7 +44636,7 @@ function dlvRailHtml(t){
       </div>`:"";
     return `<div class="dlv-c${vs.length?"":" todo"}${open?" open":""}" onclick="dlvCardToggle('${d.id}')">
       <div class="d-top">${nm}<span class="dlv-p s-${st}">${DLV_WORD[st]}</span></div>
-      <div class="d-meta">${meta}</div>${act}${ver}</div>`;
+      <div class="d-meta">${meta}</div>${open?dlvExtraHtml(last):""}${act}${ver}</div>`;
   }).join("");
   return `<div class="dlv-rail">
     <div class="dlv-h">Deliveries · ${ds.length}${mayE?`<button class="dlv-add" onclick="dlvAddOpen('${t.id}')" title="Add a delivery"><i class="ti ti-plus"></i></button>`:""}</div>
@@ -44660,7 +44704,7 @@ async function dlvAddVersion(did,mid){
   if(r.error){ toast("Not recorded — "+r.error.message,"err"); return false; }
   DLV.vers.push(row);
   toast(`${d.name} · v${row.version} delivered`);
-  return true;
+  return row;
 }
 function dlvJump(mid){
   const el=document.querySelector(`.br-open .th-m[data-mid="${CSS.escape(mid)}"]`);
@@ -44707,8 +44751,10 @@ function dlvBarHtml(t){
     if(!mine) return out;
     let did=pick.did;
     if(did==="__new"){ const d=await dlvCreate(t.id,pick.name); if(!d) return out; did=d.id; }
-    if(await dlvAddVersion(did,mine.id)){ DLV_PICK=null; DLV_OPEN=did; }
+    const vrow=await dlvAddVersion(did,mine.id);
+    if(vrow){ DLV_PICK=null; DLV_OPEN=did; }
     render();
+    if(vrow&&!brIsClient()) dlvMailOpen(vrow.id);   /* V118.79 — the email, drafted in Outlook */
     return out;
   };
 })();
@@ -44721,8 +44767,10 @@ async function dlvMsgPick(mid,did){
     const d=await dlvCreate(t.id,name); if(!d) return; did=d.id;
   }
   DLV_MP=null;
-  if(await dlvAddVersion(did,mid)) DLV_OPEN=did;
+  const vrow=await dlvAddVersion(did,mid);
+  if(vrow) DLV_OPEN=did;
   render();
+  if(vrow&&!brIsClient()) dlvMailOpen(vrow.id);   /* V118.79 */
 }
 document.addEventListener("click",e=>{
   if(DLV_MP&&!(e.target.closest&&e.target.closest(".dlv-mb"))){ DLV_MP=null; if(view==="branding") render(); }
@@ -44834,6 +44882,237 @@ function dlvRowsDress(){
     const tip=ds.map(d=>{ const l=dlvLast(d.id); return d.name+(l?" · v"+l.version:"")+" · "+DLV_WORD[dlvState(d)]; }).join("\n");
     nm.insertAdjacentHTML("beforeend",`<span class="dlv-sum"><span class="${cls}" title="${escAttr(tip)}"><i class="ti ti-package"></i> ${okN}/${ds.length}</span></span>`);
   });
+}
+
+/* ══ V118.79 TBILISI · A DELIVERY'S THREE MOMENTS ════════════════════════
+   Chirag, 20 Oct (mockup 08, with the Outlook decision):
+   1 · DRAFT IN OUTLOOK. After Deliver, a box: the client team from the
+       Strategy page as To, the manager copied, a subject, a note, the
+       file attached. "Open in Outlook" asks the `delivery` function to
+       write the draft into the MANAGER'S OWN Outlook Drafts and opens it
+       there; the manager presses Send in Outlook. The tool never sends.
+       One delivery_drafts row per draft.
+   2 · CHANGES. The manager pastes or types what the client said, says
+       how it was heard, may attach the marked-up file. It lands in the
+       thread as the client's words, quoting the version; the version is
+       marked "Changes asked"; the next delivery becomes the next version.
+   3 · APPROVE FINAL. Approving a version files its file into the brand's
+       "From us" folder on the Strategy page, named after the task, tied
+       to the task. A newer approval replaces; deleting the task does not
+       delete the filed copy. */
+const DLV_FN=SB_URL+"/functions/v1/delivery";
+const DLV_HOW=[["email","By email"],["call","On a call"],["whatsapp","On WhatsApp"],["person","In person"]];
+const DLV_HOW_WORD={email:"by email",call:"on a call",whatsapp:"on WhatsApp",person:"in person"};
+let DLV_BOX=null;                 // {kind:"mail"|"changes", vid, to:Set, cc:Set, how, files:[]}
+async function dlvCall(action,body){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session) throw new Error("Your sign-in has expired. Reload the page.");
+  let r;
+  try{ r=await fetch(DLV_FN,{method:"POST",headers:{"content-type":"application/json",authorization:"Bearer "+session.access_token},
+    body:JSON.stringify({action,...body})}); }
+  catch(e){ throw new Error("The tool could not reach the server. Check the connection and try again."); }
+  let j={}; try{ j=await r.json(); }catch(e){}
+  if(!r.ok) throw new Error(j.error||("The server said "+r.status));
+  return j;
+}
+function dlvDraftsOf(vid){ return (DLV.drafts||[]).filter(x=>x.version_id===vid).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at))); }
+function dlvMailNames(dr){
+  const rows=(typeof CT!=="undefined"&&CT.bid===activeBrand&&CT.ok)?ctRows():[];
+  return (dr.to_emails||[]).map(e=>{ const c=rows.find(r=>String(ctMail(r)).toLowerCase()===e); return c?String(c.name).split(/\s+/)[0]:e; }).join(", ");
+}
+/* the two lines a card may carry under its meta */
+function dlvExtraHtml(v){
+  if(!v) return "";
+  const dr=dlvDraftsOf(v.id)[0];
+  const a=dr?`<div class="dlv-ln mail"><i class="ti ti-mail"></i><span>Drafted for ${escHtml(dlvMailNames(dr))} · ${escHtml(v38Day(dr.created_at))}${dr.web_link?` · <a href="${escAttr(dr.web_link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Outlook ↗</a>`:""}</span></div>`:"";
+  const b=v.filed_at?`<div class="dlv-ln filed"><i class="ti ti-folder-check"></i><span>Filed in From us · <span class="go" onclick="event.stopPropagation();dlvOpenFiled('${escAttr(v.id)}')">open ↗</span></span></div>`:"";
+  return a+b;
+}
+function dlvOpenFiled(vid){
+  const v=DLV.vers.find(x=>x.id===vid); if(!v) return;
+  if(typeof BF!=="undefined"){ BF.fold="all"; BF.q=""; }
+  if(typeof bfGo==="function") bfGo(); else setView("files");
+}
+/* ── the box both moments open in ───────────────────────────────────── */
+function dlvBox(html){
+  let ov=document.getElementById("ov-dlv");
+  if(!ov){
+    ov=document.createElement("div"); ov.className="overlay"; ov.id="ov-dlv";
+    ov.onclick=e=>{ if(e.target===ov) dlvBoxClose(); };
+    ov.innerHTML=`<div class="modal dlv-modal"><div id="dlv-body"></div></div>`;
+    document.body.appendChild(ov);
+  }
+  document.getElementById("dlv-body").innerHTML=html;
+  openM("dlv");
+}
+function dlvBoxClose(){ DLV_BOX=null; closeM("dlv"); }
+function dlvBoxPaint(){ const b=document.getElementById("dlv-body"); if(b&&DLV_BOX) b.innerHTML=DLV_BOX.kind==="mail"?dlvMailHtml():dlvChangesHtml(); }
+function dlvVerOf(vid){ const v=DLV.vers.find(x=>x.id===vid); if(!v) return null; const d=DLV.list.find(x=>x.id===v.deliverable_id); const t=BR.tasks.find(x=>x.id===v.task_id); return d&&t?{v,d,t}:null; }
+function dlvAttached(v){ return v&&v.message_id?(assetsFor("message",v.message_id)||[]).filter(a=>!a.deleted_at&&a.kind!=="video"):[]; }
+function dlvAttHtml(list){
+  if(!list.length) return `<div class="dlv-att none">No file on this message</div>`;
+  return list.map(a=>`<div class="dlv-att">${bfIcon(a.filename||"")}<span class="n">${escHtml(a.filename||"file")}</span><small>${escHtml(kbmb(a.bytes||0))}</small></div>`).join("");
+}
+
+/* ── 1 · DRAFT IN OUTLOOK ───────────────────────────────────────────── */
+async function dlvMailOpen(vid){
+  const x=dlvVerOf(vid); if(!x||!dlvMayEdit(x.t)) return;
+  if(typeof ctEnsure==="function"&&!(CT.bid===activeBrand&&CT.ok)) await ctEnsure();
+  const rows=(CT.bid===activeBrand&&CT.ok)?ctRows().filter(r=>MAILRE.test(ctMail(r))):[];
+  const to=new Set(rows.map(r=>String(ctMail(r)).toLowerCase()));
+  const cc=new Set();
+  const owner=x.t.owner_id?personById(x.t.owner_id):null;
+  if(owner&&owner.email&&String(owner.email).toLowerCase()!==String(ME.email||"").toLowerCase()) cc.add(String(owner.email).toLowerCase());
+  DLV_BOX={kind:"mail",vid,to,cc,extra:[],subject:`${x.t.title||"Untitled task"} – ${x.d.name} v${x.v.version} for your review`,
+    note:`Hi,\n\nPlease find v${x.v.version} of ${x.d.name} attached for your review.\n\n— ${actorName()}, Communication Crafts`,busy:false};
+  dlvBox(dlvMailHtml());
+  setTimeout(()=>{ const n=document.getElementById("dlv-note"); if(n) n.focus(); },40);
+}
+const MAILRE=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function dlvChip(email,on,set){
+  const rows=(CT.bid===activeBrand&&CT.ok)?ctRows():[];
+  const c=rows.find(r=>String(ctMail(r)).toLowerCase()===email);
+  const nm=c?c.name:email, ini=String(nm).split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase();
+  return `<span class="dlv-chip${on?" on":""}" title="${escAttr(email)}" onclick="dlvChipToggle('${set}','${escAttr(email)}')"><span class="av">${escHtml(ini)}</span>${escHtml(nm)}${c&&c.title?`<small>${escHtml(c.title)}</small>`:""}</span>`;
+}
+function dlvChipToggle(set,email){
+  const B=DLV_BOX; if(!B||B.kind!=="mail") return;
+  const s=B[set]; if(s.has(email)) s.delete(email); else s.add(email);
+  if(set==="to"&&s.has(email)) B.cc.delete(email);
+  dlvBoxPaint();
+}
+function dlvAddAddr(inp){
+  const B=DLV_BOX; if(!B) return;
+  const e=String(inp.value||"").trim().toLowerCase();
+  if(!MAILRE.test(e)){ toast("That is not an email address","err"); return; }
+  B.to.add(e); if(!B.extra.includes(e)) B.extra.push(e); inp.value=""; dlvBoxPaint();
+}
+function dlvMailHtml(){
+  const B=DLV_BOX, x=dlvVerOf(B.vid); if(!x) return "";
+  const rows=(CT.bid===activeBrand&&CT.ok)?ctRows().filter(r=>MAILRE.test(ctMail(r))):[];
+  const team=rows.map(r=>String(ctMail(r)).toLowerCase());
+  const toAll=Array.from(new Set(team.concat(B.extra)));
+  const me=String(ME.email||"").toLowerCase();
+  const ccAll=Array.from(new Set(Array.from(B.cc).concat(team.filter(e=>!B.to.has(e)))));
+  const files=dlvAttached(x.v);
+  return `<div class="modal-top"><div><div class="modal-title">Draft in Outlook · ${escHtml(x.d.name)} v${x.v.version}</div>
+      <div class="modal-sub">in ${escHtml(me)}'s Drafts — you press Send there</div></div>
+      <button class="modal-x" onclick="dlvBoxClose()">✕</button></div>
+    <div class="modal-body dlv-form">
+      <label>To</label><div class="dlv-chips">${toAll.map(e=>dlvChip(e,B.to.has(e),"to")).join("")}
+        <input class="dlv-addr" placeholder="+ address" onkeydown="if(event.key==='Enter'){event.preventDefault();dlvAddAddr(this);}" onblur="if(this.value.trim())dlvAddAddr(this)">
+        ${!rows.length?`<span class="dlv-hint">The Strategy page's client team has no email yet</span>`:""}</div>
+      <label>Copy</label><div class="dlv-chips"><span class="dlv-chip on fixed"><span class="av">${escHtml(String(actorName()||me).split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase())}</span>${escHtml(actorName()||me)}<small>you</small></span>
+        ${ccAll.map(e=>dlvChip(e,B.cc.has(e),"cc")).join("")}</div>
+      <label>Subject</label><input id="dlv-subj" maxlength="255" value="${escAttr(B.subject)}" oninput="DLV_BOX.subject=this.value">
+      <label>Note</label><textarea id="dlv-note" rows="6" oninput="DLV_BOX.note=this.value">${escHtml(B.note)}</textarea>
+      <label>Attached</label><div class="dlv-atts">${dlvAttHtml(files)}</div>
+    </div>
+    <div class="modal-foot dlv-foot"><span class="dlv-hint">Nothing is sent from here</span>
+      <button class="btn btn-g" onclick="dlvBoxClose()">Cancel</button>
+      <button class="btn btn-p" id="dlv-go" onclick="dlvMailGo()"${B.busy?" disabled":""}><i class="ti ti-brand-windows"></i>${B.busy?"Writing the draft…":"Open in Outlook"}</button></div>`;
+}
+async function dlvMailGo(){
+  const B=DLV_BOX; if(!B||B.kind!=="mail"||B.busy) return;
+  const to=Array.from(B.to), cc=Array.from(B.cc).filter(e=>!B.to.has(e));
+  if(!to.length){ toast("Who is it for? Pick at least one address","err"); return; }
+  B.busy=true; dlvBoxPaint();
+  /* the window first, so the browser does not block it as a pop-up */
+  const win=window.open("about:blank","_blank");
+  try{
+    const r=await dlvCall("draft",{version_id:B.vid,to,cc,subject:B.subject,note:B.note});
+    if(r.draft){ DLV.drafts=(DLV.drafts||[]).concat([r.draft]); }
+    if(win&&r.webLink){ win.location=r.webLink; } else if(win) win.close();
+    if(r.skipped&&r.skipped.length) toast(`Draft is in Outlook · ${r.skipped.length} file${r.skipped.length>1?"s":""} too big to attach`,"err");
+    else toast(`Draft is in Outlook · ${r.attached?r.attached.length+" file"+(r.attached.length>1?"s":"")+" attached":"no file"}`);
+    dlvBoxClose(); render();
+  }catch(e){
+    if(win) win.close();
+    B.busy=false; dlvBoxPaint();
+    toast("Outlook did not open — "+escHtml(e.message||e),"err");
+  }
+}
+
+/* ── 2 · THE CLIENT ASKED FOR CHANGES ───────────────────────────────── */
+async function dlvChangesOpen(vid){
+  const x=dlvVerOf(vid); if(!x||!dlvMayAnswer(x.t)) return;
+  if(brIsClient()){ dlvAnswer(vid,"changes"); return; }   /* a client pressing it IS the client's word */
+  if(typeof ctEnsure==="function"&&!(CT.bid===activeBrand&&CT.ok)) await ctEnsure();
+  const rows=(CT.bid===activeBrand&&CT.ok)?ctRows():[];
+  DLV_BOX={kind:"changes",vid,words:"",how:"email",who:rows.length?rows[0].id:"",files:[],busy:false};
+  dlvBox(dlvChangesHtml());
+  setTimeout(()=>{ const n=document.getElementById("dlv-words"); if(n) n.focus(); },40);
+}
+function dlvChangesHtml(){
+  const B=DLV_BOX, x=dlvVerOf(B.vid); if(!x) return "";
+  const rows=(CT.bid===activeBrand&&CT.ok)?ctRows():[];
+  return `<div class="modal-top"><div><div class="modal-title">Changes on ${escHtml(x.d.name)} v${x.v.version}</div>
+      <div class="modal-sub">${escHtml(x.t.title||"")}</div></div>
+      <button class="modal-x" onclick="dlvBoxClose()">✕</button></div>
+    <div class="modal-body dlv-form">
+      <label>Their words</label>
+      <textarea id="dlv-words" rows="6" placeholder="Paste their email or type it" oninput="DLV_BOX.words=this.value">${escHtml(B.words)}</textarea>
+      <label>Said by</label><select class="cc-stsel" id="dlv-who" onchange="DLV_BOX.who=this.value">
+        ${rows.map(r=>`<option value="${escAttr(r.id)}"${B.who===r.id?" selected":""}>${escHtml(r.name)}${r.title?" · "+escHtml(r.title):""}</option>`).join("")}
+        <option value=""${!B.who?" selected":""}>The client</option></select>
+      <label>Heard</label><div class="dlv-how">${DLV_HOW.map(([k,w])=>`<span class="${B.how===k?"on":""}" onclick="DLV_BOX.how='${k}';dlvBoxPaint()">${w}</span>`).join("")}</div>
+      <label>Their file</label><div class="dlv-atts">
+        ${B.files.map((f,i)=>`<div class="dlv-att">${bfIcon(f.name)}<span class="n">${escHtml(f.name)}</span><small>${escHtml(kbmb(f.size))}</small><span class="x" onclick="DLV_BOX.files.splice(${i},1);dlvBoxPaint()">✕</span></div>`).join("")}
+        <label class="dlv-pick"><input type="file" multiple style="display:none" onchange="DLV_BOX.files.push(...this.files);dlvBoxPaint()"><i class="ti ti-paperclip"></i>Attach a file</label></div>
+    </div>
+    <div class="modal-foot dlv-foot"><span class="dlv-hint">Goes into the thread as the client's words</span>
+      <button class="btn btn-g" onclick="dlvBoxClose()">Cancel</button>
+      <button class="btn btn-p" onclick="dlvChangesGo()"${B.busy?" disabled":""}>${B.busy?"Recording…":"Record changes"}</button></div>`;
+}
+async function dlvChangesGo(){
+  const B=DLV_BOX; if(!B||B.kind!=="changes"||B.busy) return;
+  const x=dlvVerOf(B.vid); if(!x) return;
+  const words=String(B.words||"").trim();
+  if(!words&&!B.files.length){ toast("Type or paste what the client asked for","err"); return; }
+  const rows=(CT.bid===activeBrand&&CT.ok)?ctRows():[];
+  const c=rows.find(r=>r.id===B.who)||null;
+  B.busy=true; dlvBoxPaint();
+  const row={
+    id:"c"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36),
+    task_id:x.t.id, brand_id:x.t.brand_id, body:"[[chg:"+x.v.id+"|"+B.how+"]]"+escHtml(words).replace(/\n/g,"<br>"),
+    author_kind:"client", author_name:c?c.name:"Client", author_email:c?(ctMail(c)||""):"", author_id:null,
+    entered_by:ME.id||null, audience:"client", mentions:[]};
+  const r=await sb.from("post_comments").insert([row]);
+  if(r.error){ B.busy=false; dlvBoxPaint(); toast("Not recorded — "+escHtml(r.error.message),"err"); return; }
+  const files=B.files.slice();
+  dlvBoxClose();
+  await sb.from("deliverable_versions").update({changes_message_id:row.id}).eq("id",x.v.id);
+  x.v.changes_message_id=row.id;
+  await dlvAnswer(x.v.id,"changes");
+  if(TASK.id===x.t.id){ BR_TAB="client"; TH_STICK=true; await loadThread(x.t.id); render(); }
+  if(files.length){
+    await uploadMany(files,{ownerKind:"message",ownerId:row.id,brandId:x.t.brand_id,master:true,taskId:x.t.id,
+      onTick:()=>{ if(view==="branding"&&BR_OPEN) render(); }});
+    if(view==="branding"&&BR_OPEN) render();
+  }
+  toast(`${x.d.name} · v${x.v.version} marked Changes asked`);
+}
+/* the quote a change note carries above the client's words */
+function dlvChgQuote(chg){
+  const v=DLV.vers.find(x=>x.id===chg.vid), d=v?DLV.list.find(x=>x.id===v.deliverable_id):null;
+  const inner=v&&d?`Changes on <b>${escHtml(d.name)} v${v.version}</b>`:"Changes on a delivery";
+  return `<div class="tm-q tm-qc"><span>${inner}</span></div>`;
+}
+
+/* ── 3 · APPROVED → FILED UNDER FROM US ─────────────────────────────── */
+async function dlvApprove(vid){
+  const x=dlvVerOf(vid); if(!x||!dlvMayAnswer(x.t)) return;
+  await dlvAnswer(vid,"approved");
+  if(x.v.status!=="approved") return;              /* the update was refused */
+  if(brIsClient()||!dlvAttached(x.v).length) return;   /* the manager files; nothing to file without a file */
+  toast(`Filing v${x.v.version} under From us…`);
+  try{
+    const r=await dlvCall("file_final",{version_id:vid});
+    x.v.filed_at=r.filed_at; x.v.filed_file_id=(r.filed[0]||{}).id||null;
+    if(typeof BF!=="undefined"&&BF.bid===activeBrand) BF.ok=false;   /* the Files page re-reads */
+    toast(`${x.d.name} v${x.v.version} filed in From us`);
+  }catch(e){ toast("Approved, but not filed — "+escHtml(e.message||e),"err"); }
+  render();
 }
 
 /* ── loading, and the dressing pass ───────────────────────────────── */
