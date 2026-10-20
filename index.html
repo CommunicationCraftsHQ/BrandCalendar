@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.63 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.64 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3000,6 +3000,7 @@ body.brcv .brl-lens span.cv.on{background:#378ADD;color:#fff;}
 .br-tabs .n{font-size:10.5px;color:#fff;background:var(--acc);border-radius:99px;padding:1px 6px;
   margin-left:6px;font-weight:800;}
 .br-thread{max-height:420px;overflow-y:auto;padding:12px 0 4px;}
+.br-thread .th-m.pend{opacity:.55;transition:opacity .2s;}
 .br-files{padding:14px 0;}
 .br-hist{padding:12px 0;font-size:12.5px;color:var(--muted);}
 .br-hist div{padding:6px 0;border-bottom:1px solid #F4F4F2;}
@@ -6418,7 +6419,14 @@ document.addEventListener("click",()=>{closeSetupMenu();const a=document.getElem
 function allCampaigns(){
   const out=[];
   for(let mm=1;mm<=12;mm++)filtered(mm).forEach(e=>{
-    if(gc(e)==="cat5"&&!e._isPost) out.push({m:mm,e,sM:mm,sD:e.date,eM:e.endMonth||mm,eD:e.endDate||e.date});
+    if(gc(e)==="cat5"&&!e._isPost){
+      /* V118.64 — an end that is missing or before the start is no end:
+         a campaign moved from September to October kept "ends September"
+         and painted no day at all (Chirag, 19 Oct: Fund 2 Launch, 24 Oct). */
+      let eM=e.endDate?(e.endMonth||mm):mm, eD=e.endDate||e.date;
+      if(eM<mm||(eM===mm&&eD<e.date)){ eM=mm; eD=e.date; }
+      out.push({m:mm,e,sM:mm,sD:e.date,eM,eD});
+    }
   });
   return out;
 }
@@ -8848,8 +8856,12 @@ function saveEv(){
   const rel=isBrandOnly?{}:getRelFromForm();
   const industries=Object.entries(rel).filter(([,v])=>v==="high"||v==="medium").map(([k])=>k);
   const evData={name,date,cat,notes,mega,shopping,tentative,industries,relevance:rel,_brandOnly:isBrandOnly};
-  if(endDate) evData.endDate=endDate;
-  if(endMonth) evData.endMonth=endMonth;
+  /* V118.64 — an end month with no end day, or an end before the start,
+     is not saved: it kept a moved campaign from showing on its day. */
+  const endOk=!!endDate&&!(endMonth&&(endMonth<m||(endMonth===m&&endDate<date)))&&!(!endMonth&&endDate<date);
+  if(endOk) evData.endDate=endDate;
+  if(endOk&&endMonth) evData.endMonth=endMonth;
+  if(!endOk){ evData.endDate=undefined; evData.endMonth=undefined; }   /* undefined, so the edit clears an old one */
   if(!canEdit()){toast("View-only account","err");return;}
   if(eeKey){
     const arr=evs[eeKey.m]||[]; const idx=arr.findIndex(e=>e.id===eeKey.id);
@@ -12337,14 +12349,19 @@ async function jsrCopyAssets(ids,ownerId){
 
 async function loadThread(taskId){
   const draft=(TASK.id===taskId?TASK.draft:"")||"";
-  TASK={id:taskId,msgs:[],acts:[],loading:true,err:"",asClient:false,draft};
+  /* V118.64 — a refresh of the thread already on screen keeps it on
+     screen. It used to blank the thread while it read, so the panel drew
+     "loading", the scroll went back to the top, and a message just sent
+     vanished for a second. */
+  const same=TASK.id===taskId&&!TASK.loading&&!TASK.err;
+  TASK=same?{...TASK,draft}:{id:taskId,msgs:[],acts:[],loading:true,err:"",asClient:false,draft};
   try{
     const [c,a]=await Promise.all([
       sb.from("post_comments").select("*").eq("task_id",taskId).order("created_at"),
       sb.from("post_activity").select("*").eq("task_id",taskId).order("created_at"),
     ]);
     const bad=[c,a].find(r=>r.error);
-    if(bad){ TASK={...TASK,loading:false,err:bad.error.message}; return; }
+    if(bad){ if(!same) TASK={...TASK,loading:false,err:bad.error.message}; return; }
     /* Attachments arrive with the thread, per view — the same rule Buenos
        Aires set for social and New York kept. Nothing is fetched for a
        task nobody has opened. */
@@ -12361,20 +12378,22 @@ async function loadThread(taskId){
        that table instead of forking it, exactly so this day was free.
        Non-fatal, like everything else here — an older database without
        comment_reactions leaves TASK_RX empty and draws no chips. */
-    TASK_RX={};
+    const RX={};
     if(live.length){
       try{
         const rx=await rxP;
         if(rx&&!rx.error) (rx.data||[]).forEach(r=>{
-          (TASK_RX[r.comment_id]=TASK_RX[r.comment_id]||[]).push(r); });
+          (RX[r.comment_id]=RX[r.comment_id]||[]).push(r); });
       }catch(e){}
     }
+    if(TASK.id!==taskId) return;          /* somebody opened another task meanwhile */
+    TASK_RX=RX;
     /* A DELETED MESSAGE IS DROPPED HERE, ONCE. Filtering at the render
        site instead would mean every future reader of TASK.msgs has to
        remember — and the count in the notification bell, which does not,
        would go on counting messages nobody can see. */
     TASK={...TASK,msgs:live,acts:a.data||[],loading:false};
-  }catch(e){ TASK={...TASK,loading:false,err:String(e&&e.message||e)}; }
+  }catch(e){ if(!same) TASK={...TASK,loading:false,err:String(e&&e.message||e)}; }
 }
 /* ══ V108.5 · A TASK OPENS INSIDE THE LIST ════════════════════════
    The separate screen is gone. Everything it drew — the steps, the
@@ -12500,7 +12519,7 @@ function msgHtml(m,o){
      line of its own. A reply to a file carries the file above its words. */
   const rp=taskReplyOf(m.body), mine=(brIsClient()?client:!client)&&fbIsMine(m);
   const when=m.created_at?fmtWhen(m.created_at):"";
-  return `<div class="th-m tm${client?" cli":""}${mine?" me":""}${o.cont?" cont":""}" data-mid="${escAttr(m.id)}">
+  return `<div class="th-m tm${client?" cli":""}${mine?" me":""}${o.cont?" cont":""}${m._pending?" pend":""}" data-mid="${escAttr(m.id)}">
     ${o.cont?"":`<div class="tm-who">${brFace(m.author_id,"",client)}<b>${who}</b>
       <span class="th-kind${client?" cli":""}">${client?"Client":"Team"}</span>
       ${by}<span class="th-when">${when}${m.edited_at?" · edited":""}</span></div>`}
@@ -12844,17 +12863,35 @@ async function taskPostInner(){
        A message typed AS THE CLIENT tags nobody: the client is not
        choosing to pull the team in, the Ac Manager is transcribing. */
     mentions:(asClient||toClient)?[]:brMentions(body)};
-  const r=await sb.from("post_comments").insert([row]);
-  if(r.error){ dbErr(r); return; }
+  /* V118.64 — THE MESSAGE SHOWS THE MOMENT ENTER IS PRESSED. The box
+     used to stay full until the server answered (a second or three), and
+     with nothing moving people pressed Enter again. Now the box empties
+     and the message is drawn at once, faint, at the bottom of the thread;
+     it turns solid when the server confirms. A refusal puts the words
+     back in the box. */
+  const keepHtml=box?(box.isContentEditable?box.innerHTML:box.value):"";
   if(box){ wDraftClear(box); rtClear(box); }
   TASK.draft=""; if(rpl) TASK_REPLY=null;
+  const pend={...row,created_at:new Date().toISOString(),_pending:true};
+  if(TASK.id===t.id){ TASK.msgs=(TASK.msgs||[]).concat([pend]); }
+  TH_STICK=true; render();
+  const r=await sb.from("post_comments").insert([row]);
+  if(r.error){
+    if(TASK.id===t.id) TASK.msgs=TASK.msgs.filter(m=>m.id!==row.id);
+    if(TASK.id===t.id) TASK.draft=keepHtml;
+    render();
+    const b2=document.getElementById("th-in");
+    if(b2&&!rtValue(b2)){ if(b2.isContentEditable) b2.innerHTML=keepHtml; else b2.value=keepHtml; }
+    dbErr(r); return;
+  }
+  pend._pending=false;
   if(toClient){ JSR_PICKED=[]; JSR_PICK=false; }
   if(pickedIds.length) await jsrCopyAssets(pickedIds,row.id);
   /* THE MESSAGE APPEARS FIRST, THE FILES FILL IN BEHIND IT — the same
      order the social composer uses, and the progress bar is what makes
      the wait legible rather than alarming. */
   const staged=TASK_STAGED; TASK_STAGED=[];
-  await loadThread(t.id); render();
+  TH_STICK=true; await loadThread(t.id); render();
   if(staged.length){
     await uploadMany(staged,{ownerKind:"message",ownerId:row.id,
       brandId:activeBrand,master:true,taskId:t.id,onTick:()=>{ if(view==="branding"&&BR_OPEN) render(); }});
@@ -13713,7 +13750,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.63 Tbilisi";
+const TOOL_VERSION="V118.64 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -26359,13 +26396,22 @@ document.addEventListener("input",e=>{
    clipboard holding ONE address is taken; anything else pastes as it
    always did. */
 const W_URL_ONE=/^https?:\/\/[^\s<>"']+$/i;
+/* V118.64 — an address copied from part of Chrome's address bar comes
+   without "https://" ("communicationcraftshq.github.io/…"). A lone word
+   that looks like host.tld or host.tld/path counts as an address too, and
+   gets https:// put in front. Plain words ("hello.world" with no path is
+   still taken — it is a domain), e-mail addresses are not. */
+const W_URL_BARE=/^(?:www\.)?[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?)*\.[a-z]{2,24}(?::\d{2,5})?(?:[\/?#][^\s<>"']*)?$/i;
 document.addEventListener("paste",e=>{
   const t0=e.target;
   const el=(t0&&t0.closest)?t0.closest('[contenteditable="true"]'):null;
   if(!el||!el.isContentEditable) return;
   const dt=e.clipboardData; if(!dt) return;
   if(dt.files&&dt.files.length) return;              /* files are the writer's own business */
-  const raw=String(dt.getData("text/plain")||"").trim();
+  let raw=String(dt.getData("text/plain")||"").trim();
+  if(!W_URL_ONE.test(raw)&&!/@/.test(raw)&&W_URL_BARE.test(raw)
+     &&!/^[^\/?#]+\.(pdf|docx?|pptx?|xlsx?|csv|txt|jpe?g|png|gif|webp|heic|svg|psd|ai|zip|rar|mp4|mov|mp3|wav|js|css|json|html?|md|key|pages|numbers)$/i.test(raw))
+    raw="https://"+raw;
   if(!W_URL_ONE.test(raw)||!W_SAFE_HREF.test(raw)) return;
   e.preventDefault(); e.stopPropagation();
   const txt=wCleanUrl(raw);                            /* V3.45 — no tracking tails */
@@ -39228,7 +39274,8 @@ async function bfDetach(id){
 }
 /* a new tab is opened at the click, then pointed at the file, so the
    browser does not block it as a pop-up */
-async function bfOpen(id){
+/* V118.64 — replaced by the viewer at the end of the file */
+async function bfOpenTab(id){
   const w=window.open("about:blank","_blank");
   try{
     const r=await bfCall("open",{file_id:id});
@@ -46640,5 +46687,77 @@ function xsSheet(k,id,again){
   window.addEventListener("popstate",()=>{ if(XS_SHEET) xsSheetClose(); });
 })();
 </script>
+<script>
+/* ══ V118.64 TBILISI — THE THREAD STAYS WHERE YOU ARE; FILES OPEN IN THE TOOL ══
+   Chirag, 19 Oct: after sending, the task thread jumped to the top; and a
+   teammate who clicked Open on a Strategy file landed on SharePoint's
+   "You've requested access" page.
+
+   1 · Every redraw puts the conversation back where it was. After a send
+      (TH_STICK) it goes to the bottom, where the new message is.
+   2 · Open shows the file inside the Calendar, in Microsoft's own viewer,
+      through the brand-file function's "preview" — nobody needs a right
+      on the SharePoint site, and brand access still decides who sees it. */
+let TH_STICK=false;
+(function(){
+  const baseRender=render;
+  render=function(){
+    const th=document.querySelector("#main .br-open .br-thread");
+    const was=th?{tid:BR_OPEN,top:th.scrollTop,end:th.scrollTop+th.clientHeight>=th.scrollHeight-6}:null;
+    const out=baseRender.apply(this,arguments);
+    const put=()=>{
+      const n=document.querySelector("#main .br-open .br-thread"); if(!n) return;
+      if(TH_STICK||(was&&was.tid===BR_OPEN&&was.end&&n.scrollHeight>n.clientHeight&&TASK&&TASK.msgs&&TASK.msgs.some(m=>m._pending))) n.scrollTop=n.scrollHeight;
+      else if(was&&was.tid===BR_OPEN&&n.scrollTop!==was.top) n.scrollTop=was.top;
+    };
+    put(); requestAnimationFrame(()=>{ put(); setTimeout(()=>{ put(); TH_STICK=false; },60); });
+    return out;
+  };
+})();
+
+/* ── the viewer ── */
+let BFV=null;
+async function bfOpen(id){
+  const f=(BF.files||[]).find(x=>x.id===id)||{};
+  bfvClose();
+  const ov=document.createElement("div"); ov.id="bfv"; ov.className="bfv";
+  ov.innerHTML=`<div class="bfv-in" role="dialog" aria-label="File">
+    <div class="bfv-hd"><span class="bfv-ic">${bfIcon(f.file_name||"")}</span><b class="bfv-nm">${escHtml(f.file_name||"File")}</b>
+      <a class="bfv-dl" id="bfv-dl" style="display:none" title="Download a copy"><i class="ti ti-download"></i> Download</a>
+      <button class="bfv-x" onclick="bfvClose()" title="Close (Esc)"><i class="ti ti-x"></i></button></div>
+    <div class="bfv-bd" id="bfv-bd"><div class="bfv-wait">Opening ${escHtml(f.file_name||"the file")}…</div></div></div>`;
+  ov.addEventListener("click",e=>{ if(e.target===ov) bfvClose(); });
+  document.body.appendChild(ov); BFV=id;
+  try{
+    const r=await bfCall("preview",{file_id:id});
+    if(BFV!==id) return;
+    const bd=document.getElementById("bfv-bd"), dl=document.getElementById("bfv-dl");
+    if(r.url&&dl){ dl.href=r.url; dl.setAttribute("download",r.name||f.file_name||""); dl.style.display=""; }
+    if(r.embed){ bd.innerHTML=`<iframe src="${escAttr(r.embed)}" allow="fullscreen" referrerpolicy="no-referrer"></iframe>`; }
+    else if(r.url){ bd.innerHTML=`<div class="bfv-wait">Microsoft has no preview for this kind of file. <a href="${escAttr(r.url)}">Download it</a> to open it on your computer.</div>`; }
+    else throw new Error("SharePoint did not hand back this file.");
+  }catch(e){
+    if(BFV!==id) return;
+    const bd=document.getElementById("bfv-bd"); if(bd) bd.innerHTML=`<div class="bfv-wait err">${escHtml(e.message||e)}</div>`;
+  }
+}
+function bfvClose(){ const o=document.getElementById("bfv"); if(o) o.remove(); BFV=null; }
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&BFV){ e.stopPropagation(); bfvClose(); } },true);
+</script>
+<style>
+.bfv{position:fixed;inset:0;z-index:9000;background:rgba(20,18,16,.55);display:flex;align-items:center;justify-content:center;padding:24px;}
+.bfv-in{background:#fff;border-radius:14px;width:min(1280px,96vw);height:min(900px,92vh);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.bfv-hd{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;border-bottom:1px solid var(--div,#ECEAE5);}
+.bfv-nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px;}
+.bfv-dl{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--div,#E4E1DB);border-radius:8px;font-size:13px;font-weight:600;color:inherit;text-decoration:none;}
+.bfv-dl:hover{background:#F6F5F2;}
+.bfv-x{width:32px;height:32px;border:0;background:none;border-radius:8px;cursor:pointer;font-size:18px;color:#555;}
+.bfv-x:hover{background:#F2F0EC;}
+.bfv-bd{flex:1;min-height:0;background:#F6F5F2;display:flex;}
+.bfv-bd iframe{flex:1;border:0;width:100%;height:100%;background:#fff;}
+.bfv-wait{margin:auto;color:#777;font-size:14px;text-align:center;padding:24px;}
+.bfv-wait.err{color:#B3261E;}
+@media (max-width:760px){ .bfv{padding:0;} .bfv-in{width:100vw;height:100vh;border-radius:0;} .bfv-dl{padding:0 9px;} }
+</style>
 </body>
 </html>
