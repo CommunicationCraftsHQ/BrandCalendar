@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.67 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.68 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13750,7 +13750,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.67 Tbilisi";
+const TOOL_VERSION="V118.68 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -46874,5 +46874,61 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&BFV){ e.stopPropag
 body.soc-wait::after{content:"";position:fixed;left:0;top:0;height:2px;width:30%;background:var(--ink,#1C1B19);z-index:9999;animation:socw 1s ease-in-out infinite;}
 @keyframes socw{0%{left:-30%}100%{left:100%}}
 </style>
+
+<style id="preview-pages-css">
+/* ══ PREVIEW PAGES — the amber pill: only the Super administrator sees
+   this page until it is released. Same shape as the beta pill. */
+.pvt{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  border-radius:999px;padding:0 6px;line-height:15px;margin-left:5px;background-color:#FDF0D5;color:#B7791F;border:1px solid #F2D49B;vertical-align:1px;}
+.pvt i{font-size:9px;}
+</style>
+<script id="preview-pages">
+/* ══ PREVIEW PAGES ═══════════════════════════════════════════════════
+   Chirag, 20 Oct 2026: "When a new section is built, I want that that is
+   only visible to the super admin till it gets finalised, and then it
+   becomes accessible to whoever is given access to that page based on
+   their profile."
+
+   A new page is a row in `permissions` (segment Pages) with a preview
+   mark. The database decides who may open it (page_open, through
+   my_pages) and locks the page's data by the same rule; this block only
+   follows the answer:
+     · a tab declares its page:   {k:"…", …, page:"page_client_sheet"}
+     · a route declares it too:   {render:…, page:"page_client_sheet"}
+     · bnTabAllowed and routeAllows refuse a page the answer shuts, so the
+       desktop tabs, the phone menu and a pasted link all agree
+     · a tab whose page is in preview wears the amber Preview pill
+   Nothing is registered yet, so today nothing changes for anyone. */
+let CAL_PAGES={};
+async function loadCalPages(){
+  try{
+    const r=await sb.rpc("my_pages",{t:"calendar"});
+    CAL_PAGES={}; (r.data||[]).forEach(p=>{ CAL_PAGES[p.key]=p; });
+  }catch(e){ CAL_PAGES={}; }
+}
+function pageOpen(k){ if(isSuperAdmin()) return true; return !!(CAL_PAGES[k]&&CAL_PAGES[k].open); }
+function pagePreview(k){ return !!(CAL_PAGES[k]&&CAL_PAGES[k].preview); }
+(function(){
+  const baseAccess=resolveAccess;
+  resolveAccess=async function(){ const out=await baseAccess.apply(this,arguments); await loadCalPages(); return out; };
+  const baseTab=bnTabAllowed;
+  bnTabAllowed=function(t){ if(t&&t.page&&!pageOpen(t.page)) return false; return baseTab(t); };
+  const baseRoute=routeAllows;
+  routeAllows=function(r){ if(r&&r.page&&!pageOpen(r.page)) return false; return baseRoute(r); };
+  const baseTabs=renderBnTabs;
+  renderBnTabs=function(){
+    const out=baseTabs.apply(this,arguments);
+    try{
+      const el=document.getElementById("bn-tabs");
+      if(el) BN_TABS.forEach(t=>{
+        if(!t.page||!pagePreview(t.page)) return;
+        const b=[...el.querySelectorAll(".bntab")].find(x=>x.getAttribute("onclick")===t.go);
+        if(b&&!b.querySelector(".pvt")) b.insertAdjacentHTML("beforeend",'<span class="pvt" data-gate="preview-pill"><i class="ti ti-lock"></i>Preview</span>');
+      });
+    }catch(e){}
+    return out;
+  };
+})();
+</script>
 </body>
 </html>
