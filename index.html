@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.65 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.66 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13750,7 +13750,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.65 Tbilisi";
+const TOOL_VERSION="V118.66 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -25034,7 +25034,13 @@ function wSuiteLink(u){
   if(q.get("post"))    return {kind:"post",id:q.get("post"),comment:q.get("c")||"",tool:"Marketing Calendar"};
   if(q.get("p")==="mood"&&q.get("tag")) return {kind:"mood",id:q.get("tag"),brand:q.get("b")||"",tool:"Marketing Calendar"};
   if(q.get("b"))       return {kind:"page",brand:q.get("b"),page:q.get("p")||"",tool:"Marketing Calendar"};
-  return {kind:"tool",tool:"Marketing Calendar"};
+  /* V118.66 — only the Calendar itself is "Marketing Calendar". Other
+     pages on our site (an event survey, a lucky draw, a playbook) are web
+     pages with titles of their own, and are read like any other page:
+     Chirag, 20 Oct — the Shivalik survey showed "Marketing Calendar"
+     where Notion showed "Fund II Investor Profile". */
+  if(/^\/(BrandCalendar\/?)?(index\.html)?$/i.test(p)) return {kind:"tool",tool:"Marketing Calendar"};
+  return null;
 }
 
 /* A site the team links to every day, by name and by its own icon. */
@@ -25105,7 +25111,11 @@ function wMentionLook(url,kind,title){
   return {icon,title:t,sub:sb};
 }
 function wMentionHtml(url,kind,title){
-  const k=W_MKINDS[kind]?kind:"web";
+  let k=W_MKINDS[kind]?kind:"web";
+  /* V118.66 — a pill saved as "tool" for a page that is not a tool (the
+     old rule above) is drawn as a web page, without the wrong name, so
+     its own title is read when it is shown */
+  if(k==="tool"&&!wSuiteLink(url)){ k="web"; title=""; }
   const L=wMentionLook(url,k,title);
   const href=W_SAFE_HREF.test(String(url||""))?String(url).replace(/"/g,"&quot;"):"#";
   return '<a class="lmn" data-m="'+k+'" href="'+href+'" target="_blank" rel="noreferrer noopener" title="'+href+'" contenteditable="false">'
