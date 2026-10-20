@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.76 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.77 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -3162,6 +3162,41 @@ body.brcv .brl-lens span.cv.on{background:#378ADD;color:#fff;}
 .tf-all span.dl:hover{color:var(--text);}
 .tf.tf-hit .tf-pic,.tf.tf-hit .tf-doc{outline:2px solid #1E3A8A;outline-offset:2px;}
 .tf .mstate,.tf .mprog{position:absolute;left:0;right:0;bottom:0;}
+/* ══ V118.77 — THE SHEET: brief, messages and the box on one tinted panel ══ */
+.br-open .th-sheet{position:relative;background:#F1EFEA;border:1px solid #E2DED6;border-radius:14px;margin:12px 0 0;overflow:hidden;}
+.br-open .th-sheet .br-thread{max-height:min(62vh,600px);padding:12px 14px 6px;margin:0;}
+.br-open .th-sheet .br-pin.bb{margin:0 0 2px;border-radius:12px;border:1px solid var(--div);background:#fff;}
+.br-open .th-sheet .br-start{margin:12px 0 4px;}
+.br-open .th-sheet .br-start::before,.br-open .th-sheet .br-start::after{background:#E2DED6;}
+.br-open .th-sheet .ccm-wrap{margin:0;padding:10px 14px 12px;border-top:1px solid #E2DED6;background:#F1EFEA;}
+.br-open .th-sheet .tm-qbar{margin-left:0;}
+.th-strip{position:absolute;left:0;right:0;top:0;z-index:4;background:#0D0D0D;color:#fff;font-size:12px;padding:8px 14px;display:flex;gap:10px;align-items:center;
+  cursor:pointer;opacity:0;transform:translateY(-100%);transition:opacity .18s,transform .18s;pointer-events:none;}
+.th-strip.on{opacity:1;transform:none;pointer-events:auto;}
+.th-strip .k{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;}
+.th-strip .tx{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85;}
+.th-strip .go{opacity:.8;font-weight:600;white-space:nowrap;}
+.th-strip .go i{font-size:12px;vertical-align:-1px;}
+.cap .rep{padding:0 8px;}
+.tm-q.tm-qm{border-left-color:var(--text);background:#F6F5F2;}
+/* THE WIDE FILE CARD (documents) */
+.tf.tf-wide{display:flex;gap:12px;background:#fff;border:1px solid var(--div);border-radius:12px;padding:8px;width:100%;max-width:520px;}
+.tfw-pv{width:96px;height:96px;flex:none;position:relative;border-radius:8px;background:#F6F5F2;overflow:hidden;cursor:default;}
+.tfw-pv[data-doctab]{cursor:pointer;}
+.tfw-pv .pg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#C9C6BE;font-size:24px;}
+.tfw-pv .pg>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top;}
+.tfw-pv .tf-ty{position:absolute;left:6px;bottom:6px;}
+.tfw-rt{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between;padding:2px 2px 0 0;}
+.tf-nm.tfw-nm{max-width:none;margin-top:0;font-size:13px;}
+.tfw-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.tfw-b{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--div);border-radius:8px;background:#fff;color:var(--text);
+  font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.tfw-b i{font-size:14px;}
+.tfw-b:hover{background:#F6F5F2;}
+.tfw-b.off{opacity:.38;cursor:default;}
+.tfw-b.off:hover{background:#fff;}
+.tfw-b.ok{border-color:#2F7A46;color:#2F7A46;}
+@media(max-width:760px){ .br-open .th-sheet .br-thread{max-height:none;} .tf.tf-wide{max-width:none;} .tfw-acts{gap:4px;} .tfw-b{padding:0 8px;} }
 /* REPLY TO A FILE */
 .tm-q{display:flex;align-items:center;gap:8px;border-left:3px solid #1E3A8A;background:#F3F5FB;border-radius:0 8px 8px 0;
   padding:6px 10px;font-size:12px;color:var(--muted);max-width:660px;cursor:pointer;}
@@ -11510,7 +11545,7 @@ function brOpenPanelHtml(t){
   else if(tab==="history")        body=brHistoryHtml(t);
   else if(aud==="client"&&!paneMsgs.length)
                                   body=`<div class="br-empty2">${cv?"Nothing has been shared yet.":"Nothing has been shared with the client yet."}</div>`;
-  else                            body=`<div class="br-thread">${threadHtml(t,paneMsgs)}</div>`;
+  else                            body=`<div class="br-thread">${tab==="talk"&&!cv?brBriefPin(t):""}${threadHtml(t,paneMsgs)}</div>`;   /* V118.77 — the brief scrolls with the messages */
   const writes=aud==="client"?brMayWriteClient(t):canComment();
   const picked=JSR_PICKED.map(id=>jsrAsset(id)).filter(Boolean);
   /* ══ V113.13 · ONE MESSAGE BOX ════════════════════════════════════
@@ -11526,7 +11561,7 @@ function brOpenPanelHtml(t){
   const composer=((tab==="talk"||tab==="client")&&writes)?`
     <div class="ccm-wrap" data-drop="task:">
       ${aud==="client"&&JSR_PICK&&!brIsClient()?jsrPickHtml():""}
-      ${TASK_REPLY&&TASK.id===t.id?`<div class="tm-qbar">${taskReplyQuote(TASK_REPLY.aid,true)}<span class="x" onclick="taskReplyClear()" title="Not a reply">✕</span></div>`:""}
+      ${TASK_REPLY&&TASK.id===t.id?`<div class="tm-qbar">${TASK_REPLY.aid?taskReplyQuote(TASK_REPLY.aid,true):taskReplyQuoteMsg(TASK_REPLY.qmid,true)}<span class="x" onclick="taskReplyClear()" title="Not a reply">✕</span></div>`:""}
       <div class="ccm">
         ${brFace(ME.id,"ccm-av",brIsClient())}
         <div id="th-in" class="ccw rt" contenteditable="true" data-ph="Write a message" data-att="${aud==="client"&&!brIsClient()?"taskc":"task"}"
@@ -11574,8 +11609,9 @@ function brOpenPanelHtml(t){
          title="${t.archived_at?"Put it back in the working list, with the status it has":"Put it out of the way — the status it has is kept"}"
          aria-label="${t.archived_at?"Restore":"Archive"}"><i class="ti ti-${t.archived_at?"archive-off":"archive"}"></i></button>`:""}
     </div>
-    ${tab==="talk"&&!cv?brBriefPin(t):""}
-    ${body}${composer}</div></div>`;
+    ${(tab==="talk"||tab==="client")&&TASK.id===t.id&&!TASK.loading&&!TASK.err
+      ?`<div class="th-sheet"><div class="th-strip" onclick="thStripTop(event)"><span class="k">Brief</span><span class="tx">${escHtml(thBriefWords(t))}</span><span class="go"><i class="ti ti-arrow-up"></i> Back to brief</span></div>${body}${composer}</div>`
+      :body+composer}</div></div>`;
 }
 
 /* ── the list: filters live in the sidebar, results here ──────────── */
@@ -12555,7 +12591,7 @@ function msgHtml(m,o){
       <span class="th-kind${client?" cli":""}">${client?"Client":"Team"}</span>
       ${by}<span class="th-when">${when}${m.edited_at?" · edited":""}</span></div>`}
     <div class="tm-b">
-      ${rp.aid?taskReplyQuote(rp.aid):""}
+      ${rp.aid?taskReplyQuote(rp.aid):rp.mid?taskReplyQuoteMsg(rp.mid):""}
       ${String(rp.rest||"").replace(/<[^>]*>/g,"").trim()||/<img/i.test(rp.rest||"")
         ?`<div class="th-t" title="${escAttr(when)}">${fbBody(rp.rest)}${o.cont&&m.edited_at?` <span class="tm-ed">· edited</span>`:""}</div>`:""}
       ${taskFilesHtml(m)
@@ -12573,11 +12609,14 @@ function msgHtml(m,o){
    very start of its body, [[file:<asset id>]] — no new column, no
    migration. The thread draws it as a quote above the words, and the
    bell strips it. Editing a reply keeps it. */
-const TF_REPLY_RE=/^\[\[file:([A-Za-z0-9-]+)\]\]/;
+const TF_REPLY_RE=/^\[\[(file|msg):([A-Za-z0-9-]+)\]\]/;   /* V118.77 — [[msg:<id>]] quotes a message */
 function taskReplyOf(body){
   const s=String(body==null?"":body), mm=s.match(TF_REPLY_RE);
-  return mm?{aid:mm[1],rest:s.slice(mm[0].length)}:{aid:null,rest:s};
+  if(!mm) return {aid:null,mid:null,rest:s};
+  return mm[1]==="file"?{aid:mm[2],mid:null,rest:s.slice(mm[0].length)}:{aid:null,mid:mm[2],rest:s.slice(mm[0].length)};
 }
+/* what goes at the start of the body for the reply being written */
+function taskReplyMarker(r){ return !r?"":r.aid?"[[file:"+r.aid+"]]":r.qmid?"[[msg:"+r.qmid+"]]":""; }
 let TASK_REPLY=null;              // {aid, mid} while a reply to a file is being written
 function tfExt(a){ return String(extOf(a.filename)||"").toLowerCase(); }
 function tfTy(a){ const e=tfExt(a);
@@ -12600,14 +12639,27 @@ function taskFilesHtml(m){
     if(isDoc&&a.page_count>1) facts.push(a.page_count+" pages");
     if(a.bytes) facts.push(kbmb(a.bytes));
     if(isDoc){
+      /* V118.77 — THE WIDE CARD (Chirag, 20 Oct, mockup 07 A): thumbnail on
+         the left, the name and every action in the width to its right, no
+         taller than the old tile. Open: a PDF in the tool; Word, Excel and
+         PowerPoint in Microsoft's online viewer, read-only; anything else
+         has no Open. Link copies an address that lives an hour. */
       const pic=a.thumb_path||(isPdf(a)?a.view_path:"")||"";
       const ext=(tfExt(a)||"file").toUpperCase().slice(0,4);
-      return `<div class="tf" data-aid="${escAttr(a.id)}">
-        <div class="tf-doc" ${open}><div class="pg"${pic?` data-sign="${escAttr(pic)}"`:""}>${pic?"":"▤"}</div>
-          <div class="ft"><span class="tf-ty ${tfTy(a)}">${escHtml(ext)}</span><span>${a.page_count>1?a.page_count+" pages":""}</span></div>
-          ${stateBadge(a,up)}${ov}</div>
-        <div class="tf-nm" style="max-width:132px" title="${escAttr(a.filename)}">${escHtml(a.filename||"File")}</div>
-        <div class="tf-sz">${isMaster(a)?'<span class="tf-master">Master</span> ':""}${escHtml(a.bytes?kbmb(a.bytes):"")}</div></div>`;
+      const office=/^(doc|xls|ppt)$/.test(tfTy(a))&&!isMaster(a);
+      const canOpen=isPdf(a)||office;
+      const who=m.author_name||brPersonName(m.author_id)||"";
+      const when=a.created_at?fmtShort(a.created_at):"";
+      const meta=[isMaster(a)?'<span class="tf-master">Master</span>':"",a.bytes?escHtml(kbmb(a.bytes)):"",a.page_count>1?a.page_count+" pages":"",escHtml(who),escHtml(when)].filter(Boolean).join(" · ");
+      const acts=`<div class="tfw-acts">
+        <button class="tfw-b${canOpen?"":" off"}" ${canOpen?(isPdf(a)?`data-doctab="${escAttr(a.id)}"`:`onclick="tfOpenOffice('${escAttr(a.id)}',event)"`):'disabled'} title="${canOpen?(isPdf(a)?"Open":"Open in the browser, read-only"):"This kind of file cannot be shown in the browser"}"><i class="ti ti-external-link"></i>Open</button>
+        ${dl&&assetDownloadable(a)?`<button class="tfw-b" onclick="assetDownload('${escAttr(a.id)}',event)" title="Download"><i class="ti ti-download"></i>Download</button>`:""}
+        ${rep?`<button class="tfw-b" onclick="taskReplyTo(event,'${escAttr(a.id)}','${escAttr(m.id)}')" title="Reply to this file"><i class="ti ti-corner-up-left"></i>Reply</button>`:""}
+        ${dl&&assetDownloadable(a)?`<button class="tfw-b" onclick="tfCopyLink('${escAttr(a.id)}',event)" title="Copy a link to this file, valid for an hour"><i class="ti ti-link"></i>Link</button>`:""}
+      </div>`;
+      return `<div class="tf tf-wide" data-aid="${escAttr(a.id)}">
+        <div class="tfw-pv" ${canOpen&&isPdf(a)?open:""}><div class="pg"${pic?` data-sign="${escAttr(pic)}"`:""}>${pic?"":"▤"}</div><span class="tf-ty ${tfTy(a)}">${escHtml(ext)}</span>${stateBadge(a,up)}</div>
+        <div class="tfw-rt"><div><div class="tf-nm tfw-nm" title="${escAttr(a.filename)}">${escHtml(a.filename||"File")}</div><div class="tf-sz">${meta}</div></div>${acts}</div></div>`;
     }
     const src=a.thumb_path||a.poster_path||a.view_path||"";
     return `<div class="tf" data-aid="${escAttr(a.id)}">
@@ -12619,6 +12671,26 @@ function taskFilesHtml(m){
   const all=many?`<div class="tf-all"><span>${list.length} files</span>${dl&&list.some(assetDownloadable)
     ?`<span class="dl" onclick="commentDownloadAll('${escAttr(m.id)}',event)">⤓ Download all</span>`:""}</div>`:"";
   return `<div class="tf-set">${tiles}</div>${all}`;
+}
+/* V118.77 — Open in the browser (Microsoft's viewer, read-only) and Copy link */
+async function tfOpenOffice(id,ev){
+  if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  const a=assetById(id); if(!a||!a.storage_path){ toast("That file is not available","err"); return; }
+  const w=window.open("","_blank"); if(w){ try{ w.opener=null; }catch(e){} }
+  const u=await signedUrl(a.storage_path,3600);
+  if(!u){ if(w) w.close(); toast("That file is not available","err"); return; }
+  const v="https://view.officeapps.live.com/op/view.aspx?src="+encodeURIComponent(u);
+  if(w) w.location.href=v; else window.location.href=v;
+}
+async function tfCopyLink(id,ev){
+  if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  const btn=ev&&ev.currentTarget;
+  const a=assetById(id); if(!a){ toast("That file is not available","err"); return; }
+  const u=isMaster(a)?await masterUrl(a):await signedUrl(a.storage_path,3600);
+  if(!u){ toast("Could not make a link","err"); return; }
+  try{ await navigator.clipboard.writeText(u); }catch(e){ toast("Could not copy — "+u,"err"); return; }
+  if(btn){ const was=btn.innerHTML; btn.innerHTML='<i class="ti ti-check"></i>Copied'; btn.classList.add("ok"); setTimeout(()=>{ btn.innerHTML=was; btn.classList.remove("ok"); },1200); }
+  else toast("Link copied");
 }
 function taskReplyQuote(aid,bar){
   const a=assetById(aid);
@@ -12635,6 +12707,45 @@ function taskReplyTo(e,aid,mid){
   TASK_REPLY={aid,mid}; BR_TAB="talk"; render();
   setTimeout(()=>{ const el=document.getElementById("th-in"); if(el) el.focus(); },30);
 }
+/* V118.77 — REPLY TO A MESSAGE, the way a file is replied to: a marker at
+   the start of the body, drawn as a quote with the author's words. */
+function taskReplyMsg(e,mid){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  TASK_REPLY={aid:null,mid:null,qmid:mid}; BR_TAB="talk"; render();
+  setTimeout(()=>{ const el=document.getElementById("th-in"); if(el) el.focus(); },30);
+}
+function taskReplyQuoteMsg(mid,bar){
+  const m=(TASK.msgs||[]).find(x=>x.id===mid);
+  const who=m?(m.author_name||brPersonName(m.author_id)||""):"";
+  let words=m?mpPlain(taskReplyOf(m.body).rest).replace(/\s+/g," ").trim():"";
+  if(m&&!words){ const n=(assetsFor("message",m.id)||[]).length; words=n?(n===1?"1 file":n+" files"):""; }
+  if(words.length>110) words=words.slice(0,108)+"…";
+  const inner=`<span>${m?`<b>${escHtml(who)}</b> ${escHtml(words)}`:"Replying to a message that has been removed"}</span>`;
+  return bar?`<div class="tm-q tm-qm">${inner}</div>`
+    :`<div class="tm-q tm-qm" onclick="taskJumpMsg(event,'${escAttr(mid)}')" title="Go to the message">${inner}</div>`;
+}
+function taskJumpMsg(e,mid){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  const el=document.querySelector('.th-m[data-mid="'+mid+'"]'); if(!el) return;
+  el.scrollIntoView({block:"center",behavior:"smooth"});
+  el.classList.add("brf-hit"); setTimeout(()=>el.classList.remove("brf-hit"),1600);
+}
+/* the pinned strip: the brief's first words, and a way back up */
+function thBriefWords(t){
+  const w=String(wPlain((t&&t.brief)||"")).replace(/\s+/g," ").trim();
+  return w.length>140?w.slice(0,138)+"…":w;
+}
+function thStripTop(e){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  const th=document.querySelector("#main .br-open .br-thread"); if(th){ th.scrollTop=0; thStripSync(th); }
+}
+function thStripSync(th){
+  th=th||document.querySelector("#main .br-open .br-thread"); if(!th) return;
+  const sheet=th.closest(".th-sheet"), strip=sheet&&sheet.querySelector(".th-strip"), pin=th.querySelector(".br-pin"); if(!strip) return;
+  strip.classList.toggle("on",!!pin&&th.scrollTop>pin.offsetHeight-16);
+}
+document.addEventListener("scroll",e=>{ const t=e.target; if(t&&t.classList&&t.classList.contains("br-thread")) thStripSync(t); },true);
+(function(){ const base=render; render=function(){ const out=base.apply(this,arguments); try{ thStripSync(); requestAnimationFrame(()=>thStripSync()); setTimeout(thStripSync,80); }catch(e){} return out; }; })();
 function taskReplyClear(){ TASK_REPLY=null; render(); }
 function taskJumpFile(e,aid){
   if(e){ e.preventDefault(); e.stopPropagation(); }
@@ -12690,7 +12801,7 @@ async function taskSaveEdit(id){
   const typed=rtValue(el); if(!typed) return;
   const m=TASK.msgs.find(x=>x.id===id); if(!m||!fbIsMine(m)) return;
   const rp0=taskReplyOf(m.body);
-  const body=(rp0.aid?"[[file:"+rp0.aid+"]]":"")+typed;
+  const body=(rp0.aid?"[[file:"+rp0.aid+"]]":rp0.mid?"[[msg:"+rp0.mid+"]]":"")+typed;
   const now=new Date().toISOString();
   m.body=body; m.edited_at=now; TASK_EDITING=null; render();
   /* THE MENTIONS ARE READ AGAIN. Editing a message to add "@pranav" and
@@ -12872,13 +12983,13 @@ async function taskPostInner(){
   if(!body&&!TASK_STAGED.length&&!pickedIds.length) return;
   if(toClient&&!brMayWriteClient(t)){ toast("Only the Ac Manager writes to the client","err"); return; }
   /* 10 Oct — a reply to a file carries the file at the start of its body */
-  const rpl=(TASK_REPLY&&TASK.id===t.id)?TASK_REPLY.aid:null;
+  const rpl=(TASK_REPLY&&TASK.id===t.id)?taskReplyMarker(TASK_REPLY):"";   /* V118.77 — a file or a message */
   /* V113.13 — nothing is typed as the client any more; the row shape
      stays, so the thread still reads the old client rows correctly */
   const asClient=false, isClient=brIsClient();
   const row={
     id:"c"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36),
-    task_id:t.id, brand_id:activeBrand, body:(rpl?"[[file:"+rpl+"]]":"")+body,
+    task_id:t.id, brand_id:activeBrand, body:rpl+body,
     author_kind:(asClient||isClient)?"client":"team",
     author_name:asClient?"Client":actorName(),
     author_email:asClient?"":(ME.email||""),
@@ -13781,7 +13892,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.76 Tbilisi";
+const TOOL_VERSION="V118.77 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -16800,7 +16911,7 @@ function fbIsMine(c){
   return !!me && (String(c.author_email||"").toLowerCase()===me
               || String(c.author_name||"").toLowerCase()===me.split("@")[0]);
 }
-const REACTIONS=["👍","❤️","🙏","😠"];
+const REACTIONS=["👍","❤️","🙏"];   /* V118.77 — Chirag, 20 Oct: three, so the row stays short */
 /* V118.42 — Chirag, 17 Oct: four reactions. 🎉 and 👀 already left on a
    message keep showing; nobody can add a new one. */
 const REACTIONS_SHOWN=["👍","❤️","🙏","😠","🎉","👀"];
@@ -17864,6 +17975,7 @@ function notifExcerpt(it){
   if(s) return {text:s.slice(0,200),dim:false};
   const n=(assetsFor("message",it.c.id)||[]).length;
   if(taskReplyOf(String(it.c.body||"")).aid) return {text:"Replied to a file",dim:true};
+  if(taskReplyOf(String(it.c.body||"")).mid) return {text:"Replied to a message",dim:true};
   return {text:n?(n===1?"1 file":n+" files"):(it.mention?"Mentioned you":"Sent a file"),dim:true};
 }
 
@@ -44566,8 +44678,7 @@ function dlvJump(mid){
 function dlvMode(tid){ DLV_PICK=tid?{tid,did:(dlvFor(tid)[0]||{}).id||"__new",name:""}:null; render(); }
 function dlvPickSet(v){ if(!DLV_PICK) return; DLV_PICK.did=v; render(); if(v==="__new") setTimeout(()=>{ const i=document.getElementById("dlv-pn"); if(i) i.focus(); },40); }
 function dlvBarHtml(t){
-  if(!DLV_PICK||DLV_PICK.tid!==t.id)
-    return `<div class="dlv-bar"><button class="dlv-tg" onclick="dlvMode('${t.id}')" title="Send this as a version of one of the task's deliveries"><i class="ti ti-package-export"></i>Deliver to client</button></div>`;
+  if(!DLV_PICK||DLV_PICK.tid!==t.id) return "";   /* V118.77 — Chirag, 20 Oct: the hover row's Deliver is enough */
   const ds=dlvFor(t.id), did=DLV_PICK.did, d=ds.find(x=>x.id===did);
   const next=d?((dlvVers(d.id).length?Math.max(...dlvVers(d.id).map(v=>v.version)):0)+1):1;
   return `<div class="dlv-bar on"><b>Deliver</b>
@@ -44698,13 +44809,15 @@ function capDress(th,t){
     const rx=!!m.querySelector(".th-addrx");
     const own=!!m.querySelector('.th-acts .rgt button[onclick^="taskStartEdit"]');
     const dl=mayD&&!DLV.vers.some(v=>v.message_id===mid);
-    if(!rx&&!own&&!dl) return;
+    const rep=canComment();   /* V118.77 — reply to a message */
+    if(!rx&&!own&&!dl&&!rep) return;
     const open=DLV_MP===mid;
     const well=rx?`<span class="well">${REACTIONS.map(e=>`<button class="b emo${taskMyRx(mid,e)?" mine":""}" onclick="taskToggleRx('${q}','${e}')" title="React ${e}">${e}</button>`).join("")}</span>`:"";
     const dlv=dl?`<span class="dlv-mb"><button class="b dlv" onclick="dlvMsgMenu(event,'${q}')" title="Record this message as a delivery"><i class="ti ti-package"></i>Deliver</button>${open?dlvMsgMenuHtml(mid,ds):""}</span>`:"";
     const ed=own?`<button class="b ic" onclick="taskStartEdit('${q}')" title="Edit"><i class="ti ti-pencil"></i></button>
       <button class="b ic del" onclick="taskDeleteMsg('${q}')" title="Delete"><i class="ti ti-trash"></i></button>`:"";
-    m.insertAdjacentHTML("beforeend",`<div class="cap${open?" on":""}">${well}${dlv}${ed}</div>`);
+    const rpb=rep?`<button class="b ic rep" onclick="taskReplyMsg(event,'${q}')" title="Reply to this message"><i class="ti ti-corner-up-left"></i></button>`:"";
+    m.insertAdjacentHTML("beforeend",`<div class="cap${open?" on":""}">${well}${rpb}${dlv}${ed}</div>`);
     if(open) setTimeout(()=>{ const i=document.getElementById("dlv-mn"); if(i&&!ds.length) i.focus(); },30);
   });
 }
