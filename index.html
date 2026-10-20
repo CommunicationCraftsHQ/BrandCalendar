@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.72 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.73 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -5555,6 +5555,33 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
   .xs-sh .xs-io .brk-ioh{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 2px 2px;}
   .xs-sh .xs-io .brk-iosep{height:0;}
 }
+</style>
+<style>
+/* ══ V118.73 TBILISI · READ ALL WITH ONE SWITCH, SEEN ON ONE LINE ═════════
+   Chirag, 20 Oct: the Read all pop-up's two lines read alike. Now one
+   switch, "Keep @mentions unread" (remembered), and one button that says
+   how many it will mark, "Mark 9 as read". Seen notifications on the
+   phone drop to one line each on grey, so they stand apart from new. */
+.nra-sw{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid #EFEDE8;font-size:15px;font-weight:600;cursor:pointer;user-select:none;}
+.nra-sw > i{font-size:20px;}
+.nra-sw .sw{margin-left:auto;width:44px;height:26px;border-radius:99px;background:#D9D7D1;position:relative;flex:none;transition:background .15s;}
+.nra-sw .sw:after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.15);}
+.nra-sw.on .sw{background:#0D0D0D;} .nra-sw.on .sw:after{left:21px;}
+.nra-go{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:48px;margin-top:16px;border:0;border-radius:12px;background:#0D0D0D;color:#fff;font:inherit;font-size:15px;font-weight:700;cursor:pointer;}
+.nra-go:disabled{background:#D9D7D1;cursor:default;}
+.nrd.nra{min-width:270px;padding:8px 12px 12px;}
+.nrd.nra .nra-hd{font-size:14px;font-weight:800;padding:4px 4px 2px;}
+.nrd.nra .nra-sw{font-size:13.5px;padding:10px 4px;}
+.nrd.nra .nra-sw > i{font-size:17px;}
+.nrd.nra .nra-sw .sw{width:38px;height:22px;} .nrd.nra .nra-sw .sw:after{width:16px;height:16px;} .nrd.nra .nra-sw.on .sw:after{left:19px;}
+.nrd.nra .nra-go{height:38px;margin-top:10px;font-size:13.5px;border-radius:10px;}
+.nrd.nra .nra-go:hover{background:#2A2A2A;}
+.xn-r.seen{opacity:1!important;background:#F6F5F2;padding-top:10px;padding-bottom:10px;}
+.xn-r.seen .sp{background:transparent!important;grid-row:1;}
+.xn-r.seen .p{display:none!important;}
+.xn-r.seen .t1{font-size:14px;font-weight:600;color:#55554F;}
+.xn-r.seen .t1 em{font-weight:500;}
+.xn-r.seen .tm{font-size:12px;}
 </style>
 </head>
 <body class="mf-framed">
@@ -13754,7 +13781,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.72 Tbilisi";
+const TOOL_VERSION="V118.73 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -47007,6 +47034,48 @@ function pagePreview(k){ return !!(CAL_PAGES[k]&&CAL_PAGES[k].preview); }
       });
     }catch(e){}
     return out;
+  };
+})();
+</script>
+<script>
+/* ══ V118.73 TBILISI · READ ALL WITH ONE SWITCH (see the style above) ══ */
+const NRA_KEY="cc-read-keep-men";
+function nraKeep(){ try{ return localStorage.getItem(NRA_KEY)!=="0"; }catch(e){ return true; } }
+/* how many notifications the button will mark: the same rule notifMarkAllBut uses */
+function nraCount(keep){
+  let items=notifItems();
+  if(keep){
+    const key=i=>i.kind==="post"?"p"+(i.post&&i.post.id):i.kind==="task"?"t"+i.taskId:i.kind==="creative"?"c"+i.creativeId:i.kind==="meeting"?"m"+i.meetingId:"";
+    const hold=new Set(items.filter(i=>i.mention).map(key));
+    items=items.filter(i=>!hold.has(key(i)));
+  }
+  return items.length;
+}
+function nraBody(){
+  const k=nraKeep(), n=nraCount(k);
+  return `<div class="nra-sw${k?" on":""}" role="switch" aria-checked="${k}" onclick="event.stopPropagation();nraFlip(this)"><i class="ti ti-at"></i><span>Keep @mentions unread</span><span class="sw"></span></div>
+    <button class="nra-go"${n?"":" disabled"} onclick="event.stopPropagation();notifMarkAllBut(nraKeep())"><i class="ti ti-checks"></i>${n?`Mark ${n} as read`:"Nothing to mark"}</button>`;
+}
+function nraFlip(sw){
+  const k=!nraKeep(); try{ localStorage.setItem(NRA_KEY,k?"1":"0"); }catch(e){}
+  const box=sw.parentNode; const keep=box.querySelector(".hd,.nra-hd");
+  const hd=keep?keep.outerHTML:"";
+  box.innerHTML=hd+nraBody();
+}
+(function(){
+  const baseSheet=xnSheet;
+  xnSheet=function(which){
+    if(which!=="read") return baseSheet.apply(this,arguments);
+    xnSheetClose(); XN_SHEET="read";
+    document.body.insertAdjacentHTML("beforeend",`<div class="xn-scrim" onclick="xnSheetClose()"></div><div class="xn-sh mfs" onclick="event.stopPropagation()"><div class="hd">Mark all as read</div>${nraBody()}</div>`);
+  };
+  const baseAsk=notifReadAllAsk;
+  notifReadAllAsk=function(e){
+    if(xnPhone()) return baseAsk.apply(this,arguments);
+    if(e){ e.preventDefault(); e.stopPropagation(); }
+    const head=document.querySelector("#notif-panel .nphead"); if(!head) return;
+    const was=head.querySelector(".nrd"); if(was){ was.remove(); return; }
+    head.insertAdjacentHTML("beforeend",`<div class="nrd nra" onclick="event.stopPropagation()"><div class="nra-hd">Mark all as read</div>${nraBody()}</div>`);
   };
 })();
 </script>
