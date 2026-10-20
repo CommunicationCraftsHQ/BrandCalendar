@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.73 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.74 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13781,7 +13781,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.73 Tbilisi";
+const TOOL_VERSION="V118.74 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -17564,8 +17564,9 @@ async function fbMarkSeen(postId){
      without touching the bell, so the count went stale while the panel said
      "Nothing waiting for you." A fourth caller cannot reintroduce that. */
   syncBell();
-  try{ await sb.from("post_seen").upsert({user_email:me,post_id:postId,
-        brand_id:(p&&p.brand_id)||activeBrand,seen_at:now}); }catch(e){}
+  const nb=((NOTIF||[]).find(r=>r.post_id===postId)||(NOTIF_SEEN||[]).find(r=>r.post_id===postId)||{}).brand_id;
+  const bid=(p&&p.brand_id)||nb||activeBrand;
+  if(bid) try{ await sb.from("post_seen").upsert({user_email:me,post_id:postId,brand_id:bid,seen_at:now}); }catch(e){}
 }
 
 /* ══ LYON · PUTTING IT BACK IN THE BELL ═══════════════════════════════
@@ -47078,6 +47079,88 @@ function nraFlip(sw){
     head.insertAdjacentHTML("beforeend",`<div class="nrd nra" onclick="event.stopPropagation()"><div class="nra-hd">Mark all as read</div>${nraBody()}</div>`);
   };
 })();
+</script>
+<script>
+/* ══ V118.74 TBILISI · READ ALL CLEARS EVERYTHING, ONE BELL ON EVERY DEVICE ══
+   Chirag, 20 Oct: the phone and the computer showed different counts.
+     · the bell holds the newest 200; Read all marked only those, so the
+       next reload brought the next 200 back. Now the database marks every
+       unread one at once (mark_all_seen), with the same rules: muted
+       brands left alone, @mention threads kept when the switch says so.
+       The button's number is the database's, not the 200's.
+     · an open tab never heard about reads on another device. The bell
+       now reads again when the page comes back into view, and every two
+       minutes while it is in view.
+   Without the database function (SQL not run yet) everything falls back
+   to the V118.73 behaviour. */
+const NRA_N={};                       // keep|all -> count from the database
+async function nraDbCount(keep){
+  try{
+    const r=await sb.rpc("mark_all_seen",{keep_mentions:!!keep,dry_run:true});
+    if(r&&!r.error&&r.data&&typeof r.data.rows==="number"){ NRA_N[keep?"k":"a"]=r.data.rows; return r.data.rows; }
+  }catch(e){}
+  return null;
+}
+(function(){
+  const baseCount=nraCount;
+  nraCount=function(keep){ const v=NRA_N[keep?"k":"a"]; return (typeof v==="number")?v:baseCount.apply(this,arguments); };
+  /* the pop-up asks the database for the real number and redraws its button */
+  function freshen(){
+    const k=nraKeep();
+    nraDbCount(k).then(n=>{ if(n==null) return;
+      document.querySelectorAll(".nra-go").forEach(b=>{ const box=b.parentNode; const sw=box&&box.querySelector(".nra-sw");
+        if(!sw) return; const hd=box.querySelector(".hd,.nra-hd"); box.innerHTML=(hd?hd.outerHTML:"")+nraBody(); }); });
+  }
+  const baseSheet=xnSheet;
+  xnSheet=function(which){ const r=baseSheet.apply(this,arguments); if(which==="read") freshen(); return r; };
+  const baseAsk=notifReadAllAsk;
+  notifReadAllAsk=function(){ const r=baseAsk.apply(this,arguments); if(document.querySelector(".nrd.nra")||document.querySelector(".xn-sh .nra-go")) freshen(); return r; };
+  const baseFlip=nraFlip;
+  nraFlip=function(){ const r=baseFlip.apply(this,arguments); freshen(); return r; };
+
+  /* Read all: the database does it in one go; this screen follows */
+  const baseMark=notifMarkAllBut;
+  notifMarkAllBut=async function(keepMen){
+    let r=null;
+    try{ r=await sb.rpc("mark_all_seen",{keep_mentions:!!keepMen,dry_run:false}); }catch(e){ r=null; }
+    if(!(r&&!r.error&&r.data&&typeof r.data.rows==="number")) return baseMark.apply(this,arguments);
+    const at=r.data.seen_at||new Date().toISOString();
+    let items=notifItems();
+    if(keepMen){
+      const key=i=>i.kind==="post"?"p"+(i.post&&i.post.id):i.kind==="task"?"t"+i.taskId:i.kind==="creative"?"c"+i.creativeId:i.kind==="meeting"?"m"+i.meetingId:"";
+      const hold=new Set(items.filter(i=>i.mention).map(key));
+      items=items.filter(i=>!hold.has(key(i)));
+    }
+    items.forEach(i=>{
+      if(i.kind==="post"&&i.post&&i.post.id) POSTFB.seen[i.post.id]=at;
+      else if(i.kind==="task"&&i.taskId) TASK_SEEN[i.taskId]=at;
+      else if(i.kind==="creative"&&i.creativeId) CR_SEEN[i.creativeId]=at;
+      else if(i.kind==="meeting"&&i.meetingId) MEET_SEEN[i.meetingId]=at;
+    });
+    delete NRA_N.k; delete NRA_N.a;
+    xnSheetClose();
+    const nrd=document.querySelector(".nrd"); if(nrd) nrd.remove();
+    await nraReload(true);
+    try{ renderSocial(); }catch(e){}
+  };
+})();
+/* ── the bell reads again when you come back to it ── */
+let NRA_LAST=Date.now(), NRA_BUSY=false;
+async function nraReload(force){
+  if(NRA_BUSY) return; if(!force&&Date.now()-NRA_LAST<20000) return;
+  NRA_BUSY=true;
+  try{
+    await loadNotifications(); NRA_LAST=Date.now();
+    syncBell();
+    const np=document.getElementById("notif-panel");
+    const typing=document.activeElement&&/INPUT|TEXTAREA/.test(document.activeElement.tagName)&&np&&np.contains(document.activeElement);
+    if(np&&np.classList.contains("open")&&!typing&&!document.querySelector(".nrd")&&!document.querySelector(".xn-sh")) buildNotifPanel();
+  }catch(e){}
+  NRA_BUSY=false;
+}
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") nraReload(false); });
+window.addEventListener("focus",()=>nraReload(false));
+setInterval(()=>{ if(document.visibilityState==="visible") nraReload(true); },120000);
 </script>
 </body>
 </html>
