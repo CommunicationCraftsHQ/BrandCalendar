@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.68 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.69 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13750,7 +13750,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.68 Tbilisi";
+const TOOL_VERSION="V118.69 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -17367,6 +17367,34 @@ function fbMentionKey(e,inputId,brandId,teamOnly){
   box.style.left=r.left+"px"; box.style.top=(r.bottom+4)+"px"; box.style.position="fixed";
   document.body.appendChild(box); mentionBox=box;
 }
+/* ══ V118.69 TBILISI · THE @ LIST BELONGS TO THE BOX ══════════════════
+   Chirag, 20 Oct: "we had already updated all of the message boxes" — and
+   the Help desk box still had no @ list. The look came with the kit's box;
+   the @ list was switched on by hand, box by box, and a box built later
+   (Help desk) never got it. So it is now part of the box itself: any kit
+   message box (.ccw) — or any field marked data-mention — opens the list
+   when @ is typed. data-mention="<brand id>" offers that brand's people
+   (client included, as on a post); anything else offers the team.
+   A box that already wires fbMentionKey itself is left alone. */
+function wAtBox(t){
+  const el=t&&t.closest?t.closest(".ccw,[data-mention]"):null;
+  if(!el||!el.id) return null;
+  return (el.isContentEditable||el.tagName==="TEXTAREA"||el.tagName==="INPUT")?el:null;
+}
+function wAtWired(el){ return /fbMentionKey\(/.test(el.getAttribute("oninput")||""); }
+document.addEventListener("input",e=>{
+  const el=wAtBox(e.target); if(!el||wAtWired(el)) return;
+  const m=el.getAttribute("data-mention");
+  const brand=(m&&m!=="team")?m:null;
+  try{ fbMentionKey(e,el.id,brand,!brand); }catch(er){}
+},true);
+/* Up, Down, Enter and Escape reach the list before the box's own Enter-to-send */
+document.addEventListener("keydown",e=>{
+  if(!mentionBox) return;
+  const el=wAtBox(e.target)||(e.target&&e.target.id===mentionInput?e.target:null);
+  if(!el||el.id!==mentionInput) return;
+  if(mentionKeyNav(e)) e.stopImmediatePropagation();
+},true);
 function closeMentionBox(){ if(mentionBox){ mentionBox.remove(); mentionBox=null; }
   mentionHits=[]; mentionInput=null; mentionSel=0; }
 
@@ -21521,7 +21549,7 @@ function fbPanelHtml(p){
   /* one comment. No box, no border, no buttons until you reach it. */
   const row=c=>{
     if(fbEditing===c.id) return `<div class="c46">${av(c.author_name,c.author_kind)}
-      <div class="cb46"><div id="fb-edit-${c.id}" class="cin46 rt" contenteditable="true" style="width:100%;box-sizing:border-box;" onfocus="rtFocus(this)" onblur="mpBarHide()">${mpRender(c.body)}</div>
+      <div class="cb46"><div id="fb-edit-${c.id}" class="cin46 rt" data-mention="${escAttr(p.brand_id||activeBrand)}" contenteditable="true" style="width:100%;box-sizing:border-box;" onfocus="rtFocus(this)" onblur="mpBarHide()">${mpRender(c.body)}</div>
         <div style="display:flex;gap:6px;margin-top:6px;">
           <button class="btn btn-p btn-sm" onclick="fbSaveEdit('${p.id}','${c.id}')">Save</button>
           <button class="btn btn-g btn-sm" onclick="fbCancelEdit()">Cancel</button></div></div></div>`;
