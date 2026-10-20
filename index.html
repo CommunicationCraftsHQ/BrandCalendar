@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.70 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.72 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -11324,7 +11324,11 @@ function brSetQ(v){
   const b2=document.querySelector(".fb-q");
   if(b2){ b2.focus(); try{ b2.setSelectionRange(at,at); }catch(err){} }
 }
-function brPickSort(e,k){ if(e){ e.preventDefault(); e.stopPropagation(); } FLT_UI={id:null,open:null,term:""}; brSetSort(k); }
+/* V118.72 — the kit's sort menu calls pick(k) with ONE value; this took
+   (e,k), so the chosen sort arrived in the event slot and was ignored.
+   Chirag, 20 Oct: "clicking the sorting dropdown items give no result".
+   Takes either shape now, so an old caller still works. */
+function brPickSort(a,b){ const k=(typeof a==="string")?a:b; if(a&&typeof a==="object"&&a.preventDefault){ a.preventDefault(); a.stopPropagation(); } FLT_UI={id:null,open:null,term:""}; brSetSort(k); }
 /* The phone sheet and the archive door set a filter by hand. */
 function brFilterSet(k,vals){
   const fs=brFilter.f.filter(f=>f.k!==k);
@@ -13750,7 +13754,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.70 Tbilisi";
+const TOOL_VERSION="V118.72 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -17419,6 +17423,18 @@ async function wSendAtOnce(o){
   }
   return r||{error:null};
 }
+/* ══ V118.71 TBILISI · THE SEND BUTTON HOLDS STILL ═══════════════════
+   Chirag, 20 Oct: a task message "took around 4 seconds and I had to
+   click again". Not slowness: pressing the arrow blurred the box, the
+   48px of room kept for the black bar went away, the row shrank and the
+   arrow moved up from under the pointer before the click completed. So
+   the first click landed on nothing. Pressing the arrow no longer takes
+   the focus away: the box keeps its shape, the click lands, and the
+   send code clears the box as before. One listener for every box. */
+document.addEventListener("pointerdown",e=>{
+  const b=e.target&&e.target.closest?e.target.closest(".ccm-send"):null;
+  if(b) e.preventDefault();
+},true);
 function closeMentionBox(){ if(mentionBox){ mentionBox.remove(); mentionBox=null; }
   mentionHits=[]; mentionInput=null; mentionSel=0; }
 
