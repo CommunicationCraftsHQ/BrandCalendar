@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.77 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.78 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13136,15 +13136,15 @@ function renderBranding(){
      <span class="fb-end">
        ${BR.ok?`<span data-gate="br-count">${fltCountHtml(rows.length,filtered&&rows.length!==total?total:rows.length,
           brArchivedOnly()?"Archived task":"Branding task")}</span>`:""}
-       ${BR.ok&&!brIsClient()?`<span class="brl-lens">
+       ${BR.ok&&!brIsClient()&&brHasClient()?`<span class="brl-lens">
      <span class="${BR_CV?"":"on"}" onclick="brSetCV(0)">Team</span>
      <span class="cv${BR_CV?" on":""}" onclick="brSetCV(1)"><i class="ti ti-eye"></i>Client view <span class="beta">beta</span></span></span>`:""}
        ${BR.ok?`<span class="brl-lens">
      <span class="${brGroup?"":"on"}" onclick="brSetGroup(0)">Flat</span>
      <span class="${brGroup?"on":""}" onclick="brSetGroup(1)">By project</span></span>`:""}
        ${BR.ok?`<span class="fb-w fb-view"><button class="fb-chip${fltIsOpen("tasks","view")?" open":""}" onclick="fltOpen(event,'tasks','view')" data-gate="br-view"><i class="ti ti-eye"></i>View
-     <span class="fb-val">${brIsClient()?"":(BR_CV?"Client view":"Team")+" · "}${brGroup?"By project":"Flat"}</span><i class="ti ti-chevron-down"></i></button>${
-     fltIsOpen("tasks","view")?`<div class="fb-pop open" onclick="event.stopPropagation()">${brIsClient()?"":[["0","Team"],["1","Client view"]].map(([k,l])=>
+     <span class="fb-val">${brIsClient()||!brHasClient()?"":(BR_CV?"Client view":"Team")+" · "}${brGroup?"By project":"Flat"}</span><i class="ti ti-chevron-down"></i></button>${
+     fltIsOpen("tasks","view")?`<div class="fb-pop open" onclick="event.stopPropagation()">${brIsClient()||!brHasClient()?"":[["0","Team"],["1","Client view"]].map(([k,l])=>
        `<div class="fb-opt one${(BR_CV?"1":"0")===k?" on":""}" onclick="event.stopPropagation();FLT_UI={id:null,open:null,term:''};brSetCV(${k})"><span class="nm">${l}</span>${(BR_CV?"1":"0")===k?`<i class="ti ti-check tick"></i>`:""}</div>`).join("")+'<div class="brk-iosep"></div>'}${
        [["0","Flat"],["1","By project"]].map(([k,l])=>
        `<div class="fb-opt one${(brGroup?"1":"0")===k?" on":""}" onclick="event.stopPropagation();FLT_UI={id:null,open:null,term:''};brSetGroup(${k})"><span class="nm">${l}</span>${(brGroup?"1":"0")===k?`<i class="ti ti-check tick"></i>`:""}</div>`).join("")}</div>`:""}</span>`:""}
@@ -13892,7 +13892,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.77 Tbilisi";
+const TOOL_VERSION="V118.78 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -40568,13 +40568,13 @@ function acCntHtml(){ return fltCountHtml(acVisible().length,acInScope().length,
 function acColsVar(){
   const H="var(--ac-h)";
   const w={ams:"minmax(var(--ac-a),1.1fr)",team:AC.tab==="people"?"minmax(var(--ac-t),150px)":"var(--ac-t)",strategy:H,plan:H,posts:H,tasks:H,promos:H,adopt:AC.tab==="people"?H:"minmax(var(--ac-ad),1.5fr)",
-    see:"86px",muted:"112px",hidden:"86px"};
+    see:"86px",muted:"112px",hidden:"86px",clients:"minmax(120px,1fr)"};
   return ["3px","minmax(var(--ac-b),1fr)"].concat(acColsNow().filter(([k])=>!AC_HIDE.has(k)).map(([k])=>w[k])).concat(["18px"]).join(" ");
 }
 /* V118.8 — each tab has its own columns */
 const AC_PCOLS=[["ams","Account managers"],["team","Team"],["see","Can see"],["muted","Notifications off"],["hidden","Hidden"]];
 const AC_PNUM=["see","muted","hidden"];
-function acColsNow(){ return AC.tab==="people"?AC_PCOLS:AC_COLS; }
+function acColsNow(){ const c=AC.tab==="people"?AC_PCOLS:AC_COLS; return acClOn()?acClIns(c):c; }
 function acTab(t){
   if(t!=="people"&&t!=="health") return;
   AC.tab=t; try{ localStorage.setItem("cc-ac-tab",t); }catch(e){}
@@ -40596,6 +40596,7 @@ function acList(){
 function acRowHtml(bid){
   const b=brands[bid], cols=acColsNow().filter(([k])=>!AC_HIDE.has(k));
   const cell=k=>{
+    if(k==="clients") return acClCell(bid);
     if(k==="ams"){
       const ams=acAMsOf(bid);
       const mine=ams.some(t=>t.user_id===ME.id);
@@ -41095,7 +41096,7 @@ function acInScopeFor(bid){ return acInScope().indexOf(bid)>-1; }
     if(v==="accounts") return {render:renderAccounts,sidebar:buildAccountsSidebar,needs:"edit"};
     return base(v);
   };
-  PAGE_NAME.accounts="Accounts";
+  PAGE_NAME.accounts="Ac Mgmt";
   const baseTabs=renderBnTabs;
   renderBnTabs=function(){
     const el=document.getElementById("bn-tabs");
@@ -41106,8 +41107,7 @@ function acInScopeFor(bid){ return acInScope().indexOf(bid)>-1; }
       el.style.display="";
       const t=(k,ic,l,go,on)=>`<button class="bntab${on?" on":""}" data-ac="${k}" onclick="${go}" aria-current="${on?"page":"false"}"><i class="ti ${ic}"></i> ${l}</button>`;
       el.innerHTML=t("cal","ti-calendar","Calendar","acPopClose();goHome()",view==="year")
-        +t("evs","ti-calendar-event","Events","acPopClose();setView('list')",view==="list")
-        +(acMay()?t("acc","ti-briefcase","Accounts","acGo()",view==="accounts"):"");
+        +(acMay()?t("acc","ti-briefcase","Ac Mgmt","acGo()",view==="accounts"):"");
       return;
     }
     return baseTabs.apply(this,arguments);
@@ -42760,7 +42760,7 @@ async function cplSave(){
    shows what the address gives away (@handle, the site's name). */
 (function(){
   const PAGE_NAMES={tasks:"Tasks",mood:"Mood board",brief:"Strategy",content:"Posts",plan:"Plan",
-                    promotions:"Promotions",year:"Calendar",accounts:"Accounts"};
+                    promotions:"Promotions",year:"Calendar",accounts:"Ac Mgmt"};
   const bn=id=>(brands&&brands[id]&&brands[id].name)||"";
   const withBrand=(kind,id)=>bn(id)?kind+" · "+bn(id):kind;
   const day=(y,m,d)=>{ try{ return new Date(Number(y),Number(m)-1,Number(d)||1).toLocaleDateString("en-GB",{day:"numeric",month:"short"}); }catch(e){ return ""; } };
@@ -43842,7 +43842,7 @@ function openTrashHistory(){
 const IO={rows:[],ok:false,busy:false,err:"",q:"",f:[],sort:"newest",page:"all",undone:{},load:0,stale:true};
 const IO_CTX={detail:""};
 const IO_PAGE_OF={year:"Calendar",list:"Calendar",content:"Posts",branding:"Tasks",brief:"Strategy",mplan:"Plan",plan:"Plan",
-  promotions:"Promotions",numbers:"Numbers",evmgr:"Event Manager",objadmin:"Lists",mood:"Mood board",files:"Files",accounts:"Accounts"};
+  promotions:"Promotions",numbers:"Numbers",evmgr:"Events",objadmin:"Lists",mood:"Mood board",files:"Files",accounts:"Ac Mgmt"};
 function ioPageName(){ return IO_PAGE_OF[view]||(PAGE_NAME&&PAGE_NAME[view])||"Calendar"; }
 const IO_FMT={xlsx:"Excel",xls:"Excel",csv:"CSV",docx:"Word",pptx:"PowerPoint",pdf:"PDF"};
 async function ioLog(dir,o){
@@ -47412,6 +47412,253 @@ async function nraReload(force){
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") nraReload(false); });
 window.addEventListener("focus",()=>nraReload(false));
 setInterval(()=>{ if(document.visibilityState==="visible") nraReload(true); },120000);
+</script>
+
+<style>
+/* ══ V118.78 TBILISI — Master lists › Events for everyone, Ac Mgmt clients ══ */
+.em2-page .em2-hrow,.em2-page .em2-li{grid-template-columns:112px minmax(180px,1fr) 150px minmax(150px,1fr) 74px 46px 40px;}
+.em2-rel{display:flex;flex-wrap:wrap;gap:2px;align-items:center;min-width:0;}
+.em2-rel .evl-rel{margin:0;}
+.em2-rel .none,.em2-used.z{color:var(--subtle);}
+.em2-used{font-size:12px;color:var(--text);white-space:nowrap;}
+.em2-step{display:inline-flex;align-items:center;gap:2px;}
+.em2-step .btn{padding:0 8px;}
+.em2-mth.now{color:var(--acc);}
+.em2-ro .em2-ce{pointer-events:none;}
+.em2-ro .em2-li{cursor:default;}
+.em2-ro .em2-li.on{background:transparent;}
+.em2-ro .em2-ce:hover{border-color:transparent;background:transparent;}
+.em2-ro .em2-star,.em2-ro .em2-seg span{cursor:default;pointer-events:none;}
+.em2-ro .em2-del,.em2-ro .em2-pbar,.em2-ro .em2-adm{display:none !important;}
+.em2-ro .em2-notes textarea{border-color:transparent;background:transparent;resize:none;}
+.ac-cl{display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-width:0;}
+.ac-cl.may{cursor:pointer;}
+.ac-cl .ac-who .e{display:none;}
+.ac-cl .ac-who{background:#EAF2FB;color:#1F5E9E;padding:2px 8px;border-radius:9px;font-size:12px;}
+.ac-menu .ac-clft{border-top:1px solid var(--div);padding:9px 12px;font-size:12px;}
+.ac-menu .ac-clft a{display:block;margin-top:2px;color:var(--text);font-weight:600;cursor:pointer;text-decoration:underline;}
+.ac-menu .ac-clnone{padding:10px 12px;font-size:12px;color:var(--subtle);}
+</style>
+
+<script>
+/* ══ V118.78 TBILISI ═════════════════════════════════════════════════════
+   Chirag, 20 Oct:
+   1 · The Marketing Calendar name, top left, is the way home: All brands,
+       Calendar, from anywhere.
+   2 · One Events page. The top-bar reader and Master lists › Events did
+       the same job; the reader is gone and Master lists › Events opens for
+       everyone on the team, read-only. Only admins (manage_events) edit.
+       The reader's two columns, Relevant for and Used by, moved in.
+   3 · Accounts is "Ac Mgmt", and a brand's clients are added from it,
+       like its team. Preview: the Clients column shows to the Super
+       administrator only until Chirag releases it. The Tasks page's
+       Client view switch shows only where the brand has a client. */
+
+/* ── 1 · home ─────────────────────────────────────────────────────── */
+goHome=function(){
+  closeAllPops(); try{ BRQ=""; }catch(e){}
+  if(activeBrand){
+    const sel=document.getElementById("brand-sel"); if(sel) sel.value="";
+    activeBrand=""; try{ applyLayerDefaults(); }catch(e){}
+    view="year"; setView("year"); return;
+  }
+  if(view!=="year") setView("year"); else render();
+};
+
+/* ── 2 · one Events page ──────────────────────────────────────────── */
+function emMay(){ return canCap("manage_events"); }
+function emStaff(){ return !!ME&&ME.role&&ME.role!=="client"&&ME.role!=="pending"; }
+(function(){
+  const baseRoute=viewRoute;
+  viewRoute=function(v){
+    const r=baseRoute(v);
+    if(v==="evmgr"&&r) return Object.assign({},r,{needs:"staff"});
+    return r;
+  };
+  const baseAllows=routeAllows;
+  routeAllows=function(r){
+    if(r&&r.needs==="staff") return emStaff();
+    return baseAllows.apply(this,arguments);
+  };
+  const baseMenu=menuAllows;
+  menuAllows=function(need){
+    if(need==="lists") return emStaff();
+    return baseMenu.apply(this,arguments);
+  };
+  /* the old reader address (?p=list on All brands) lands on the one page */
+  const baseRender=render;
+  render=function(){
+    if(view==="list"&&!(activeBrand&&brands[activeBrand])&&emStaff()) view="evmgr";
+    if(view==="branding"&&BR_CV&&!brIsClient()&&!brHasClient()) BR_CV=false;
+    return baseRender.apply(this,arguments);
+  };
+})();
+openEventManager=function(){
+  if(!emStaff()) return capDenied("The event database");
+  setView("evmgr");
+};
+openMasterLists=function(){
+  closeAllPops();
+  if(emStaff()) return setView("evmgr");
+  if(objaIsAdmin()) return openObjAdmin();
+  capDenied("Master lists");
+};
+evlOpenMaster=function(id,m){ emSel=id; setView("evmgr"); };
+mlTabs=function(){
+  const t=[];
+  if(emStaff()) t.push(["events","Events"]);
+  if(objaIsAdmin()) LKEYS.forEach(k=>t.push([k,LKIND[k].label]));
+  return t;
+};
+/* nobody but an admin writes: every writer asks first */
+["emSetName","emSetNotes","emSetDate","emSetCat","emStar","emDel","emRel","emAllRel","emAdd","importEvents"].forEach(n=>{
+  const f=window[n]; if(typeof f!=="function") return;
+  window[n]=function(){ if(!emMay()){ toast("Only an admin changes the events","err"); return; } return f.apply(this,arguments); };
+});
+(function(){
+  const basePanel=emPanelHtml;
+  emPanelHtml=function(){
+    const h=basePanel.apply(this,arguments);
+    return emMay()?h:h.replace("Pick an event to set how relevant it is to each industry.","Pick an event to see how relevant it is to each industry.");
+  };
+})();
+function emRelHtml(e){
+  const rel=e.relevance||{};
+  const rated=Object.entries(rel).filter(([,v])=>v==="high"||v==="medium")
+    .map(([k,v])=>({row:indById(k),v})).filter(x=>x.row)
+    .sort((a,b)=>(a.v==="high"?0:1)-(b.v==="high"?0:1));
+  if(!rated.length) return `<span class="none">—</span>`;
+  return rated.slice(0,2).map(x=>`<span class="evl-rel${x.v==="medium"?" md":""}">${escAttr(x.row.label)}</span>`).join("")
+    +(rated.length>2?`<span class="evl-rel more" title="${escAttr(rated.slice(2).map(x=>x.row.label).join(", "))}">+${rated.length-2}</span>`:"");
+}
+function emNowMonth(){ const d=new Date(); return d.getFullYear()===YEAR?d.getMonth()+1:0; }
+function emStep(d){
+  let m=(emMonth||emNowMonth()||1)+d; if(m<1) m=12; if(m>12) m=1;
+  emMonth=m; renderEvMgr();
+}
+function emToday(){
+  const m=emNowMonth();
+  if(!m){ toast("Today is not in "+YEAR); return; }
+  emMonth=0; renderEvMgr();
+  const h=[...document.querySelectorAll("#main .em2-mth")].find(x=>x.dataset.m===String(m));
+  if(h) h.scrollIntoView({block:"start",behavior:"smooth"});
+}
+(function(){
+  const base=renderEvMgr;   /* already wrapped by the Master lists switch */
+  renderEvMgr=function(){
+    const out=base.apply(this,arguments);
+    try{
+      const page=document.querySelector("#main .em2-page"); if(!page) return out;
+      const ro=!emMay();
+      page.classList.toggle("em2-ro",ro);
+      /* the two columns from the old reader */
+      const hr=page.querySelector(".em2-hrow");
+      if(hr&&hr.children.length===5) hr.children[3].insertAdjacentHTML("beforebegin","<span>Relevant for</span><span>Used by</span>");
+      page.querySelectorAll(".em2-li[data-ev]").forEach(li=>{
+        const hit=emFind(li.dataset.ev), st=li.querySelector(".em2-star"); if(!hit||!st) return;
+        const n=emBrandsUsing(hit.e.id)||0;
+        st.insertAdjacentHTML("beforebegin",`<span class="em2-rel">${emRelHtml(hit.e)}</span><span class="em2-used${n?"":" z"}">${n} brand${n===1?"":"s"}</span>`);
+      });
+      /* month headers know their month, and this month is marked */
+      const now=emNowMonth();
+      page.querySelectorAll(".em2-mth").forEach(h=>{
+        const i=MN.indexOf(h.textContent.trim().replace(/\s+\d{4}$/,""));
+        if(i>0){ h.dataset.m=String(i); if(i===now) h.classList.add("now"); }
+      });
+      /* Today and the month stepper, beside the month picker */
+      const ctl=page.querySelector(".em2-ctl"), ms=ctl&&[...ctl.querySelectorAll("select.fi")].pop();
+      if(ms&&!ctl.querySelector(".em2-step")) ms.insertAdjacentHTML("afterend",
+        `<span class="em2-step"><button class="btn btn-s btn-sm" onclick="emStep(-1)" title="Previous month" aria-label="Previous month"><i class="ti ti-chevron-left"></i></button>`+
+        `<button class="btn btn-s btn-sm" onclick="emToday()">Today</button>`+
+        `<button class="btn btn-s btn-sm" onclick="emStep(1)" title="Next month" aria-label="Next month"><i class="ti ti-chevron-right"></i></button></span>`);
+      if(ctl) ctl.querySelectorAll("button,label.btn").forEach(b=>{
+        const oc=b.getAttribute("onclick")||"";
+        if(/emAdd\(\)/.test(oc)||(b.tagName==="LABEL"&&b.querySelector('input[type="file"]'))) b.classList.add("em2-adm");
+      });
+      /* Export moves right once Add is hidden */
+      if(ro&&ctl){ const ex=[...ctl.querySelectorAll("button")].find(b=>/exportMasterXLSX/.test(b.getAttribute("onclick")||"")); if(ex) ex.style.marginLeft="auto"; }
+      if(ro){
+        page.querySelectorAll(".em2-ce").forEach(i=>{ if(i.tagName==="SELECT") i.disabled=true; else i.readOnly=true; i.tabIndex=-1; });
+        page.querySelectorAll(".em2-notes textarea").forEach(t=>{ t.readOnly=true; if(!t.value.trim()) t.closest(".em2-notes").style.display="none"; });
+        const sub=page.querySelector(".year-sub");
+        if(sub) sub.textContent=sub.textContent.replace(/\s*Change anything in place[^.]*\.?/,"").trim();
+      }
+    }catch(e){ console.warn("evmgr v78",e); }
+    return out;
+  };
+})();
+
+/* ── 3 · clients ──────────────────────────────────────────────────── */
+function brClientP(p){ return !!p&&(p.role==="client"||/^client_/.test(p.toolRole||"")); }
+function brClientsOf(bid){
+  const ids=ASSIGN[bid]||[];
+  return (PEOPLE||[]).filter(p=>brClientP(p)&&(p.brand_id===bid||ids.indexOf(p.id)>-1));
+}
+/* no client on the brand, no Client view. If who-is-on-which-brand could
+   not be read, the switch stays rather than hiding on a guess. */
+function brHasClient(){
+  if(!ASSIGN_OK||PEOPLE_BLOCKED) return true;
+  if(activeBrand&&brands[activeBrand]) return brClientsOf(activeBrand).length>0;
+  return Object.keys(brands||{}).some(b=>brClientsOf(b).length>0);
+}
+/* PREVIEW — Super administrator only until released */
+function acClOn(){ return typeof isSuperAdmin==="function"&&isSuperAdmin(); }
+function acClIns(c){
+  const i=c.findIndex(([k])=>k==="team");
+  const out=c.slice(); out.splice(i<0?out.length:i+1,0,["clients","Clients"]); return out;
+}
+function acClCell(bid){
+  const cl=brClientsOf(bid), mm=AC.migr&&canManagePeople(bid);
+  const who=cl.map(p=>`<span class="ac-who"><span class="e"></span>${escHtml(p.name)}</span>`).join("");
+  return `<span class="ac-cl ac-ams${mm?" may":""}" data-col="clients" ${mm?`onclick="event.stopPropagation();acMenuOpen(event,'${bid}','clients')"`:""}>${who}${mm&&!cl.length?`<span class="ac-pick">Add</span>`:""}${!mm&&!cl.length?`<span class="nc z">—</span>`:""}${mm?`<b class="brl-sgcar">▾</b>`:""}</span>`;
+}
+function acClDraw(first){
+  const {bid}=AC_MENU, on=new Set(brClientsOf(bid).map(p=>p.id));
+  const q=AC_MQ.trim().toLowerCase();
+  const all=(PEOPLE||[]).filter(brClientP)
+    .map(p=>({id:p.id,nm:String(p.name||p.email||"").split("@")[0],mail:p.email||"",other:p.brand_id&&p.brand_id!==bid&&brands[p.brand_id]?brands[p.brand_id].name:""}))
+    .filter(p=>!q||p.nm.toLowerCase().includes(q)||p.mail.toLowerCase().includes(q))
+    .sort((a,b)=>a.nm.localeCompare(b.nm));
+  const line=p=>`<div class="brl-pl${on.has(p.id)?" on":""}" data-uid="${escAttr(p.id)}" onclick="acMenuPick(event,'${escAttr(p.id)}')">
+      <span class="ck">${on.has(p.id)?"✓":""}</span><span class="em"></span><span class="nm">${escHtml(p.nm)}</span>${p.other?`<span class="rl">${escHtml(p.other)}</span>`:""}</div>`;
+  const here=all.filter(p=>on.has(p.id)), rest=all.filter(p=>!on.has(p.id));
+  let list="";
+  if(here.length) list+=`<div class="fb-sec">Clients on ${escHtml(brands[bid].name)}</div>`+here.map(line).join("");
+  if(rest.length) list+=`<div class="fb-sec">${here.length?"Other clients":"Clients"}</div>`+rest.map(line).join("");
+  if(!all.length) list=`<div class="ac-clnone">${q?`Nobody called “${escHtml(AC_MQ.trim())}”.`:"No client accounts yet."}</div>`;
+  let m=document.getElementById("ac-menu");
+  if(!m){ m=document.createElement("div"); m.id="ac-menu"; m.className="brl-menu stm brl-owners ac-menu"; m.onclick=ev=>ev.stopPropagation(); document.body.appendChild(m); }
+  const box=document.getElementById("ac-mq"), at=box?box.selectionStart:null;
+  m.innerHTML=`<div class="bp-q"><i class="ti ti-search"></i><input id="ac-mq" placeholder="Find a client…" value="${escAttr(AC_MQ)}"
+      oninput="AC_MQ=this.value;acMenuDraw()" onkeydown="if(event.key==='Escape')acMenuClose()" onclick="event.stopPropagation()"></div>
+    <div class="brl-pls">${list}</div>
+    <div class="ac-clft">New client? <a onclick="acMenuClose();window.open('app.html#people','_blank')">Invite in CC Platform → People &amp; access</a></div>`;
+  const a=AC_MENU.anchor;
+  if(a){ const W=300, H=m.getBoundingClientRect().height;
+    let left=Math.min(Math.max(8,a.left),window.innerWidth-W-8), top=a.bottom+4;
+    if(top+H>window.innerHeight-8) top=Math.max(8,a.top-H-4);
+    m.style.left=left+"px"; m.style.top=top+"px"; }
+  const b2=document.getElementById("ac-mq");
+  if(b2){ b2.focus(); if(at!=null){ try{ b2.setSelectionRange(at,at); }catch(err){} } }
+}
+(function(){
+  const baseDraw=acMenuDraw;
+  acMenuDraw=function(first){
+    if(AC_MENU&&AC_MENU.kind==="clients") return acClDraw(first);
+    return baseDraw.apply(this,arguments);
+  };
+  const basePick=acMenuPick;
+  acMenuPick=async function(e,uid){
+    if(AC_MENU&&AC_MENU.kind==="clients"){
+      if(e){ e.preventDefault(); e.stopPropagation(); }
+      const bid=AC_MENU.bid, on=brClientsOf(bid).some(p=>p.id===uid);
+      await acSee(uid,bid,!on);
+      if(AC_MENU) acMenuDraw();
+      return;
+    }
+    return basePick.apply(this,arguments);
+  };
+})();
 </script>
 </body>
 </html>
