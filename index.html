@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.79 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.81 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12538,7 +12538,7 @@ function msgHtml(m,o){
      claims the client wrote it. The database refuses a client message
      with no entered_by, and this line is why. */
   const chg=taskReplyOf(m.body).chg;   /* V118.79 — a change note says how it was heard */
-  const by=chg&&m.entered_by?`<span class="th-by">· ${escHtml(DLV_HOW_WORD[chg.how]||"")}, recorded by ${escHtml(brPersonName(m.entered_by))}</span>`
+  const by=chg&&m.entered_by?`<span class="th-by">· recorded by ${escHtml(brPersonName(m.entered_by))}</span>`
     :client&&m.entered_by&&m.entered_by!==m.author_id?`<span class="th-by">· added by ${escHtml(brPersonName(m.entered_by))}, from a call</span>`:"";
   /* THE BRIEF IS NOT A MESSAGE. It is drawn at the top of every thread
      out of branding_tasks.brief and has no post_comments row at all, so
@@ -13897,7 +13897,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.79 Tbilisi";
+const TOOL_VERSION="V118.81 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -44245,6 +44245,7 @@ function buildIoSidebar(){
 .dlv-bar input{height:28px;border:1px solid var(--div);border-radius:8px;padding:0 9px;font:inherit;font-size:12.5px;min-width:180px;}
 .dlv-bar .as{font-size:12px;color:var(--muted);}
 .dlv-bar .x{margin-left:auto;width:26px;height:26px;border:none;background:transparent;color:var(--subtle);cursor:pointer;font-size:14px;}
+.dlv-bar.chg{border-color:#8A6D00;}.dlv-bar.chg > i{color:#8A6D00;font-size:15px;}
 /* deliver a message already in the thread */
 .dlv-mb{position:relative;}
 .dlv-menu{position:absolute;right:0;top:100%;z-index:40;background:#fff;border:1px solid var(--div);border-radius:10px;
@@ -44263,7 +44264,7 @@ function buildIoSidebar(){
 .dlv-c .d-act .ab.mail{border-color:#C9D6EA;color:#2B6CB0;}
 .dlv-ln{font-size:11px;color:var(--muted);margin-top:5px;display:flex;align-items:flex-start;gap:5px;line-height:1.35;}
 .dlv-ln i{font-size:12px;flex:none;margin-top:1px;}.dlv-ln > span{min-width:0;}
-.dlv-c .d-act .ab.mail{padding:0 7px;}.dlv-ln.mail{color:#2B6CB0;}.dlv-ln.filed{color:#1E6B2E;}
+.dlv-c .d-act .ab.mail{padding:0 8px;}.dlv-ln.mail{color:#2B6CB0;}.dlv-ln.filed{color:#1E6B2E;}
 .dlv-ln a,.dlv-ln .go{color:inherit;font-weight:700;text-decoration:underline;cursor:pointer;}
 #ov-dlv .modal.dlv-modal{max-width:620px;width:100%;}
 .dlv-form{display:grid;grid-template-columns:72px minmax(0,1fr);gap:10px 12px;align-items:start;padding:14px 22px 6px;}
@@ -44280,9 +44281,6 @@ function buildIoSidebar(){
 .dlv-chip.fixed{cursor:default;}
 .dlv-addr{flex:1;min-width:110px;border:none!important;height:26px;padding:0 6px!important;font-size:12.5px!important;}
 .dlv-hint{font-size:11.5px;color:var(--subtle);}
-.dlv-how{display:flex;gap:6px;flex-wrap:wrap;padding-top:3px;}
-.dlv-how span{border:1px solid var(--div);border-radius:999px;padding:4px 11px;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);background:#fff;}
-.dlv-how span.on{background:var(--text);color:#fff;border-color:var(--text);}
 .dlv-atts{display:grid;gap:5px;padding-top:2px;}
 .dlv-att{display:flex;align-items:center;gap:9px;border:1px solid var(--div);border-radius:9px;padding:6px 10px;font-size:12.5px;background:#fff;}
 .dlv-att .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;}
@@ -44321,8 +44319,10 @@ function buildIoSidebar(){
 .dlv-p{display:inline-flex;align-items:center;gap:4px;}
 .dlv-p::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;}
 .dlv-rn{flex:1;min-width:0;height:26px;border:1px solid var(--text);border-radius:7px;padding:0 7px;font:inherit;font-size:12.5px;font-weight:700;}
-.dlv-c .d-act{display:grid;grid-template-columns:1fr 1fr 30px;gap:5px;padding:0 11px 10px;align-items:center;}
-.dlv-c .d-act:not(:has(.ok)){grid-template-columns:30px;justify-content:end;}
+.dlv-c .d-act{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:0 11px 10px;align-items:center;}
+.dlv-c .d-act .ab.mail{grid-column:1/-1;background:#F7FAFE;}
+.dlv-c .d-top .dlv-mo{margin:-4px -6px 0 -2px;}
+.dlv-c .d-top .ab.more{height:24px;width:24px;border:none;background:transparent;}
 .dlv-c .ab{flex:1;height:30px;display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;border:1px solid var(--div);background:#fff;
   border-radius:8px;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;color:var(--text);padding:0 4px;min-width:0;}
 .dlv-c .ab i{font-size:14px;}
@@ -44621,13 +44621,15 @@ function dlvRailHtml(t){
       :`<span class="t">${escHtml(d.name)}</span>`;
     const meta=last?`<span class="vchip">v${last.version}</span>${escHtml(v38Day(last.created_at))}${dlvSender(last)?" · "+escHtml(dlvSender(last)):""}`
       :`not sent yet${d.due_date?" · due "+escHtml(v38Day(d.due_date)):""}`;
-    const act=open&&((last&&mayA)||mayE)?`<div class="d-act" onclick="event.stopPropagation()">
-        ${last&&mayA?`<button class="ab ok${last.status==="approved"?" on":""}" onclick="dlvApprove('${last.id}')" title="Approve v${last.version}"><i class="ti ti-check"></i>Approve</button>
+    /* V118.81 — Chirag, 21 Oct (mockup 10, B2): the client's answer is the pair on top,
+       "Email the client" is one wide button under it, Rename / Remove sit behind ⋯ in the corner */
+    const more=open&&mayE?`<span class="dlv-mo"><button class="ab more" onclick="dlvMore(event,'${d.id}')" title="Rename, remove"><i class="ti ti-dots"></i></button>
+          ${DLV_MORE===d.id?`<div class="dlv-menu" onclick="event.stopPropagation()"><div class="mi" onclick="dlvRenOpen('${d.id}')"><i class="ti ti-pencil"></i>Rename</div>
+            <div class="mi rm" onclick="dlvRemove('${d.id}')"><i class="ti ti-trash"></i>Remove</div></div>`:""}</span>`:"";
+    const act=open&&last&&(mayA||(mayE&&!brIsClient()))?`<div class="d-act" onclick="event.stopPropagation()">
+        ${mayA?`<button class="ab ok${last.status==="approved"?" on":""}" onclick="dlvApprove('${last.id}')" title="Approve v${last.version}"><i class="ti ti-check"></i>Approve</button>
         <button class="ab ch${last.status==="changes"?" on":""}" onclick="dlvChangesOpen('${last.id}')" title="Record the changes the client asked for on v${last.version}"><i class="ti ti-arrow-back-up"></i>Changes</button>`:""}
-        ${last&&mayE&&!brIsClient()?`<button class="ab mail" onclick="dlvMailOpen('${last.id}')" title="Draft the email in your Outlook, file attached"><i class="ti ti-mail"></i></button>`:""}
-        ${mayE?`<span class="dlv-mo"><button class="ab more" onclick="dlvMore(event,'${d.id}')" title="Rename, remove"><i class="ti ti-dots"></i></button>
-          ${DLV_MORE===d.id?`<div class="dlv-menu"><div class="mi" onclick="dlvRenOpen('${d.id}')"><i class="ti ti-pencil"></i>Rename</div>
-            <div class="mi rm" onclick="dlvRemove('${d.id}')"><i class="ti ti-trash"></i>Remove</div></div>`:""}</span>`:""}
+        ${mayE&&!brIsClient()?`<button class="ab mail" onclick="dlvMailOpen('${last.id}')" title="Draft the email in your Outlook, file attached"><i class="ti ti-mail"></i>Email the client</button>`:""}
       </div>`:"";
     const ver=open&&vs.length?`<div class="d-vers" onclick="event.stopPropagation()"><div class="lbl">Versions</div>
         ${vs.slice().reverse().map(v=>`<div class="vr"><span class="vchip">v${v.version}</span><span class="dt">${escHtml(v38Day(v.created_at))}</span>
@@ -44635,7 +44637,7 @@ function dlvRailHtml(t){
           ${v.message_id?`<span class="go" onclick="dlvJump('${escAttr(v.message_id)}')" title="Go to the message"><i class="ti ti-arrow-up-right"></i></span>`:`<span></span>`}</div>`).join("")}
       </div>`:"";
     return `<div class="dlv-c${vs.length?"":" todo"}${open?" open":""}" onclick="dlvCardToggle('${d.id}')">
-      <div class="d-top">${nm}<span class="dlv-p s-${st}">${DLV_WORD[st]}</span></div>
+      <div class="d-top">${nm}<span class="dlv-p s-${st}">${DLV_WORD[st]}</span>${more}</div>
       <div class="d-meta">${meta}</div>${open?dlvExtraHtml(last):""}${act}${ver}</div>`;
   }).join("");
   return `<div class="dlv-rail">
@@ -44722,6 +44724,7 @@ function dlvJump(mid){
 function dlvMode(tid){ DLV_PICK=tid?{tid,did:(dlvFor(tid)[0]||{}).id||"__new",name:""}:null; render(); }
 function dlvPickSet(v){ if(!DLV_PICK) return; DLV_PICK.did=v; render(); if(v==="__new") setTimeout(()=>{ const i=document.getElementById("dlv-pn"); if(i) i.focus(); },40); }
 function dlvBarHtml(t){
+  if(DLV_CHG&&DLV_CHG.tid===t.id) return dlvChgBarHtml(t);   /* V118.81 — the Changes bar lives in the same slot */
   if(!DLV_PICK||DLV_PICK.tid!==t.id) return "";   /* V118.77 — Chirag, 20 Oct: the hover row's Deliver is enough */
   const ds=dlvFor(t.id), did=DLV_PICK.did, d=ds.find(x=>x.id===did);
   const next=d?((dlvVers(d.id).length?Math.max(...dlvVers(d.id).map(v=>v.version)):0)+1):1;
@@ -44736,6 +44739,7 @@ function dlvBarHtml(t){
   const base=taskPost;
   taskPost=async function(){
     const t=brTask();
+    if(DLV_CHG&&t&&DLV_CHG.tid===t.id) return dlvChangesGo();   /* V118.81 — the Changes bar is on: this message is the client's */
     const pick=DLV_PICK&&t&&DLV_PICK.tid===t.id?{...DLV_PICK}:null;
     if(!pick||!DLV.ok) return base.apply(this,arguments);
     if(!brMayWriteClient(t)){ toast("Only the Ac Manager delivers to the client","err"); return; }
@@ -44753,8 +44757,7 @@ function dlvBarHtml(t){
     if(did==="__new"){ const d=await dlvCreate(t.id,pick.name); if(!d) return out; did=d.id; }
     const vrow=await dlvAddVersion(did,mine.id);
     if(vrow){ DLV_PICK=null; DLV_OPEN=did; }
-    render();
-    if(vrow&&!brIsClient()) dlvMailOpen(vrow.id);   /* V118.79 — the email, drafted in Outlook */
+    render();   /* V118.80 — Chirag, 21 Oct: the email is its own step (the Email button on the card), not part of Deliver */
     return out;
   };
 })();
@@ -44769,8 +44772,7 @@ async function dlvMsgPick(mid,did){
   DLV_MP=null;
   const vrow=await dlvAddVersion(did,mid);
   if(vrow) DLV_OPEN=did;
-  render();
-  if(vrow&&!brIsClient()) dlvMailOpen(vrow.id);   /* V118.79 */
+  render();   /* V118.80 — no Outlook box here either; Email is on the card */
 }
 document.addEventListener("click",e=>{
   if(DLV_MP&&!(e.target.closest&&e.target.closest(".dlv-mb"))){ DLV_MP=null; if(view==="branding") render(); }
@@ -44901,8 +44903,6 @@ function dlvRowsDress(){
        to the task. A newer approval replaces; deleting the task does not
        delete the filed copy. */
 const DLV_FN=SB_URL+"/functions/v1/delivery";
-const DLV_HOW=[["email","By email"],["call","On a call"],["whatsapp","On WhatsApp"],["person","In person"]];
-const DLV_HOW_WORD={email:"by email",call:"on a call",whatsapp:"on WhatsApp",person:"in person"};
 let DLV_BOX=null;                 // {kind:"mail"|"changes", vid, to:Set, cc:Set, how, files:[]}
 async function dlvCall(action,body){
   const {data:{session}}=await sb.auth.getSession();
@@ -44946,7 +44946,7 @@ function dlvBox(html){
   openM("dlv");
 }
 function dlvBoxClose(){ DLV_BOX=null; closeM("dlv"); }
-function dlvBoxPaint(){ const b=document.getElementById("dlv-body"); if(b&&DLV_BOX) b.innerHTML=DLV_BOX.kind==="mail"?dlvMailHtml():dlvChangesHtml(); }
+function dlvBoxPaint(){ const b=document.getElementById("dlv-body"); if(b&&DLV_BOX) b.innerHTML=dlvMailHtml(); }
 function dlvVerOf(vid){ const v=DLV.vers.find(x=>x.id===vid); if(!v) return null; const d=DLV.list.find(x=>x.id===v.deliverable_id); const t=BR.tasks.find(x=>x.id===v.task_id); return d&&t?{v,d,t}:null; }
 function dlvAttached(v){ return v&&v.message_id?(assetsFor("message",v.message_id)||[]).filter(a=>!a.deleted_at&&a.kind!=="video"):[]; }
 function dlvAttHtml(list){
@@ -45034,57 +45034,63 @@ async function dlvMailGo(){
 }
 
 /* ── 2 · THE CLIENT ASKED FOR CHANGES ───────────────────────────────── */
+/* V118.81 — Chirag, 21 Oct: no pop-up. Changes puts a bar above the ordinary
+   message box ("Changes on Creative tag v1 · said by …"); the words, and any
+   marked-up file, go through the box like any message, and land on the
+   client's side as the client's message carrying the delivery tag. */
+let DLV_CHG=null;                 // {tid, vid, who} while the Changes bar is up
 async function dlvChangesOpen(vid){
   const x=dlvVerOf(vid); if(!x||!dlvMayAnswer(x.t)) return;
   if(brIsClient()){ dlvAnswer(vid,"changes"); return; }   /* a client pressing it IS the client's word */
   if(typeof ctEnsure==="function"&&!(CT.bid===activeBrand&&CT.ok)) await ctEnsure();
   const rows=(CT.bid===activeBrand&&CT.ok)?ctRows():[];
-  DLV_BOX={kind:"changes",vid,words:"",how:"email",who:rows.length?rows[0].id:"",files:[],busy:false};
-  dlvBox(dlvChangesHtml());
-  setTimeout(()=>{ const n=document.getElementById("dlv-words"); if(n) n.focus(); },40);
+  DLV_PICK=null; TASK_REPLY=null;
+  DLV_CHG={tid:x.t.id,vid,who:rows.length?rows[0].id:""};
+  BR_TAB="client"; render();
+  setTimeout(()=>{ const b=document.getElementById("th-in"); if(b) b.focus(); },60);
 }
-function dlvChangesHtml(){
-  const B=DLV_BOX, x=dlvVerOf(B.vid); if(!x) return "";
+function dlvChgOff(){ DLV_CHG=null; render(); }
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&DLV_CHG&&e.target&&e.target.id==="th-in"){ e.preventDefault(); dlvChgOff(); } },true);
+function dlvChgBarHtml(t){
+  const x=dlvVerOf(DLV_CHG.vid); if(!x) return "";
   const rows=(CT.bid===activeBrand&&CT.ok)?ctRows():[];
-  return `<div class="modal-top"><div><div class="modal-title">Changes on ${escHtml(x.d.name)} v${x.v.version}</div>
-      <div class="modal-sub">${escHtml(x.t.title||"")}</div></div>
-      <button class="modal-x" onclick="dlvBoxClose()">✕</button></div>
-    <div class="modal-body dlv-form">
-      <label>Their words</label>
-      <textarea id="dlv-words" rows="6" placeholder="Paste their email or type it" oninput="DLV_BOX.words=this.value">${escHtml(B.words)}</textarea>
-      <label>Said by</label><select class="cc-stsel" id="dlv-who" onchange="DLV_BOX.who=this.value">
-        ${rows.map(r=>`<option value="${escAttr(r.id)}"${B.who===r.id?" selected":""}>${escHtml(r.name)}${r.title?" · "+escHtml(r.title):""}</option>`).join("")}
-        <option value=""${!B.who?" selected":""}>The client</option></select>
-      <label>Heard</label><div class="dlv-how">${DLV_HOW.map(([k,w])=>`<span class="${B.how===k?"on":""}" onclick="DLV_BOX.how='${k}';dlvBoxPaint()">${w}</span>`).join("")}</div>
-      <label>Their file</label><div class="dlv-atts">
-        ${B.files.map((f,i)=>`<div class="dlv-att">${bfIcon(f.name)}<span class="n">${escHtml(f.name)}</span><small>${escHtml(kbmb(f.size))}</small><span class="x" onclick="DLV_BOX.files.splice(${i},1);dlvBoxPaint()">✕</span></div>`).join("")}
-        <label class="dlv-pick"><input type="file" multiple style="display:none" onchange="DLV_BOX.files.push(...this.files);dlvBoxPaint()"><i class="ti ti-paperclip"></i>Attach a file</label></div>
-    </div>
-    <div class="modal-foot dlv-foot"><span class="dlv-hint">Goes into the thread as the client's words</span>
-      <button class="btn btn-g" onclick="dlvBoxClose()">Cancel</button>
-      <button class="btn btn-p" onclick="dlvChangesGo()"${B.busy?" disabled":""}>${B.busy?"Recording…":"Record changes"}</button></div>`;
+  return `<div class="dlv-bar on chg"><i class="ti ti-arrow-back-up"></i><b>Changes on ${escHtml(x.d.name)} v${x.v.version}</b>
+    <span class="as">said by</span><select class="cc-stsel" onchange="DLV_CHG.who=this.value">
+      ${rows.map(r=>`<option value="${escAttr(r.id)}"${DLV_CHG.who===r.id?" selected":""}>${escHtml(r.name)}</option>`).join("")}
+      <option value=""${!DLV_CHG.who?" selected":""}>The client</option></select>
+    <button class="x" onclick="dlvChgOff()" title="Not a change note">✕</button></div>`;
 }
 async function dlvChangesGo(){
-  const B=DLV_BOX; if(!B||B.kind!=="changes"||B.busy) return;
-  const x=dlvVerOf(B.vid); if(!x) return;
-  const words=String(B.words||"").trim();
-  if(!words&&!B.files.length){ toast("Type or paste what the client asked for","err"); return; }
+  const C=DLV_CHG; if(!C) return;
+  const x=dlvVerOf(C.vid); if(!x){ DLV_CHG=null; render(); return; }
+  const box=document.getElementById("th-in");
+  const words=box?rtValue(box):"";
+  const files=(TASK_STAGED||[]).slice();
+  if(!String(words||"").replace(/<[^>]*>/g,"").trim()&&!files.length){ toast("Paste or type what the client asked for","err"); return; }
   const rows=(CT.bid===activeBrand&&CT.ok)?ctRows():[];
-  const c=rows.find(r=>r.id===B.who)||null;
-  B.busy=true; dlvBoxPaint();
+  const c=rows.find(r=>r.id===C.who)||null;
   const row={
     id:"c"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36),
-    task_id:x.t.id, brand_id:x.t.brand_id, body:"[[chg:"+x.v.id+"|"+B.how+"]]"+escHtml(words).replace(/\n/g,"<br>"),
+    task_id:x.t.id, brand_id:x.t.brand_id, body:"[[chg:"+x.v.id+"]]"+words,
     author_kind:"client", author_name:c?c.name:"Client", author_email:c?(ctMail(c)||""):"", author_id:null,
     entered_by:ME.id||null, audience:"client", mentions:[]};
+  const keep=box?(box.isContentEditable?box.innerHTML:box.value):"";
+  if(box){ wDraftClear(box); rtClear(box); }
+  TASK_STAGED=[]; DLV_CHG=null;
+  const pend={...row,created_at:new Date().toISOString(),_pending:true};
+  if(TASK.id===x.t.id) TASK.msgs=(TASK.msgs||[]).concat([pend]);
+  TH_STICK=true; render();
   const r=await sb.from("post_comments").insert([row]);
-  if(r.error){ B.busy=false; dlvBoxPaint(); toast("Not recorded — "+escHtml(r.error.message),"err"); return; }
-  const files=B.files.slice();
-  dlvBoxClose();
+  if(r.error){
+    if(TASK.id===x.t.id) TASK.msgs=TASK.msgs.filter(m=>m.id!==row.id);
+    DLV_CHG=C; TASK_STAGED=files; render();
+    const b2=document.getElementById("th-in"); if(b2){ if(b2.isContentEditable) b2.innerHTML=keep; else b2.value=keep; }
+    toast("Not recorded — "+escHtml(r.error.message),"err"); return;
+  }
   await sb.from("deliverable_versions").update({changes_message_id:row.id}).eq("id",x.v.id);
   x.v.changes_message_id=row.id;
   await dlvAnswer(x.v.id,"changes");
-  if(TASK.id===x.t.id){ BR_TAB="client"; TH_STICK=true; await loadThread(x.t.id); render(); }
+  if(TASK.id===x.t.id){ TH_STICK=true; await loadThread(x.t.id); render(); }
   if(files.length){
     await uploadMany(files,{ownerKind:"message",ownerId:row.id,brandId:x.t.brand_id,master:true,taskId:x.t.id,
       onTick:()=>{ if(view==="branding"&&BR_OPEN) render(); }});
