@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.85 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.86 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -4138,6 +4138,38 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
 .prreset{color:var(--acc);font-weight:600;cursor:pointer;text-transform:none;letter-spacing:0;font-size:12px;}
 
 /* ══ THE PROMOTION, OPENED UNDER ITS ROW ═══════════════════════════ */
+/* V118.86 — opened like a task */
+.prpanel.pr-task{padding:0;}
+.prpanel .br-open.pr-open{background:transparent;box-shadow:none;padding:12px 16px 16px;border-bottom:0;}
+.pr-body{display:grid;grid-template-columns:minmax(0,1fr) 264px;column-gap:16px;align-items:start;margin-top:0;}
+.pr-rail{margin-top:12px;display:grid;gap:10px;}
+.pr-rail .prbox .prbb{padding:10px 13px;}
+.pr-open .th-sheet{margin-top:12px;}
+.pr-open .br-thread{max-height:min(62vh,600px);}
+.br-pin.pr .bx{display:block;-webkit-line-clamp:unset;overflow:visible;}
+.pr-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 14px;font-size:12.5px;}
+.pr-facts div b{display:block;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);font-weight:700;}
+.pr-words{margin-top:8px;font-size:13px;}
+.pr-crmsg{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--div);border-radius:10px;padding:7px 10px;margin-bottom:6px;cursor:pointer;max-width:460px;}
+.pr-crmsg .prtimg{width:44px;height:44px;border-radius:7px;background:#EDEBE6;display:grid;place-items:center;font-size:11px;font-weight:800;color:var(--muted);overflow:hidden;flex:none;}
+.pr-crmsg .prtimg img{width:100%;height:100%;object-fit:cover;}
+.pr-crmsg .tx{flex:1;min-width:0;display:grid;}.pr-crmsg .tx b{font-size:13px;}.pr-crmsg .tx small{color:var(--subtle);font-size:11.5px;}
+.pr-crmsg .go{font-size:11.5px;font-weight:700;color:var(--acc);}
+.pr-crlist{margin-top:12px;display:grid;gap:12px;}
+.pr-crgh{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;}
+.pr-cradd{margin-left:auto;font-weight:700;letter-spacing:0;text-transform:none;color:var(--acc);cursor:pointer;font-size:12px;}
+.pr-crline{display:grid;grid-template-columns:44px minmax(0,1fr) auto 100px;gap:12px;align-items:center;background:#fff;border:1px solid var(--div);border-radius:10px;padding:7px 12px;margin-bottom:6px;cursor:pointer;}
+.pr-crline:hover{border-color:#C9C8C3;}
+.pr-crline .prtimg{width:44px;height:44px;border-radius:7px;background:#EDEBE6;display:grid;place-items:center;color:var(--muted);overflow:hidden;}
+.pr-crline .prtimg img{width:100%;height:100%;object-fit:cover;}
+.pr-crline .tx{display:grid;min-width:0;}.pr-crline .tx b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.pr-crline .tx small{color:var(--subtle);font-size:11.5px;}
+.pr-crline .cm{font-size:12px;color:var(--muted);text-align:right;}
+.pr-rc{padding:6px 0;border-bottom:1px solid var(--div);cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;}
+.pr-rc:last-child{border-bottom:0;}.pr-rc .nm{font-weight:700;font-size:12.5px;}.pr-rc small{grid-column:1/-1;color:var(--subtle);font-size:11px;}
+.pr-brief{margin-top:12px;grid-template-columns:minmax(0,340px) minmax(0,1fr);}
+.pr-hist{font-size:12.5px;padding:4px 0;}
+.pr-main > .prbox{margin-top:12px;}
+@media (max-width:900px){ .pr-body{grid-template-columns:1fr;} }
 .prpanel{background:#f6f4f2;box-shadow:inset 3px 0 0 var(--acc);border-bottom:1px solid var(--div);
   padding:14px 16px 16px;}
 .prpanel:last-child{border-bottom:0;}
@@ -11519,12 +11551,36 @@ function brBriefPin(t){
   if(!b) return "";
   /* 10 Oct — BRIEF B: a card with a dark bar, so it can never be read
      as one more message, and a "Conversation" line under it. */
-  return `<div class="br-pin bb${BR_BRIEF_OPEN?" open":""}">
-    <div class="lbl">Brief<span class="act">${canEdit()?`<span onclick="event.stopPropagation();brOpenTask('${t.id}')">Edit</span>`:""}<span onclick="brBriefMore(event)">${BR_BRIEF_OPEN?"less":"more"}</span></span></div>
-    <div class="bx">${fbBody(b)}</div></div><div class="br-start">Conversation</div>`;
+  return `<div class="br-pin bb${BR_BRIEF_OPEN?" open":""}${t._promo?" pr":""}">
+    <div class="lbl">Brief<span class="act">${canEdit()?`<span onclick="event.stopPropagation();${t._promo?"prTab('brief')":`brOpenTask('${t.id}')`}">Edit</span>`:""}${t._promo?"":`<span onclick="brBriefMore(event)">${BR_BRIEF_OPEN?"less":"more"}</span>`}</span></div>
+    <div class="bx">${t._promo?b:fbBody(b)}</div></div><div class="br-start">Conversation</div>`;   /* V118.86 — a promotion's brief is drawn ready-made */
 }
 function brBriefMore(e){ if(e){ e.preventDefault(); e.stopPropagation(); } BR_BRIEF_OPEN=!BR_BRIEF_OPEN; render(); }
 
+/* V118.86 — the message box of a thread, drawn once for tasks and promotions */
+function thComposerHtml(t,aud,picked){
+  picked=picked||[];
+  return `
+    <div class="ccm-wrap" data-drop="task:">
+      ${aud==="client"&&JSR_PICK&&!brIsClient()?jsrPickHtml():""}
+      ${TASK_REPLY&&TASK.id===t.id?`<div class="tm-qbar">${TASK_REPLY.aid?taskReplyQuote(TASK_REPLY.aid,true):taskReplyQuoteMsg(TASK_REPLY.qmid,true)}<span class="x" onclick="taskReplyClear()" title="Not a reply">✕</span></div>`:""}
+      <div class="ccm">
+        ${brFace(ME.id,"ccm-av",brIsClient())}
+        <div id="th-in" class="ccw rt" contenteditable="true" data-ph="Write a message" data-att="${aud==="client"&&!brIsClient()?"taskc":"task"}"
+          data-draft="th-${escAttr(t.id)}${aud==="client"?"-c":""}"
+          onkeydown="if(mentionKeyNav(event))return;if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();taskPost();}"
+          oninput="fbMentionKey(event,'th-in',activeBrand,true)"
+          onfocus="rtFocus(this)" onblur="mpBarHide();setTimeout(closeMentionBox,150)"></div>
+        <button class="ccm-send" onclick="taskPost()" title="Post"><i class="ti ti-arrow-up"></i></button>
+      </div>
+      <input type="file" id="th-files" multiple style="display:none;" onchange="taskStageFiles(this.files)">
+      ${TASK_STAGED.length||(aud==="client"&&picked.length)?`<span class="stagedfs">${
+        TASK_STAGED.map((f,i)=>`<span class="stagedf" title="${escAttr(f.name)}"><span class="sfn">${escHtml(f.name)}</span>
+          <b>${kbmb(f.size)}</b><i onclick="taskUnstage(${i})" title="Remove">&times;</i></span>`).join("")
+        +(aud==="client"?picked.map(a=>`<span class="stagedf" title="${escAttr(a.filename||"")}"><span class="sfn">${escHtml(a.filename||"File")}</span>
+          <b>${kbmb(a.bytes)}</b><i onclick="jsrUnpick('${escAttr(a.id)}')" title="Remove">&times;</i></span>`).join(""):"")}</span>`:""}
+    </div>`;
+}
 function brOpenPanelHtml(t){
   const pj=brProject(t.project_id);
   const unread=brUnreadFor(t.id);
@@ -11558,26 +11614,7 @@ function brOpenPanelHtml(t){
      "Post as the client" went with it, on his word: clients get their own
      section later. The draft is kept per task by the shared draft store,
      so a re-render no longer needs TASK.draft to carry it. */
-  const composer=((tab==="talk"||tab==="client")&&writes)?`
-    <div class="ccm-wrap" data-drop="task:">
-      ${aud==="client"&&JSR_PICK&&!brIsClient()?jsrPickHtml():""}
-      ${TASK_REPLY&&TASK.id===t.id?`<div class="tm-qbar">${TASK_REPLY.aid?taskReplyQuote(TASK_REPLY.aid,true):taskReplyQuoteMsg(TASK_REPLY.qmid,true)}<span class="x" onclick="taskReplyClear()" title="Not a reply">✕</span></div>`:""}
-      <div class="ccm">
-        ${brFace(ME.id,"ccm-av",brIsClient())}
-        <div id="th-in" class="ccw rt" contenteditable="true" data-ph="Write a message" data-att="${aud==="client"&&!brIsClient()?"taskc":"task"}"
-          data-draft="th-${escAttr(t.id)}${aud==="client"?"-c":""}"
-          onkeydown="if(mentionKeyNav(event))return;if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();taskPost();}"
-          oninput="fbMentionKey(event,'th-in',activeBrand,true)"
-          onfocus="rtFocus(this)" onblur="mpBarHide();setTimeout(closeMentionBox,150)"></div>
-        <button class="ccm-send" onclick="taskPost()" title="Post"><i class="ti ti-arrow-up"></i></button>
-      </div>
-      <input type="file" id="th-files" multiple style="display:none;" onchange="taskStageFiles(this.files)">
-      ${TASK_STAGED.length||(aud==="client"&&picked.length)?`<span class="stagedfs">${
-        TASK_STAGED.map((f,i)=>`<span class="stagedf" title="${escAttr(f.name)}"><span class="sfn">${escHtml(f.name)}</span>
-          <b>${kbmb(f.size)}</b><i onclick="taskUnstage(${i})" title="Remove">&times;</i></span>`).join("")
-        +(aud==="client"?picked.map(a=>`<span class="stagedf" title="${escAttr(a.filename||"")}"><span class="sfn">${escHtml(a.filename||"File")}</span>
-          <b>${kbmb(a.bytes)}</b><i onclick="jsrUnpick('${escAttr(a.id)}')" title="Remove">&times;</i></span>`).join(""):"")}</span>`:""}
-    </div>`:"";
+  const composer=((tab==="talk"||tab==="client")&&writes)?thComposerHtml(t,aud,picked):"";
   /* V108.8 — NO stopPropagation HERE. Review, the lightbox and the video
      player are ONE delegated listener on `document`, so a panel that
      swallowed its own clicks silently disabled all three: Review did
@@ -12423,9 +12460,11 @@ async function loadThread(taskId){
   const same=TASK.id===taskId&&!TASK.loading&&!TASK.err;
   TASK=same?{...TASK,draft}:{id:taskId,msgs:[],acts:[],loading:true,err:"",asClient:false,draft};
   try{
+    /* V118.86 — a promotion's conversation lives on post_comments.promotion_id */
+    const col=(typeof PR_TASK!=="undefined"&&PR_TASK&&PR_TASK.id===taskId)?"promotion_id":"task_id";
     const [c,a]=await Promise.all([
-      sb.from("post_comments").select("*").eq("task_id",taskId).order("created_at"),
-      sb.from("post_activity").select("*").eq("task_id",taskId).order("created_at"),
+      sb.from("post_comments").select("*").eq(col,taskId).order("created_at"),
+      sb.from("post_activity").select("*").eq(col,taskId).order("created_at"),
     ]);
     const bad=[c,a].find(r=>r.error);
     if(bad){ if(!same) TASK={...TASK,loading:false,err:bad.error.message}; return; }
@@ -12497,7 +12536,7 @@ function brToggleOpen(e,id){
   openTaskScreen(id);
 }
 function brTabTo(e,k){ if(e){ e.preventDefault(); e.stopPropagation(); } BR_TAB=k; render(); }
-function brTask(){ return BR.tasks.find(t=>t.id===TASK.id)||null; }
+function brTask(){ return BR.tasks.find(t=>t.id===TASK.id)||((typeof PR_TASK!=="undefined"&&PR_TASK&&PR_TASK.id===TASK.id)?PR_TASK:null); }   /* V118.86 — an open promotion stands in as a task */
 
 /* ── the thread, with milestone dividers derived from the work ──────*/
 function threadHtml(t,msgs){
@@ -12593,8 +12632,8 @@ function msgHtml(m,o){
       <span class="th-kind${client?" cli":""}">${client?"Client":"Team"}</span>
       ${by}<span class="th-when">${when}${m.edited_at?" · edited":""}</span></div>`}
     <div class="tm-b">
-      ${rp.aid?taskReplyQuote(rp.aid):rp.mid?taskReplyQuoteMsg(rp.mid):rp.chg?dlvChgQuote(rp.chg):""}
-      ${String(rp.rest||"").replace(/<[^>]*>/g,"").trim()||/<img/i.test(rp.rest||"")
+      ${rp.aid?taskReplyQuote(rp.aid):rp.mid?taskReplyQuoteMsg(rp.mid):rp.chg?dlvChgQuote(rp.chg):rp.cr?prCrMsgCard(rp.cr):""}
+      ${!rp.cr&&(String(rp.rest||"").replace(/<[^>]*>/g,"").trim()||/<img/i.test(rp.rest||""))
         ?`<div class="th-t" title="${escAttr(when)}">${fbBody(rp.rest)}${o.cont&&m.edited_at?` <span class="tm-ed">· edited</span>`:""}</div>`:""}
       ${taskFilesHtml(m)
        +uploadLiveBlock("message",m.id)
@@ -12611,14 +12650,15 @@ function msgHtml(m,o){
    very start of its body, [[file:<asset id>]] — no new column, no
    migration. The thread draws it as a quote above the words, and the
    bell strips it. Editing a reply keeps it. */
-const TF_REPLY_RE=/^\[\[(file|msg|chg):([A-Za-z0-9-]+)(?:\|([a-z]+))?\]\]/;   /* V118.77 — [[msg:<id>]] quotes a message; V118.79 — [[chg:<version>|<how>]] is the client's change note */
+const TF_REPLY_RE=/^\[\[(file|msg|chg|creative):([A-Za-z0-9-]+)(?:\|([a-z]+))?\]\]/;   /* V118.86 — [[creative:<id>]] is a creative's card */   /* V118.77 — [[msg:<id>]] quotes a message; V118.79 — [[chg:<version>|<how>]] is the client's change note */
 function taskReplyOf(body){
   const s=String(body==null?"":body), mm=s.match(TF_REPLY_RE);
-  if(!mm) return {aid:null,mid:null,chg:null,rest:s};
+  if(!mm) return {aid:null,mid:null,chg:null,cr:null,rest:s};
   const rest=s.slice(mm[0].length);
-  if(mm[1]==="file") return {aid:mm[2],mid:null,chg:null,rest};
-  if(mm[1]==="msg") return {aid:null,mid:mm[2],chg:null,rest};
-  return {aid:null,mid:null,chg:{vid:mm[2],how:mm[3]||""},rest};
+  if(mm[1]==="file") return {aid:mm[2],mid:null,chg:null,cr:null,rest};
+  if(mm[1]==="msg") return {aid:null,mid:mm[2],chg:null,cr:null,rest};
+  if(mm[1]==="creative") return {aid:null,mid:null,chg:null,cr:mm[2],rest};
+  return {aid:null,mid:null,chg:{vid:mm[2],how:mm[3]||""},cr:null,rest};
 }
 /* what goes at the start of the body for the reply being written */
 function taskReplyMarker(r){ return !r?"":r.aid?"[[file:"+r.aid+"]]":r.qmid?"[[msg:"+r.qmid+"]]":""; }
@@ -12994,7 +13034,7 @@ async function taskPostInner(){
   const asClient=false, isClient=brIsClient();
   const row={
     id:"c"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36),
-    task_id:t.id, brand_id:activeBrand, body:rpl+body,
+    ...(t._promo?{promotion_id:t.id}:{task_id:t.id}), brand_id:activeBrand, body:rpl+body,   /* V118.86 */
     author_kind:(asClient||isClient)?"client":"team",
     author_name:asClient?"Client":actorName(),
     author_email:asClient?"":(ME.email||""),
@@ -13897,7 +13937,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.85 Tbilisi";
+const TOOL_VERSION="V118.86 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -29165,7 +29205,53 @@ function prSetSg(v){ PR.sg=v; render(); }
 /* ONE AT A TIME, Chirag's call: opening a second row closes the first,
    so the list stays short and you always know where you are. Clicking
    the open row again closes it. */
-function prOpen(id){ PR.open=(PR.open===id)?null:id; PR.creative=null; render(); }
+let PR_TASK=null;
+function prOpen(id){
+  PR.open=(PR.open===id)?null:id; PR.creative=null;
+  if(PR.open){ prTaskOpen(PR.open); }
+  render();
+}
+/* V118.86 — the promotion stands in as a task: the thread code reads it through brTask() */
+function prTaskOf(p){
+  return {id:p.id,_promo:true,title:p.name||"",brand_id:p.brand_id||activeBrand,owner_id:p.created_by||null,project_id:null,
+    status:"in_progress",brief:prBriefHtml(p),archived_at:null,created_at:p.created_at};
+}
+function prTaskOpen(pid){
+  const p=PR.list.find(x=>x.id===pid); if(!p) return;
+  PR_TASK=prTaskOf(p);
+  PR.tab=PR.tab||"talk"; BR_TAB="talk";
+  if(TASK_REPLY&&TASK.id!==pid) TASK_REPLY=null;
+  if(TASK.id!==pid){ TASK={id:pid,msgs:[],acts:[],loading:true,err:"",asClient:false,draft:""};
+    loadThread(pid).then(()=>{ if(TASK.id===pid&&view==="promotions") render(); }); }
+}
+function prTab(k){ PR.tab=k; if(k==="talk") BR_TAB="talk"; render(); }
+function prBriefHtml(p){
+  const seg=prSegOf(p), st=prStreams(p.id), tgt=prNumOr(p.target_value);
+  const facts=[["Objective",prObjLabel(p.objective_key)],["Target",tgt!==null?prFmt(tgt)+" "+escHtml(prUnit(p))+escHtml(prBasisTail(p)):""],
+    ["Target group",seg?escHtml(prSegLabel(seg)):""],["Runs",prIsOngoing(p)?"Ongoing"+(p.starts_on?" from "+escHtml(prShort(p.starts_on)):""):[p.starts_on,p.ends_on].filter(Boolean).map(prShort).map(escHtml).join(" – ")],
+    ["Budget",prBudgetCell(p)],["Platforms",st.map(x=>escHtml((PR_PLAT[x.platform]||PR_PLAT.other).label)).join(", ")]].filter(x=>x[1]);
+  const words=String(p.goals||p.target_audience||"").trim();
+  return `<div class="pr-facts">${facts.map(([k,v])=>`<div><b>${k}</b>${v}</div>`).join("")}</div>${words?`<div class="pr-words">${wRender(words)}</div>`:""}`;
+}
+/* V118.86 — one line per creative on the Creatives tab (the listing rule) */
+function prCrLine(c){
+  const src=prCrThumb(c), st=PR_CST[c.status]||PR_CST.drafting, n=(PR.crc[c.id]||[]).length;
+  const who=c.created_by?bfWho(c.created_by):"";
+  return `<div class="pr-crline" onclick="event.stopPropagation();prCrOpen('${escAttr(c.promotion_id)}','${escAttr(c.id)}')">
+    <span class="prtimg"${src?` data-sign="${escAttr(src)}"`:""}>${src?"":'<i class="ti ti-photo"></i>'}</span>
+    <span class="tx"><b>${escHtml(c.title||"Untitled")}</b><small>${escHtml(c.format||"")}${who?" · "+escHtml(who):""}${c.created_at?" · "+escHtml(fmtShort(c.created_at)):""}</small></span>
+    <span class="prcst"><i style="background:${st[1]}"></i>${st[0]}</span>
+    <span class="cm">${n?n+(n===1?" comment":" comments"):"—"}</span></div>`;
+}
+function prCrMsgCard(cid){
+  const c=PR.cr.find(x=>x.id===cid);
+  if(!c) return `<div class="tm-q tm-qm"><span>A creative that has been removed</span></div>`;
+  const src=prCrThumb(c), st=PR_CST[c.status]||PR_CST.drafting;
+  return `<div class="pr-crmsg" onclick="event.stopPropagation();prCrOpen('${escAttr(c.promotion_id)}','${escAttr(c.id)}')">
+    <span class="prtimg"${src?` data-sign="${escAttr(src)}"`:""}>${src?"":'<i class="ti ti-photo"></i>'}</span>
+    <span class="tx"><b>${escHtml(c.title||"Untitled")}</b><small>${escHtml(prCrPlat(c))} · ${escHtml(c.format||"")}</small></span>
+    <span class="prcst"><i style="background:${st[1]}"></i>${st[0]}</span><span class="go">Open ↗</span></div>`;
+}
 function prBack(){ PR.creative=null; render(); }
 
 /* ── the list ─────────────────────────────────────────────────────── */
@@ -29517,8 +29603,7 @@ function prPanelHtml(p){
           ${auds.length?auds.map(a=>prAudLine(a,canEditP)).join("")
             :`<div class="audnone">No audience yet</div>`}
           ${canEditP?`<span class="praddchip" onclick="prAudAdd('${escAttr(x.id)}')"><i class="ti ti-plus"></i>Audience</span>`:""}
-          <div class="prthumbs">${crs.map(c=>prCrTile(c)).join("")}
-            ${canCap("edit_ad_creatives")?`<span class="prmini" onclick="prCrNew('${p.id}','${x.id}')"><i class="ti ti-plus"></i>${crs.length?"":" Add creative"}</span>`:""}</div>
+          ${/* V118.86 — creatives moved to their own tab; the platform row keeps its audiences */""}
         </div>
       </div>`;
     }).join(""):`<div class="prprow empty"><span class="nsdim">No platform on this promotion yet</span></div>`}
@@ -29551,11 +29636,50 @@ function prPanelHtml(p){
       g.at?" · "+escHtml(prShort(String(g.at).slice(0,10))):""}</div>
     <div class="prbtns">
       ${canOut?`<button class="prmini" onclick="prProgOpen('${p.id}')">Update progress</button>`:""}
-      ${canEditP?`<button class="prmini acc" onclick="prTrash('${p.id}')"><i class="ti ti-trash"></i> Move to Trash</button>`:""}
     </div>
   </div></div>`;
 
-  return `<div class="prpanel"><div class="prcols3">${detail}<div>${plats}${months}</div>${sofar}</div></div>`;
+  /* ══ V118.86 · THE PROMOTION OPENS LIKE A TASK ════════════════════
+     Chirag, 22 Oct (mockups 01–03): the same shape every row opens into —
+     tabs, the thread in its sheet with the brief pinned, a rail on the
+     right. The setup form above is the Brief tab; the month table is the
+     Numbers tab; the creatives have a tab and a place in the rail. */
+  if(!PR_TASK||PR_TASK.id!==p.id) prTaskOpen(p.id);
+  const t=PR_TASK, tab=PR.tab||"talk";
+  const crs=prCrFor(p.id), nMsg=(TASK.id===p.id?(TASK.msgs||[]).length:0);
+  let body;
+  if(tab==="talk"){
+    if(TASK.id!==p.id||TASK.loading) body=`<div class="th-load">Loading the conversation…</div>`;
+    else if(TASK.err) body=`<div class="th-load">Could not load it — ${escHtml(TASK.err)}</div>`;
+    else body=`<div class="th-sheet"><div class="th-strip" onclick="thStripTop(event)"><span class="k">Brief</span><span class="tx">${escHtml(thBriefWords(t))}</span><span class="go"><i class="ti ti-arrow-up"></i> Back to brief</span></div>
+      <div class="br-thread">${brBriefPin(t)}${threadHtml(t,brMsgsFor("team"))}</div>${canComment()?thComposerHtml(t,"team",[]):""}</div>`;
+  } else if(tab==="creatives"){
+    body=`<div class="pr-crlist">${st.length?st.map(x=>{ const list=prCrFor(p.id,x.id);
+      return `<div class="pr-crgrp"><div class="pr-crgh">${escHtml((PR_PLAT[x.platform]||PR_PLAT.other).label)} · ${list.length}${
+          canCap("edit_ad_creatives")?`<span class="pr-cradd" onclick="prCrNew('${p.id}','${x.id}')"><i class="ti ti-plus"></i> Creative</span>`:""}</div>
+        ${list.length?list.map(c=>prCrLine(c)).join(""):`<div class="nsdim" style="font-size:12.5px">Nothing yet</div>`}</div>`; }).join("")
+      :`<div class="nsdim" style="padding:8px 2px">Add a platform under Brief first</div>`}</div>`;
+  } else if(tab==="brief"){
+    body=`<div class="prcols3 pr-brief">${detail}<div>${plats}</div></div>`;
+  } else if(tab==="numbers"){
+    body=months||`<div class="prbox"><div class="prbh">Figures</div><div class="prbb nsdim" style="padding:12px 13px;font-size:12.5px">${ong?"":"A one-off promotion keeps its figures in So far, on the right."}</div></div>`;
+  } else {
+    const acts=(TASK.id===p.id?(TASK.acts||[]):[]);
+    body=`<div class="prbox"><div class="prbh">History</div><div class="prbb">${acts.length?acts.map(a=>`<div class="pr-hist"><b>${escHtml(a.actor_name||"")}</b> ${escHtml(a.action||"")}<span class="nsdim"> · ${escHtml(fmtShort(a.created_at))}</span></div>`).join("")
+      :`<div class="nsdim" style="font-size:12.5px">Nothing yet</div>`}</div></div>`;
+  }
+  const railCr=`<div class="prbox"><div class="prbh">Creatives · ${crs.length}${canCap("edit_ad_creatives")&&st.length?`<i class="ti ti-plus prbx" title="Add a creative" onclick="prCrNew('${id}','${escAttr(st[0].id)}')"></i>`:""}</div>
+    <div class="prbb pr-railcr">${crs.length?crs.map(c=>{ const cs=PR_CST[c.status]||PR_CST.drafting;
+      return `<div class="pr-rc" onclick="prCrOpen('${id}','${escAttr(c.id)}')"><span class="nm">${escHtml(c.title||"Untitled")}</span><span class="prcst"><i style="background:${cs[1]}"></i>${cs[0]}</span><small>${escHtml(prCrPlat(c))} · ${escHtml(c.format||"")}</small></div>`; }).join("")
+      :`<div class="nsdim" style="font-size:12px">None yet</div>`}</div></div>`;
+  const T=(k,l)=>`<span class="${tab===k?"on":""}" onclick="event.stopPropagation();prTab('${k}')">${l}</span>`;
+  return `<div class="prpanel pr-task"><div class="br-open pr-open"><div class="br-in">
+    <div class="br-tabs">${T("talk","Conversation"+(nMsg?` · ${nMsg}`:""))}${T("creatives","Creatives"+(crs.length?` · ${crs.length}`:""))}${T("brief","Brief")}${T("numbers","Numbers")}${T("history","History")}
+      <span class="br-gap"></span>
+      <button class="br-ico" onclick="event.stopPropagation();prCopyLink('${id}')" title="Copy a link that opens this promotion" aria-label="Copy link"><i class="ti ti-link"></i></button>
+      ${canEditP?`<button class="br-ico" onclick="event.stopPropagation();prTrash('${id}')" title="Move to Trash" aria-label="Move to Trash"><i class="ti ti-trash"></i></button>`:""}</div>
+    <div class="pr-body"><div class="pr-main">${body}</div><div class="pr-rail">${sofar}${railCr}</div></div>
+  </div></div></div>`;
 }
 
 /* The chips inside an opened row write straight away — there is no
@@ -30157,8 +30281,12 @@ async function prCrCreate(pid,sid){
   if(r.error||!r.data||!r.data.length){ toast("Could not add it — "+(r.error?r.error.message:"not allowed"),"err"); btn.disabled=false; return; }
   const id=r.data[0].id;
   await prLog(id,"added the creative");
+  /* V118.86 — the creative lands in the promotion's conversation as a card */
+  try{ await sb.from("post_comments").insert([{id:"c"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36),
+    promotion_id:pid, brand_id:activeBrand, body:"[[creative:"+id+"]]"+escHtml(title),
+    author_kind:"team", author_name:actorName(), author_email:ME.email||"", author_id:ME.id||null, mentions:[]}]); }catch(e){}
   closeM("promo"); toast("Creative added");
-  PR.creative=id; PR.key=null; render();
+  PR.key=null; PR.tab="talk"; if(TASK.id===pid) loadThread(pid).then(()=>{ if(view==="promotions") render(); }); render();
 }
 async function prLog(cid,action){
   const r=await sb.from("post_activity").insert([{
@@ -44861,7 +44989,7 @@ function dlvMsgMenuHtml(mid,ds){
    whether you may react, whether the message is yours — so it cannot come
    to disagree with the row it replaces. */
 function capDress(th,t){
-  const mayD=dlvMayEdit(t), ds=dlvFor(t.id);
+  const mayD=!t._promo&&dlvMayEdit(t), ds=t._promo?[]:dlvFor(t.id);   /* V118.86 — no Deliver on a promotion's messages */
   th.querySelectorAll(".th-m.tm[data-mid]").forEach(m=>{
     if(m.querySelector(":scope > .cap")) return;
     const mid=m.getAttribute("data-mid"), q=escAttr(mid);
@@ -44879,6 +45007,12 @@ function capDress(th,t){
     m.insertAdjacentHTML("beforeend",`<div class="cap${open?" on":""}">${well}${rpb}${dlv}${ed}</div>`);
     if(open) setTimeout(()=>{ const i=document.getElementById("dlv-mn"); if(i&&!ds.length) i.focus(); },30);
   });
+}
+/* V118.86 — the hover row on a promotion's messages, from the same code the task uses */
+function prThreadDress(){
+  if(view!=="promotions"||!PR.open||!PR_TASK||PR_TASK.id!==PR.open||TASK.id!==PR.open||TASK.loading) return;
+  const th=document.querySelector("#main .pr-open .br-thread"); if(!th) return;
+  capDress(th,PR_TASK);
 }
 function dlvRowsDress(){
   if(view!=="branding"||!DLV.ok||DLV.brand!==activeBrand) return;
@@ -45150,6 +45284,7 @@ async function dlvApprove(vid){
 let V38_Q=false;
 function v38Soon(){ if(V38_Q) return; V38_Q=true; requestAnimationFrame(()=>{ V38_Q=false; v38Dress(); }); }
 function v38Dress(){
+  try{ prThreadDress(); }catch(e){ console.warn("[v118.86] promotion thread",e); }
   try{ chDress(); }catch(e){ console.warn("[v118.40] channels",e); }
   try{ finDress(); }catch(e){ console.warn("[v118.40] finals",e); }
   try{ dlvDress(); }catch(e){ console.warn("[v118.40] deliverables",e); }
@@ -45838,7 +45973,7 @@ function v44LinkWord(url){
   const base=brBriefPin;
   brBriefPin=function(t){
     const h=base.apply(this,arguments);
-    if(!h||BR_BRIEF_OPEN) return h;
+    if(!h||BR_BRIEF_OPEN||(t&&t._promo)) return h;   /* V118.86 — a promotion's brief is a fact card, never clamped */
     const words=String(wPlain((t&&t.brief)||"")).replace(/https?:\/\/[^\s<>"]+/g,u=>"["+v44LinkWord(u.replace(/[.,;:)\]]+$/,""))+"]").trim();
     const txt=escHtml(words).replace(/\n{2,}/g,"\n").replace(/\n/g,"<br>");
     return h.replace(/<div class="bx">[\s\S]*?<\/div><\/div><div class="br-start">/,()=>`<div class="bx v44-cl">${txt}</div></div><div class="br-start">`);
