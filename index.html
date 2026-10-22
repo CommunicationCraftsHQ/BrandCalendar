@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.84 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.85 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13897,7 +13897,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.84 Tbilisi";
+const TOOL_VERSION="V118.85 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -47979,6 +47979,117 @@ async function bsUpd(patch, id){
   if (!(r.data || []).length) return { error: { message: "you don't have the right to change this brand's target groups. Ask its account manager." }, data: [] };
   return r;
 }
+</script>
+<style>
+/* V118.85 — an influencer's details are edited in place */
+.bc-t input.bc-ce{height:30px;padding:0 8px;border:1px solid transparent;border-radius:7px;background:transparent;font:inherit;font-size:13.5px;color:var(--text);width:100%;min-width:0;box-sizing:border-box;}
+.bc-t input.bc-ce:hover{border-color:var(--div);background:#fff;}
+.bc-t input.bc-ce:focus{border-color:var(--acc);background:#fff;outline:none;}
+.bc-t input.bc-ce.nm{font-weight:700;font-size:14px;}
+.bc-t input.bc-ce.fl{font-weight:700;width:84px;}
+.bc-t input.bc-ce::placeholder{color:#B9B6AF;font-weight:400;}
+.bc-t td.w-nm .bc-nmw{display:flex;align-items:center;gap:10px;min-width:0;}
+.bc-t .bc-hw{display:flex;align-items:center;gap:2px;min-width:150px;}
+.bc-t .bc-hw a{color:var(--muted);font-size:15px;padding:0 4px;text-decoration:none;}
+.bc-t .bc-hw a:hover{color:var(--text);}
+.bc-t .bc-flk{font-weight:700;cursor:default;}
+</style>
+<script>
+/* ══ V118.85 TBILISI · AN INFLUENCER'S DETAILS ARE EDITED IN PLACE ════════
+   Chirag, 22 Oct (a team member's report): once a creator was on the
+   Strategy page, only Status could change. Pasting "Name - link" put the
+   whole line in the name and left the handle empty.
+   · Name, Handle, Followers and Category are typed in place; Enter or a
+     click away saves. Same people as Strategy (canEditVision).
+   · Handle takes @name or a full Instagram / YouTube link.
+   · "Name - link" splits itself when added by hand.
+   · Followers of a creator picked from Roster stay Roster's number. */
+/* initials skip a lone dash: "Minniee - Heels on Wheels" is MH, not M- */
+saInitials=function(n){ return String(n||"?").trim().split(/\s+/).filter(w=>/[A-Za-z0-9]/.test(w)).map(x=>x[0]||"").slice(0,2).join("").toUpperCase()||"?"; };
+function bcClean(t){ return String(t==null?"":t).replace(/[​-‍﻿ ]/g," ").replace(/\s+/g," ").trim(); }
+function bcLink(t){
+  const s=bcClean(t);
+  let m=s.match(/https?:\/\/(?:www\.|m\.)?instagram\.com\/([A-Za-z0-9._]+)\/?[^\s]*/i);
+  if(m&&!/^(p|reel|reels|stories|explore)$/i.test(m[1])) return {url:m[0],handle:m[1],platform:"instagram"};
+  m=s.match(/https?:\/\/(?:www\.|m\.)?youtube\.com\/(?:@|c\/|user\/)([A-Za-z0-9._-]+)[^\s]*/i);
+  if(m) return {url:m[0],handle:m[1],platform:"youtube"};
+  return null;
+}
+function bcParse(t){
+  const s=bcClean(t), l=bcLink(s);
+  if(l){ const name=bcClean(s.replace(l.url,"")).replace(/[\s\-–—|:,]+$/,"").replace(/^[\s\-–—|:,]+/,"").trim();
+    return {name, handle:l.handle, platform:l.platform}; }
+  if(/^@?[A-Za-z0-9._]+$/.test(s)&&(/^@/.test(s)||/[._]/.test(s)||/^[a-z0-9]+$/.test(s))) return {name:"", handle:s.replace(/^@/,""), platform:null};
+  return {name:s, handle:"", platform:null};
+}
+function bcFollowIn(v){
+  const s=bcClean(v).toLowerCase().replace(/,/g,""); if(!s||s==="—"||s==="-") return null;
+  const m=s.match(/^([\d.]+)\s*([km]|lakh|lac|l|cr)?$/); if(!m) return NaN;
+  const n=parseFloat(m[1]); if(isNaN(n)) return NaN;
+  const x={k:1e3,m:1e6,lakh:1e5,lac:1e5,l:1e5,cr:1e7}[m[2]]||1;
+  return Math.round(n*x);
+}
+function bcSet(id,f,el){
+  const r=BC.rows.find(x=>x.id===id); if(!r||!bcMay()) return;
+  const v=bcClean(el.value);
+  if(f==="name"){
+    if(v===(r.name||"")) return;
+    const p=bcParse(v);
+    if(p.handle&&p.name){ /* a link pasted into the name splits too */
+      return bcWrite(r,{name:p.name,handle:p.handle,platform:p.platform||r.platform||"instagram"},{name:r.name,handle:r.handle,platform:r.platform}); }
+    if(!v&&!r.handle){ el.value=r.name||""; return toast("A creator needs a name or a handle","err"); }
+    return bcWrite(r,{name:v},{name:r.name});
+  }
+  if(f==="handle"){
+    const l=bcLink(v), h=l?l.handle:v.replace(/^@/,"").replace(/\/+$/,"");
+    if(h===(r.handle||"")&&(!l||l.platform===r.platform)) { el.value=r.handle?"@"+r.handle:""; return; }
+    if(h&&!/^[A-Za-z0-9._-]+$/.test(h)){ el.value=r.handle?"@"+r.handle:""; return toast("That is not a handle — type @name or paste the profile link","err"); }
+    if(!h&&!r.name){ el.value=r.handle?"@"+r.handle:""; return toast("A creator needs a name or a handle","err"); }
+    return bcWrite(r,{handle:h,platform:l?l.platform:(r.platform||"instagram")},{handle:r.handle,platform:r.platform});
+  }
+  if(f==="followers"){
+    if(r.entry_id) return;
+    const n=bcFollowIn(v);
+    if(Number.isNaN(n)){ el.value=r.followers==null?"":saFollow(r.followers); return toast("Followers: a number like 12500, 12.5K or 1.2M","err"); }
+    if(n===(r.followers==null?null:Number(r.followers))) { el.value=n==null?"":saFollow(n); return; }
+    return bcWrite(r,{followers:n},{followers:r.followers});
+  }
+  if(f==="category"){
+    if(v===(r.category||"")) return;
+    return bcWrite(r,{category:v},{category:r.category});
+  }
+}
+(function(){
+  const base=bcRowHtml;
+  bcRowHtml=function(r){
+    if(!bcMay()) return base.apply(this,arguments);
+    const id=saA(r.id), st=BC_ST.find(s=>s[0]===r.status)||BC_ST[0], u=bcHandleUrl(r);
+    const inp=(f,val,ph,cls,extra)=>`<input class="vb-ce bc-ce${cls?" "+cls:""}" data-f="${f}" value="${saA(val)}" placeholder="${saA(ph)}"${extra||""}
+      onblur="bcSet('${id}','${f}',this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}else if(event.key==='Escape'){this.value=this.defaultValue;this.blur();}">`;
+    return `<tr data-bc="${id}">
+    <td class="w-nm"><span class="bc-nmw"><span class="bc-av">${saH(saInitials(r.name||r.handle))}</span><span class="bc-nm" style="display:none">${saH(r.name||r.handle)}</span>${inp("name",r.name||"","Name","nm")}</span></td>
+    <td><span class="bc-hw">${inp("handle",r.handle?"@"+String(r.handle).replace(/^@/,""):"","@handle or profile link")}${u?`<a href="${saA(u)}" target="_blank" rel="noopener" title="Open the profile"><i class="ti ti-brand-${r.platform==="youtube"?"youtube":"instagram"}"></i></a>`:""}</span></td>
+    <td class="bc-f">${r.entry_id?`<span class="bc-flk" title="Kept up to date by Roster">${saH(saFollow(r.followers))}</span>`:inp("followers",r.followers==null?"":saFollow(r.followers),"—","fl")}</td>
+    <td>${inp("category",r.category||"","Category")}</td>
+    <td><span class="bc-st ${st[0]}" title="Change" onclick="bcStatus('${id}')">${st[1]}</span></td>
+    <td class="vb-x"><button class="vb-del" title="Take this off" onclick="bcDel('${id}')">✕</button></td></tr>`;
+  };
+  bcAddHand=function(){
+    const q=bcClean(BC.q); if(!q) return;
+    const p=bcParse(q);
+    const row={name:p.name,handle:p.handle}; if(p.platform) row.platform=p.platform;
+    bcInsert(row);
+  };
+  /* a repaint while someone is typing in a cell keeps what they typed */
+  const basePaint=bcPaint;
+  bcPaint=function(){
+    const a=document.activeElement, cell=a&&a.classList&&a.classList.contains("bc-ce")?{id:a.closest("tr").dataset.bc,f:a.dataset.f,v:a.value,p:a.selectionStart}:null;
+    const out=basePaint.apply(this,arguments);
+    if(cell){ const n=document.querySelector(`tr[data-bc="${cell.id}"] input.bc-ce[data-f="${cell.f}"]`);
+      if(n){ n.value=cell.v; n.focus(); try{ n.setSelectionRange(cell.p,cell.p); }catch(e){} } }
+    return out;
+  };
+})();
 </script>
 </body>
 </html>
