@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.88 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.89 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -4206,6 +4206,9 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
 .pr-szbig .under .b{border:1px solid var(--div);border-radius:7px;padding:2px 9px;font-weight:700;font-size:11.5px;cursor:pointer;}.pr-szbig .under .b.dim{color:var(--subtle);}
 .pr-vers{margin-top:8px;font-size:11.5px;color:var(--muted);display:grid;gap:3px;}.pr-vers b{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);}.pr-vers .v{cursor:pointer;}.pr-vers u{color:var(--blue,#2B6CB0);cursor:pointer;}
 /* copy and lead form */
+.pr-asof{font-size:11px;color:var(--subtle,#8a8a8a);font-weight:400;white-space:nowrap;}
+.pr-asofl{display:block;margin-top:3px;font-size:11px;color:var(--subtle,#8a8a8a);font-weight:400;line-height:1.2;}
+.prgr .pr-asof{margin-left:2px;}
 .pr-form .prbh{display:flex;align-items:center;}.prbx-t{margin-left:auto;font-weight:700;letter-spacing:0;text-transform:none;color:var(--blue,#2B6CB0);cursor:pointer;font-size:12px;}
 .pr-formg{display:grid;grid-template-columns:140px minmax(0,1fr);gap:10px 14px;padding:12px 13px;align-items:start;}
 .pr-fk{font-size:12px;font-weight:600;color:var(--muted);padding-top:7px;}
@@ -13993,7 +13996,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.88 Tbilisi";
+const TOOL_VERSION="V118.89 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -28954,15 +28957,27 @@ function prProgress(p){
             target:r&&prNumOr(r.target_value)!==null?prNumOr(r.target_value):prNumOr(p.target_value),
             value:r?prNumOr(r.result_value):null,
             spend:r?prNumOr(r.spend):null,
-            at:r?(r.updated_at||r.entered_at):null};
+            at:r?(r.updated_at||r.entered_at):null,
+            resAt:r?prResAt(r):null, spdAt:r?prSpdAt(r):null, by:r?r.entered_by:null};   /* V118.89 — each figure knows its own day */
   }
-  let v=null,s=null,at=null;
+  let v=null,s=null,at=null,resAt=null,spdAt=null,by=null;
   (PR.months[p.id]||[]).forEach(m=>{
-    const x=prNumOr(m.result_value); if(x!==null) v=(v===null?0:v)+x;
-    const y=prNumOr(m.spend); if(y!==null) s=(s===null?0:s)+y;
-    const u=m.updated_at||m.entered_at; if(u&&(!at||String(u)>String(at))) at=u;
+    const x=prNumOr(m.result_value); if(x!==null){ v=(v===null?0:v)+x; const ra=prResAt(m); if(ra&&(!resAt||String(ra)>String(resAt))) resAt=ra; }
+    const y=prNumOr(m.spend); if(y!==null){ s=(s===null?0:s)+y; const sa=prSpdAt(m); if(sa&&(!spdAt||String(sa)>String(spdAt))) spdAt=sa; }
+    const u=m.updated_at||m.entered_at; if(u&&(!at||String(u)>String(at))){ at=u; by=m.entered_by; }
   });
-  return {label:"", target:prNumOr(p.target_value), value:v, spend:s, at};
+  return {label:"", target:prNumOr(p.target_value), value:v, spend:s, at, resAt, spdAt, by};
+}
+/* V118.89 — WHEN WAS THIS FIGURE ENTERED. Chirag, 22 Oct: the leads and
+   the spend on one row are often entered on different days, and a number
+   without its day cannot be trusted. result_at / spend_at are stamped
+   only when that figure changes; a row from before carries its one date. */
+function prResAt(m){ return m.result_at||m.updated_at||m.entered_at||null; }
+function prSpdAt(m){ return m.spend_at||m.updated_at||m.entered_at||null; }
+function prAsOf(at,by,lead){
+  if(!at) return "";
+  const who=by?brPersonName(by):"";
+  return `<span class="pr-asof" title="${escAttr((who?who+" · ":"")+prShort(String(at).slice(0,10)))}">${lead===false?"":"· "}as of ${escHtml(prShort(String(at).slice(0,10)))}</span>`;
 }
 function prBar(g){
   const pc=(g.target&&g.value!==null)?Math.min(100,Math.round(g.value/g.target*100)):0;
@@ -29701,13 +29716,13 @@ function prGroupRows(rows){
    switched off hands its piece to the heading, so nothing is lost. */
 function prGroupHeadHtml(g,tpl,cols){
   const n=g.rows.length;
-  let res=null; g.rows.forEach(p=>{ const v=prResultAll(p); if(v!==null) res=(res===null?0:res)+v; });
+  let res=null, oldest=null; g.rows.forEach(p=>{ const v=prResultAll(p); if(v!==null){ res=(res===null?0:res)+v; const a=prProgress(p).resAt; if(a&&(!oldest||String(a)<String(oldest))) oldest=a; } });   /* V118.89 — a total is only as fresh as its oldest figure */
   const unit=g.key?(prObjUnit(g.key)||"results"):"results";
   const label=g.key?prObjLabel(g.key):"No objective";
   const mark={prog:"res",budget:"bud",spent:"spd"};
   const piece={
     prog:  res===null?'<span class="nsdim">nothing recorded</span>'
-            :`<b>${prFmt(res)}</b> ${escHtml(unit)} so far`,
+            :`<b>${prFmt(res)}</b> ${escHtml(unit)} so far ${prAsOf(oldest)}`,
     budget:prBudgetRollHtml(g.rows,true),
     spent: prSpendTotal(g.rows)===null?'<span class="nsdim">—</span>'
             :prSpendRollHtml(g.rows)
@@ -29755,10 +29770,10 @@ function prCellHtml(p,k){
           ? '<span class="nsdim">No target</span>'
           : `${val!==null?`<b>${prFmt(val)}</b>`:'<span class="nsdim">—</span>'} of ${prFmt(tgt)}${
               prBasis(p)==="per_month"?' <span class="nsdim">this month</span>':""}`}</div>
-        <div class="prpgb"><i style="width:${pc}%"></i></div></div>`;
+        <div class="prpgb"><i style="width:${pc}%"></i></div>${val!==null&&g.resAt?`<small class="pr-asofl">${prAsOf(g.resAt,g.by,false)}</small>`:""}</div>`;
     }
     case "budget": return `<div class="prmn prbd">${prBudgetCell(p)}</div>`;
-    case "spent":  return `<div class="prmn">${g.spend!==null&&g.spend!==undefined?prMoney(g.spend,cur):'<span class="nsdim">—</span>'}</div>`;
+    case "spent":  return `<div class="prmn">${g.spend!==null&&g.spend!==undefined?prMoney(g.spend,cur)+(g.spdAt?`<small class="pr-asofl">${prAsOf(g.spdAt,g.by,false)}</small>`:""):'<span class="nsdim">—</span>'}</div>`;
     case "plats": {
       const st=prStreams(p.id);
       return `<div class="prdt">${st.length?st.map(x=>escHtml((PR_PLAT[x.platform]||PR_PLAT.other).label)).join(", "):'<span class="nsdim">—</span>'}</div>`;
@@ -29866,7 +29881,7 @@ function prPanelHtml(p){
     const ms=prMonths(p.id);
     const body=ms.length?ms.map(m=>`<tr><td style="text-align:left"><b>${escHtml(prMonthName(m.month_start))}</b></td>
         <td style="text-align:left">${prFmt(prNumOr(m.target_value)!==null?m.target_value:p.target_value)}</td>
-        <td>${prFmt(m.result_value)}</td><td>${prMoney(prNumOr(m.spend),cur)}</td>
+        <td>${prFmt(m.result_value)}${prNumOr(m.result_value)!==null?`<small class="pr-asofl">${prAsOf(prResAt(m),m.entered_by,false)}</small>`:""}</td><td>${prMoney(prNumOr(m.spend),cur)}${prNumOr(m.spend)!==null?`<small class="pr-asofl">${prAsOf(prSpdAt(m),m.entered_by,false)}</small>`:""}</td>
         <td style="text-align:left" class="nsdim">${escHtml(m.note||"—")}</td>
         <td>${canOut?`<a class="prlink" href="javascript:void 0" onclick="prProgOpen('${p.id}','${m.month_start}')">Update</a>`:""}</td></tr>`).join("")
       :`<tr><td colspan="6" class="nsdim">Nothing recorded yet</td></tr>`;
@@ -29883,9 +29898,9 @@ function prPanelHtml(p){
     <div class="prbig">${val!==null?`<b>${prFmt(val)}</b>`:'<b class="nsdim">—</b>'}
       <span class="nsdim">${tgt===null?"no target":"of "+prFmt(tgt)+" "+escHtml(prUnit(p))+prBasisTail(p)}</span></div>
     <div class="prpgb" style="margin:9px 0 11px"><i style="width:${pc}%"></i></div>
+    ${val!==null&&g.resAt?`<div class="nsdim" style="font-size:12px;margin-top:-6px;margin-bottom:8px">${prAsOf(g.resAt,g.by,false)}</div>`:""}
     <div class="nsdim" style="font-size:12.5px">${g.spend!==null&&g.spend!==undefined
-      ? prMoney(g.spend,cur)+" spent" : "Nothing spent yet"}${
-      g.at?" · "+escHtml(prShort(String(g.at).slice(0,10))):""}</div>
+      ? prMoney(g.spend,cur)+" spent "+prAsOf(g.spdAt,g.by) : "Nothing spent yet"}</div>
     <div class="prbtns">
       ${canOut?`<button class="prmini" onclick="prProgOpen('${p.id}')">Update progress</button>`:""}
     </div>
@@ -30463,9 +30478,14 @@ async function prProgSave(){
               spend:num(g("pg-spend")), note:g("pg-note").value.trim()};
   const btn=g("pg-save"); btn.disabled=true;
   try{
-    const cur=prMonthRow(p.id,ms);
+    const cur=prMonthRow(p.id,ms), now=new Date().toISOString();
+    /* V118.89 — each figure keeps its own day: stamped only when it changes */
+    const stamp={};
+    if(!cur||prNumOr(cur.result_value)!==vals.result_value) stamp.result_at=vals.result_value===null?null:now;
+    if(!cur||prNumOr(cur.spend)!==vals.spend) stamp.spend_at=vals.spend===null?null:now;
+    Object.assign(vals,stamp);
     if(cur){
-      const r=await sb.from("promotion_months").update({...vals,entered_by:ME.id,updated_at:new Date().toISOString()}).eq("id",cur.id).select("id");
+      const r=await sb.from("promotion_months").update({...vals,entered_by:ME.id,updated_at:now}).eq("id",cur.id).select("id");
       if(r.error) throw new Error(r.error.message);
       if(!r.data||!r.data.length) throw new Error("Not saved — your access may have changed");
     }else{
