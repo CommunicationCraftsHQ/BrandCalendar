@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.89 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.90 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13996,7 +13996,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.89 Tbilisi";
+const TOOL_VERSION="V118.90 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -34667,7 +34667,16 @@ window.prSegOpen=function(){ pbOpen("seg"); };
   /* ── talking points ── */
   const tpKey = () => { const b = (typeof brands === "object" && brands) ? brands[VB.key] : null;
     return ((b && b.brief && Array.isArray(b.brief.talking)) ? b.brief.talking : []).map(t => String(t || "").trim()).filter(Boolean); };
-  window.tgTpToggle = function(id){ VB.open = VB.open || {}; VB.open[id] = !VB.open[id]; vbPaint(); };
+  /* V118.90 — ONE VIEW. Chirag, 22 Oct (mockup 06, option D): the section's
+     Open / Collapse is gone. Every row is one line with its "+" doors; click
+     the row and only that row unfolds — notes, the rest of the objectives,
+     the talking points. One row open at a time, like a promotion. */
+  window.tgTpToggle = function(id){ const was = !!(VB.open && VB.open[id]); VB.open = {}; if (!was) VB.open[id] = true; vbPaint(); };
+  window.tgRowClick = function(ev, id){
+    if (ev && ev.target && ev.target.closest && ev.target.closest("input,select,button,a,textarea,.vb-plus,.tg-x,.sx-grip,.tg-segbtn,.vb-del,[contenteditable]")) return;
+    const sel = window.getSelection && window.getSelection(); if (sel && String(sel).length) return;
+    tgTpToggle(id);
+  };
   /* V118.84 — what is typed in the new line, per row, so a repaint
      (another save, a reload) does not wipe a half-typed point */
   VB.tpDraft = VB.tpDraft || {};
@@ -34721,6 +34730,22 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     const id = escA(r.id), n = (r.talking_points || []).length, op = !!(VB.open && VB.open[r.id]);
     const objs = (r.objective_keys || []);
     const edit = may();
+    if (!op) {   /* V118.90 — the closed line: chips, and a small door where something can be added */
+      const Lc = segsOf(r);
+      const objC = `<div class="tg-lines tg-flat">${objs.map(k => `<span class="vb-inf tg-obj">${edit
+          ? `<b>${esc(vbObjWords(k).label)}<i class="tg-x" title="Take it off" onclick="event.stopPropagation();tgObjOff('${id}','${escA(k)}')">×</i></b>`
+          : `<b class="ro">${esc(vbObjWords(k).label)}</b>`}</span>`).join("")}${edit ? `<span class="vb-plus tg-pl" title="Add an objective" onclick="tgObjOpen(event,'${id}')">${objs.length ? "+" : "+ objective"}</span>` : (objs.length ? "" : `<span class="nsdim">—</span>`)}</div>`;
+      const segC = `<div class="tg-lines tg-flat">${Lc.map((w, i) => `<span class="vb-inf tg-seg">${edit
+          ? `<b>${esc(w)}<i class="tg-x" title="Take it off" onclick="event.stopPropagation();tgSegOff('${id}',${i})">×</i></b>`
+          : `<b class="ro">${esc(w)}</b>`}</span>`).join("")}${edit ? `<span class="vb-plus tg-pl" onclick="tgSegOpen(event,'${id}')">${Lc.length ? "+" : "+ segment"}</span>` : (Lc.length ? "" : `<span class="nsdim">—</span>`)}</div>`;
+      const tpC = `<span class="a3-tp${n ? "" : " none"}" onclick="tgTpToggle('${id}')">${n ? n + " point" + (n > 1 ? "s" : "") : (edit ? "+ points" : "None")}</span>`;
+      return `<tr data-tg="${id}" class="tg-c" onclick="tgRowClick(event,'${id}')">
+        <td class="w-grp">${edit && typeof sxGrip === "function" ? sxGrip("tg") : ""}${edit ? grpSel(r.segment_key, `tgGrp('${id}',this.value)`) : `<span class="vb-ro">${esc(mlabel(VB.segs, r.segment_key))}</span>`}</td>
+        <td class="w-seg">${segC}</td>
+        <td>${objC}</td>
+        <td class="w-tp">${tpC}</td>
+        <td class="vb-x">${edit ? `<button class="vb-del" title="Take this off" onclick="vbSegDel('${id}')">✕</button>` : ""}</td></tr>`;
+    }
     const objCell = `<div class="tg-lines">${objs.map((k, i) => `<div class="tg-ln"><span class="vb-inf tg-obj">${edit
         ? `<b>${esc(vbObjWords(k).label)}<i class="tg-x" title="Take it off" onclick="event.stopPropagation();tgObjOff('${id}','${escA(k)}')">×</i></b>`
         : `<b class="ro">${esc(vbObjWords(k).label)}</b>`}</span>${noteBox(r, "o", i, k)}</div>`).join("")}${edit ? `<div class="tg-ln vb-inf"><span class="vb-plus" onclick="tgObjOpen(event,'${id}')">+ objective</span></div>` : (objs.length ? "" : `<span class="nsdim">—</span>`)}</div>`;
@@ -34729,13 +34754,13 @@ window.prSegOpen=function(){ pbOpen("seg"); };
         ? `<b>${esc(w)}<i class="tg-x" title="Take it off" onclick="event.stopPropagation();tgSegOff('${id}',${i})">×</i></b>`
         : `<b class="ro">${esc(w)}</b>`}</span>${noteBox(r, "s", i, w)}</div>`).join("")}${edit ? `<div class="tg-ln vb-inf"><span class="vb-plus" onclick="tgSegOpen(event,'${id}')">+ segment</span></div>` : (L.length ? "" : `<span class="nsdim">—</span>`)}</div>`;
     const tp = `<span class="a3-tp${n ? "" : " none"}${op ? " open" : ""}" onclick="tgTpToggle('${id}')">${n ? n + " talking point" + (n > 1 ? "s" : "") : (edit ? "Add talking points" : "None")}</span>`;
-    const main = `<tr data-tg="${id}">
+    const main = `<tr data-tg="${id}" class="tg-on" onclick="tgRowClick(event,'${id}')">
         <td class="w-grp">${edit && typeof sxGrip === "function" ? sxGrip("tg") : ""}${edit ? grpSel(r.segment_key, `tgGrp('${id}',this.value)`) : `<span class="vb-ro">${esc(mlabel(VB.segs, r.segment_key))}</span>`}</td>
         <td class="w-seg">${segCell}</td>
         <td>${objCell}</td>
         <td class="w-tp">${tp}</td>
         <td class="vb-x">${edit ? `<button class="vb-del" title="Take this off" onclick="vbSegDel('${id}')">✕</button>` : ""}</td></tr>`;
-    return main + (op ? `<tr class="a3-open"><td></td><td colspan="4">${tgTpBody(r)}</td></tr>` : "");
+    return main + `<tr class="a3-open"><td></td><td colspan="4">${tgTpBody(r)}</td></tr>`;
   }
   function html(){
     if (VB.busy) return `<div class="bd-card"><div class="bd-note" style="margin:0;">Reading the lists…</div></div>`;
@@ -41824,8 +41849,8 @@ function cpHtml(){
   const rows=cpRows(), may=cpMay();
   if(!rows.length&&!may) return `<div class="bd-note" style="margin:6px 0 2px">None yet.</div>`;
   return `<table class="vb-t a3 cp-t"><thead><tr><th>Competitor</th><th>Type</th><th>Links</th><th>Mood board</th><th>Strengths</th><th></th></tr></thead><tbody>
-    ${((typeof sxOpen==="function"&&!sxOpen("cp"))?rows.slice(0,SX_TOP):rows).map(cpRowHtml).join("")}
-    ${(rows.length>CP_SHOW&&typeof sxOpen!=="function")?`<tr class="cp-more"><td colspan="6"><span class="cp-morebtn" onclick="CP.all=!CP.all;cpPaint();"><i class="ti ti-chevron-${CP.all?"up":"down"}"></i>${CP.all?"Show fewer":"Show all "+rows.length}</span></td></tr>`:""}
+    ${((rows.length>CP_SHOW&&!CP.all)?rows.slice(0,CP_SHOW):rows).map(cpRowHtml).join("")}
+    ${(rows.length>CP_SHOW)?`<tr class="cp-more"><td colspan="6"><span class="cp-morebtn" onclick="CP.all=!CP.all;cpPaint();"><i class="ti ti-chevron-${CP.all?"up":"down"}"></i>${CP.all?"Show fewer":"Show all "+rows.length}</span></td></tr>`:""}
     ${may?`<tr class="vb-new cp-new"><td class="w-nm"><input class="vb-ce" id="cp-new" placeholder="Add a competitor…" onkeydown="if(event.key==='Enter'&&this.value.trim()){event.preventDefault();cpAdd(this.value);}"></td>
       <td class="w-ty">${["direct","aspirational"].map(t=>`<span class="cp-ty ${t}${CP.newT===t?"":" off"}" onclick="CP.newT='${t}';cpPaint();const n=document.getElementById('cp-new');if(n)n.focus();">${CP_T[t]}</span>`).join(" ")}</td><td></td><td></td><td></td><td></td></tr>`:""}
     </tbody></table>`;
@@ -46711,7 +46736,7 @@ function xfActBack(){ xtSheet("files"); }
      · Client team sits at the right end of the links row */
 const SX_KEY={cp:"cc-sx-cp",vb:"cc-sx-vb",in:"cc-sx-in"};   /* V118.54 — Influencers & creators too */
 const SX_TOP=3;
-function sxOpen(k){ try{ return localStorage.getItem(SX_KEY[k])==="o"; }catch(e){ return false; } }
+function sxOpen(k){ return true; }   /* V118.90 — one view: a section is never collapsed; a row opens under itself */
 function sxSet(k,on){
   try{ localStorage.setItem(SX_KEY[k],on?"o":"c"); }catch(e){}
   if(k==="cp"){ if(!on) CP.open=null; cpPaint(); }
@@ -46724,12 +46749,8 @@ function sxDress(){
   [["cp","bd-cp"],["vb","bd-vb"],["in","bd-in"]].forEach(([k,id])=>{
     const sec=document.getElementById(id); if(!sec) return;
     const card=sec.closest(".mk-card"); if(!card) return;
-    const on=sxOpen(k);
-    card.classList.add("sx-card"); card.classList.toggle("sx-c",!on); card.classList.toggle("sx-o",on);
-    let b=sec.querySelector(".sx-tog");
-    if(!b){ sec.insertAdjacentHTML("beforeend",`<button class="sx-tog" type="button"></button>`); b=sec.querySelector(".sx-tog"); }
-    b.onclick=()=>sxSet(k,!sxOpen(k));
-    b.innerHTML=on?`<i class="ti ti-chevron-up"></i>Collapse`:`<i class="ti ti-chevron-down"></i>Open`;
+    card.classList.add("sx-card","sx-o"); card.classList.remove("sx-c");
+    const b=sec.querySelector(".sx-tog"); if(b) b.remove();   /* V118.90 — no Open / Collapse */
   });
 }
 (function(){
@@ -46830,19 +46851,20 @@ async function chlLoad(){
 .tg-seg b .tg-x,.tg-obj b .tg-x{display:none;margin-left:6px;font-style:normal;font-weight:600;color:var(--subtle,#999);cursor:pointer;line-height:1;}
 .tg-seg b:hover .tg-x,.tg-obj b:hover .tg-x{display:inline;}
 .tg-seg b .tg-x:hover,.tg-obj b .tg-x:hover{color:var(--acc,#D23B2B);}
-.sx-c .tg-seg b .tg-x,.sx-c .tg-obj b .tg-x{display:none !important;}
-.sx-c .tg-seg b,.sx-c .tg-obj b{cursor:default;}
 .vb-inf.tg-seg b,.vb-inf.tg-obj b{cursor:default;}
 .vb-inf.tg-seg b:hover{border-color:var(--div);color:var(--text);}
 .vb-inf.tg-obj b:hover{color:var(--text);}
 a.tg-undo{color:#fff;text-decoration:underline;font-weight:700;cursor:pointer;margin-left:2px;}
-.sx-c .tg-lines{display:flex !important;flex-direction:row !important;flex-wrap:nowrap;gap:6px;overflow:hidden;align-items:center;}
-.sx-c .tg-ln{margin:0 !important;width:auto !important;flex:none !important;display:inline-flex !important;}
-.sx-c tr[data-tg] td{padding-top:8px !important;padding-bottom:8px !important;vertical-align:middle !important;}
+/* V118.90 — one view: the closed line is flat; the open row is the full block */
+.tg-lines.tg-flat{display:flex !important;flex-direction:row !important;flex-wrap:wrap;gap:6px;align-items:center;}
+tr.tg-c td{padding-top:8px !important;padding-bottom:8px !important;vertical-align:middle !important;cursor:pointer;}
+tr.tg-c:hover td{background:var(--surface2,#faf9f7);}
+tr.tg-on td{background:#FBFBF9;cursor:pointer;}
+.vb-plus.tg-pl{font-size:12px;padding:2px 8px;}
+.a3-tp.none{cursor:pointer;}
 .sx-grip{display:inline-flex;align-items:center;justify-content:center;width:18px;height:28px;margin:0 4px 0 -14px;color:var(--subtle,#aaa);cursor:grab;opacity:0;vertical-align:middle;flex:none;}
 .sx-grip i{font-size:15px;}
-.sx-o tr[data-cp]:hover .sx-grip,.sx-o tr[data-tg]:hover .sx-grip{opacity:1;}
-.sx-c .sx-grip{display:none !important;}
+tr[data-cp]:hover .sx-grip,tr[data-tg]:hover .sx-grip{opacity:1;}
 .sx-o td.w-nm,.sx-o td.w-grp{white-space:nowrap;}
 .sx-o td.w-nm > input,.sx-o td.w-grp > select{display:inline-block;width:calc(100% - 22px) !important;vertical-align:middle;}
 tr.sx-drag{opacity:.35;}
