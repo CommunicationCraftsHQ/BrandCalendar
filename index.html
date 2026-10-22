@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.83 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.84 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13897,7 +13897,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.83 Tbilisi";
+const TOOL_VERSION="V118.84 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -34176,7 +34176,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     }
     Object.assign(r, now);
     vbPaint();
-    const u = await sb.from("brand_segments").update(now).eq("id", r.id);
+    const u = await bsUpd(now, r.id);
     if (u.error){ Object.assign(r, was); say("Not saved — " + u.error.message, "err"); vbPaint(); }
   }
   /* V118.75 — Chirag, 20 Oct: "clicking on any target group segment
@@ -34206,7 +34206,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     if (u.kind === "s"){ if (u.N) r.segment_notes = u.N; return tgSegWrite(r, r.segment_key, u.L, u.K); }
     if ((r.objective_keys || []).includes(u.k)) return;
     await tgObj(u.id, u.k);
-    if (u.N && u.N[u.k]){ r.objective_notes = u.N; await sb.from("brand_segments").update({ objective_notes: u.N }).eq("id", u.id); vbPaint(); }
+    if (u.N && u.N[u.k]){ r.objective_notes = u.N; await bsUpd({ objective_notes: u.N }, u.id); vbPaint(); }
   };
   /* moving a row to another group keeps its words, except any the new
      group's list does not have or another row there already holds */
@@ -34241,7 +34241,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
       const on = Object.assign({}, notesOf(r, "objective_notes")); delete on[k]; upd.objective_notes = on; r.objective_notes = on;
     }
     r.objective_keys = now; vbPaint();
-    const u = await sb.from("brand_segments").update(upd).eq("id", id);
+    const u = await bsUpd(upd, id);
     if (u.error){ r.objective_keys = was; if ("objective_notes" in upd) r.objective_notes = wasN; say("Not saved — " + u.error.message, "err"); return vbPaint(); }
     if (now.includes(k) && !VB.bobjs.find(b => b.objective_key === k))
       VB.bobjs.push({ brand_id: VB.key, objective_key: k, label: null, unit: null });
@@ -34259,7 +34259,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     Object.keys(notesOf(r, f)).forEach(x => { if (low(x) !== low(k)) now[x] = notesOf(r, f)[x]; });
     if (t) now[k] = t;
     r[f] = now;
-    const u = await sb.from("brand_segments").update({ [f]: now }).eq("id", r.id);
+    const u = await bsUpd({ [f]: now }, r.id);
     if (u.error){ r[f] = was; say("Not saved — " + u.error.message, "err"); vbPaint(); }
   };
   const noteBox = (r, kind, i, k) => {
@@ -34276,12 +34276,19 @@ window.prSegOpen=function(){ pbOpen("seg"); };
   const tpKey = () => { const b = (typeof brands === "object" && brands) ? brands[VB.key] : null;
     return ((b && b.brief && Array.isArray(b.brief.talking)) ? b.brief.talking : []).map(t => String(t || "").trim()).filter(Boolean); };
   window.tgTpToggle = function(id){ VB.open = VB.open || {}; VB.open[id] = !VB.open[id]; vbPaint(); };
+  /* V118.84 — what is typed in the new line, per row, so a repaint
+     (another save, a reload) does not wipe a half-typed point */
+  VB.tpDraft = VB.tpDraft || {};
+  window.tgTpDraft = function(id, v){ VB.tpDraft = VB.tpDraft || {}; VB.tpDraft[id] = v; };
+  window.tgTpBlur = function(id, el){ const v = String(el.value || "").trim(); if (!v) return; tgTpAdd(id, v, true); };
   async function tgTpWrite(r, now, focusNew){
     const was = (r.talking_points || []).slice();
     r.talking_points = now; vbPaint();
     if (focusNew){ const n = document.getElementById("tg-tpnew-" + r.id); if (n) n.focus(); }
-    const u = await sb.from("brand_segments").update({ talking_points: now }).eq("id", r.id);
-    if (u.error){ r.talking_points = was; say("Not saved — " + u.error.message, "err"); vbPaint(); }
+    const u = await bsUpd({ talking_points: now }, r.id);
+    if (u.error){ r.talking_points = was;
+      const lost = now.filter(x => !was.includes(x)); if (lost.length){ VB.tpDraft = VB.tpDraft || {}; VB.tpDraft[r.id] = lost.join(" "); }
+      say("Not saved — " + u.error.message, "err"); vbPaint(); }
   }
   window.tgTpSet = function(id, i, v){
     const r = VB.bsegs.find(x => x.id === id); if (!r) return;
@@ -34290,12 +34297,13 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     if (t) cur[i] = t; else cur.splice(i, 1);
     tgTpWrite(r, cur, false);
   };
-  window.tgTpAdd = function(id, v){
+  window.tgTpAdd = function(id, v, noFocus){
     const r = VB.bsegs.find(x => x.id === id); if (!r) return;
     const t = String(v || "").trim(); if (!t) return;
     const cur = (r.talking_points || []);
+    if (VB.tpDraft) delete VB.tpDraft[id];
     if (cur.some(x => low(x) === low(t))) return say("Already on this row", "err");
-    tgTpWrite(r, cur.concat([t]), true);
+    tgTpWrite(r, cur.concat([t]), !noFocus);
   };
   window.tgTpSug = function(id, i){ const s = tpKey().filter(t => !((VB.bsegs.find(x => x.id === id) || {}).talking_points || []).some(x => low(x) === low(t))); if (s[i]) tgTpAdd(id, s[i]); };
   window.tgTpOff = function(id, i){ const r = VB.bsegs.find(x => x.id === id); if (!r) return; const cur = (r.talking_points || []).slice(); cur.splice(i, 1); tgTpWrite(r, cur, false); };
@@ -34308,8 +34316,9 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     return `<div class="x4">${tps.map((t, i) => `<div class="ln"><span class="no">${i + 1}</span>
         <input class="vb-ce" value="${escA(t)}" onblur="tgTpSet('${escA(r.id)}',${i},this.value)" onkeydown="if(event.key==='Enter')this.blur()">
         <span class="k" title="Take it off" onclick="tgTpOff('${escA(r.id)}',${i})">✕</span></div>`).join("")}
-      <div class="ln new"><span class="no">${tps.length + 1}</span><input class="vb-ce" id="tg-tpnew-${escA(r.id)}" placeholder="Type a talking point…"
-        onkeydown="if(event.key==='Enter'&&this.value.trim()){event.preventDefault();tgTpAdd('${escA(r.id)}',this.value);}"><span></span></div>
+      <div class="ln new"><span class="no">${tps.length + 1}</span><input class="vb-ce" id="tg-tpnew-${escA(r.id)}" placeholder="Type a talking point…" value="${escA((VB.tpDraft || {})[r.id] || "")}"
+        oninput="tgTpDraft('${escA(r.id)}',this.value)" onblur="tgTpBlur('${escA(r.id)}',this)"
+        onkeydown="if(event.key==='Enter'&&this.value.trim()){event.preventDefault();const v=this.value;this.value='';tgTpAdd('${escA(r.id)}',v);}"><span></span></div>
       ${spare.length ? `<div class="sug">Key talking points ${spare.map((t, i) => `<b onclick="tgTpSug('${escA(r.id)}',${i})">+ ${esc(t)}</b>`).join("")}</div>` : ""}</div>`;
   }
 
@@ -34511,7 +34520,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     if ((r[field] || null) === v) return;
     const was = r[field] || null;
     r[field] = v;
-    const u = await sb.from("brand_segments").update({ [field]: v }).eq("id", id);
+    const u = await bsUpd({ [field]: v }, id);
     if (u.error){ r[field] = was; say("Not saved — " + u.error.message, "err"); vbPaint(); }
   };
 
@@ -34523,7 +34532,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     const now = i > -1 ? was.filter(x => x !== key) : was.concat([key]);
     r.sway = now;
     vbPaint();
-    const u = await sb.from("brand_segments").update({ sway: now }).eq("id", id);
+    const u = await bsUpd({ sway: now }, id);
     if (u.error){ r.sway = was; say("Not saved — " + u.error.message, "err"); vbPaint(); }
   };
 
@@ -34549,7 +34558,7 @@ window.prSegOpen=function(){ pbOpen("seg"); };
     const used = (typeof PR === "object" && PR && Array.isArray(PR.list))
       ? PR.list.filter(p => p.brand_segment_id === id).length : 0;
     if (used) return say(used + (used === 1 ? " promotion is aimed at it" : " promotions are aimed at it"), "err");
-    const r = await sb.from("brand_segments").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+    const r = await bsUpd({ deleted_at: new Date().toISOString() }, id);
     if (r.error) return say("Not removed — " + r.error.message, "err");
     VB.bsegs = VB.bsegs.filter(x => x.id !== id);
     vbPaint(); say("Removed");
@@ -47956,5 +47965,20 @@ function acClDraw(first){
   #main .br-open.wa .th-strip{display:none!important;}
 }
 </style>
+<script>
+/* V118.84 — A SAVE THE DATABASE REFUSED IS NOT A SAVE. When the database
+   turns a change down for lack of rights it does not answer with an
+   error: it changes nothing and says so by sending back no rows. The
+   Strategy page's target groups read "no error" as saved, so a point
+   typed by someone without the right showed on screen and was gone on
+   the next reload. Every target-group change now asks for the row back,
+   and no row back is treated as "Not saved". */
+async function bsUpd(patch, id){
+  const r = await sb.from("brand_segments").update(patch).eq("id", id).select("id");
+  if (r.error) return r;
+  if (!(r.data || []).length) return { error: { message: "you don't have the right to change this brand's target groups. Ask its account manager." }, data: [] };
+  return r;
+}
+</script>
 </body>
 </html>
