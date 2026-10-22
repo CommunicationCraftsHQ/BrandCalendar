@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.87 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.88 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -11603,12 +11603,12 @@ function brBriefHtml(t){
    that pushes the conversation off the screen. */
 let BR_BRIEF_OPEN=false;
 function brBriefPin(t){
-  const b=(t.brief||"").trim();
+  const b=(t.brief||"").trim()||(t._creative?'<span class="nsdim">No brief yet</span>':"");   /* V118.88 — a creative's pin is always there, so Edit is */
   if(!b) return "";
   /* 10 Oct — BRIEF B: a card with a dark bar, so it can never be read
      as one more message, and a "Conversation" line under it. */
   return `<div class="br-pin bb${BR_BRIEF_OPEN?" open":""}${t._promo?" pr":""}">
-    <div class="lbl">Brief<span class="act">${canEdit()?`<span onclick="event.stopPropagation();${t._promo?"prTab('brief')":`brOpenTask('${t.id}')`}">Edit</span>`:""}${t._promo?"":`<span onclick="brBriefMore(event)">${BR_BRIEF_OPEN?"less":"more"}</span>`}</span></div>
+    <div class="lbl">Brief<span class="act">${canEdit()?`<span onclick="event.stopPropagation();${t._creative?`prCrEditOpen('${t.id}')`:t._promo?"prTab('brief')":`brOpenTask('${t.id}')`}">Edit</span>`:""}${t._promo?"":`<span onclick="brBriefMore(event)">${BR_BRIEF_OPEN?"less":"more"}</span>`}</span></div>
     <div class="bx">${t._promo?b:fbBody(b)}</div></div><div class="br-start">Conversation</div>`;   /* V118.86 — a promotion's brief is drawn ready-made */
 }
 function brBriefMore(e){ if(e){ e.preventDefault(); e.stopPropagation(); } BR_BRIEF_OPEN=!BR_BRIEF_OPEN; render(); }
@@ -13993,7 +13993,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.87 Tbilisi";
+const TOOL_VERSION="V118.88 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -29392,7 +29392,7 @@ function prCrPanelHtml(p,c){
       <div class="prbb" style="padding:8px 11px 10px"><div class="pr-cl" onclick="prCTab('sizes')"><b>Sizes</b> · ${zin} of ${zs.length} in<small>${zs.map(z=>escHtml(z.label||z.ratio)+(z.asset_id?" ✓":" —")).join(" · ")}</small></div></div></div>
     <div class="prbox"><div class="prbh">Copy<span class="prbx-t" onclick="prCTab('copy')">›</span></div><div class="prbb pr-cl" onclick="prCTab('copy')">${c.headline||c.primary_text?`${escHtml(c.headline||String(c.primary_text||"").slice(0,60))}<small>${escHtml([c.cta,c.link].filter(Boolean).join(" → "))}</small>`:`<span class="nsdim">Nothing written yet</span>`}</div></div>
     ${lead?`<div class="prbox"><div class="prbh">Lead form<span class="prbx-t" onclick="prCTab('lead')">›</span></div><div class="prbb pr-cl" onclick="prCTab('lead')">${qs.length?`${qs.length} question${qs.length===1?"":"s"}<small>${escHtml(qs.map(q=>q.question).filter(Boolean).slice(0,3).join(" · "))}</small>`:`<span class="nsdim">No questions yet</span>`}</div></div>`:""}
-    <div class="prbox"><div class="prbh">Details</div><div class="prbb pr-cl nsdim" style="cursor:default">${escHtml(c.format||"")} · ${escHtml(bfWho(c.created_by)||"")}${c.created_at?" · "+escHtml(fmtShort(c.created_at)):""}</div></div></div>`;
+    <div class="prbox"><div class="prbh">Details${canE?`<span class="prbx-t" onclick="prCrEditOpen('${escAttr(c.id)}')">Edit</span>`:""}</div><div class="prbb pr-cl nsdim" style="cursor:default">${escHtml(c.format||"")} · ${escHtml(bfWho(c.created_by)||"")}${c.created_at?" · "+escHtml(fmtShort(c.created_at)):""}</div></div></div>`;
   return `<div class="pr-cpanel" onclick="event.stopPropagation()"><div class="pr-cin">
     <div class="br-tabs pr-ctabs">${T("talk","Conversation"+(nMsg?` · ${nMsg}`:""))}${T("sizes","Sizes"+(zs.length?` · ${zin} of ${zs.length}`:""))}${T("copy","Copy")}${lead?T("lead","Lead form"+(qs.length?` · ${qs.length}`:"")):""}${T("history","History")}
       <span class="br-gap"></span><span class="prcst pl"><i class="ti ${(PR_PLAT[prCrPlatKey(c)]||PR_PLAT.other).icon}"></i>${escHtml(prCrPlat(c))}</span>
@@ -30516,7 +30516,7 @@ function prCrNew(pid,sid){
       <button class="modal-x" onclick="closeM('promo')">✕</button></div>
     <div class="modal-body">
       <div class="field"><label class="fl">Name</label><input class="fi" id="prc-title" maxlength="120"></div>
-      <div class="field"><label class="fl">Format</label><select class="fi" id="prc-fmt">${PR_FMT.map(f=>`<option>${escHtml(f)}</option>`).join("")}</select></div>
+      <div class="field"><label class="fl">Format</label><select class="fi cc-stsel" id="prc-fmt">${PR_FMT.map(f=>`<option>${escHtml(f)}</option>`).join("")}</select></div>
       <div class="field"><label class="fl">Brief</label><div class="fi ta rt v44-ta" id="prc-brief" contenteditable="true" data-nodraft="1" data-ph="What this creative has to say" onfocus="rtFocus(this)" onblur="mpBarHide()"></div></div>
     </div>
     <div class="modal-foot"><span style="flex:1"></span>
@@ -30686,6 +30686,37 @@ async function prCrStatus(cid,st){
   await prLog(cid,`moved it to ${PR_CST[st][0]}`);
   if(TASK.id===cid) await loadThread(cid);
   render();
+}
+/* V118.88 — Chirag, 22 Oct: Edit on a creative's brief opened the promotion's; and the name had no door. */
+function prCrEditOpen(cid){
+  const c=PR.cr.find(x=>x.id===cid); if(!c) return;
+  if(!canCap("edit_ad_creatives")){ capDenied("Changing creatives"); return; }
+  prBox(`<div class="modal-top"><div><div class="modal-title">Edit creative</div>
+      <div class="modal-sub">${escHtml((PR.list.find(x=>x.id===c.promotion_id)||{}).name||"")}</div></div>
+      <button class="modal-x" onclick="closeM('promo')">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label class="fl">Name</label><input class="fi" id="prc-title" maxlength="120" value="${escAttr(c.title||"")}"></div>
+      <div class="field"><label class="fl">Format</label><select class="fi cc-stsel" id="prc-fmt">${PR_FMT.map(f=>`<option${c.format===f?" selected":""}>${escHtml(f)}</option>`).join("")}</select></div>
+      <div class="field"><label class="fl">Brief</label><div class="fi ta rt v44-ta" id="prc-brief" contenteditable="true" data-nodraft="1" data-ph="What this creative has to say" onfocus="rtFocus(this)" onblur="mpBarHide()">${wRender(c.brief||"")}</div></div>
+    </div>
+    <div class="modal-foot"><span style="flex:1"></span>
+      <button class="btn btn-s" onclick="closeM('promo')">Cancel</button>
+      <button class="btn btn-p" id="prc-save" onclick="prCrEditSave('${escAttr(cid)}')">Save</button></div>`);
+  setTimeout(()=>{ const n=document.getElementById("prc-title"); if(n){ n.focus(); n.select(); } },30);
+}
+async function prCrEditSave(cid){
+  const c=PR.cr.find(x=>x.id===cid); if(!c) return;
+  const g=id=>document.getElementById(id);
+  const title=g("prc-title").value.trim();
+  if(!title){ toast("Give the creative a name","err"); g("prc-title").focus(); return; }
+  const patch={title,format:g("prc-fmt").value,brief:v44Val("prc-brief"),updated_at:new Date().toISOString()};
+  const btn=g("prc-save"); btn.disabled=true;
+  const r=await sb.from("ad_creatives").update(patch).eq("id",cid).select("id");
+  if(r.error||!r.data||!r.data.length){ toast("Could not save — "+(r.error?r.error.message:"not allowed"),"err"); btn.disabled=false; return; }
+  Object.assign(c,patch);
+  if(PR_CTASK&&PR_CTASK.id===cid){ PR_CTASK.title=title; PR_CTASK.brief=patch.brief; }
+  await prLog(cid,"changed the name or brief");
+  closeM("promo"); toast("Saved"); render();
 }
 async function prCrBrief(cid){
   const v=v44Val("prc-brief-ed");
