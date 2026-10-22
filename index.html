@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.90 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.91 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -4206,6 +4206,11 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
 .pr-szbig .under .b{border:1px solid var(--div);border-radius:7px;padding:2px 9px;font-weight:700;font-size:11.5px;cursor:pointer;}.pr-szbig .under .b.dim{color:var(--subtle);}
 .pr-vers{margin-top:8px;font-size:11.5px;color:var(--muted);display:grid;gap:3px;}.pr-vers b{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);}.pr-vers .v{cursor:pointer;}.pr-vers u{color:var(--blue,#2B6CB0);cursor:pointer;}
 /* copy and lead form */
+.ctfb .ct-cnt{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.ctfb .ct-camp{font-size:12.5px;color:var(--subtle);}
+.ctfb .ctfb-q{max-width:230px;}
+.ctfb .mc-host{margin:0 2px;}
+.prfb .lc{white-space:nowrap;}
 .pr-asof{font-size:11px;color:var(--subtle,#8a8a8a);font-weight:400;white-space:nowrap;}
 .pr-asofl{display:block;margin-top:3px;font-size:11px;color:var(--subtle,#8a8a8a);font-weight:400;line-height:1.2;}
 .prgr .pr-asof{margin-left:2px;}
@@ -5775,7 +5780,7 @@ select.pr-fv.cc-stsel{height:34px;padding:0 28px 0 10px;background-color:#fff;}
          page's own controls, in the suite's order: Columns · Import /
          Export · New task · bell. brNavSync shows them on Tasks only. -->
     <div class="bsw mf-hide" id="brk-cols" style="display:none;">
-      <button class="nav-btn brk-colsbtn" id="brk-cols-btn" onclick="brColsOpen(event)" title="Columns" aria-label="Columns">
+      <button class="nav-btn brk-colsbtn" id="brk-cols-btn" onclick="hbColsOpen(event)" title="Columns" aria-label="Columns">
         <i class="ti ti-columns-3"></i><span id="brk-cn">7/7</span></button>
       <div class="bpanel right" id="brk-cols-panel"></div>
     </div>
@@ -5788,7 +5793,7 @@ select.pr-fv.cc-stsel{height:34px;padding:0 28px 0 10px;background-color:#fff;}
       </button>
       <div class="bpanel right" id="export-panel"></div>
     </div>
-    <button class="nav-btn red mf-hide" id="brk-new" style="display:none;" onclick="brNewTask()"><i class="ti ti-plus"></i> New task</button>
+    <button class="nav-btn red mf-hide" id="brk-new" style="display:none;" onclick="hbNew()"><i class="ti ti-plus"></i> <span id="brk-new-lbl">New task</span></button>
     <div class="bsw">
       <button class="bell" id="bell-btn" onclick="toggleBell(event)" title="Notifications">
         <i class="ti ti-bell"></i><span class="badge zero" id="bell-badge">0</span>
@@ -7887,6 +7892,34 @@ function setContentStatusFilter(k){ contentStatusFilter=(contentStatusFilter===k
    clears it, exactly as status does; two filters that behave differently
    is worse than one filter fewer. */
 let contentFormatFilter="";
+/* V118.91 — the kit's search and filter on Posts (mockup 07) */
+let CT_F=[], CT_Q="";
+const CT_FIELDS=[
+  {k:"status",  label:"Status",   icon:"circle-dot"},
+  {k:"format",  label:"Format",   icon:"photo"},
+];
+function ctValsOf(p,k){
+  if(k==="status") return ccStatusKey("post",p.status);
+  if(k==="format") return p.format||"static";
+  return null;
+}
+function ctBase(){ return socialForBrandYear(activeBrand,YEAR).filter(p=>p.month===(contentMonth||curMonth||1)); }
+function ctOptionsFor(k){
+  if(k==="status") return fltCounts(ctBase(),k,ctValsOf,ccStatusList("post"));
+  return fltCounts(ctBase(),k,ctValsOf,SOCIAL_FORMATS.map(f=>[f,f.charAt(0).toUpperCase()+f.slice(1)]));
+}
+function ctSetQ(v){
+  CT_Q=v;
+  const box=document.querySelector(".ctfb-q"), at=box?box.selectionStart:null;
+  renderSocial();
+  const b2=document.querySelector(".ctfb-q"); if(b2){ b2.focus(); try{ b2.setSelectionRange(at,at); }catch(err){} }
+}
+function ctKeep(p){
+  if(CT_F.length&&!fltKeep(p,CT_F,ctValsOf)) return false;
+  const q=String(CT_Q||"").trim().toLowerCase(); if(!q) return true;
+  const c=p.content||{}, ig=c.instagram||{}, fb=c.facebook||{};
+  return [p.title,p.name,ig.caption,fb.caption,ig.hashtags,fb.hashtags,p.notes].some(x=>String(x||"").toLowerCase().includes(q));
+}
 function setContentFormatFilter(k){ contentFormatFilter=(contentFormatFilter===k)?"":k; renderSocial(); }
 function setContentMonthTo(m){ contentMonth=m; renderSocial(); buildContentSidebar(); }
 
@@ -8073,6 +8106,7 @@ function renderSocial(){
   const monthTotal=posts.length;
   if(contentStatusFilter) posts=posts.filter(p=>ccStatusKey("post",p.status)===contentStatusFilter);
   if(contentFormatFilter) posts=posts.filter(p=>(p.format||"static")===contentFormatFilter);
+  posts=posts.filter(ctKeep);   /* V118.91 — the row's search and filter */
   posts.sort((a,b2)=>a.date-b2.date||String(a.time||"").localeCompare(String(b2.time||"")));
   const modeSeg=(mm,icon,label)=>`<span onclick="setContentMode('${mm}')" style="height:30px;box-sizing:border-box;padding:0 12px;border-radius:6px;display:flex;align-items:center;gap:5px;font-size:13px;font-weight:${contentMode===mm?"700":"600"};cursor:pointer;${contentMode===mm?"background:#fff;color:#0D0D0D;box-shadow:0 1px 2px rgba(0,0,0,.08);":"color:var(--muted);"}"><i class="ti ${icon}" style="font-size:13px;"></i> ${label}</span>`;
   const modeToggle=`<div style="display:flex;align-items:center;background:#E7E6E1;border-radius:8px;padding:3px;gap:2px;height:36px;box-sizing:border-box;">${modeSeg("view","ti-eye","View")}${modeSeg("edit","ti-pencil","Edit")}</div>`;
@@ -8097,9 +8131,16 @@ function renderSocial(){
         stood 250px lower than the calendar's and the tool looked like
         five different tools. Every page now leads with its own row of
         controls, in the same place, and the content follows it. -->
-   <div class="pgbar" style="justify-content:space-between;flex-wrap:nowrap;">
-     <div style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${monthTotal} Post${monthTotal!==1?"s":""} <span style="font-weight:400;color:var(--subtle);">· ${MN[contentMonth]}</span></div>
-     <div style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;flex-shrink:0;">${seedCtl}${modeToggle}${canE?`<button class="btn btn-p" style="white-space:nowrap;" onclick="addContentPost()"><i class="ti ti-plus"></i> Add post</button>`:""}</div>
+   <!-- V118.91 — ONE ROW, THE SUITE'S ORDER (mockup 07): Search · + Filter ·
+        gap · count · ‹ month › Today · View/Edit. Import and Add post live
+        in the black bar now. -->
+   <div class="pgbar ctfb fb" style="flex-wrap:nowrap;">
+     <input class="fi brfb-q ctfb-q" placeholder="Search posts…" value="${escAttr(CT_Q||"")}" oninput="ctSetQ(this.value)" onclick="event.stopPropagation()">
+     ${fltChipsHtml("posts")}
+     <span style="flex:1"></span>
+     <span class="ct-cnt">${fltCountHtml(posts.length,monthTotal,"post")}${(()=>{ const c=(typeof mpCamps==="function")?mpCamps(contentMonth).length:0; return c?`<span class="ct-camp">· ${c} campaign${c===1?"":"s"}</span>`:""; })()}</span>
+     <span class="ct-mc"></span>
+     ${modeToggle}
    </div>
    <div style="padding:0 32px 20px;">
    <div style="display:grid;grid-template-columns:minmax(280px,340px) minmax(0,1fr);gap:14px;align-items:start;">
@@ -11196,17 +11237,36 @@ function brColFlip(k){
   render(); brColsFill();
 }
 function brIoOn(){ return view==="branding"&&BR&&BR.ok&&!!activeBrand&&!brIsClient()&&canEdit()&&!brCV()&&can("task_create"); }
-/* V116.8 — what the black bar shows depends on the page. Called by every
-   render: Tasks draws its three, every other page puts Export back. */
+/* ══ V118.91 — ONE HEADER ON EVERY PAGE ═══════════════════════════════
+   Chirag, 22 Oct (mockup 07): the Tasks rule holds everywhere. The black
+   bar's right end is one set of buttons — Columns · Link · Import/Export ·
+   red + New … · bell — and each page says what goes in them. hbSpec() is
+   that answer; brNavSync draws it. Promotions and Posts in this build. */
+function hbSpec(){
+  if(!activeBrand||brIsClient()) return null;
+  const canE=canEdit();
+  if(view==="branding"&&BR&&BR.ok)
+    return {cols:{n:1+BRK_COLS.length-BRK_HIDE.size,of:1+BRK_COLS.length,open:brColsOpen}, nw:canE?{label:"New task",go:brNewTask}:null, io:brIoOn()};
+  if(view==="promotions"&&PR.key&&!PR.loading&&!PR.err){
+    const canP=canCap("edit_promotions"), offer=PR_COLS.filter(c=>c.label);
+    return {cols:{n:prShown().length+1,of:offer.length+1,open:prColsOpen}, nw:canP?{label:"New promotion",go:()=>prEditOpen(null)}:null, io:canP};
+  }
+  if(view==="content"&&brands[activeBrand])
+    return {cols:null, nw:canE?{label:"Add post",go:addContentPost}:null, io:canE&&can("import_export")};
+  return null;
+}
+function hbColsOpen(e){ const sp=hbSpec(); if(sp&&sp.cols) sp.cols.open(e); }
+function hbNew(){ const sp=hbSpec(); if(sp&&sp.nw) sp.nw.go(); }
 function brNavSync(canE){
-  const onT=view==="branding"&&BR&&BR.ok&&!!activeBrand&&!brIsClient();
+  const sp=hbSpec();
   const cols=document.getElementById("brk-cols"), nw=document.getElementById("brk-new"), ex=document.getElementById("export-btn");
-  if(cols) cols.style.display=onT?"":"none";
-  if(nw) nw.style.display=(onT&&canE)?"":"none";
-  const cn=document.getElementById("brk-cn"); if(cn) cn.textContent=`${1+BRK_COLS.length-BRK_HIDE.size}/${1+BRK_COLS.length}`;
+  if(cols) cols.style.display=(sp&&sp.cols)?"":"none";
+  if(nw) nw.style.display=(sp&&sp.nw)?"":"none";
+  const nl=document.getElementById("brk-new-lbl"); if(nl&&sp&&sp.nw) nl.textContent=sp.nw.label;
+  const cn=document.getElementById("brk-cn"); if(cn&&sp&&sp.cols) cn.textContent=`${sp.cols.n}/${sp.cols.of}`;
   if(ex){
     if(!ex.dataset.orig) ex.dataset.orig=ex.innerHTML;
-    const io=brIoOn();
+    const io=!!(sp&&sp.io);
     /* V118.40 — the Strategy page imports and never exports: one upload
        icon for whoever may edit it, and no button at all for anyone else */
     const sio=!io&&((typeof stIoOn==="function"&&stIoOn())||(typeof cplIoOn==="function"&&cplIoOn()));
@@ -13310,6 +13370,30 @@ function buildExportPanel(){
   const isBrief=!!document.querySelector(".bd-wrap");
   if(view==="brief"){ el.innerHTML=(typeof stIoOn==="function"&&stIoOn())?stIoMenu():""; return; }
   if(view==="cplay"){ el.innerHTML=(typeof cplIoOn==="function"&&cplIoOn())?cplIoMenu():""; return; }
+  if(view==="promotions"&&hbSpec()&&hbSpec().io){   /* V118.91 */
+    const n=(PR.list||[]).length;
+    el.innerHTML=`<div class="brk-ioh"><i class="ti ti-upload"></i>Import</div>
+      <div class="brow act" onclick="closeAllPops();priPick()"><i class="ti ti-file-upload"></i><span class="bnm">Fill from a sheet</span></div>
+      <div class="brow act" onclick="closeAllPops();priTemplate(false)"><i class="ti ti-file-spreadsheet"></i><span class="bnm">Blank template</span></div>
+      <div class="brow act" onclick="closeAllPops();priHistory()"><i class="ti ti-history"></i><span class="bnm">Past imports</span></div>
+      <div class="brk-iosep"></div>
+      <div class="brk-ioh"><i class="ti ti-download"></i>Export</div>
+      <div class="brow act" onclick="closeAllPops();priTemplate(true)"><i class="ti ti-table"></i><span class="bnm">This list${n?" · "+n:""}</span></div>`;
+    return;
+  }
+  if(view==="content"&&hbSpec()&&hbSpec().io){   /* V118.91 — Posts: the sheet on top, the three files below */
+    const m=contentMonth||curMonth||1, n=socialForBrandYear(activeBrand,YEAR).filter(p=>p.month===m).length;
+    el.innerHTML=`<div class="brk-ioh"><i class="ti ti-upload"></i>Import</div>
+      <div class="brow act" onclick="closeAllPops();sdPick()"><i class="ti ti-file-upload"></i><span class="bnm">Fill from a sheet</span></div>
+      <div class="brow act" onclick="closeAllPops();sdTemplate(false)"><i class="ti ti-file-spreadsheet"></i><span class="bnm">Blank template</span></div>
+      <div class="brk-iosep"></div>
+      <div class="brk-ioh"><i class="ti ti-download"></i>Export</div>
+      <div class="brow act" onclick="closeAllPops();sdTemplate(true)"><i class="ti ti-table"></i><span class="bnm">This month as a sheet${n?" · "+n:""}</span></div>
+      <div class="brow act" onclick="closeAllPops();doExport('word')"><i class="ti ti-file-text"></i><span class="bnm">Word document</span></div>
+      <div class="brow act" onclick="closeAllPops();doExport('excel')"><i class="ti ti-table"></i><span class="bnm">Excel sheet</span></div>
+      <div class="brow act" onclick="closeAllPops();exPickOpen()"><i class="ti ti-presentation"></i><span class="bnm">PowerPoint deck</span></div>`;
+    return;
+  }
   if(brIoOn()){
     const n=(typeof brVisibleRows==="function"?brVisibleRows():null);
     el.innerHTML=`<div class="brk-ioh"><i class="ti ti-upload"></i>Import</div>
@@ -13996,7 +14080,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.90 Tbilisi";
+const TOOL_VERSION="V118.91 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -29174,6 +29258,7 @@ function prOptionsFor(k){
   return fltCounts(base,k,prValsOf,(PR.bsegs||[]).map(o=>[o.id,prSegLabel(o)]));
 }
 function prFilters(){ if(!PR.f) PR.f=[{k:"status",op:"is not",vals:new Set(["ended"])}]; return PR.f; }
+FLT_HOSTS.posts={ fields:CT_FIELDS, optionsFor:ctOptionsFor, get:()=>CT_F, set:fs=>{ CT_F=fs; }, render:()=>renderSocial() };
 FLT_HOSTS.promotions={
   fields:PR_FIELDS, optionsFor:prOptionsFor,
   get:()=>prFilters(), set:fs=>{ PR.f=fs; },
@@ -29265,6 +29350,17 @@ function prColToggle(e,k){
   render();
 }
 function prColReset(e){ if(e){ e.preventDefault(); e.stopPropagation(); } PR.cols=PR_COLS_DEF.slice(); render(); }
+/* V118.91 — the Columns panel hangs off the black bar, like Tasks' */
+function prColsFill(){
+  const el=document.getElementById("brk-cols-panel"); if(!el) return;
+  const offer=PR_COLS.filter(c=>c.label), on=prShown();
+  el.innerHTML=`<div class="brk-ioh">Columns</div>
+    <div class="brow brk-lock"><span class="brk-bx on"><i class="ti ti-lock"></i></span><span class="bnm">Promotion</span></div>`+
+    offer.map(c=>{ const is=on.indexOf(c.k)>-1;
+      return `<div class="brow" onclick="prColToggle(null,'${c.k}');prColsFill()"><span class="brk-bx${is?" on":""}">${is?"✓":""}</span><span class="bnm">${escHtml(c.label)}</span></div>`; }).join("")+
+    (on.length!==PR_COLS_DEF.length||PR_COLS_DEF.some(k=>on.indexOf(k)<0)?`<div class="brk-reset" onclick="prColReset(null);prColsFill()">Reset</div>`:"");
+}
+function prColsOpen(e){ prColsFill(); popOpen("brk-cols-panel",e); }
 function prColsHtml(){
   const offer=PR_COLS.filter(c=>c.label), on=prShown();
   return `<span class="brfb-w prcols"><span class="brfb-chip${PR_FPOP==="cols"?" open":""}" onclick="prFPop(event,'cols')">
@@ -29578,15 +29674,16 @@ function prListHtml(){
      its own `padding:0 0 16px`, which would both drop the page gutter
      this bar shares with the list under it and add 16px of height.
      The chip classes stand on their own, so only they are borrowed. */
+  /* V118.91 — THE ROW IN THE SUITE'S ORDER (mockup 07): Search · + Filter ·
+     gap · count · the Promotions/Numbers switch · Sort last. Import, New
+     promotion and Columns moved up into the black bar. */
   const bar=`<div class="pgbar prfb fb">
-      ${nsw}
       <input class="fi brfb-q prfb-q" placeholder="Search promotions…" value="${escAttr(PR.q||"")}"
         oninput="prSetQ(this.value)" onclick="event.stopPropagation()">
       ${fltChipsHtml("promotions")}
       <span style="flex:1"></span>
-      ${canEditP?`<button class="btn btn-s" style="background:var(--surface);" onclick="priOpen()" aria-label="Import campaigns" title="Download these campaigns or a blank template, and put a filled sheet back"><i class="ti ti-upload"></i></button>`:""}
-      ${canEditP?`<button class="btn btn-p" onclick="prEditOpen(null)"><i class="ti ti-plus"></i> New promotion</button>`:""}
-      ${prColsHtml()}
+      ${fltCountHtml(rows.length,PR.list.length,"promotion")}
+      ${nsw}
       ${sortChip}
     </div>`;
 
@@ -43888,9 +43985,9 @@ function mcMount(){
     else strip.insertAdjacentHTML("beforeend",html);
   } else if(a==="content"){
     const bar=main.querySelector(".pgbar"); if(!bar) return;
-    const t=bar.firstElementChild;
-    if(t){ const sp=t.querySelector("span"); if(sp) sp.remove(); t.style.flex="0 0 auto"; t.insertAdjacentHTML("afterend",html);
-      const h=bar.querySelector(".mc-host"); if(h){ h.style.marginLeft="16px"; h.style.marginRight="auto"; } }
+    const slot=bar.querySelector(".ct-mc");   /* V118.91 — after the count, before the switch */
+    if(slot) slot.insertAdjacentHTML("afterend",html);
+    else { const t=bar.firstElementChild; if(t) t.insertAdjacentHTML("afterend",html); }
   } else if(a==="numbers"){
     let row=main.querySelector(".prnum-row");
     if(!row){ const ph=main.querySelector(":scope > .ph"); const r=`<div class="pgbar prnum-row"></div>`;
