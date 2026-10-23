@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.98 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.99 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14213,7 +14213,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.98 Tbilisi";
+const TOOL_VERSION="V118.99 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -49154,7 +49154,7 @@ function plMomCardHtml(){
 })();
 </script>
 <style id="v11898-css">
-/* ══ V118.98 TBILISI · THE MEETINGS PAGE, TWO PANES, LIKE A TASK ═══════
+/* ══ V118.98/.99 TBILISI · THE MEETINGS PAGE, TWO PANES, LIKE A TASK ═══════
    Chirag, 23 Oct (mockups 07 → 09): the desk's Meetings page should take
    the full width and read like the Tasks page where conversations flow.
    The list on the left, the open meeting on the right; the passages are
@@ -49164,7 +49164,7 @@ function plMomCardHtml(){
 @media(min-width:769px){
   .mlpage.ml2{padding-top:0;}
   .mlpage.ml2 .mom-wrap{padding:0 var(--pg-x,32px) 40px;max-width:none;margin:0;}
-  .mlpage.ml2 > .pgbar{display:block;padding:0 var(--pg-x,32px) 14px;}
+  .mlpage.ml2 > .pgbar{display:block;padding:0 var(--pg-x,32px);margin:0;min-height:0;}   /* the row then the list, as on Tasks */
   .mlpage.ml2 .fb .fi{width:230px;}
   .mlpage.ml2 .lc b{font-size:15px;}
   .mlpage.ml2 .lc .sub{color:var(--subtle);font-size:13px;font-weight:400;}
@@ -49307,12 +49307,11 @@ function plMomCardHtml(){
   }
   window.ml2List=function(){ const l=document.querySelector("#main .mlpage.ml2 .ml2-list"); if(l) l.innerHTML=listHtml(); };
   function barHtml(){
-    const all=ML.meets||[], np=all.reduce((n,x)=>n+mlPassOf(x.id).length,0), last=mlLastWritten(), unread=all.filter(meetUnread).length;
+    /* V118.99 — Chirag, 23 Oct: the count line and the All / Unread switch
+       are not needed; the sidebar already carries both */
     return `<div class="fb">
       <input class="fi fb-q" placeholder="Search meetings…" value="${esc(ML.filt.q||"")}" oninput="ml2Q(this.value)" onclick="event.stopPropagation()">
       <span class="fb-end">
-        <span><div class="lc"><b>${all.length}</b> <span class="sub">meeting${all.length===1?"":"s"}${np?` · ${np} passage${np===1?"":"s"}`:""}${last?` · last written ${esc(fbTimeLabel(last))}`:""}</span></div></span>
-        <span class="brl-lens"><span class="${ML.filt.unread?"":"on"}" onclick="ml2Unread(false)">All</span><span class="${ML.filt.unread?"on":""}" onclick="ml2Unread(true)">Unread${unread?`<span class="n">${unread}</span>`:""}</span></span>
         <span class="fb-w fb-sortw"><button class="fb-chip" onclick="ml2Sort()"><i class="ti ti-arrows-sort"></i>Sort <span class="fb-op">by</span> <span class="fb-val">Date, ${ML.sortOld?"oldest":"newest"} first</span><i class="ti ti-chevron-down"></i></button></span>
       </span></div>`;
   }
