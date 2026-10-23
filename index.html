@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.95 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.97 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2882,6 +2882,9 @@ body.brcv .brl-lens span.cv.on{background:#378ADD;color:#fff;}
 .brl-tr .c.late{color:var(--acc);font-weight:700;}
 .brl-un{min-width:17px;height:17px;padding:0 5px;border-radius:99px;background:var(--acc);color:#fff;
   font-size:10.5px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex:none;}
+/* V118.96 — the link box's close */
+.mplink .mpl-x{border:0;background:transparent;color:var(--subtle,#8a8a8a);font-size:13px;cursor:pointer;padding:0 6px;line-height:1;}
+.mplink .mpl-x:hover{color:var(--text,#111);}
 /* V118.95 — the Deliveries column, worked like the steps */
 .brl-dw{position:relative;display:flex;align-items:center;gap:3px;min-width:0;}
 .brl-dw.may{cursor:pointer;}
@@ -14210,7 +14213,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.95 Tbilisi";
+const TOOL_VERSION="V118.97 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -26809,9 +26812,11 @@ function wLinkEl(){
   el=document.createElement("div"); el.id="mp-link"; el.className="mplink";
   el.innerHTML='<input class="mpl-t" type="text" placeholder="What it is">'
     +'<input class="mpl-u" type="url" placeholder="https://">'
-    +'<button class="mpl-go" type="button">Add</button>';
+    +'<button class="mpl-go" type="button">Add</button>'
+    +'<button class="mpl-x" type="button" title="Close" aria-label="Close">✕</button>';   /* V118.96 */
   document.body.appendChild(el);
   el.querySelector(".mpl-go").addEventListener("mousedown",e=>{ e.preventDefault(); wLinkApply(); });
+  el.querySelector(".mpl-x").addEventListener("mousedown",e=>{ e.preventDefault(); wLinkClose(); });
   el.addEventListener("keydown",e=>{
     if(e.key==="Enter"){ e.preventDefault(); wLinkApply(); }
     if(e.key==="Escape"){ e.preventDefault(); wLinkClose(); }
@@ -26919,6 +26924,7 @@ document.addEventListener("scroll",()=>{ if(WBAR_FOR) wBarShow(WBAR_FOR); },true
 window.addEventListener("resize",()=>{ if(WBAR_FOR) wBarShow(WBAR_FOR); });
 function wBarHide(){
   const b=document.getElementById("mp-bar"); if(b) b.classList.remove("open");
+  if(typeof wLinkOpen==="function"&&wLinkOpen()) setTimeout(()=>{ const a=document.activeElement; if(wLinkOpen()&&!(a&&a.closest&&a.closest("#mp-link"))) wLinkClose(); },0);   /* V118.96 — after focus has settled */
   if(WBAR_FOR&&WBAR_FOR.classList){ WBAR_FOR.classList.remove("w-dock"); WBAR_FOR.style.paddingBottom=""; }
   WBAR_FOR=null;
 }
@@ -26940,9 +26946,30 @@ function wBarCheck(){
   if(!document.body.contains(WBAR_FOR)){ wBarHide(); return; }   /* redrawn away */
   const a=document.activeElement;
   if(a===WBAR_FOR||(WBAR_FOR.contains&&WBAR_FOR.contains(a))) return;
-  if(a&&a.closest&&a.closest("#mp-bar")) return;                 /* pressing B or I */
+  if(a&&a.closest&&a.closest("#mp-bar,#mp-link")) return;        /* pressing B or I, or typing the link */
   wBarHide();
 }
+/* ══ V118.96 — THE LINK BOX GOES THE SAME WAY ════════════════════════
+   The team, 23 Oct: "this box once it appears doesn't go away till you
+   refresh the whole tool." It only ever closed on Add, Enter or Escape;
+   a click anywhere else, a redraw, or the bar hiding left it parked on
+   the screen. The same one rule as the bar now: whenever focus or a
+   press lands outside the link box and outside its writing box, or the
+   writing box is gone, the link box goes. And it has a ✕. */
+function wLinkOpen(){ const el=document.getElementById("mp-link"); return !!(el&&el.classList.contains("open")); }
+function wLinkCheck(ev){
+  if(!wLinkOpen()) return;
+  const t=ev&&ev.target;
+  if(t&&t.closest&&t.closest("#mp-link,#mp-bar")) return;
+  if(WLINK_BOX&&!document.body.contains(WLINK_BOX)){ wLinkClose(); return; }
+  if(ev&&ev.type==="mousedown"){ wLinkClose(); return; }
+  const a=document.activeElement;
+  if(a&&a.closest&&a.closest("#mp-link,#mp-bar")) return;
+  if(WLINK_BOX&&(a===WLINK_BOX||(WLINK_BOX.contains&&WLINK_BOX.contains(a)))) return;
+  wLinkClose();
+}
+document.addEventListener("mousedown",wLinkCheck,true);
+document.addEventListener("focusin",wLinkCheck,true);
 document.addEventListener("focusin",wBarCheck,true);
 document.addEventListener("focusout",()=>setTimeout(wBarCheck,0),true);
 /* A redraw does not move focus, so focus alone cannot catch a box that
@@ -34901,7 +34928,10 @@ window.prSegOpen=function(){ pbOpen("seg"); };
      the talking points. One row open at a time, like a promotion. */
   window.tgTpToggle = function(id){ const was = !!(VB.open && VB.open[id]); VB.open = {}; if (!was) VB.open[id] = true; vbPaint(); };
   window.tgRowClick = function(ev, id){
-    if (ev && ev.target && ev.target.closest && ev.target.closest("input,select,button,a,textarea,.vb-plus,.tg-x,.sx-grip,.tg-segbtn,.vb-del,[contenteditable]")) return;
+    /* V118.97 — the "4 points" chip toggles the row itself. Letting its
+       click run on to the row toggled it a second time, so the row opened
+       and shut in one click and the points could never be reached. */
+    if (ev && ev.target && ev.target.closest && ev.target.closest("input,select,button,a,textarea,.vb-plus,.tg-x,.sx-grip,.tg-segbtn,.vb-del,.a3-tp,[contenteditable]")) return;
     const sel = window.getSelection && window.getSelection(); if (sel && String(sel).length) return;
     tgTpToggle(id);
   };
