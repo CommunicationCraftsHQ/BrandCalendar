@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.97 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.98 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14213,7 +14213,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.97 Tbilisi";
+const TOOL_VERSION="V118.98 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -49151,6 +49151,266 @@ function plMomCardHtml(){
     return out;
   };
   try{ paintMeets(); }catch(e){}
+})();
+</script>
+<style id="v11898-css">
+/* ══ V118.98 TBILISI · THE MEETINGS PAGE, TWO PANES, LIKE A TASK ═══════
+   Chirag, 23 Oct (mockups 07 → 09): the desk's Meetings page should take
+   the full width and read like the Tasks page where conversations flow.
+   The list on the left, the open meeting on the right; the passages are
+   drawn as messages on the task sheet's tinted panel, with the task box
+   at the bottom. One-line titles in the list. No tabs. The phone keeps
+   its own layout (V118.57), untouched. */
+@media(min-width:769px){
+  .mlpage.ml2{padding-top:0;}
+  .mlpage.ml2 .mom-wrap{padding:0 var(--pg-x,32px) 40px;max-width:none;margin:0;}
+  .mlpage.ml2 > .pgbar{display:block;padding:0 var(--pg-x,32px) 14px;}
+  .mlpage.ml2 .fb .fi{width:230px;}
+  .mlpage.ml2 .lc b{font-size:15px;}
+  .mlpage.ml2 .lc .sub{color:var(--subtle);font-size:13px;font-weight:400;}
+  .mlpage.ml2 .brl-lens .n{font-size:10px;color:#fff;background:var(--acc);border-radius:99px;padding:0 5px;margin-left:4px;}
+  .ml2-cols{display:grid;grid-template-columns:400px minmax(0,1fr);gap:16px;align-items:start;}
+  /* ── the list ── */
+  .ml2-list{background:var(--surface);border:1px solid var(--div);border-radius:var(--rc,14px);overflow:hidden;}
+  .ml2-yr{display:flex;padding:9px 14px;font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--subtle);background:#FCFCFB;border-bottom:1px solid var(--div);}
+  .ml2-yr .n{margin-left:auto;font-weight:600;letter-spacing:0;text-transform:none;}
+  .ml2-row{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-bottom:1px solid #F4F4F2;cursor:pointer;}
+  .ml2-row:last-child{border-bottom:0;}
+  .ml2-row:hover{background:#FAFAF9;}
+  .ml2-row.on{background:#F7F5F0;box-shadow:inset 4px 0 0 #0D0D0D;cursor:default;}
+  .ml2-row.pin{background:#FAFAF9;box-shadow:inset 4px 0 0 #CFCCC4;}   /* open and pinned, not the one being written */
+  .ml2-row .xmt-dt{order:0;}
+  .ml2-row .tx{flex:1;min-width:0;}
+  .ml2-row .tx b{display:block;font-size:13.5px;font-weight:700;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ml2-row.nw .tx b::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--acc);margin:0 6px 2px 0;}
+  .ml2-row .tx .l2{display:flex;gap:6px;font-size:12px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;}
+  .ml2-row .tx .l2>span{flex:none;} .ml2-row .tx .l2>span.cl{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;}
+  .ml2-row .tx .l3{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--subtle);margin-top:5px;white-space:nowrap;overflow:hidden;}
+  .ml2-row .tx .l3 .faces{display:inline-flex;flex:none;} .ml2-row .tx .l3 .faces .nav-av{width:18px;height:18px;font-size:8px;margin-left:-5px;border:2px solid #fff;} .ml2-row .tx .l3 .faces .nav-av:first-child{margin-left:0;}
+  .ml2-row .tx .l3 .s{font-weight:700;color:var(--text);flex:none;} .ml2-row .tx .l3 .lw{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+  .ml2-row .np{flex:none;font-size:10.5px;font-weight:800;color:var(--muted);background:#F1EFE8;border-radius:999px;padding:1px 7px;margin-top:2px;}
+  .ml2-row.nw .np{background:#FDECEC;color:#D7262B;}
+  .ml2-list .ml-wait{padding:26px 14px;}
+  /* ── the open meeting, on the right ── */
+  .ml2-pane{min-width:0;}
+  .ml2-pane .ml-card{background:#fff;border:1px solid var(--div);border-radius:var(--rc,14px);box-shadow:none;padding:0;margin:0 0 14px;max-width:none;}
+  .ml2-pane .ml-card.live.hero{background:#fff;border-color:var(--div);box-shadow:none;}
+  .ml2-pane .ml-card:not(.open):hover{box-shadow:none;}
+  .ml2-pane .ml-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px 12px;padding:16px 18px 0;min-height:0;cursor:default;}
+  .ml2-pane .ml-row > .ml-chv,.ml2-pane .ml-row > .ml-sp,.ml2-pane .ml-row > .np,.ml2-pane .ml-row > .xmt-br{display:none;}
+  .ml2-pane .ml-row > .xmt-dt{order:0;width:50px;}
+  .ml2-pane .ml-row > .ml-tt{order:1;flex:1 1 0;min-width:0;width:auto;font-size:18px;font-weight:700;line-height:1.25;padding-top:4px;white-space:normal;}
+  .ml2-pane .ml-row > input.ml-tt{border:0;background:transparent;height:auto;padding:4px 0;}
+  .ml2-pane .ml-row > .mom-state{order:2;flex-basis:auto;align-self:center;font-size:11.5px;color:var(--subtle);}
+  .ml2-pane .ml-row > .ml-ic{order:3;width:32px;height:32px;border-radius:9px;border:1px solid var(--div);background:var(--surface);color:var(--muted);font-size:15px;margin:0;}
+  .ml2-pane .ml-row > .ml-ic:hover{color:var(--text);background:#F6F5F2;}
+  .ml2-pane .ml-row > .ml-ic.on{color:var(--acc);border-color:var(--acc);}
+  .ml2-pane .ml-row > .mom-fc{display:none;}   /* the chips moved into the facts strip */
+  .ml2-facts{display:flex;flex-wrap:wrap;gap:10px 32px;padding:14px 18px 16px 80px;border-bottom:1px solid var(--div);}
+  .ml2-f{min-width:0;max-width:300px;}
+  .ml2-f .k{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);margin-bottom:4px;}
+  .ml2-f .mom-fc{font-size:13px;font-weight:600;padding:0;height:auto;background:transparent;border-radius:0;max-width:100%;}
+  .ml2-f .mom-fc.ro{cursor:default;}
+  .ml2-f .mom-fc:not(.empty):not(.ro){cursor:pointer;} .ml2-f .mom-fc:not(.empty):not(.ro):hover{text-decoration:underline;}
+  .ml2-f .mom-fc.ed{text-decoration:underline;background:transparent;border:0;}
+  .ml2-f .mom-fc.empty{font-size:11.5px;font-weight:500;padding:0 9px;height:22px;border:1px dashed var(--div);border-radius:999px;color:var(--subtle);}
+  .ml2-f .mom-fc .nav-av{width:20px;height:20px;font-size:9px;}
+  .ml2-f .mom-fc .faces{display:inline-flex;} .ml2-f .mom-fc .faces .nav-av{margin-left:-5px;border:2px solid #fff;} .ml2-f .mom-fc .faces .nav-av:first-child{margin-left:0;}
+  .ml2-f .mom-fc .nm,.ml2-f .mom-fc .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ml2-f .mom-fc .sub{color:var(--subtle);font-weight:500;margin-left:4px;}
+  .ml2-pane .mom-fed{margin:0 18px;}
+  .ml2-pane .ml-dec{display:none;}
+  /* the minutes: the task sheet */
+  .ml2-pane .ml-body{background:#F1EFEA;border:1px solid #E2DED6;border-radius:14px;margin:16px 18px 18px;padding:0;overflow:hidden;}
+  .ml2-pane .ml-body > .mom-rule,.ml2-pane .ml-body > .mom-slbl{display:none;}
+  .ml2-thread{max-height:min(62vh,600px);overflow-y:auto;padding:12px 14px 14px;}
+  .ml2-pane .mom-pass{display:flex;gap:10px;align-items:flex-start;padding:16px 0 0;margin:16px 0 0;border-top:1px solid #E6E3DC;}
+  .ml2-pane .mom-pass:first-child{border-top:0;margin-top:4px;padding-top:0;}
+  .ml2-pane .mom-pass+.mom-pass{border-top:1px solid #E6E3DC;padding-top:16px;}
+  .ml2-pane .mom-pass > .nav-av{width:30px;height:30px;font-size:11px;flex:none;}
+  .ml2-pane .mom-pass.mom-unsigned{gap:0;} .ml2-pane .mom-pass.mom-unsigned > span:first-child{display:none;}
+  .ml2-pane .mom-pass > div{flex:1;min-width:0;}
+  .ml2-pane .mom-by{min-height:30px;align-items:center;margin-bottom:6px;}
+  .ml2-pane .mom-by b{font-size:13px;}
+  .ml2-pane .mom-by b::after{content:"Team";font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;background:#fff;color:var(--muted);margin-left:8px;vertical-align:1px;}
+  .ml2-pane .mom-pass > .nav-av.client ~ div .mom-by b::after{content:"Client";background:#E6F1FB;color:#1B5A96;}
+  .ml2-pane .mom-bod{background:#F6F5F2;border-radius:4px 12px 12px 12px;padding:10px 13px;max-width:760px;font-size:13.5px;line-height:1.6;}
+  .ml2-pane .mom-pass > .nav-av.client ~ div .mom-bod{background:#F2F8FD;}
+  .ml2-pane .mom-pass:has(.act span[onclick^="momPassEdit"]) .mom-bod,.ml2-pane .mom-bod[contenteditable="true"]{background:#FFF1EF;}
+  .ml2-pane .mom-bod[contenteditable="true"]:focus{outline:1px solid var(--text);}
+  .ml2-pane .mom-ed-box{background:#fff;}
+  .ml2-pane .mom-none{padding:4px 0;}
+  /* the box, as on a task */
+  .ml2-pane .mom-newp{display:flex;align-items:flex-end;gap:10px;grid-template-columns:none;border-top:1px solid #E2DED6;margin:0;padding:10px 14px 12px;background:#F1EFEA;}
+  .ml2-pane .mom-newp.first{border-top:1px solid #E2DED6;padding-top:10px;}
+  .ml2-pane .mom-newp > .nav-av{width:28px;height:28px;margin-bottom:8px;flex:none;}
+  .ml2-pane .mom-newp > div{flex:1;min-width:0;}
+  .ml2-pane .mom-min-edit{min-height:44px;background:#fff;border:1px solid var(--div);border-radius:12px;padding:12px 14px;font-size:13.5px;line-height:1.5;}
+  .ml2-pane .mom-min-edit:focus{border-color:var(--text);}
+  .ml2-send{width:40px;height:40px;border-radius:12px;background:#0D0D0D;color:#fff;border:0;display:inline-flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;flex:none;margin-bottom:2px;}
+  .ml2-send:hover{background:#333;}
+  .ml2-pane .ml-body .mom-newp .mom-ro,.ml2-pane .ml-body > .mom-ro{padding:10px 14px 12px;border-top:1px solid #E2DED6;}
+}
+</style>
+<script>
+/* ══ V118.98 TBILISI ═══════════════════════════════════════════════════ */
+(function(){
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+  function on(){ return typeof mfNarrow==="function"&&!mfNarrow()&&view==="meets"&&!!document.querySelector("#main .mlpage"); }
+  /* search and sort live on the page row; both read by mlFiltered */
+  const baseFiltered=mlFiltered;
+  mlFiltered=function(){
+    let ms=baseFiltered.apply(this,arguments);
+    const q=String((ML.filt&&ML.filt.q)||"").trim().toLowerCase();
+    if(q) ms=ms.filter(x=>String(x.topic||"").toLowerCase().indexOf(q)>-1);
+    if(ML.sortOld) ms=ms.slice().reverse();
+    return ms;
+  };
+  window.ml2Q=function(v){ ML.filt.q=v; ml2List();
+    const ms=mlFiltered();
+    if(ms.length&&!ms.some(x=>ML.open[x.id])&&!(MOM.draft&&!MOM.id)){
+      renderMeetsPage();
+      const i=document.querySelector("#main .mlpage.ml2 .fb-q"); if(i){ i.focus(); try{ i.setSelectionRange(i.value.length,i.value.length); }catch(e){} } } };
+  window.ml2Sort=function(){ ML.sortOld=!ML.sortOld; renderMeetsPage(); };
+  window.ml2Unread=function(v){ if(!!ML.filt.unread!==!!v) mlFilter("unread"); };
+  window.ml2Pick=function(id){
+    if(ML.open[id]&&MOM.id===id&&MOM.draft) return;
+    /* V113.12's rule, kept: one open card, unless pinned */
+    mlOpenOnly(id); meetMarkSeen(id,activeBrand); mlLive(id,true); renderMeetsPage();
+  };
+  function lastOf(x){ const ps=mlPassOf(x.id); return ps.length?ps[ps.length-1].created_at:(x.updated_at||x.created_at||""); }
+  function dtBox(x,cls){ const t=String(x.held_on||""); if(!/^\d{4}-\d{2}-\d{2}$/.test(t)) return `<span class="xmt-dt${cls||""}"><b>·</b><span></span></span>`;
+    return `<span class="xmt-dt${cls||""}"><b>${Number(t.slice(8,10))}</b><span>${(MN[Number(t.slice(5,7))]||"").slice(0,3).toUpperCase()}</span></span>`; }
+  function longDate(x){ const t=String(x.held_on||""); if(!/^\d{4}-\d{2}-\d{2}$/.test(t)) return "—"; const d=new Date(t+"T12:00:00");
+    return `${Number(t.slice(8,10))} ${(MN[Number(t.slice(5,7))]||"").slice(0,3)} ${t.slice(0,4)} · ${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getDay()]}`; }
+  function faces(x){ const {ccNames}=momFactParts(x); return ccNames.length?`<span class="faces">${ccNames.slice(0,4).map(n=>momFace(n,"team")).join("")}</span>`:""; }
+  function rowHtml(x){
+    const np=mlPassOf(x.id).length, {clNames}=momFactParts(x), live=(MOM.id===x.id&&!!MOM.draft), open=!!ML.open[x.id]&&!live;
+    const where=`${esc(PL_LOC[x.location_kind]||"")}${x.location_name?` · ${esc(x.location_name)}`:""}`;
+    return `<div class="ml2-row${live?" on":open?" pin":""}${meetUnread(x)?" nw":""}" data-meet="${esc(x.id)}" onclick="ml2Pick('${esc(x.id)}')">${dtBox(x,meetUnread(x)?" nw":"")}
+      <div class="tx"><b title="${esc(x.topic||"Meeting")}">${esc(x.topic||"Meeting")}</b>
+        <div class="l2"><span>${where||"—"}</span>${clNames.length?`<span>·</span><span class="cl">${esc(clNames.join(", "))}</span>`:""}</div>
+        <div class="l3">${faces(x)}${np?`<span class="s">${np} passage${np===1?"":"s"}</span><span class="lw">· last written ${esc(fbTimeLabel(lastOf(x)))}</span>`:`<span class="lw">Nothing written yet</span>`}</div></div>
+      ${np?`<span class="np">${np}</span>`:""}</div>`;
+  }
+  function listHtml(){
+    const ms=mlFiltered(), fresh=!!(MOM.draft&&!MOM.id);
+    const out=[];
+    if(fresh) out.push(`<div class="ml2-yr">New</div><div class="ml2-row on nw"><span class="xmt-dt nw"><b>${Number(String(MOM.draft.held_on||"").slice(8,10))||"·"}</b><span>${(MN[Number(String(MOM.draft.held_on||"").slice(5,7))]||"").slice(0,3).toUpperCase()}</span></span><div class="tx"><b>${esc(MOM.draft.topic||"New meeting")}</b><div class="l3"><span class="lw">Being written</span></div></div></div>`);
+    if(!ms.length){ out.push(`<div class="ml-wait">${(ML.filt.person||ML.filt.unread||ML.filt.q)?`Nothing matches. <span class="ml-lnk" onclick="ML.filt={person:null,unread:false,q:''};renderMeetsPage()">Show everything</span>`:"No meetings logged yet."}</div>`); return out.join(""); }
+    const per={}; ms.forEach(x=>{ const y=String(x.held_on).slice(0,4); per[y]=(per[y]||0)+1; });
+    let y=null;
+    ms.forEach(x=>{ const yr=String(x.held_on).slice(0,4);
+      if(yr!==y){ y=yr; out.push(`<div class="ml2-yr" id="ml-y${esc(yr)}">${esc(yr)}<span class="n">${per[yr]} meeting${per[yr]===1?"":"s"}</span></div>`); }
+      out.push(rowHtml(x)); });
+    return out.join("");
+  }
+  window.ml2List=function(){ const l=document.querySelector("#main .mlpage.ml2 .ml2-list"); if(l) l.innerHTML=listHtml(); };
+  function barHtml(){
+    const all=ML.meets||[], np=all.reduce((n,x)=>n+mlPassOf(x.id).length,0), last=mlLastWritten(), unread=all.filter(meetUnread).length;
+    return `<div class="fb">
+      <input class="fi fb-q" placeholder="Search meetings…" value="${esc(ML.filt.q||"")}" oninput="ml2Q(this.value)" onclick="event.stopPropagation()">
+      <span class="fb-end">
+        <span><div class="lc"><b>${all.length}</b> <span class="sub">meeting${all.length===1?"":"s"}${np?` · ${np} passage${np===1?"":"s"}`:""}${last?` · last written ${esc(fbTimeLabel(last))}`:""}</span></div></span>
+        <span class="brl-lens"><span class="${ML.filt.unread?"":"on"}" onclick="ml2Unread(false)">All</span><span class="${ML.filt.unread?"on":""}" onclick="ml2Unread(true)">Unread${unread?`<span class="n">${unread}</span>`:""}</span></span>
+        <span class="fb-w fb-sortw"><button class="fb-chip" onclick="ml2Sort()"><i class="ti ti-arrows-sort"></i>Sort <span class="fb-op">by</span> <span class="fb-val">Date, ${ML.sortOld?"oldest":"newest"} first</span><i class="ti ti-chevron-down"></i></button></span>
+      </span></div>`;
+  }
+  /* the open card is the one the page drew — same ids, same handlers —
+     dressed as a task: date box and title on top, the facts under them,
+     the passages on the sheet, the box at the bottom */
+  function dressCard(card){
+    if(card.dataset.ml2) return; card.dataset.ml2="1";
+    const row=card.querySelector(":scope > .ml-row"); if(!row) return;
+    row.removeAttribute("onclick");   /* the head is not a toggle here — the list is where you pick */
+    const live=card.classList.contains("live");
+    const d=live&&MOM.draft?MOM.draft:(momRow(card.getAttribute("data-meet"))||{});
+    const chips=[...row.querySelectorAll(":scope > .mom-fc")];
+    const keys=["where","cc","cl","link"], labels={where:"Where",cc:"CC team",cl:"Client side",link:"Transcript"};
+    const facts=document.createElement("div"); facts.className="ml2-facts";
+    const when=document.createElement("div"); when.className="ml2-f";
+    when.innerHTML=`<div class="k">When</div><span class="mom-fc${live?"":" ro"}">${esc(longDate(d))}</span>`;
+    if(live) when.querySelector(".mom-fc").addEventListener("click",e=>{ e.stopPropagation(); momFc("held_on"); });
+    facts.appendChild(when);
+    chips.forEach((c,i)=>{ const k=keys[i]||""; const f=document.createElement("div"); f.className="ml2-f"; f.setAttribute("data-k",k);
+      f.innerHTML=`<div class="k">${labels[k]||""}</div>`; const cc=c.cloneNode(true); cc.style.display="";
+      /* the strip has room for every name, so none is shortened */
+      const nm=cc.querySelector(".nm"); const parts=momFactParts(d);
+      if(nm&&k==="cc"&&parts.ccNames.length) nm.textContent=parts.ccNames.join(", ");
+      if(nm&&k==="cl"&&parts.clNames.length) nm.textContent=parts.clNames.join(", ");
+      f.appendChild(cc); c.remove(); facts.appendChild(f); });
+    const box=row.querySelector(":scope > .xmt-dt"); const t=String(d.held_on||"");
+    if(box&&/^\d{4}-\d{2}-\d{2}$/.test(t)) box.innerHTML=`<b>${Number(t.slice(8,10))}</b><span>${(MN[Number(t.slice(5,7))]||"").slice(0,3).toUpperCase()}</span>`;
+    row.after(facts);
+    const body=card.querySelector(":scope > .ml-body");
+    if(body){
+      const th=document.createElement("div"); th.className="ml2-thread";
+      const keep=[...body.children].filter(e=>!e.classList.contains("mom-newp")&&!e.classList.contains("mom-rule")&&!e.classList.contains("mom-slbl"));
+      keep.forEach(e=>th.appendChild(e));
+      const np=body.querySelector(":scope > .mom-newp");
+      if(th.querySelector(".mom-pass,.mom-none")) body.insertBefore(th,np||null);
+      if(np&&np.querySelector("#mom-minutes")){ const b=document.createElement("button"); b.className="ml2-send"; b.title="Add to the minutes"; b.innerHTML=`<i class="ti ti-arrow-up"></i>`;
+        b.addEventListener("mousedown",e=>e.preventDefault());   /* keep the box focused so one blur does the posting */
+        b.addEventListener("click",()=>{ const e=document.getElementById("mom-minutes"); if(e) e.blur(); else momPassAdd(); });
+        np.appendChild(b); }
+    }
+  }
+  function dress(){
+    const pg=document.querySelector("#main .mlpage"); if(!pg||!on()) return;
+    if(pg.classList.contains("ml2")) return;
+    pg.classList.add("ml2");
+    document.documentElement.classList.remove("xmd-on");
+    const bar=pg.querySelector(":scope > .pgbar"); if(bar) bar.innerHTML=barHtml();
+    const w=pg.querySelector(".mom-wrap"); if(!w) return;
+    const wait=w.querySelector(":scope > .ml-wait");
+    const nodes=[...w.querySelectorAll(".ml-node.open")];
+    const cards=nodes.map(n=>n.querySelector(":scope > .ml-card")).filter(Boolean);
+    /* the fresh card first, then the live one, then pinned ones */
+    cards.sort((a,b)=>(b.closest(".fresh")?1:0)-(a.closest(".fresh")?1:0)||(b.classList.contains("live")?1:0)-(a.classList.contains("live")?1:0));
+    const cols=document.createElement("div"); cols.className="ml2-cols";
+    const list=document.createElement("div"); list.className="ml2-list";
+    const pane=document.createElement("div"); pane.className="ml2-pane";
+    if(wait&&!nodes.length&&!(MOM.draft&&!MOM.id)){ list.innerHTML=wait.outerHTML; }
+    else list.innerHTML=listHtml();
+    cards.forEach(c=>pane.appendChild(c));
+    cols.appendChild(list); cols.appendChild(pane);
+    w.innerHTML=""; w.appendChild(cols);
+    cards.forEach(dressCard);
+  }
+  let SC=null, SQ=null;
+  const baseMeets=renderMeetsPage;
+  renderMeetsPage=function(){
+    try{
+      const th=document.querySelector("#main .mlpage.ml2 .ml-card.live .ml2-thread");
+      SC=th?{id:MOM.id,top:th.scrollTop,n:MOM.pass?MOM.pass.length:0}:null;
+      const qi=document.querySelector("#main .mlpage.ml2 .fb-q"); SQ=(qi&&document.activeElement===qi)?qi.selectionStart:null;
+      /* the open meeting is always one of the listed ones: a filter or a
+         search that hides it hands the page to the first one it shows */
+      if(on()&&!(MOM.draft&&!MOM.id)){ const ms=mlFiltered(); if(ms.length&&!ms.some(x=>ML.open[x.id])){ mlOpenOnly(ms[0].id); mlLive(ms[0].id,true); } }
+      if(MOM.id&&MOM.draft&&MOM.passOk) ML.pass[MOM.id]=MOM.pass;   /* the list's counts follow what was just written */
+    }catch(e){}
+    const out=baseMeets.apply(this,arguments);
+    try{ dress();
+      const th=document.querySelector("#main .mlpage.ml2 .ml-card.live .ml2-thread");
+      if(th){ const n=MOM.pass?MOM.pass.length:0;
+        if(SC&&SC.id===MOM.id) th.scrollTop=(n>SC.n)?th.scrollHeight:SC.top; else th.scrollTop=0; }
+      /* a redraw while you are typing in Search (the passages arriving, say) keeps the caret there */
+      if(SQ!=null){ const qi=document.querySelector("#main .mlpage.ml2 .fb-q"); if(qi){ qi.focus(); try{ qi.setSelectionRange(SQ,SQ); }catch(e){} } }
+    }catch(e){ console.warn("ml2",e); }
+    return out;
+  };
+  /* V118.57's dresser puts the desk's one-column class back on every
+     render; on this layout it stays off */
+  const baseXmt=xmtDress;
+  xmtDress=function(){ const out=baseXmt.apply(this,arguments); try{ if(document.querySelector("#main .mlpage.ml2")) document.documentElement.classList.remove("xmd-on"); }catch(e){} return out; };
+  /* the sidebar's year jump lands on the list's year row */
+  const baseJump=mlJumpYear;
+  mlJumpYear=function(y){ const el=document.getElementById("ml-y"+y); if(el&&el.scrollIntoView){ el.scrollIntoView({block:"start",behavior:"auto"}); return; } return baseJump.apply(this,arguments); };
+  /* a link to a meeting scrolls its card into view; the list row too */
+  const baseScroll=mlScrollTo;
+  mlScrollTo=function(id){ baseScroll.apply(this,arguments); setTimeout(()=>{ const r=document.querySelector(`.ml2-row[data-meet="${CSS.escape(id)}"]`); if(r&&r.scrollIntoView) r.scrollIntoView({block:"nearest"}); },90); };
+  if(ML&&ML.filt&&ML.filt.q==null) ML.filt.q="";
+  try{ dress(); }catch(e){}
 })();
 </script>
 </body>
