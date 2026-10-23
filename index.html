@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.93 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.94 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2882,6 +2882,27 @@ body.brcv .brl-lens span.cv.on{background:#378ADD;color:#fff;}
 .brl-tr .c.late{color:var(--acc);font-weight:700;}
 .brl-un{min-width:17px;height:17px;padding:0 5px;border-radius:99px;background:var(--acc);color:#fff;
   font-size:10.5px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex:none;}
+/* V118.94 — the Deliveries view and the closed delivery */
+.brl-dv .brl-hd,.brl-dv .brl-tr{grid-template-columns:3px 20px minmax(0,1fr) minmax(0,1.4fr) 150px 104px 110px 30px !important;}
+.dv-chips{display:flex;flex-wrap:wrap;gap:4px;min-width:0;}
+.dvch{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--div,#e3e0da);border-radius:7px;padding:2px 8px;font-size:12px;font-weight:600;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;}
+.dvch b{font-weight:600;color:var(--subtle,#8a8a8a);}
+.dvch.s-none{color:var(--subtle,#8a8a8a);border-style:dashed;}
+.dvch.s-sent{border-color:#c9daf3;background:#f0f5fd;color:#1f4f8f;}
+.dvch.s-changes{border-color:#f0d9a8;background:#fff8ea;color:#8a5a0a;}
+.dvch.s-approved{border-color:#bfe3cc;background:#f0faf3;color:#1f6b3f;}
+.dvch.s-delivered{background:#111;border-color:#111;color:#fff;}.dvch.s-delivered b{color:#bbb;}
+.dv-files{display:flex;gap:4px;align-items:center;}
+.dvff{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;background:var(--surface2,#f1f0ec);overflow:hidden;cursor:pointer;font-size:9px;font-weight:700;}
+.dvff img{width:100%;height:100%;object-fit:cover;}
+.dv-tk{color:#1f8a4c;margin-right:6px;font-size:15px;vertical-align:-2px;}
+.dv-cnt{font-size:12.5px;color:var(--subtle,#8a8a8a);margin-left:6px;}
+.brl-tr .c.c-dvd{text-align:right;white-space:nowrap;}
+.dlv-c.done{background:#f6f6f3;}
+.dlv-p.s-delivered{background:#111;color:#fff;}
+.dlv-c .ab.done{background:#111;color:#fff;border-color:#111;}
+.dlv-all{margin-left:auto;font-size:11px;font-weight:700;color:var(--blue,#2B6CB0);background:none;border:0;cursor:pointer;}
+.dlv-alldone{color:#1f8a4c;font-weight:800;margin-left:6px;}
 .brl-flag{font-size:10.5px;font-weight:700;color:#7A5312;background:#FFF6E8;border:1px solid #F0DFBE;
   border-radius:5px;padding:1px 6px;white-space:nowrap;flex:none;}
 /* THE HOVER READING OF THE STEPS. Markup, not a title attribute: a
@@ -10980,7 +11001,8 @@ let BRK_HIDE=(()=>{ try{ return new Set(JSON.parse(localStorage.getItem("cc-br-c
 let BR_OPEN=null, BR_MENU=null, BR_STMENU=null, BR_TAB='talk';
 let BR_OWMENU=null;   /* V117.2 — the row's owner menu, like the status menu */
 let brGroup=false;   /* flat, by default */
-function brSetGroup(v){ brGroup=!!v; closeAllPops(); render(); }
+let brDlvView=false;   /* V118.94 — the third view: Deliveries */
+function brSetGroup(v){ v=Number(v); brDlvView=(v===2); brGroup=(v===1); closeAllPops(); render(); }
 /* NAPLES - ONE ORDER CANNOT ALSO BE SEVEN. Group by project draws the
    list as one section per project, and a single stored order has nothing
    to say about where a row sits inside a section it was not dragged in.
@@ -11277,6 +11299,29 @@ function brNavSync(canE){
     if(io||sio) ex.setAttribute("aria-label",io?"Import / Export":"Import"); else ex.removeAttribute("aria-label");
     ex.style.display=((view==="brief"||view==="cplay")&&!sio)?"none":"";
   }
+}
+/* V118.94 — one task, drawn for the Deliveries view */
+function brDlvRowHtml(t){
+  const pj=brProject(t.project_id), open=(BR_OPEN===t.id), ds=dlvFor(t.id), done=dlvTaskDone(t.id);
+  const chips=ds.length?ds.map(d=>{ const st=dlvState(d), v=st==="delivered"?dlvFinalVer(d):dlvLast(d.id);
+      return `<span class="dvch s-${st}" title="${escAttr(d.name+" · "+DLV_WORD[st])}">${escHtml(d.name)}${v?` <b>v${v.version}</b>`:""}</span>`; }).join("")
+    :`<span class="nsdim">No deliveries listed</span>`;
+  const files=ds.filter(dlvDone).flatMap(d=>dlvFinalFiles(d));
+  const ff=files.length?files.slice(0,4).map(a=>{ const img=a.kind==="image"||/\.(png|jpe?g|gif|webp)$/i.test(a.filename||"");
+      return `<span class="dvff${img?" img":""}" onclick="event.stopPropagation();dlvOpenFile('${escAttr(a.id)}')" title="${escAttr(a.filename||"")}"${img?` data-sign="${escAttr(a.thumb_path||a.view_path||"")}"`:""}>${img?"":bfIcon(a.filename||"")}</span>`; }).join("")+(files.length>4?`<span class="nsdim">+${files.length-4}</span>`:"")
+    :`<span class="nsdim">—</span>`;
+  const n=ds.filter(dlvDone).length;
+  const when=done?escHtml(fmtShort(ds.map(d=>d.delivered_at).sort().pop())):(ds.length?`<span class="nsdim">${n} of ${ds.length}</span>`:`<span class="nsdim">—</span>`);
+  return `<div class="brl-tr${done?' dim':''}${open?' opened':''}" ${open?`style="--brpj:${escAttr((pj&&pj.colour)||'#0D0D0D')}"`:''} onclick="brToggleOpen(event,'${t.id}')">
+    <div class="brl-sp" style="${pj?`background:${escAttr(pj.colour||'#7C3AED')}`:''}"></div>
+    <span class="brl-car">${open?'⌄':'›'}</span>
+    <div class="brl-nm">${done?'<i class="ti ti-circle-check-filled dv-tk" title="Every delivery is delivered"></i>':''}<span class="nmt" title="${escAttr(t.title)}">${escHtml(t.title)}</span>
+      ${pj?`<span class="brl-pj" style="color:${escAttr(pj.colour||'#7C3AED')}">◧ ${escHtml(pj.name)}</span>`:''}</div>
+    <div class="dv-chips">${chips}</div>
+    <div class="dv-files">${ff}</div>
+    ${brOwnerCell(t)}
+    <span class="c c-dvd">${when}</span>
+    ${brRowMenu(t)}</div>`;
 }
 function brRowHtml(t,showTag){
   const pj=brProject(t.project_id), pr=brProgress(t), ms=brMsFor(t.id);
@@ -13252,7 +13297,15 @@ function renderBranding(){
     const head=`<div class="brl-hd"><span></span><span></span><span>Task</span><span class="h-st">Status</span>
       <span class="h-ms">Milestones</span>${BR_COLS.map((x,i)=>`<span class="c ${BRKC[i]}">${x}</span>`).join("")}<span></span></div>`;
     let rowsHtml="";
-    if(brGroup){
+    if(brDlvView){
+      /* V118.94 — DELIVERIES (mockup 08, B): the same task rows, other columns —
+         a chip per delivery coloured by its state, the final files, the Ac
+         manager, the day the task was delivered. */
+      const headD=`<div class="brl-hd"><span></span><span></span><span>Task</span><span class="h-dv">Deliveries</span>
+        <span class="h-ff">Final files</span><span class="c c-own">Ac manager</span><span class="c c-dvd">Delivered on</span><span></span></div>`;
+      rows.forEach(t=>{ rowsHtml+=brDlvRowHtml(t); if(BR_OPEN===t.id) rowsHtml+=brOpenPanelHtml(t); });
+      body=`<div class="brl brl-dv">${headD}${rowsHtml}</div>`;
+    } else if(brGroup){
       /* Projects first, then everything else. NO HEADING FOR THE
          UNGROUPED: most tasks belong to no project, so a section called
          "Not part of a project" is a title over the normal case, which
@@ -13271,7 +13324,7 @@ function renderBranding(){
     } else {
       rows.forEach(t=>{ rowsHtml+=brRowHtml(t,true); if(BR_OPEN===t.id) rowsHtml+=brOpenPanelHtml(t); });
     }
-    body=`<div class="${brColsClass()}" style="${brColsGrid()}">${head}${rowsHtml}</div>`;
+    if(!brDlvView) body=`<div class="${brColsClass()}" style="${brColsGrid()}">${head}${rowsHtml}</div>`;
   }
   mc.innerHTML=`
    ${pageHead()}
@@ -13299,19 +13352,20 @@ function renderBranding(){
      ${BR.ok?fltChipsHtml("tasks"):""}
      <span class="fb-end">
        ${BR.ok?`<span data-gate="br-count">${fltCountHtml(rows.length,filtered&&rows.length!==total?total:rows.length,
-          brArchivedOnly()?"Archived task":"Branding task")}</span>`:""}
+          brArchivedOnly()?"Archived task":"Branding task")}${brDlvView?`<span class="dv-cnt">· ${rows.filter(t=>dlvTaskDone(t.id)).length} fully delivered</span>`:""}</span>`:""}
        ${BR.ok&&!brIsClient()&&brHasClient()?`<span class="brl-lens">
      <span class="${BR_CV?"":"on"}" onclick="brSetCV(0)">Team</span>
      <span class="cv${BR_CV?" on":""}" onclick="brSetCV(1)"><i class="ti ti-eye"></i>Client view <span class="beta">beta</span></span></span>`:""}
        ${BR.ok?`<span class="brl-lens">
-     <span class="${brGroup?"":"on"}" onclick="brSetGroup(0)">Flat</span>
-     <span class="${brGroup?"on":""}" onclick="brSetGroup(1)">By project</span></span>`:""}
+     <span class="${!brGroup&&!brDlvView?"on":""}" onclick="brSetGroup(0)">Flat</span>
+     <span class="${brGroup?"on":""}" onclick="brSetGroup(1)">By project</span>
+     <span class="${brDlvView?"on":""}" onclick="brSetGroup(2)">Deliveries</span></span>`:""}
        ${BR.ok?`<span class="fb-w fb-view"><button class="fb-chip${fltIsOpen("tasks","view")?" open":""}" onclick="fltOpen(event,'tasks','view')" data-gate="br-view"><i class="ti ti-eye"></i>View
-     <span class="fb-val">${brIsClient()||!brHasClient()?"":(BR_CV?"Client view":"Team")+" · "}${brGroup?"By project":"Flat"}</span><i class="ti ti-chevron-down"></i></button>${
+     <span class="fb-val">${brIsClient()||!brHasClient()?"":(BR_CV?"Client view":"Team")+" · "}${brDlvView?"Deliveries":brGroup?"By project":"Flat"}</span><i class="ti ti-chevron-down"></i></button>${
      fltIsOpen("tasks","view")?`<div class="fb-pop open" onclick="event.stopPropagation()">${brIsClient()||!brHasClient()?"":[["0","Team"],["1","Client view"]].map(([k,l])=>
        `<div class="fb-opt one${(BR_CV?"1":"0")===k?" on":""}" onclick="event.stopPropagation();FLT_UI={id:null,open:null,term:''};brSetCV(${k})"><span class="nm">${l}</span>${(BR_CV?"1":"0")===k?`<i class="ti ti-check tick"></i>`:""}</div>`).join("")+'<div class="brk-iosep"></div>'}${
-       [["0","Flat"],["1","By project"]].map(([k,l])=>
-       `<div class="fb-opt one${(brGroup?"1":"0")===k?" on":""}" onclick="event.stopPropagation();FLT_UI={id:null,open:null,term:''};brSetGroup(${k})"><span class="nm">${l}</span>${(brGroup?"1":"0")===k?`<i class="ti ti-check tick"></i>`:""}</div>`).join("")}</div>`:""}</span>`:""}
+       [["0","Flat"],["1","By project"],["2","Deliveries"]].map(([k,l])=>
+       `<div class="fb-opt one${(brDlvView?"2":brGroup?"1":"0")===k?" on":""}" onclick="event.stopPropagation();FLT_UI={id:null,open:null,term:''};brSetGroup(${k})"><span class="nm">${l}</span>${(brDlvView?"2":brGroup?"1":"0")===k?`<i class="ti ti-check tick"></i>`:""}</div>`).join("")}</div>`:""}</span>`:""}
        ${BR.ok?fltSortHtml("tasks",Object.entries(BR_SORT),brSort,"due","brPickSort"):""}
        ${canE&&BR.ok?`<button class="btn btn-p fb-mnew" style="white-space:nowrap;" onclick="brNewTask()"><i class="ti ti-plus"></i> New task</button>`:""}
      </span>
@@ -14080,7 +14134,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.93 Tbilisi";
+const TOOL_VERSION="V118.94 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -44782,6 +44836,7 @@ function buildIoSidebar(){
 .dlv-sum i{font-size:11px;vertical-align:-1px;}
 .dlv-sum span{font-size:10.5px;font-weight:700;border:1px solid var(--div);border-radius:6px;padding:0 6px;color:var(--muted);background:#fff;white-space:nowrap;}
 .dlv-sum span.approved{background:#EEF7EE;color:#1E6B2E;border-color:#BFDCC4;}
+.dlv-sum span.delivered{background:#111;color:#fff;border-color:#111;}
 .dlv-sum span.changes{background:#FBF3DC;color:#8A6D00;border-color:#EBD9A2;}
 /* V118.79 — a delivery's three moments */
 .dlv-c .d-act .ab.mail{border-color:#C9D6EA;color:#2B6CB0;}
@@ -45097,7 +45152,7 @@ function pgLinkSync(){
 /* ── 6 · a task's deliverables ────────────────────────────────────── */
 const DLV={brand:null,ok:false,loading:false,list:[],vers:[],drafts:[]};
 let DLV_OPEN=null, DLV_ADD=null, DLV_PICK=null, DLV_MP=null;
-const DLV_WORD={none:"Not sent",sent:"Sent",approved:"Approved",changes:"Changes asked"};
+const DLV_WORD={none:"Not sent",sent:"Sent",approved:"Approved",changes:"Changes asked",delivered:"Delivered"};   /* V118.94 — Delivered closes it */
 async function dlvLoad(bid){
   DLV.loading=true;
   try{
@@ -45120,7 +45175,61 @@ async function dlvLoad(bid){
 function dlvFor(tid){ return DLV.list.filter(d=>d.task_id===tid).sort((a,b)=>(a.sort-b.sort)||String(a.created_at).localeCompare(String(b.created_at))); }
 function dlvVers(did){ return DLV.vers.filter(v=>v.deliverable_id===did).sort((a,b)=>a.version-b.version); }
 function dlvLast(did){ const vs=dlvVers(did); return vs[vs.length-1]||null; }
-function dlvState(d){ const l=dlvLast(d.id); return l?l.status:"none"; }
+function dlvState(d){ if(d.delivered_at) return "delivered"; const l=dlvLast(d.id); return l?l.status:"none"; }
+/* ══ V118.94 — CLOSING A DELIVERY (Chirag, 23 Oct, mockup 08 option B) ═══
+   Approved says the client said yes; Delivered says we are done — the
+   account manager closes the delivery, the approved file is the final,
+   no more versions until Reopen. A task whose deliveries are all
+   Delivered turns Delivered itself. */
+function dlvDone(d){ return !!d.delivered_at; }
+function dlvOpenFile(id){ for(const k of Object.keys(ASSETS)){ if((ASSETS[k]||[]).some(a=>a.id===id)){ openLightbox(id,ASSETS[k]); return; } } toast("That file is not available","err"); }
+function dlvFinalVer(d){ return d.delivered_version_id?DLV.vers.find(v=>v.id===d.delivered_version_id)||dlvLast(d.id):dlvLast(d.id); }
+function dlvFinalFiles(d){ const v=dlvFinalVer(d); return v?dlvAttached(v):[]; }
+function dlvTaskDone(tid){ const ds=dlvFor(tid); return ds.length>0&&ds.every(dlvDone); }
+function dlvCanClose(d,t){ if(!dlvMayEdit(t)||dlvDone(d)) return false; const l=dlvLast(d.id); return !!l&&(l.status==="approved"||l.status==="sent"); }
+async function dlvMarkDelivered(did){
+  const d=DLV.list.find(x=>x.id===did); if(!d) return;
+  const t=BR.tasks.find(x=>x.id===d.task_id); if(!dlvCanClose(d,t)) return;
+  const l=dlvLast(d.id);
+  if(l.status!=="approved"){   /* the client said yes by phone — recorded on their behalf */
+    await dlvAnswer(l.id,"approved"); if(l.status!=="approved") return;
+    if(dlvAttached(l).length){ try{ const r=await dlvCall("file_final",{version_id:l.id}); l.filed_at=r.filed_at; l.filed_file_id=(r.filed[0]||{}).id||null; if(typeof BF!=="undefined"&&BF.bid===activeBrand) BF.ok=false; }catch(e){ console.warn("[v118.94] not filed",e); } }
+  }
+  const patch={delivered_version_id:l.id,delivered_at:new Date().toISOString(),delivered_by:ME.id||null};
+  const r=await sb.from("task_deliverables").update(patch).eq("id",did);
+  if(r.error){ toast("Not closed — "+r.error.message,"err"); return; }
+  Object.assign(d,patch);
+  await logTask(t.id,`marked "${d.name}" delivered (v${l.version})`);
+  toast(`${d.name} · delivered`);
+  if(dlvTaskDone(t.id)&&brStatusOf(t)!=="closed"){
+    const was=t.status; t.status="closed";
+    const r2=await sb.from("branding_tasks").update({status:"closed"}).eq("id",t.id);
+    if(r2.error){ t.status=was; dbErr(r2); } else { await logTask(t.id,"every delivery is delivered — the task is Delivered"); toast(`${t.title} · Delivered`); }
+  }
+  if(TASK&&TASK.id===t.id){ await loadThread(t.id); }
+  render();
+}
+async function dlvReopen(did){
+  const d=DLV.list.find(x=>x.id===did); if(!d||!dlvDone(d)) return;
+  const t=BR.tasks.find(x=>x.id===d.task_id); if(!dlvMayEdit(t)) return;
+  const patch={delivered_version_id:null,delivered_at:null,delivered_by:null};
+  const r=await sb.from("task_deliverables").update(patch).eq("id",did);
+  if(r.error){ toast("Not reopened — "+r.error.message,"err"); return; }
+  Object.assign(d,patch);
+  await logTask(t.id,`reopened "${d.name}"`);
+  if(brStatusOf(t)==="closed"){
+    const was=t.status; t.status="drafting";
+    const r2=await sb.from("branding_tasks").update({status:"drafting"}).eq("id",t.id);
+    if(r2.error){ t.status=was; dbErr(r2); } else await logTask(t.id,"a delivery was reopened — the task is In progress");
+  }
+  if(TASK&&TASK.id===t.id){ await loadThread(t.id); }
+  render();
+}
+async function dlvMarkAll(tid){
+  const t=BR.tasks.find(x=>x.id===tid); if(!t) return;
+  const ds=dlvFor(tid).filter(d=>dlvCanClose(d,t)&&dlvLast(d.id).status==="approved");
+  for(const d of ds) await dlvMarkDelivered(d.id);
+}
 function dlvWho(id){ return (id&&(brPersonName(id)||(personById(id)||{}).name))||"the client"; }
 function dlvMayEdit(t){ return !!t&&brIsAM(t)&&DLV.ok; }
 function dlvMayAnswer(t){ return !!t&&DLV.ok&&(brIsAM(t)||brIsClient()); }
@@ -45142,29 +45251,36 @@ function dlvRailHtml(t){
       ?`<input class="dlv-rn" id="dlv-rn" maxlength="120" value="${escAttr(d.name)}" onclick="event.stopPropagation()"
           onkeydown="if(event.key==='Enter'){event.preventDefault();dlvRename('${d.id}');}if(event.key==='Escape'){DLV_REN=null;render();}" onblur="dlvRename('${d.id}')">`
       :`<span class="t">${escHtml(d.name)}</span>`;
-    const meta=last?`<span class="vchip">v${last.version}</span>${escHtml(v38Day(last.created_at))}${dlvSender(last)?" · "+escHtml(dlvSender(last)):""}`
+    const meta=dlvDone(d)?`<span class="vchip">v${(dlvFinalVer(d)||{}).version||"?"}</span>delivered ${escHtml(v38Day(d.delivered_at))}${d.delivered_by?" · "+escHtml(dlvWho(d.delivered_by)):""}`
+      :last?`<span class="vchip">v${last.version}</span>${escHtml(v38Day(last.created_at))}${dlvSender(last)?" · "+escHtml(dlvSender(last)):""}`
       :`not sent yet${d.due_date?" · due "+escHtml(v38Day(d.due_date)):""}`;
     /* V118.81 — Chirag, 21 Oct (mockup 10, B2): the client's answer is the pair on top,
        "Email the client" is one wide button under it, Rename / Remove sit behind ⋯ in the corner */
     const more=open&&mayE?`<span class="dlv-mo"><button class="ab more" onclick="dlvMore(event,'${d.id}')" title="Rename, remove"><i class="ti ti-dots"></i></button>
           ${DLV_MORE===d.id?`<div class="dlv-menu" onclick="event.stopPropagation()"><div class="mi" onclick="dlvRenOpen('${d.id}')"><i class="ti ti-pencil"></i>Rename</div>
             <div class="mi rm" onclick="dlvRemove('${d.id}')"><i class="ti ti-trash"></i>Remove</div></div>`:""}</span>`:"";
-    const act=open&&last&&(mayA||(mayE&&!brIsClient()))?`<div class="d-act" onclick="event.stopPropagation()">
+    const done=dlvDone(d), fv=done?dlvFinalVer(d):null, ff=done?dlvFinalFiles(d):[];
+    const act=open&&last&&!done&&(mayA||(mayE&&!brIsClient()))?`<div class="d-act" onclick="event.stopPropagation()">
         ${mayA?`<button class="ab ok${last.status==="approved"?" on":""}" onclick="dlvApprove('${last.id}')" title="Approve v${last.version}"><i class="ti ti-check"></i>Approve</button>
         <button class="ab ch${last.status==="changes"?" on":""}" onclick="dlvChangesOpen('${last.id}')" title="Record the changes the client asked for on v${last.version}"><i class="ti ti-arrow-back-up"></i>Changes</button>`:""}
         ${mayE&&!brIsClient()?`<button class="ab mail" onclick="dlvMailOpen('${last.id}')" title="Draft the email in your Outlook, file attached"><i class="ti ti-mail"></i>Email the client</button>`:""}
-      </div>`:"";
+        ${dlvCanClose(d,t)?`<button class="ab done" onclick="dlvMarkDelivered('${d.id}')" title="${last.status==="approved"?"Close this delivery — v"+last.version+" is the final":"The client said yes by phone — approve v"+last.version+" on their behalf and close"}"><i class="ti ti-package-export"></i>Mark delivered</button>`:""}
+      </div>`
+      :(open&&done?`<div class="d-act" onclick="event.stopPropagation()">
+        ${ff.length?ff.map(a=>`<button class="ab" onclick="event.stopPropagation();dlvOpenFile('${escAttr(a.id)}')" title="${escAttr(a.filename||"")}"><i class="ti ti-download"></i>Final${ff.length>1?" · "+escHtml(bfExt(a.filename||"")):""}</button>`).join(""):""}
+        ${mayE&&!brIsClient()?`<button class="ab" onclick="dlvReopen('${d.id}')" title="Open it again for another version"><i class="ti ti-rotate"></i>Reopen</button>`:""}
+      </div>`:"");
     const ver=open&&vs.length?`<div class="d-vers" onclick="event.stopPropagation()"><div class="lbl">Versions</div>
         ${vs.slice().reverse().map(v=>`<div class="vr"><span class="vchip">v${v.version}</span><span class="dt">${escHtml(v38Day(v.created_at))}</span>
           <span class="dlv-p s-${v.status}">${escHtml(DLV_WORD[v.status])}</span>
           ${v.message_id?`<span class="go" onclick="dlvJump('${escAttr(v.message_id)}')" title="Go to the message"><i class="ti ti-arrow-up-right"></i></span>`:`<span></span>`}</div>`).join("")}
       </div>`:"";
-    return `<div class="dlv-c${vs.length?"":" todo"}${open?" open":""}" onclick="dlvCardToggle('${d.id}')">
+    return `<div class="dlv-c${vs.length?"":" todo"}${open?" open":""}${dlvDone(d)?" done":""}" onclick="dlvCardToggle('${d.id}')">
       <div class="d-top">${nm}<span class="dlv-p s-${st}">${DLV_WORD[st]}</span>${more}</div>
       <div class="d-meta">${meta}</div>${open?dlvExtraHtml(last):""}${act}${ver}</div>`;
   }).join("");
   return `<div class="dlv-rail">
-    <div class="dlv-h">Deliveries · ${ds.length}${mayE?`<button class="dlv-add" onclick="dlvAddOpen('${t.id}')" title="Add a delivery"><i class="ti ti-plus"></i></button>`:""}</div>
+    <div class="dlv-h">Deliveries · ${ds.length}${ds.length&&ds.every(dlvDone)?`<span class="dlv-alldone" title="Every delivery is delivered">✓</span>`:""}${mayE&&ds.some(d=>dlvCanClose(d,t)&&dlvLast(d.id).status==="approved")?`<button class="dlv-all" onclick="event.stopPropagation();dlvMarkAll('${t.id}')" title="Close every approved delivery">Mark all delivered</button>`:""}${mayE?`<button class="dlv-add" onclick="dlvAddOpen('${t.id}')" title="Add a delivery"><i class="ti ti-plus"></i></button>`:""}</div>
     ${add}${cards||(add?"":`<div class="dlv-empty">${mayE?"Nothing named yet.":"Nothing delivered yet."}</div>`)}</div>`;
 }
 let DLV_MORE=null, DLV_REN=null;
@@ -45221,6 +45337,7 @@ async function dlvAnswer(vid,status){
 }
 async function dlvAddVersion(did,mid){
   const d=DLV.list.find(x=>x.id===did); if(!d) return false;
+  if(dlvDone(d)){ toast(`${d.name} is delivered — reopen it first`,"err"); return false; }   /* V118.94 */
   const vs=dlvVers(did);
   const row={id:(crypto.randomUUID?crypto.randomUUID():"v"+Date.now()),deliverable_id:did,task_id:d.task_id,brand_id:d.brand_id,
     version:(vs.length?Math.max(...vs.map(v=>v.version)):0)+1,message_id:mid||null,status:"sent",
@@ -45244,12 +45361,12 @@ function dlvJump(mid){
   el.classList.add("fb-landed"); setTimeout(()=>el.classList.remove("fb-landed"),1600);
 }
 /* the message box, in deliver mode */
-function dlvMode(tid){ DLV_PICK=tid?{tid,did:(dlvFor(tid)[0]||{}).id||"__new",name:""}:null; render(); }
+function dlvMode(tid){ DLV_PICK=tid?{tid,did:(dlvFor(tid).filter(d=>!dlvDone(d))[0]||{}).id||"__new",name:""}:null; render(); }
 function dlvPickSet(v){ if(!DLV_PICK) return; DLV_PICK.did=v; render(); if(v==="__new") setTimeout(()=>{ const i=document.getElementById("dlv-pn"); if(i) i.focus(); },40); }
 function dlvBarHtml(t){
   if(DLV_CHG&&DLV_CHG.tid===t.id) return dlvChgBarHtml(t);   /* V118.81 — the Changes bar lives in the same slot */
   if(!DLV_PICK||DLV_PICK.tid!==t.id) return "";   /* V118.77 — Chirag, 20 Oct: the hover row's Deliver is enough */
-  const ds=dlvFor(t.id), did=DLV_PICK.did, d=ds.find(x=>x.id===did);
+  const ds=dlvFor(t.id).filter(x=>!dlvDone(x)), did=DLV_PICK.did, d=ds.find(x=>x.id===did);   /* V118.94 — a delivered one takes no new version */
   const next=d?((dlvVers(d.id).length?Math.max(...dlvVers(d.id).map(v=>v.version)):0)+1):1;
   return `<div class="dlv-bar on"><b>Deliver</b>
     <select class="cc-stsel" onchange="dlvPickSet(this.value)">${ds.map(x=>`<option value="${x.id}"${x.id===did?" selected":""}>${escHtml(x.name)}</option>`).join("")}
@@ -45403,14 +45520,15 @@ function prThreadDress(){
 }
 function dlvRowsDress(){
   if(view!=="branding"||!DLV.ok||DLV.brand!==activeBrand) return;
+  if(brDlvView) return;   /* V118.94 — the Deliveries view draws every delivery itself */
   document.querySelectorAll("#main .brl-tr:not(.wa-r)").forEach(row=>{
     const m=/brToggleOpen\(event,'([^']+)'\)/.exec(row.getAttribute("onclick")||""); if(!m) return;
     const nm=row.querySelector(".brl-nm"); if(!nm||nm.querySelector(".dlv-sum")) return;
     const ds=dlvFor(m[1]); if(!ds.length) return;
     /* ONE LINE PER ROW (the listing rule): one chip — approved of total —
        and every deliverable, its version and state, on hover */
-    const st=ds.map(d=>dlvState(d)), okN=st.filter(x=>x==="approved").length;
-    const cls=okN===ds.length?"approved":(st.includes("changes")?"changes":"");
+    const st=ds.map(d=>dlvState(d)), okN=st.filter(x=>x==="delivered").length;   /* V118.94 — delivered of total */
+    const cls=okN===ds.length?"delivered":(st.every(x=>x==="approved"||x==="delivered")?"approved":(st.includes("changes")?"changes":""));
     const tip=ds.map(d=>{ const l=dlvLast(d.id); return d.name+(l?" · v"+l.version:"")+" · "+DLV_WORD[dlvState(d)]; }).join("\n");
     nm.insertAdjacentHTML("beforeend",`<span class="dlv-sum"><span class="${cls}" title="${escAttr(tip)}"><i class="ti ti-package"></i> ${okN}/${ds.length}</span></span>`);
   });
