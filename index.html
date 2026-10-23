@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.92 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.93 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14080,7 +14080,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.92 Tbilisi";
+const TOOL_VERSION="V118.93 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -48868,6 +48868,64 @@ function plMomCardHtml(){
     const h=baseCounts.apply(this,arguments);
     return (terse&&ptOn())?h.replace(/<span class="ct meet[^"]*">.*?<\/span>/,""):h;
   };
+})();
+</script>
+<style id="v11893-css">
+/* ══ V118.93 TBILISI · MEETINGS WEARS THE SUB-PAGE HEADER; EVEN GAPS ═════
+   Chirag, 23 Oct: the Meetings page (one step below Plan) did not wear
+   the "one tab that grows" header the suite settled on 17 Oct, and the
+   Plan page's cards were not evenly spaced. */
+.mlpage .pgbar .mom-back{display:none;}
+.mlpage .pgbar .ml-add{display:none;}
+/* every gap on the Plan page is 14px: the scope strip ends at 14, the
+   MOM card had been adding its own 10 on top, and the Add-next row was 7 */
+.pt-momw.mpv-eng{margin-top:-12px;}
+.mpv-addnext{padding-top:7px;}
+</style>
+<script>
+/* ══ V118.93 TBILISI ═══════════════════════════════════════════════════ */
+(function(){
+  /* 1 · Meetings is one step under Plan: the Plan tab grows into
+        "Plan | Meetings". UNDER is read by the V118.24/29 block through
+        window.BK_UNDER? No — it is closed over. So the pill is drawn
+        here the same way, for the one view that block does not know. */
+  const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  function paintMeets(){
+    const el=document.getElementById("bn-tabs"); if(!el||el.style.display==="none") return;
+    const on=(view==="meets"||view==="mom")&&typeof mfNarrow==="function"&&!mfNarrow();
+    const have=el.querySelector(".bk-pill.bk-meets");
+    if(!on){ if(have){ const par=have.previousElementSibling; have.remove(); if(par) par.style.display=""; } return; }
+    if(have||el.querySelector(".bk-pill")) return;
+    const par=[...el.querySelectorAll(".bntab")].find(b=>(b.getAttribute("onclick")||"").indexOf("openMonthPlanView")>-1);
+    if(!par) return;
+    par.classList.remove("on"); par.setAttribute("aria-current","false"); par.style.display="none";
+    const pi=par.querySelector("i"); const pIcon=pi?pi.className:"ti";
+    const word=par.textContent.replace(/beta/i,"").trim();
+    const c=document.createElement("span"); c.className="bk-pill bk-meets"; c.setAttribute("aria-current","page");
+    c.innerHTML=`<button class="bk-p" onclick="mlBack()" title="Back to ${esc(word)}"><i class="${pIcon}"></i>${esc(word)}</button><span class="bk-d"></span><span class="bk-c"><i class="ti ti-notes"></i>Meetings</span>`;
+    par.after(c);
+  }
+  const baseTabs=renderBnTabs;
+  renderBnTabs=function(){ const out=baseTabs.apply(this,arguments); try{ paintMeets(); }catch(e){} return out; };
+  const baseRender=render;
+  render=function(){ const out=baseRender.apply(this,arguments); try{ paintMeets(); }catch(e){} return out; };
+  /* 2 · Add MOM is the bar's red New button on the Meetings page */
+  const baseSpec=hbSpec;
+  hbSpec=function(){
+    if(view==="meets"&&activeBrand&&!brIsClient()&&canEdit()) return {cols:null, nw:{label:"Add MOM",go:()=>plMeetOpen(null)}, io:false};
+    return baseSpec.apply(this,arguments);
+  };
+  const baseMeets=renderMeetsPage;
+  renderMeetsPage=function(){
+    const out=baseMeets.apply(this,arguments);
+    try{
+      const bar=document.querySelector("#main .mlpage .pgbar");
+      if(bar){ bar.querySelectorAll(".btn").forEach(b=>{ if(/Add MOM/i.test(b.textContent)) b.classList.add("ml-add"); }); }
+      brNavSync(canEdit());
+    }catch(e){}
+    return out;
+  };
+  try{ paintMeets(); }catch(e){}
 })();
 </script>
 </body>
