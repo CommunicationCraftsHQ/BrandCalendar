@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.100 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.101 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2882,6 +2882,24 @@ body.brcv .brl-lens span.cv.on{background:#378ADD;color:#fff;}
 .brl-tr .c.late{color:var(--acc);font-weight:700;}
 .brl-un{min-width:17px;height:17px;padding:0 5px;border-radius:99px;background:var(--acc);color:#fff;
   font-size:10.5px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex:none;}
+/* V118.101 — Plan and Strategy rows in the suite's order */
+#calstrip.pl-row{display:flex;align-items:center;}
+#calstrip.pl-row > .pl-cnt{order:1;margin-right:auto;font-size:13px;color:var(--text);white-space:nowrap;}
+#calstrip.pl-row > .pl-cnt b{font-weight:700;}
+#calstrip.pl-row > .nav-sep{display:none;}
+#calstrip.pl-row > .pl-tc{order:2;}
+#calstrip.pl-row > .mc-today{order:3;}
+#calstrip.pl-row > #view-pill{order:4;margin-left:6px;flex:none;flex-wrap:nowrap;white-space:nowrap;}
+#calstrip.pl-row > #view-pill{align-items:center;height:auto;}
+#calstrip.pl-row > #view-pill .tab-item{white-space:nowrap;margin:0 !important;align-self:center;display:inline-flex;align-items:center;height:28px;vertical-align:top;position:static;top:auto;}
+#calstrip.pl-row{flex-wrap:nowrap;}
+#calstrip.pl-row > #lay-sep{order:5;}
+#calstrip.pl-row > #lay-grp{order:6;}
+#calstrip.pl-row > #year-step,#calstrip.pl-row > #past-tog{order:7;}
+#bf-links .st-cnt{margin-left:auto;font-size:12.5px;color:var(--subtle,#8a8a8a);white-space:nowrap;}
+#bf-links .st-cnt + .ct-btn{margin-left:10px;}
+#bf-links .ct-btn{background:#fff !important;color:var(--text) !important;border:1px solid var(--div,#e3e0da) !important;border-radius:9px !important;font-weight:600;}
+#bf-links .ct-btn .n{opacity:1;color:var(--acc,#D23B2B);}
 /* V118.96 — the link box's close */
 .mplink .mpl-x{border:0;background:transparent;color:var(--subtle,#8a8a8a);font-size:13px;cursor:pointer;padding:0 6px;line-height:1;}
 .mplink .mpl-x:hover{color:var(--text,#111);}
@@ -11298,6 +11316,11 @@ function hbSpec(){
   }
   if(view==="content"&&brands[activeBrand])
     return {cols:null, nw:canE?{label:"Add post",go:addContentPost}:null, io:canE&&can("import_export")};
+  /* V118.101 — build 2 of mockup 07: Plan and Strategy */
+  if((view==="mplan"||view==="year"||view==="list")&&brands[activeBrand])
+    return {cols:null, nw:(canE&&typeof PLD!=="undefined"&&PLD.ok&&PLD.ok.meet)?{label:"Add MOM",go:()=>plMeetOpen(null)}:null, io:true};
+  if(view==="brief"&&brands[activeBrand]&&typeof stIoOn==="function"&&stIoOn())
+    return {cols:null, nw:null, io:true};
   return null;
 }
 function hbColsOpen(e){ const sp=hbSpec(); if(sp&&sp.cols) sp.cols.open(e); }
@@ -11320,7 +11343,7 @@ function brNavSync(canE){
     ex.classList.toggle("brk-io",io||sio);
     ex.title=io?"Import / Export":(sio?"Import":"");
     if(io||sio) ex.setAttribute("aria-label",io?"Import / Export":"Import"); else ex.removeAttribute("aria-label");
-    ex.style.display=((view==="brief"||view==="cplay")&&!sio)?"none":"";
+    ex.style.display=((view==="brief"||view==="cplay")&&!sio&&!io)?"none":"";
   }
 }
 /* V118.94 — one task, drawn for the Deliveries view */
@@ -13501,7 +13524,13 @@ function buildExportPanel(){
      and live here. Import WRITES, so it keeps its own confirm step — the
      menu entry is shared, the safety is not. */
   const isBrief=!!document.querySelector(".bd-wrap");
-  if(view==="brief"){ el.innerHTML=(typeof stIoOn==="function"&&stIoOn())?stIoMenu():""; return; }
+  if(view==="brief"){ el.innerHTML=(typeof stIoOn==="function"&&stIoOn())?`<div class="brk-ioh"><i class="ti ti-upload"></i>Import</div>`+stIoMenu():""; return; }
+  if((view==="mplan"||view==="year"||view==="list")&&hbSpec()&&hbSpec().io){   /* V118.101 — Plan: export only, for now */
+    el.innerHTML=`<div class="brk-ioh"><i class="ti ti-download"></i>Export</div>
+      <div class="exscope"><div>${escAttr(line1)}<br><span class="dim">${escAttr(line2)}</span></div></div>
+      <div class="brow act" onclick="closeAllPops();exportXLSX()"><i class="ti ti-table"></i><span class="bnm">Excel sheet</span></div>`;
+    return;
+  }
   if(view==="cplay"){ el.innerHTML=(typeof cplIoOn==="function"&&cplIoOn())?cplIoMenu():""; return; }
   if(view==="promotions"&&hbSpec()&&hbSpec().io){   /* V118.91 */
     const n=(PR.list||[]).length;
@@ -14213,7 +14242,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.100 Tbilisi";
+const TOOL_VERSION="V118.101 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -33040,19 +33069,23 @@ plStripExtras=function(on){
      page's own control row, next to Add MOM, visible the moment you
      land on Plan and in the events list too. The one in the month
      label stays for when you are already in a month. */
-  if(PLD.ok.meet&&!strip.querySelector(".mom-all")){
-    const hm=`<button class="btn btn-g btn-sm mom-all" onclick="mlOpen()"
-        title="Every meeting with this brand, on one page">Meetings <i class="ti ti-chevron-right"></i></button>`;
-    if(ys&&ys.parentElement===strip) ys.insertAdjacentHTML("beforebegin",`<span style="flex:1"></span>`+hm);
-    else strip.insertAdjacentHTML("beforeend",hm);
-  }
-  if(PLD.ok.meet&&canEdit()&&!strip.querySelector(".mom-add")){
-    const h=`<button class="mom-add" onclick="plMeetOpen(null)"><i class="ti ti-plus"></i> Add MOM</button>`;
-    const all=strip.querySelector(".mom-all");
-    if(all) all.insertAdjacentHTML("afterend",h);
-    else if(ys&&ys.parentElement===strip) ys.insertAdjacentHTML("beforebegin",`<span style="flex:1"></span>`+h);
-    else strip.insertAdjacentHTML("beforeend",h);
-  }
+  /* ══ V118.101 — THE ROW IN THE SUITE'S ORDER (mockup 07, build 2) ════
+     count · ‹ month › Today · Calendar / Events / Meetings · Social.
+     "Meetings ›" joins the view switch; Add MOM is the bar's red button
+     (hbSpec). The nodes stay the nav's own; CSS `order` lines them up. */
+  strip.classList.add("pl-row");
+  strip.querySelectorAll(".mom-all,.mom-add").forEach(x=>x.remove());
+  const pill=document.getElementById("view-pill");
+  if(pill&&PLD.ok.meet&&!pill.querySelector(".pl-meets")) pill.insertAdjacentHTML("beforeend",`<button class="tab-item pl-meets" data-v="meets" onclick="mlOpen()">Meetings</button>`);
+  if(pill&&!PLD.ok.meet){ const m=pill.querySelector(".pl-meets"); if(m) m.remove(); }
+  let cnt=strip.querySelector(".pl-cnt");
+  if(!cnt){ strip.insertAdjacentHTML("afterbegin",`<span class="pl-cnt lc"></span>`); cnt=strip.querySelector(".pl-cnt"); }
+  try{
+    const sel=plSel(), posts=socialForBrandYear(activeBrand,YEAR).filter(p=>p.month===sel).length;
+    const camps=(typeof mpCamps==="function")?mpCamps(sel).length:0;
+    const bits=[`<b>${posts}</b> post${posts===1?"":"s"}`]; if(camps) bits.push(`${camps} campaign${camps===1?"":"s"}`);
+    cnt.innerHTML=bits.join(" · ");
+  }catch(e){ cnt.innerHTML=""; }
   plRange();
   plPickDraw();
 };
@@ -42884,9 +42917,32 @@ function ctBtnHtml(){
   return `<span class="bf-lk ct-btn" onclick="ctOpen(event)"><i class="ti ti-address-book"></i>Client team${n!==""?` <span class="n">${n}</span>`:""}<i class="ti ti-lock ct-lock"></i></span>`;
 }
 (function(){ const base=bfLinksHtml; bfLinksHtml=function(){ const h=base.apply(this,arguments);
-  if(!ctMay()||!BF.ok) return h;
+  const cnt=`<span class="st-cnt"></span>`;   /* V118.101 — filled by stCntPaint as the lists arrive */
+  if(!ctMay()||!BF.ok) return h+cnt;
   if(!(CT.bid===activeBrand&&CT.ok)) setTimeout(ctEnsure,0);
-  return h+ctBtnHtml(); }; })();
+  return h+cnt+ctBtnHtml(); }; })();
+/* V118.101 — what the Strategy page holds, in words, at the row's end */
+function stCntText(){
+  try{
+    const c=(typeof cpRows==="function"&&CP.ok&&CP.bid===activeBrand)?cpRows().length:0;
+    const v=(typeof tgIo!=="undefined"&&tgIo)?tgIo.vb():null, g=v&&v.key===activeBrand?(v.bsegs||[]).length:0;
+    const b=(typeof bcRows==="function"&&BC.ok&&BC.bid===activeBrand)?bcRows().length:0;
+    const bits=[]; if(c) bits.push(`${c} competitor${c===1?"":"s"}`); if(g) bits.push(`${g} target group${g===1?"":"s"}`); if(b) bits.push(`${b} creator${b===1?"":"s"}`);
+    return bits.join(" · ");
+  }catch(e){ return ""; }
+}
+function stCntPaint(){
+  if(view!=="brief") return;
+  const row=document.getElementById("bf-links"); if(!row) return;
+  let el=row.querySelector(".st-cnt");
+  if(!el){ const ct=row.querySelector(".ct-btn"); if(ct) ct.insertAdjacentHTML("beforebegin",`<span class="st-cnt"></span>`); else row.insertAdjacentHTML("beforeend",`<span class="st-cnt"></span>`); el=row.querySelector(".st-cnt"); }
+  const t=stCntText(); if(el.textContent!==t) el.textContent=t;
+}
+(function(){
+  let q=null;
+  new MutationObserver(()=>{ if(view!=="brief"||q) return; q=setTimeout(()=>{ q=null; stCntPaint(); },60); })
+    .observe(document.documentElement,{childList:true,subtree:true});
+})();
 function ctPhone(r){ return r.phone_official||r.phone_personal||""; }
 function ctMail(r){ return r.email_official||r.email_personal||""; }
 function ctPopHtml(){
