@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>html,body{margin:0;padding:0}</style>
 <title>Spin to win</title>
-<meta name="cc-tool-version" content="V1.6 New Jersey">
+<meta name="cc-tool-version" content="V1.7 New Jersey">
 <meta name="robots" content="noindex">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -560,6 +560,8 @@ function boot(){
   if (!SLUG) return showState("This link is missing its wheel.", "Scan the QR code again.");
   rpc("wheel_open", { p_slug: SLUG }).then((g) => {
     if (!g) return showState("This wheel isn't available.");
+    /* V1.7: a Jewel wheel has its own page; the QR and the address stay the same */
+    if (g.config && g.config.look === "jewel") { location.replace("jewel.html" + location.search); return; }
     applyGame(g);
     if (g.status === "draft") return showState("This wheel opens soon.");
     if (g.status === "closed") return showState("This wheel has closed.", "Thank you for joining in.");
