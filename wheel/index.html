@@ -3,9 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<style>html,body{margin:0;padding:0}</style>
+<style>html,body{margin:0;padding:0}
+/* V1.8: nothing shows until the wheel's own look is known (no flash of the default yellow) */
+body:not(.wd-ready){background:#120D09!important}body:not(.wd-ready)>*{visibility:hidden}</style>
 <title>Spin to win</title>
-<meta name="cc-tool-version" content="V1.7 New Jersey">
+<meta name="cc-tool-version" content="V1.8 New Jersey">
 <meta name="robots" content="noindex">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -508,10 +510,11 @@ function applyGame(g){
   document.title = (c.headline ? c.headline + (c.headline_em ? " " + c.headline_em : "") : "Spin to win") + (c.brand_line ? " · " + c.brand_line : "");
   document.body.style.background = getComputedStyle(phone).getPropertyValue("--bg").trim() || "#120D09";
   clearCelebration(); won = -1; angle = 0; setRot(); lastSeg = under(0); layout();
+  document.body.classList.add("wd-ready");
 }
 
 function sheet(id, on){ $(id).classList.toggle("show", !!on); }
-function showState(head, sub){ $("stateHead").textContent = head; $("stateSub").textContent = sub || ""; sheet("state", true); sheet("form", false); hint.style.visibility = "hidden"; }
+function showState(head, sub){ document.body.classList.add("wd-ready"); $("stateHead").textContent = head; $("stateSub").textContent = sub || ""; sheet("state", true); sheet("form", false); hint.style.visibility = "hidden"; }
 
 /* a live wheel only spins once the details are in, and only once */
 function gate(){

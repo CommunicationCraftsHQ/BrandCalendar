@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Spin the wheel</title>
-<meta name="cc-tool-version" content="V1.8 New Jersey">
+<meta name="cc-tool-version" content="V1.9 New Jersey">
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,6 +24,7 @@ body{background:var(--wine-deep);color:var(--ink);font-family:var(--sans);font-w
 button,input{font:inherit;color:inherit}
 #app{position:relative;max-width:440px;height:100dvh;margin:0 auto;overflow:hidden;
   background:radial-gradient(120% 70% at 50% 42%,#6A1A26 0%,var(--wine) 45%,var(--wine-deep) 100%)}
+body:not(.ready) .scr{visibility:hidden}
 #dust{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
 
 /* ── screens ── */
@@ -36,13 +37,13 @@ button,input{font:inherit;color:inherit}
 .kicker{font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:var(--ink-soft);font-weight:400}
 .h1{font-family:var(--serif);font-weight:500;font-size:44px;line-height:1.02;margin:0;text-align:center;letter-spacing:-.005em}
 .h1 i{font-style:italic;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
-.sub{font-size:15px;line-height:1.55;color:var(--ink-soft);text-align:center;max-width:290px;margin:0}
+.sub{font-size:17px;line-height:1.5;color:var(--ink-soft);text-align:center;max-width:290px;margin:0}
 .btn{appearance:none;border:0;cursor:pointer;width:100%;max-width:320px;height:54px;border-radius:999px;
   background:var(--gold-grad);color:#3A0A12;font-weight:500;font-size:13px;letter-spacing:.28em;text-transform:uppercase;
   box-shadow:0 10px 30px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.45);transition:transform .2s,filter .3s}
 .btn:active{transform:scale(.98)}
 .btn[disabled]{filter:grayscale(.6) brightness(.7);cursor:default}
-.ghost{appearance:none;background:none;border:0;color:var(--ink-mute);font-size:12px;letter-spacing:.22em;text-transform:uppercase;cursor:pointer;padding:10px}
+.ghost{appearance:none;background:none;border:0;color:var(--ink-soft);font-size:13px;letter-spacing:.22em;text-transform:uppercase;cursor:pointer;padding:10px}
 .foot{margin-top:auto;width:180px;opacity:.8}
 
 /* welcome */
@@ -56,12 +57,13 @@ button,input{font:inherit;color:inherit}
 #form .stage{flex:1;width:100%;display:flex;flex-direction:column;justify-content:center;gap:30px}
 .field{position:relative;border-bottom:1px solid var(--line);padding:22px 0 10px;transition:border-color .3s}
 .field:focus-within{border-color:var(--gold)}
-.field label{position:absolute;left:0;top:26px;font-size:15px;color:var(--ink-mute);transition:all .25s;pointer-events:none}
-.field input{width:100%;background:none;border:0;outline:0;font-size:20px;font-family:var(--serif);font-weight:500;letter-spacing:.01em;padding:0}
-.field input:focus+label,.field input:not(:placeholder-shown)+label{top:0;font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold)}
-.field.ph input{padding-left:44px}
-.field.ph .cc{position:absolute;left:0;bottom:12px;font-family:var(--serif);font-size:20px;color:var(--ink-soft)}
-.field.ph label{left:44px}
+.field label{position:absolute;left:0;top:28px;font-size:18px;color:var(--ink-mute);transition:all .25s;pointer-events:none}
+.field input{width:100%;background:none;border:0;outline:0;font-size:27px;font-family:var(--serif);font-weight:500;letter-spacing:.01em;padding:0}
+.field input:focus+label,.field input:not(:placeholder-shown)+label{top:0;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold)}
+.field.ph input{padding-left:62px;letter-spacing:.06em}
+.field.ph .cc{position:absolute;left:0;bottom:11px;font-family:var(--serif);font-size:27px;color:var(--ink-soft)}
+.field.ph label{left:62px}
+.field input:focus+label{left:0}
 .field.bad{border-color:#E08A7A}
 .consent{display:flex;gap:12px;align-items:flex-start;font-size:13px;line-height:1.5;color:var(--ink-soft);cursor:pointer}
 .consent input{appearance:none;flex:none;width:18px;height:18px;margin:1px 0 0;border:1px solid var(--gold);border-radius:4px;display:grid;place-items:center;cursor:pointer}
@@ -71,7 +73,7 @@ button,input{font:inherit;color:inherit}
 /* wheel */
 #wheel{gap:0}
 #wheel .top{display:flex;flex-direction:column;align-items:center;gap:14px}
-.hint{height:18px;transition:opacity .4s}
+.hint{display:none}
 .wheel-wrap{position:relative;flex:1;margin:0 -28px;width:calc(100% + 56px);display:flex;align-items:center;justify-content:center;min-height:0;container-type:inline-size}
 .dial{position:relative;flex:none;aspect-ratio:1;touch-action:none;user-select:none;-webkit-user-select:none}
 /* A · whole wheel, as wide as the phone */
@@ -127,22 +129,37 @@ button,input{font:inherit;color:inherit}
 #msg.on .spark{animation:twinkle2 2.8s ease-in-out 3.2s infinite}
 @keyframes twinkle2{0%,100%{transform:scale(1) rotate(0);opacity:1}50%{transform:scale(1.35) rotate(18deg);opacity:.7}}
 #msg .gone{opacity:0!important;transform:translateY(8px)!important;pointer-events:none;transition:opacity .5s,transform .5s!important}
+#welcome .kicker,#form .kicker{font-size:12px;letter-spacing:.26em;color:var(--gold)}
+#redeem{justify-content:flex-start;gap:18px;overflow-y:auto}
+#redeem .rd-prize{font-family:var(--serif);font-weight:500;font-size:42px;line-height:1;text-align:center;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent;margin:6px 0 0}
+#redeem .rd-sub{font-size:16px;color:var(--ink);text-align:center;margin:0}
+#redeem .code{margin:4px 0 0}
+#redeem ol{list-style:none;counter-reset:s;margin:6px 0 0;padding:0;width:100%;max-width:340px;display:flex;flex-direction:column;gap:14px}
+#redeem li{counter-increment:s;display:flex;gap:14px;align-items:flex-start;font-size:16px;line-height:1.45;color:var(--ink)}
+#redeem li::before{content:counter(s);flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--gold);display:grid;place-items:center;font-family:var(--serif);font-size:16px;font-weight:600;color:var(--gold-hi)}
+#redeem .rd-fine{font-size:13px;line-height:1.5;color:var(--ink-soft);text-align:center;max-width:320px;margin:0}
+#redeem .rd-acts{margin-top:auto;width:100%;display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:8px}
+.btn.line{background:none;border:1px solid var(--gold);color:var(--gold-hi);box-shadow:none;position:relative;overflow:hidden}
+.btn.line::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,240,200,.35),transparent);animation:btnsheen 3.4s ease-in-out 1s infinite}
+#app.redeeming #msg{opacity:0;pointer-events:none;transition:opacity .4s}
+#app.redeeming #msg .act{pointer-events:none}
 #after{width:100%;display:flex;flex-direction:column;align-items:center;gap:12px;opacity:0;transform:translateY(10px);transition:opacity .8s ease .2s,transform .9s cubic-bezier(.2,.7,.2,1) .2s}
 #after.show{opacity:1;transform:none}
 #after .btn{background:none;border:1px solid var(--gold);color:var(--gold-hi);box-shadow:none;position:relative;overflow:hidden}
 #after .btn::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,240,200,.35),transparent);animation:btnsheen 3.4s ease-in-out 1s infinite}
 @keyframes btnsheen{0%{left:-60%}55%,100%{left:130%}}
-#msg .detail{font-size:13px;line-height:1.5;margin:0}
+#msg .detail{font-size:16px;line-height:1.45;margin:0;color:var(--ink)}
+#msg .kicker{font-size:13px;letter-spacing:.22em;color:var(--ink)}
 .prize{font-family:var(--serif);font-weight:500;font-size:58px;line-height:.98;margin:10px 0 0;
   background:linear-gradient(100deg,#F8E2A6 0%,#D9B060 34%,#FFF8E4 50%,#F8E2A6 62%,#D9B060 100%);background-size:250% 100%;background-position:100% 0;
   -webkit-background-clip:text;background-clip:text;color:transparent}
 #msg.on .prize{animation:sweep 2.6s ease 1.9s both}
 @keyframes sweep{from{background-position:100% 0}to{background-position:0 0}}
-.prize small{display:block;font-family:var(--sans);font-weight:400;font-size:12px;letter-spacing:.34em;text-transform:uppercase;margin-top:10px;color:var(--gold);-webkit-text-fill-color:var(--gold)}
+.prize small{display:block;font-family:var(--sans);font-weight:400;font-size:12px;letter-spacing:.2em;text-transform:uppercase;margin-top:10px;font-size:16px;font-weight:500;color:var(--gold);-webkit-text-fill-color:var(--gold)}
 .detail{font-size:14px;line-height:1.55;color:var(--ink-soft);margin:0 0 16px}
 .code{display:inline-flex;flex-direction:column;gap:4px;border:1px dashed var(--line);border-radius:10px;padding:10px 22px;margin-bottom:18px}
-.code b{font-family:var(--serif);font-weight:600;font-size:26px;letter-spacing:.18em;color:var(--ink)}
-.code span{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--ink-mute)}
+.code b{font-family:var(--serif);font-weight:600;font-size:31px;letter-spacing:.18em;color:var(--ink)}
+.code span{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-hi);font-weight:400}
 #msg .btn{height:48px}
 #msg.lose .prize{font-size:44px!important}
 
@@ -185,7 +202,9 @@ button,input{font:inherit;color:inherit}
       <div class="halo" aria-hidden="true">
         <svg viewBox="-130 -130 260 260" class="spin" id="haloSvg"></svg>
       </div>
-      <h1 class="h1" id="head">Spin for a <i>little sparkle</i></h1>
+      <div class="kicker" id="wKick">Spin &amp; win</div>
+      <h1 class="h1" id="head" style="margin-top:-10px">Spin for a <i>little sparkle</i></h1>
+      <p class="sub" id="wSub"></p>
       <p class="sub" id="stateSub" hidden></p>
     </div>
     <button class="btn" id="begin">Begin</button>
@@ -196,12 +215,12 @@ button,input{font:inherit;color:inherit}
     <img class="mark sm mk" data-img="mark" alt=""><div class="wm sm mk" hidden></div>
     <form class="stage" id="f" novalidate>
       <div>
-        <div class="kicker" style="text-align:center;margin-bottom:12px">Before you spin</div>
-        <h2 class="h1" style="font-size:38px">Tell us who's <i>spinning</i></h2>
+        <h2 class="h1" style="font-size:40px" id="fHead">Unlock your <i>spin</i></h2>
+        <p class="sub" id="fSub" style="margin:14px auto 0"></p>
       </div>
       <div>
         <div class="field" id="fName"><input id="name" placeholder=" " autocomplete="name"><label for="name">Your name</label></div>
-        <div class="field ph" id="fPhone"><span class="cc">+91</span><input id="phone" placeholder=" " inputmode="numeric" maxlength="10" autocomplete="tel-national"><label for="phone">Mobile number</label></div>
+        <div class="field ph" id="fPhone"><span class="cc">+91</span><input id="phone" placeholder=" " inputmode="numeric" maxlength="11" autocomplete="tel-national"><label for="phone">Mobile number</label></div>
       </div>
       <label class="consent"><input type="checkbox" id="ok" checked><span id="consentTxt">I agree to be contacted about my prize.</span></label>
       <div class="ferr" id="ferr"></div>
@@ -213,7 +232,7 @@ button,input{font:inherit;color:inherit}
   <section class="scr" id="wheel" data-lay="a">
     <div class="top">
       <img class="mark sm mk" data-img="mark" alt=""><div class="wm sm mk" hidden></div>
-      <div class="kicker hint" id="hint">Swipe the wheel, or tap the sparkle</div>
+      <div class="kicker hint" id="hint"></div>
     </div>
     <div class="wheel-wrap">
       <div class="dial" id="dial">
@@ -231,6 +250,21 @@ button,input{font:inherit;color:inherit}
     <button class="btn" id="spinBtn">Spin</button>
   </section>
 
+  <!-- 5 · how to redeem (V1.9) -->
+  <section class="scr" id="redeem">
+    <img class="mark sm mk" data-img="mark" alt=""><div class="wm sm mk" hidden></div>
+    <div class="kicker" style="margin-top:6px">How to redeem</div>
+    <div class="rd-prize" id="rdPrize"></div>
+    <p class="rd-sub" id="rdSub"></p>
+    <div class="code"><b id="rdCode"></b><span id="rdCodeNote">Your prize code</span></div>
+    <ol id="rdSteps"></ol>
+    <p class="rd-fine" id="rdFine"></p>
+    <div class="rd-acts">
+      <button class="btn line" id="cta" hidden>Explore the collection</button>
+      <button class="ghost" id="rdBack">Back to my prize</button>
+    </div>
+  </section>
+
   <!-- 4 · result: written into the winning segment -->
   <div id="msg">
     <div class="in" id="msgIn">
@@ -241,8 +275,7 @@ button,input{font:inherit;color:inherit}
     </div>
     <div class="act" id="msgAct">
       <div class="code r r5" id="rCode"><b id="rCodeTxt"></b><span id="rCodeNote">Show this at the counter</span></div>
-      <div class="r r6" style="width:100%" id="doneRow"><button class="btn" id="done">Done</button></div>
-      <div id="after" hidden><div class="kicker" id="afterNote">Take a screenshot to keep your code</div><button class="btn" id="cta">Explore the collection</button></div>
+      <div class="r r6" style="width:100%" id="doneRow"><button class="btn" id="done">Redeem</button></div>
     </div>
   </div>
 </div>
@@ -305,13 +338,15 @@ function drawWheel() {
   const fit = N > 10 ? .72 : N > 8 ? .85 : 1;
   P.forEach((p, i) => {
     const g = el("g", { transform: `rotate(${i * SEG + SEG / 2})`, style: "transition:opacity .6s" }, rotor);
-    const big = el("text", { x: 0, y: -128, "text-anchor": "middle", fill: "#F6E9CF", "font-family": "Cormorant Garamond, Georgia, serif", "font-weight": 600, "font-size": (p.t.length > 4 ? 23 : 30) * fit }, g);
+    const big = el("text", { x: 0, y: -128, "text-anchor": "middle", fill: "#F6E9CF", "font-family": "Cormorant Garamond, Georgia, serif", "font-weight": 600, "font-size": (p.t.length > 4 ? 25 : 32) * fit }, g);
     big.textContent = p.t;
-    const sm = el("text", { x: 0, y: -106, "text-anchor": "middle", fill: "#D9B060", "font-family": "Jost, sans-serif", "font-weight": 400, "font-size": 8.6 * fit, "letter-spacing": 2.4 * fit }, g);
+    big.setAttribute("y", -130);
+    const sm = el("text", { x: 0, y: -103, "text-anchor": "middle", fill: "#ECC984", "font-family": "Jost, sans-serif", "font-weight": 500, "font-size": 12.5 * fit, "letter-spacing": 1.1 * fit }, g);
     sm.textContent = (p.s || "").toUpperCase();
     labels.push(g);
   });
   for (const c of rotor.children) c.classList.add("fade");
+  fitLabels();
   /* the welcome halo: the same wheel in outline, turning slowly */
   const h = $("haloSvg"); h.innerHTML = "";
   el("circle", { r: 122, fill: "none", stroke: "url(#gg)", "stroke-width": .8, opacity: .55 }, h);
@@ -324,6 +359,16 @@ function drawWheel() {
   rot = 0; lastTick = 0; rotor.setAttribute("transform", "rotate(0)");
 }
 
+/* a label never runs past the edges of its slice: shrink it to fit */
+function fitLabels() {
+  labels.forEach((g) => [...g.querySelectorAll("text")].forEach((tx) => {
+    const y = Math.abs(+tx.getAttribute("y")), room = 2 * (y - 6) * Math.sin(Math.PI / N) * .9;
+    let w = 0; try { w = tx.getComputedTextLength(); } catch (e) {}
+    if (!tx.dataset.fs) tx.dataset.fs = tx.getAttribute("font-size");
+    const fs = +tx.dataset.fs; tx.setAttribute("font-size", w > room && w > 0 ? (fs * room / w).toFixed(2) : fs);
+  }));
+}
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitLabels());
 /* the look: the setup's words, logo and framing */
 const FRAME = { whole: "a", close: "b", hero: "c" };
 function applyGame(g) {
@@ -341,14 +386,23 @@ function applyGame(g) {
   if (c.footer_url) { foot.src = c.footer_url; foot.hidden = false; } else foot.hidden = true;
   $("head").innerHTML = esc(c.headline || "Spin for a") + " <i>" + esc(c.headline_em || "little sparkle") + "</i>";
   $("consentTxt").textContent = c.consent || "I agree to be contacted about my prize.";
+  /* V1.9: the words that make someone want to go on (defaults are the recommended set) */
+  $("wKick").textContent = c.welcome_kicker || "Spin & win";
+  $("wSub").textContent = c.welcome_sub == null ? "" : c.welcome_sub;
+  $("wSub").hidden = !$("wSub").textContent;
+  $("begin").textContent = c.begin_label || "Try my luck";
+  $("fHead").innerHTML = esc(c.form_head || "Unlock your") + " <i>" + esc(c.form_head_em || "spin") + "</i>";
+  $("fSub").textContent = c.form_sub || "Your prize code is tied to your number, so it's yours alone.";
+  $("go").textContent = c.unlock_label || "Unlock my spin";
   $("rCodeNote").textContent = c.fine || "Show this at the counter";
   const lay = c.preset === "" ? "x" : (FRAME[c.preset] || "b");
   $("wheel").dataset.lay = lay;
   $("dial").style.width = lay === "x" ? `min(${Math.round(94 * (+c.zoom || 100) / 100)}cqw, 140dvh)` : "";
   $("dial").style.marginTop = lay === "x" ? (+c.pos || 0) + "%" : "";
-  $("hint").textContent = lay === "c" ? "Swipe the wheel, or tap Spin" : "Swipe the wheel, or tap the sparkle";
+
   document.title = [c.headline, c.headline_em].filter(Boolean).join(" ") + (c.brand_line ? " · " + c.brand_line : "") || "Spin the wheel";
   reset(); drawWheel();
+  document.body.classList.add("ready");
 }
 
 /* ── sound: glass ticks and a bell chord, made in the browser ── */
@@ -400,14 +454,16 @@ function drawStar(x, y, s, a) {
 let screen = "welcome";
 function show(id) { screen = id; document.querySelectorAll(".scr").forEach((s) => s.classList.toggle("on", s.id === id)); }
 function showState(head, sub) {
+  document.body.classList.add("ready");
   show("welcome"); $("head").textContent = head; $("stateSub").textContent = sub || ""; $("stateSub").hidden = !sub; $("begin").hidden = true;
 }
 
 /* ── the details, then the spin ── */
 let live = false, unlocked = false, result = null;
 const nameI = $("name"), phoneI = $("phone"), goB = $("go");
-const okName = () => nameI.value.trim().length >= 2, okPhone = () => /^[6-9]\d{9}$/.test(phoneI.value);
-phoneI.addEventListener("input", () => { phoneI.value = phoneI.value.replace(/\D/g, "").slice(0, 10); check(); });
+const digits = () => phoneI.value.replace(/\D/g, "").slice(0, 10);
+const okName = () => nameI.value.trim().length >= 2, okPhone = () => /^[6-9]\d{9}$/.test(digits());
+phoneI.addEventListener("input", () => { const d = digits(); phoneI.value = d.length > 5 ? d.slice(0, 5) + " " + d.slice(5) : d; check(); });
 nameI.addEventListener("input", check);
 function check() { goB.disabled = !(okName() && okPhone()); $("ferr").textContent = ""; }
 $("begin").addEventListener("click", () => { ctx(); if (PREVIEW) { unlocked = true; show("wheel"); } else show("form"); });
@@ -418,7 +474,7 @@ $("f").addEventListener("submit", async (e) => {
   if (!$("ok").checked) { $("ferr").textContent = "Please tick the box to continue."; return; }
   ctx(); goB.disabled = true; goB.textContent = "Unlocking…";
   try {
-    const r = await rpc("wheel_spin", { p_slug: SLUG, p_name: nameI.value.trim(), p_mobile: phoneI.value, p_test: qs.get("test") === "1" });
+    const r = await rpc("wheel_spin", { p_slug: SLUG, p_name: nameI.value.trim(), p_mobile: digits(), p_test: qs.get("test") === "1" });
     result = { ...r, name: nameI.value.trim() }; keep(result);
     if (r.duplicate) { replay(result); return; }
     unlocked = true; show("wheel");
@@ -426,7 +482,7 @@ $("f").addEventListener("submit", async (e) => {
     const k = Object.keys(ERR).find((x) => String(err.message).includes(x));
     $("ferr").textContent = k ? ERR[k] : "Something went wrong. Check your connection and try again.";
     if (k === "wheel_closed" || k === "no_prizes_left") { live = false; showState(ERR[k]); }
-  } finally { goB.textContent = "Unlock my spin"; check(); }
+  } finally { goB.textContent = cfg.unlock_label || "Unlock my spin"; check(); }
 });
 
 /* ── the spin ── */
@@ -520,7 +576,8 @@ function liftOut(i) {
   $("rCode").style.display = lose ? "none" : "";
   $("rCodeTxt").textContent = (result && result.code) || (PREVIEW ? (cfg.code_prefix || "WIN") + "-7Q4K" : "");
   const site = (cfg.site_url || "").trim();
-  $("done").textContent = lose ? (site ? "Visit " + site.replace(/^https?:\/\//, "").replace(/\/$/, "") : "Done") : "Done";
+  $("done").textContent = lose ? (site ? "Visit " + site.replace(/^https?:\/\//, "").replace(/\/$/, "") : "Done") : (cfg.redeem_label || "Redeem");
+  lastWin = lose ? -1 : i;
   $("done").dataset.href = lose && site ? (/^https?:/.test(site) ? site : "https://" + site) : "";
   const inn = $("msgIn"); inn.style.top = (T + H * .13) + "px"; inn.style.width = (W * .78) + "px";
   requestAnimationFrame(() => m.classList.add("on"));
@@ -528,7 +585,7 @@ function liftOut(i) {
   clearInterval(trickle);
   if (!lose) trickle = setInterval(() => { if ($("wheel").classList.contains("zoom")) addMote(true, T + H * .35); else clearInterval(trickle); }, 420);
 }
-let trickle = 0;
+let trickle = 0, lastWin = -1;
 function sweepSheen() {
   const g = $("sheen"), t0 = performance.now();
   (function go(t) {
@@ -546,21 +603,32 @@ function reset() {
   labels.forEach((g) => { g.style.opacity = 1; g.classList.add("fade"); });
   spent = false; spinning = false; $("hint").style.opacity = 1; hub.classList.add("idle");
   clearInterval(trickle);
-  const dr = $("doneRow"); dr.classList.remove("gone"); dr.style.display = ""; $("after").classList.remove("show"); $("after").hidden = true;
+  $("app").classList.remove("redeeming"); lastWin = -1;
 }
 $("done").addEventListener("click", () => {
   if ($("done").dataset.href) { location.href = $("done").dataset.href; return; }
-  if (PREVIEW && $("after").classList.contains("show")) { reset(); show("welcome"); return; }
-  /* one spin: the result stays on screen, the light keeps moving, and the next step appears */
-  $("doneRow").classList.add("gone");
+  openRedeem();
+});
+/* V1.9: Redeem opens the how-to page; the prize stays behind it, still lit */
+function openRedeem() {
+  const i = lastWin; if (i < 0) return;
+  const p = P[i];
+  $("rdPrize").textContent = [p.t, p.s].filter(Boolean).join(" ");
+  $("rdSub").textContent = cfg.subline || "";
+  $("rdSub").hidden = !cfg.subline;
+  $("rdCode").textContent = (result && result.code) || (PREVIEW ? (cfg.code_prefix || "WIN") + "-7Q4K" : "");
+  $("rdCodeNote").textContent = cfg.fine || "Show this at the counter";
+  const steps = String(cfg.redeem_steps || "Visit any " + (cfg.brand_line || "of our") + " store before the offer ends.\nPick the piece you love.\nShow this code at billing. Our team will apply your prize.")
+    .split(/\n+/).map((x) => x.trim()).filter(Boolean);
+  $("rdSteps").innerHTML = steps.map((x) => "<li>" + esc(x) + "</li>").join("");
+  $("rdFine").textContent = cfg.redeem_fine || "One code per bill. It can't be combined with other offers.";
   const label = (cfg.cta_label || "").trim(), url = (cfg.cta_url || cfg.site_url || "").trim();
   $("cta").textContent = label || (url ? "Visit " + url.replace(/^https?:\/\//, "").replace(/\/$/, "") : "");
   $("cta").hidden = !url;
   $("cta").dataset.href = url ? (/^https?:/.test(url) ? url : "https://" + url) : "";
-  $("afterNote").textContent = $("msg").classList.contains("lose") ? "" : (cfg.after_note || "Take a screenshot to keep your code");
-  const a = $("after"); a.hidden = false;
-  setTimeout(() => { $("doneRow").style.display = "none"; requestAnimationFrame(() => a.classList.add("show")); }, 450);
-});
+  $("app").classList.add("redeeming"); show("redeem");
+}
+$("rdBack").addEventListener("click", () => { $("app").classList.remove("redeeming"); show("wheel"); });
 $("cta").addEventListener("click", () => { if ($("cta").dataset.href) window.open($("cta").dataset.href, "_blank", "noopener"); });
 
 /* someone who has already spun sees their result again */
