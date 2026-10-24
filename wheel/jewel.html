@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Spin the wheel</title>
-<meta name="cc-tool-version" content="V1.7 New Jersey">
+<meta name="cc-tool-version" content="V1.8 New Jersey">
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -123,6 +123,15 @@ button,input{font:inherit;color:inherit}
 #msg.on .r{opacity:1;transform:none;transition:opacity .8s ease,transform .9s cubic-bezier(.2,.7,.2,1)}
 #msg.on .r1{transition-delay:1.5s}#msg.on .r2{transition-delay:1.75s}#msg.on .r3{transition-delay:2.15s}#msg.on .r4{transition-delay:2.4s}#msg.on .r5{transition-delay:2.65s}#msg.on .r6{transition-delay:2.9s}
 #msg .spark{width:16px;height:16px;margin:8px 0 10px}
+/* V1.8: after Done the light keeps moving and a next step appears */
+#msg.on .spark{animation:twinkle2 2.8s ease-in-out 3.2s infinite}
+@keyframes twinkle2{0%,100%{transform:scale(1) rotate(0);opacity:1}50%{transform:scale(1.35) rotate(18deg);opacity:.7}}
+#msg .gone{opacity:0!important;transform:translateY(8px)!important;pointer-events:none;transition:opacity .5s,transform .5s!important}
+#after{width:100%;display:flex;flex-direction:column;align-items:center;gap:12px;opacity:0;transform:translateY(10px);transition:opacity .8s ease .2s,transform .9s cubic-bezier(.2,.7,.2,1) .2s}
+#after.show{opacity:1;transform:none}
+#after .btn{background:none;border:1px solid var(--gold);color:var(--gold-hi);box-shadow:none;position:relative;overflow:hidden}
+#after .btn::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,240,200,.35),transparent);animation:btnsheen 3.4s ease-in-out 1s infinite}
+@keyframes btnsheen{0%{left:-60%}55%,100%{left:130%}}
 #msg .detail{font-size:13px;line-height:1.5;margin:0}
 .prize{font-family:var(--serif);font-weight:500;font-size:58px;line-height:.98;margin:10px 0 0;
   background:linear-gradient(100deg,#F8E2A6 0%,#D9B060 34%,#FFF8E4 50%,#F8E2A6 62%,#D9B060 100%);background-size:250% 100%;background-position:100% 0;
@@ -232,7 +241,8 @@ button,input{font:inherit;color:inherit}
     </div>
     <div class="act" id="msgAct">
       <div class="code r r5" id="rCode"><b id="rCodeTxt"></b><span id="rCodeNote">Show this at the counter</span></div>
-      <div class="r r6" style="width:100%"><button class="btn" id="done">Done</button></div>
+      <div class="r r6" style="width:100%" id="doneRow"><button class="btn" id="done">Done</button></div>
+      <div id="after" hidden><div class="kicker" id="afterNote">Take a screenshot to keep your code</div><button class="btn" id="cta">Explore the collection</button></div>
     </div>
   </div>
 </div>
@@ -515,13 +525,17 @@ function liftOut(i) {
   const inn = $("msgIn"); inn.style.top = (T + H * .13) + "px"; inn.style.width = (W * .78) + "px";
   requestAnimationFrame(() => m.classList.add("on"));
   if (!lose) for (let n = 0; n < 46; n++) setTimeout(() => addMote(true, T + H * .3), 1600 + n * 24);
+  clearInterval(trickle);
+  if (!lose) trickle = setInterval(() => { if ($("wheel").classList.contains("zoom")) addMote(true, T + H * .35); else clearInterval(trickle); }, 420);
 }
+let trickle = 0;
 function sweepSheen() {
   const g = $("sheen"), t0 = performance.now();
   (function go(t) {
     const q = Math.min(1, (t - t0) / 1400), x = -260 + 520 * (1 - Math.pow(1 - q, 3));
     g.setAttribute("gradientTransform", `translate(${x} 0) rotate(-20)`);
     if (q < 1) requestAnimationFrame(go);
+    else if ($("wheel").classList.contains("zoom")) setTimeout(() => { if ($("wheel").classList.contains("zoom")) sweepSheen(); }, 1600);
   })(t0);
 }
 function reset() {
@@ -531,12 +545,23 @@ function reset() {
   segs.forEach((s) => { s.style.opacity = 1; if (s.dataset.fill) { s.setAttribute("fill", s.dataset.fill); delete s.dataset.fill; } s.classList.add("fade"); });
   labels.forEach((g) => { g.style.opacity = 1; g.classList.add("fade"); });
   spent = false; spinning = false; $("hint").style.opacity = 1; hub.classList.add("idle");
+  clearInterval(trickle);
+  const dr = $("doneRow"); dr.classList.remove("gone"); dr.style.display = ""; $("after").classList.remove("show"); $("after").hidden = true;
 }
 $("done").addEventListener("click", () => {
   if ($("done").dataset.href) { location.href = $("done").dataset.href; return; }
-  if (PREVIEW) { reset(); show("welcome"); return; }
-  $("done").parentElement.style.visibility = "hidden";       /* one spin: the result stays on screen */
+  if (PREVIEW && $("after").classList.contains("show")) { reset(); show("welcome"); return; }
+  /* one spin: the result stays on screen, the light keeps moving, and the next step appears */
+  $("doneRow").classList.add("gone");
+  const label = (cfg.cta_label || "").trim(), url = (cfg.cta_url || cfg.site_url || "").trim();
+  $("cta").textContent = label || (url ? "Visit " + url.replace(/^https?:\/\//, "").replace(/\/$/, "") : "");
+  $("cta").hidden = !url;
+  $("cta").dataset.href = url ? (/^https?:/.test(url) ? url : "https://" + url) : "";
+  $("afterNote").textContent = $("msg").classList.contains("lose") ? "" : (cfg.after_note || "Take a screenshot to keep your code");
+  const a = $("after"); a.hidden = false;
+  setTimeout(() => { $("doneRow").style.display = "none"; requestAnimationFrame(() => a.classList.add("show")); }, 450);
 });
+$("cta").addEventListener("click", () => { if ($("cta").dataset.href) window.open($("cta").dataset.href, "_blank", "noopener"); });
 
 /* someone who has already spun sees their result again */
 function replay(res) {
