@@ -1,0 +1,570 @@
+<title>Spin to win</title>
+<meta name="cc-tool-version" content="V1.5 New Jersey">
+<meta name="robots" content="noindex">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+/* Layout: the phone on the left, the setup panel on the right (a bottom sheet on a phone).
+   One wheel engine; looks change tokens only. The page frame commits to one dark look by choice. */
+:root{
+  --serif:"Instrument Serif","Times New Roman",Georgia,serif;
+  --display:"Bricolage Grotesque","Arial Black",system-ui,sans-serif;
+  --body:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --page:#1B1A17; --panel:#24231F; --line:#34332D; --page-ink:#EDEAE2; --page-mute:#9B978C; --chip:#2E2D28; --chip-on:#EDEAE2; --chip-on-ink:#1B1A17; --focus:#F0A63A;
+  --bg:#E8D98A; --bg2:#E8D98A; --ink:#151410; --mute:#5A5440; --accent:#E4623A;
+  --hub:#151410; --hub-ink:#F4EEDC; --rim:#151410; --pointer:#151410; --card:#FFFBEF; --card-ink:#151410; --glow:transparent;
+  --gild:#D9B26A; --gild-hi:#F6E2B0; --gild-lo:#8A6A2E; --gild-shade:rgba(21,18,12,.86);
+  color-scheme:dark;
+}
+.look-gold{--bg:#120D09;--bg2:#2A1A10;--ink:#F6E7CF;--mute:#B89C78;--accent:#F0A63A;--hub:#3A2414;--hub-ink:#FBEBD2;--rim:#C9874A;--pointer:#5A3519;--card:#FBF1E2;--card-ink:#2A1A10;--glow:rgba(240,166,58,.35);--gild-shade:rgba(8,6,4,.8)}
+.look-neon{--bg:#0E1013;--bg2:#1A1530;--ink:#F2F0FF;--mute:#8F8BA8;--accent:#B76BFF;--hub:#ECEAF6;--hub-ink:#17151F;--rim:#2A2836;--pointer:#C27BFF;--card:#17151F;--card-ink:#F2F0FF;--glow:rgba(183,107,255,.45);--gild:#CDB6FF;--gild-hi:#F3EBFF;--gild-lo:#7A5BC4;--gild-shade:rgba(10,9,16,.82)}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--page);color:var(--page-ink);font-family:var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px;
+  display:flex;align-items:flex-start;justify-content:center;gap:28px;overflow-x:hidden}
+button{font-family:inherit}
+button:focus-visible,input:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+/* ── the phone ── */
+.phone{position:relative;flex:none;width:400px;max-width:100%;height:min(820px,calc(100vh - 40px));min-height:640px;border-radius:36px;overflow:hidden;
+  background:radial-gradient(120% 70% at 50% 62%,var(--bg2),var(--bg) 70%);color:var(--ink);
+  box-shadow:0 30px 80px rgba(0,0,0,.5),0 0 0 8px #0B0B0A;touch-action:none;user-select:none;-webkit-user-select:none;transition:background .4s}
+.top{position:absolute;z-index:6;left:0;right:0;top:0;padding:34px 24px 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
+.brand{font:700 12px/1 var(--body);letter-spacing:.22em;text-transform:uppercase;color:var(--mute)}
+h1{margin:6px 0 0;font:800 clamp(36px,10vw,48px)/.95 var(--display);letter-spacing:-.03em;text-wrap:balance}
+h1 em{font-style:normal;color:var(--accent)}
+.look-neon h1 em{background:linear-gradient(90deg,#C27BFF,#6FB6FF);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font:500 15px/1.35 var(--body);color:var(--mute);margin:4px 0 0}
+.bottom{position:absolute;z-index:6;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 24px 20px;pointer-events:none}
+.hint{display:flex;align-items:center;gap:8px;font:600 14px/1 var(--body);color:var(--mute);background:color-mix(in srgb,var(--bg) 70%,transparent);padding:8px 12px;border-radius:999px}
+.hint svg{animation:swipe 1.8s ease-in-out infinite}
+@keyframes swipe{0%,100%{transform:translateX(-6px) rotate(-12deg)}50%{transform:translateX(8px) rotate(14deg)}}
+.fine{font:500 11px/1.4 var(--body);color:var(--mute);text-align:center;background:color-mix(in srgb,var(--bg) 78%,transparent);padding:4px 10px;border-radius:8px}
+.spinpill{pointer-events:auto;border:0;border-radius:999px;padding:14px 34px;font:800 17px/1 var(--display);letter-spacing:.06em;background:var(--hub);color:var(--hub-ink);box-shadow:0 8px 24px rgba(0,0,0,.35);cursor:pointer}
+
+.wheel{position:absolute;z-index:3;left:50%;aspect-ratio:1;transform:translate(-50%,-50%);transition:width .35s ease,top .35s ease}
+.wheel::before{content:"";position:absolute;inset:-14%;border-radius:50%;background:radial-gradient(closest-side,var(--glow),transparent);pointer-events:none}
+.wheel canvas{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;will-change:transform;cursor:grab}
+.pointer{position:absolute;left:50%;top:0;width:min(13%,56px);aspect-ratio:.82;transform:translate(-50%,-62%);transform-origin:50% 22%;z-index:4;pointer-events:none;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35))}
+.pointer.tick{animation:flick .09s ease-out}
+@keyframes flick{0%{transform:translate(-50%,-62%) rotate(0)}40%{transform:translate(-50%,-62%) rotate(-18deg)}100%{transform:translate(-50%,-62%) rotate(0)}}
+.pointer svg{width:100%;height:100%;display:block}.pointer path{fill:var(--pointer)}
+.look-neon .pointer{filter:drop-shadow(0 0 8px var(--accent)) drop-shadow(0 0 2px #fff)}
+.hubbtn{position:absolute;left:50%;top:50%;width:27%;max-width:120px;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;z-index:4;border:0;
+  background:var(--hub);color:var(--hub-ink);font:800 clamp(14px,4.4vw,20px)/1 var(--display);letter-spacing:.04em;cursor:pointer;
+  box-shadow:0 0 0 5px var(--rim),0 8px 20px rgba(0,0,0,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.hubbtn small{font:600 9px/1 var(--body);letter-spacing:.12em;opacity:.7}
+.look-gold .hubbtn{background:radial-gradient(circle at 35% 30%,#6B4425,var(--hub) 70%);box-shadow:0 0 0 4px #E7B985,0 0 0 7px #8A5A31,0 10px 24px rgba(0,0,0,.5)}
+.look-neon .hubbtn{background:radial-gradient(circle at 35% 30%,#FFFFFF,#D8D4EE 60%,#B9B3DA);box-shadow:0 0 0 6px #1A1824,0 0 26px var(--glow)}
+.wheel.won{animation:pop .6s cubic-bezier(.2,1.6,.4,1)}
+@keyframes pop{0%{transform:translate(-50%,-50%) scale(1)}40%{transform:translate(-50%,-50%) scale(1.04)}100%{transform:translate(-50%,-50%) scale(1)}}
+.phone.shake{animation:shake .45s}
+@keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+
+/* ── the celebration ── */
+#fx{position:absolute;inset:0;z-index:14;pointer-events:none;width:100%;height:100%}
+/* Gilded (chosen 24 Oct): the screen settles into shadow, two fine rings ripple out, dust drifts up, a light sweeps the prize */
+.gild{position:absolute;inset:0;z-index:13;pointer-events:none}
+.gild .shade{position:absolute;inset:0;background:var(--gild-shade);opacity:0;-webkit-backdrop-filter:blur(7px) saturate(.8);backdrop-filter:blur(7px) saturate(.8)}
+.gild .ring{position:absolute;left:50%;top:42%;width:46%;aspect-ratio:1;border-radius:50%;border:1px solid var(--gild);transform:translate(-50%,-50%) scale(.2);opacity:0}
+.gild .center{position:absolute;left:0;right:0;top:42%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:0 22px}
+.gild .center>*{opacity:0;transform:translateY(10px)}
+.gild .k{font:600 11px/1 var(--body);letter-spacing:.32em;text-transform:uppercase;color:var(--gild)}
+.gild .big{font:400 clamp(60px,19vw,84px)/.9 var(--serif);letter-spacing:-.01em;
+  background:linear-gradient(100deg,var(--gild-lo) 0%,var(--gild) 30%,var(--gild-hi) 45%,#fff 50%,var(--gild-hi) 55%,var(--gild) 70%,var(--gild-lo) 100%);
+  background-size:250% 100%;background-position:100% 0;-webkit-background-clip:text;background-clip:text;color:transparent}
+.gild .big i{font-style:italic}
+.gild .small{font:500 13px/1.4 var(--body);color:rgba(255,255,255,.66)}
+.gild.on .shade{animation:fadein .8s ease forwards}
+.gild.on .ring{animation:ring 2.2s cubic-bezier(.2,.8,.2,1) .3s forwards}
+.gild.on .ring.r2{animation-delay:.65s}
+.gild.on .center>*{animation:rise .9s cubic-bezier(.2,.8,.2,1) forwards}
+.gild.on .center>*:nth-child(2){animation:rise .9s cubic-bezier(.2,.8,.2,1) .25s forwards, shine 2.4s ease-in-out 1s forwards}
+.gild.on .center>*:nth-child(3){animation-delay:.45s}
+.gild.lose .ring{display:none}
+.gild.lose .big{background:none;color:rgba(255,255,255,.85)}
+@keyframes fadein{to{opacity:1}}
+@keyframes rise{to{opacity:1;transform:none}}
+@keyframes ring{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}20%{opacity:.9}100%{opacity:0;transform:translate(-50%,-50%) scale(2.1)}}
+@keyframes shine{from{background-position:100% 0}to{background-position:0 0}}
+
+.prize{position:absolute;left:12px;right:12px;bottom:12px;z-index:20;background:var(--card);color:var(--card-ink);border-radius:26px;padding:20px 22px 18px;
+  transform:translateY(130%);transition:transform .55s cubic-bezier(.2,1.2,.3,1);box-shadow:0 -10px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:10px;text-align:center}
+.prize.show{transform:translateY(0)}
+.prize .how{font:500 14px/1.4 var(--body);opacity:.75}
+.code{display:flex;align-items:center;justify-content:center;border:2px dashed currentColor;border-radius:14px;padding:12px;font:700 20px/1 var(--body);letter-spacing:.14em;font-variant-numeric:tabular-nums}
+.btns{display:flex;gap:8px}
+.btn{flex:1;border:0;border-radius:14px;padding:14px;font:700 15px/1 var(--body);cursor:pointer;background:var(--accent);color:#fff}
+.btn.ghost{background:transparent;color:inherit;box-shadow:inset 0 0 0 2px currentColor;opacity:.8}
+.look-gold .btn:not(.ghost){color:#2A1A10}
+.toast{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);background:rgba(0,0,0,.78);color:#fff;font:600 14px/1 var(--body);padding:12px 16px;border-radius:999px;opacity:0;transition:.25s;z-index:25;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+
+/* ── the public page: the phone is the whole screen ── */
+body{padding:0!important;display:block!important;background:#120D09;overflow:hidden}
+.phone{width:100%!important;max-width:520px;height:100%!important;min-height:0!important;margin:0 auto;border-radius:0!important;box-shadow:none!important}
+.top{padding-top:calc(30px + env(safe-area-inset-top,0px))}
+.bottom{padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+/* the details sheet and the state card */
+.sheet{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:22;background:var(--card);color:var(--card-ink);border-radius:26px;
+  padding:22px 20px 18px;box-shadow:0 -10px 40px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:12px;transform:translateY(130%);transition:transform .5s cubic-bezier(.2,1.1,.3,1)}
+.sheet.show{transform:none}
+.sheet h2{margin:0;font:800 22px/1.1 var(--display);letter-spacing:-.01em}
+.sheet p{margin:0;font:500 14px/1.45 var(--body);opacity:.75}
+.sheet label{display:flex;flex-direction:column;gap:6px;font:700 11px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;opacity:.8}
+.sheet input[type=text],.sheet input[type=tel]{font:500 17px/1 var(--body);padding:13px 14px;border-radius:12px;border:1.5px solid color-mix(in srgb,currentColor 25%,transparent);background:transparent;color:inherit;width:100%;letter-spacing:0;text-transform:none}
+.sheet input:focus{outline:none;border-color:var(--accent)}
+.mob{display:flex;align-items:center;gap:8px}.mob span{font:600 17px/1 var(--body);opacity:.7;letter-spacing:0}
+.agree{flex-direction:row!important;align-items:flex-start;gap:10px!important;text-transform:none!important;letter-spacing:0!important;font:500 13px/1.4 var(--body)!important}
+.agree input{width:18px;height:18px;margin:1px 0 0;accent-color:var(--accent);flex:none}
+.err{font:600 13px/1.3 var(--body);color:#C0392B;min-height:1em}
+.look-gold .err,.look-neon .err{color:#FF8A7A}
+.sheet .btn{flex:none}
+.sheet .btn[disabled]{opacity:.6}
+.state{text-align:center;gap:8px}
+@media (prefers-reduced-motion:reduce){.hint svg{animation:none}.gild *{animation-duration:.01ms!important;animation-delay:0s!important}}
+</style>
+
+<div class="phone" id="phone">
+  <div class="top">
+    <div class="brand" id="brand">Brew Theory · Sample</div>
+    <h1 id="head">Spin &amp; <em>Win!</em></h1>
+    <p class="sub" id="sub">Flick the wheel with your finger</p>
+  </div>
+  <div class="wheel" id="wheel">
+    <div class="pointer" id="pointer"><svg viewBox="0 0 40 49"><path d="M20 49 C14 34 2 26 2 15 A18 15 0 0 1 38 15 C38 26 26 34 20 49Z"/></svg></div>
+    <canvas id="cv" aria-label="Prize wheel"></canvas>
+    <button class="hubbtn" id="hub" aria-label="Spin the wheel"><span>SPIN</span><small>TAP OR SWIPE</small></button>
+  </div>
+  <div class="bottom">
+    <button class="spinpill" id="spinPill" hidden>SPIN</button>
+    <div class="hint" id="hint"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a8 8 0 0 0 16 0"/><path d="M17 17l3-3 1 4"/></svg><span>Swipe across the wheel</span></div>
+    <div class="fine" id="fine">One spin per person. Coupons can't be combined with other offers.</div>
+  </div>
+  <canvas id="fx"></canvas>
+  <div class="gild" id="gild"><div class="shade"></div><div class="ring"></div><div class="ring r2"></div>
+    <div class="center"><div class="k" id="gk">You have won</div><div class="big" id="gb"><i>15%</i> off</div><div class="small" id="gs">Your code is below</div></div></div>
+  <div class="prize" id="prize" role="dialog" aria-live="polite">
+    <div class="how" id="phow">Show this code at the counter</div>
+    <div class="code" id="pcode">BREW-7Q4K</div>
+    <div class="btns"><button class="btn ghost" id="copy">Copy code</button><button class="btn" id="again" hidden>Spin again</button></div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <form class="sheet" id="form" novalidate>
+    <h2 id="formHead">Enter your details to spin</h2>
+    <label for="fName">Your name<input type="text" id="fName" autocomplete="name" maxlength="80"></label>
+    <label for="fMob">Mobile<div class="mob"><span>+91</span><input type="tel" id="fMob" inputmode="numeric" autocomplete="tel-national" maxlength="14"></div></label>
+    <label class="agree" for="fOk"><input type="checkbox" id="fOk"><span id="fOkText">I agree to be contacted about my prize.</span></label>
+    <div class="err" id="fErr"></div>
+    <button class="btn" type="submit" id="fGo">Unlock my spin</button>
+  </form>
+  <div class="sheet state" id="state"><h2 id="stateHead">Loading the wheel…</h2><p id="stateSub"></p></div>
+</div>
+
+<script>
+(() => {
+/* ── sample prizes; the first N are used for N sections ── */
+let ALL = [];   /* the wheel's prizes, from the database (or MarTech's preview) */
+const LOOKS = {
+  pop:{ seg:[["#151410","#F4EEDC"],["#6E9180","#F4EEDC"],["#F2E6A8","#151410"],["#E4623A","#F9F0DC"],["#5B9BEF","#F4EEDC"]],
+        rim:"#151410", rimW:.035, conf:["#E4623A","#5B9BEF","#6E9180","#151410","#FFFFFF","#F2E6A8"], hl:"#FFFFFF",
+        head:'Spin &amp; <em>Win!</em>', brand:"Brew Theory · Sample", sub:"Flick the wheel with your finger" },
+  gold:{ seg:[["#FBEBD6","#7A4A2A"],["#F3D9B6","#7A4A2A"],["#E8452F","#FFF3E6"],["#FBEBD6","#7A4A2A"],["#2E1B10","#F6C978"]],
+        rim:"#E7B985", rimW:.06, pegs:true, line:"rgba(160,110,60,.35)", conf:["#F0A63A","#F6D58E","#E8452F","#FFFFFF","#C9874A"], hl:"#F6C978",
+        head:'Spin to <em>win</em>', brand:"Brew Theory · Diwali", sub:"Swipe the wheel to reveal your treat" },
+  neon:{ seg:[["#7B3FE4","#FFFFFF"],["#1F8F6E","#FFFFFF"],["#2B2F8F","#FFFFFF"],["#B23FB0","#FFFFFF"],["#1E6AA8","#FFFFFF"],["#C08A16","#FFFFFF"]],
+        rim:"#1A1824", rimW:.05, neon:true, conf:["#C27BFF","#6FB6FF","#4BE3B0","#FFD166","#FFFFFF"], hl:"#E9D7FF",
+        head:'<em>Spin</em> to reveal it', brand:"Brew Theory · Rewards", sub:"Swipe hard. Your prize is waiting" },
+};
+/* presets: the zoom, and where the wheel's top edge sits (share of screen height) */
+const PRESETS = { whole:{zoom:100,top:null}, close:{zoom:185,top:.27}, hero:{zoom:250,top:.29} };
+const cfg = { look:"gold", zoom:185, pos:0, n:8, sound:true, preset:"close" };
+
+const TAU = Math.PI*2;
+const $ = (id) => document.getElementById(id);
+const phone=$("phone"), cv=$("cv"), ctx=cv.getContext("2d"), wheelEl=$("wheel"), pointer=$("pointer"), hub=$("hub");
+const fx=$("fx"), fctx=fx.getContext("2d"), gild=$("gild"), prizeEl=$("prize"), hint=$("hint"), pill=$("spinPill");
+let angle = 0, busy = false, won = -1, lastSeg = 0;
+const prizes = () => ALL;
+const SEG = () => TAU / cfg.n;
+const mod = (a,m) => ((a % m) + m) % m;
+const under = (a) => Math.floor(mod(-a, TAU) / SEG());
+
+/* ── place the wheel: zoom sets its width, position moves its centre down the screen ── */
+function layout(){
+  if (PRESETS[cfg.preset]) applyPreset(cfg.preset);
+  const W = phone.clientWidth, H = phone.clientHeight;
+  const w = Math.round(W * .86 * cfg.zoom/100);
+  wheelEl.style.width = w + "px";
+  const baseY = H * .54, y = baseY + (H * cfg.pos/100);
+  wheelEl.style.top = y + "px";
+  /* when the hub is off the screen, a SPIN button appears at the bottom */
+  const hubVisible = y + w*.135 < H - 70;
+  pill.hidden = hubVisible; hint.hidden = !hubVisible; hub.hidden = !hubVisible;
+  requestAnimationFrame(() => draw(won));
+}
+
+/* ── draw ── */
+function draw(hl = -1){
+  const L = LOOKS[cfg.look], P = prizes(), n = P.length, seg = SEG();
+  const r = cv.clientWidth; if (!r) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, r > 600 ? 2 : 3);
+  cv.width = cv.height = Math.round(r*dpr); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,r,r);
+  const c = r/2, R = c - 1, inner = R*(1 - L.rimW);
+  ctx.beginPath(); ctx.arc(c,c,R,0,TAU); ctx.fillStyle = L.rim; ctx.fill();
+  const scale = Math.min(1, Math.sqrt(8/n));
+  for (let i=0;i<n;i++){
+    const a0 = -Math.PI/2 + i*seg, a1 = a0 + seg;
+    let ci = i % L.seg.length; if (i === n-1 && ci === 0 && n > 1) ci = 1 % L.seg.length;   /* no two neighbours alike */
+    const [bg, fg] = L.seg[ci];
+    ctx.beginPath(); ctx.moveTo(c,c); ctx.arc(c,c,inner,a0,a1); ctx.closePath();
+    if (L.neon){ const g = ctx.createRadialGradient(c,c,inner*.25,c,c,inner); g.addColorStop(0,"#15141C"); g.addColorStop(.55,"#1B1A25"); g.addColorStop(1,bg); ctx.fillStyle = g; }
+    else ctx.fillStyle = bg;
+    ctx.fill();
+    if (L.line){ ctx.strokeStyle = L.line; ctx.lineWidth = 2; ctx.stroke(); }
+    if (L.neon){ ctx.strokeStyle = "#0E1013"; ctx.lineWidth = r*.02; ctx.stroke(); }
+    ctx.save(); ctx.translate(c,c); ctx.rotate(a0 + seg/2);
+    ctx.fillStyle = fg; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    const big = Math.round(r*.085*scale), small = Math.round(r*.042*scale);
+    if (L.neon){ ctx.shadowColor = bg; ctx.shadowBlur = 12; }
+    ctx.font = `800 ${big}px "Bricolage Grotesque","Arial Black",sans-serif`;
+    ctx.fillText(P[i].t, inner*.9, P[i].s ? -small*.45 : 0);
+    if (P[i].s){ ctx.font = `700 ${small}px "DM Sans",system-ui,sans-serif`; ctx.fillText(P[i].s.toUpperCase(), inner*.9, big*.55); }
+    ctx.restore();
+    if (hl >= 0 && i !== hl){ ctx.beginPath(); ctx.moveTo(c,c); ctx.arc(c,c,inner,a0,a1); ctx.closePath(); ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fill(); }
+  }
+  if (hl >= 0){
+    const a0 = -Math.PI/2 + hl*seg;
+    ctx.save(); ctx.beginPath(); ctx.moveTo(c,c); ctx.arc(c,c,inner-3,a0,a0+seg); ctx.closePath();
+    ctx.lineWidth = Math.max(5, r*.02); ctx.strokeStyle = L.hl; ctx.shadowColor = L.hl; ctx.shadowBlur = 22; ctx.stroke(); ctx.restore();
+  }
+  if (L.pegs){
+    for (let i=0;i<n*2;i++){
+      const a = -Math.PI/2 + i*seg/2, pr = R - (R-inner)/2, x = c + Math.cos(a)*pr, y = c + Math.sin(a)*pr;
+      const g = ctx.createRadialGradient(x-1,y-1,0,x,y,r*.022); g.addColorStop(0,"#FFE3A6"); g.addColorStop(1,"#E08A1E");
+      ctx.beginPath(); ctx.arc(x,y,Math.max(4,r*.018),0,TAU); ctx.fillStyle = g; ctx.fill();
+    }
+  }
+  const sh = ctx.createRadialGradient(c,c,inner*.2,c,c,inner*.42); sh.addColorStop(0,"rgba(0,0,0,.18)"); sh.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.beginPath(); ctx.arc(c,c,inner*.42,0,TAU); ctx.fillStyle = sh; ctx.fill();
+}
+const setRot = () => { cv.style.transform = `rotate(${angle}rad)`; };
+
+/* ── sound: built in the browser, no files ── */
+let ac = null, master = null, noiseBuf = null;
+function audio(){
+  if (!cfg.sound) return null;
+  if (!ac){
+    try {
+      ac = new (window.AudioContext || window.webkitAudioContext)();
+      master = ac.createGain(); master.gain.value = .9;
+      const comp = ac.createDynamicsCompressor(); master.connect(comp).connect(ac.destination);
+      const verb = ac.createConvolver(), len = ac.sampleRate*2.2, ir = ac.createBuffer(2, len, ac.sampleRate);
+      for (let ch=0;ch<2;ch++){ const d = ir.getChannelData(ch); for (let i=0;i<len;i++) d[i] = (Math.random()*2-1)*Math.pow(1-i/len, 2.6); }
+      verb.buffer = ir; const wet = ac.createGain(); wet.gain.value = .28; master.connect(verb).connect(wet).connect(comp);
+      noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+      const d = noiseBuf.getChannelData(0); for (let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+    } catch(e){ return null; }
+  }
+  if (ac.state === "suspended") ac.resume();
+  return ac;
+}
+function noise(t, dur, freq, q, gain, type = "bandpass"){
+  const s = ac.createBufferSource(); s.buffer = noiseBuf;
+  const f = ac.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+  const g = ac.createGain(); g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  s.connect(f).connect(g).connect(master); s.start(t, Math.random()*.5); s.stop(t + dur + .02);
+  return { f, g };
+}
+function tone(t, freq, dur, type, gain, glideTo){
+  const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.setValueAtTime(freq, t);
+  if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, t + dur);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g).connect(master); o.start(t); o.stop(t + dur + .02);
+}
+/* the ratchet: a wooden click whose pitch rises with speed */
+function sndTick(speed){
+  const a = audio(); if (!a) return; const t = a.currentTime;
+  const p = 1800 + Math.min(speed, 30)*45;
+  noise(t, .035, p, 6, .5);
+  tone(t, p*.5, .03, "square", .05);
+}
+function sndWhoosh(){
+  const a = audio(); if (!a) return; const t = a.currentTime;
+  const { f } = noise(t, .55, 600, 1.2, .35);
+  f.frequency.setValueAtTime(400, t); f.frequency.exponentialRampToValueAtTime(2600, t + .45);
+}
+let rollNode = null;
+function sndRoll(dur){
+  const a = audio(); if (!a) return; const t = a.currentTime;
+  const s = a.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
+  const f = a.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 180; f.Q.value = .8;
+  const g = a.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.35, t + dur*.6); g.gain.linearRampToValueAtTime(.0001, t + dur);
+  const lfo = a.createOscillator(), lg = a.createGain(); lfo.frequency.value = 22; lg.gain.value = .25; lfo.connect(lg).connect(g.gain);
+  s.connect(f).connect(g).connect(master); s.start(t); lfo.start(t); s.stop(t + dur + .05); lfo.stop(t + dur + .05);
+}
+/* Gilded: a soft bell chord rising, then a high bell and a scatter of tiny chimes */
+function bell(t, f, g){ [1, 2.76, 5.4, 8.93].forEach((m,i) => tone(t, f*m, 2.6/(i+1), "sine", g/(i*1.6+1))); }
+function sndWin(){
+  const a = audio(); if (!a) return; const t = a.currentTime + .05;
+  [523.25, 659.25, 783.99].forEach((f,i) => bell(t + .3 + i*.12, f, .1)); bell(t + .9, 1046.5, .08);
+  for (let i=0;i<12;i++) tone(t + 1 + i*.08, 3200 + Math.random()*2400, .4, "sine", .025);
+}
+function sndLose(){
+  const a = audio(); if (!a) return; const t = a.currentTime + .02;
+  tone(t, 392, .35, "sawtooth", .08, 370); tone(t + .32, 349, .35, "sawtooth", .08, 330); tone(t + .64, 311, .8, "sawtooth", .08, 260);
+}
+const buzz = (p) => { if (navigator.vibrate) try { navigator.vibrate(p); } catch(e){} };
+
+/* ── pointer tick ── */
+let lastTickT = 0, curSpeed = 0;
+function track(){
+  const s = under(angle); if (s === lastSeg) return; lastSeg = s;
+  const now = performance.now(); if (now - lastTickT < 28) return; lastTickT = now;
+  pointer.classList.remove("tick"); void pointer.offsetWidth; pointer.classList.add("tick");
+  buzz(5); sndTick(curSpeed);
+}
+
+/* ── spin: the prize is chosen by the odds, then the wheel is steered onto it ── */
+function pick(){ const P = prizes(), tot = P.reduce((s,p) => s + p.w, 0); let x = Math.random()*tot; for (let i=0;i<P.length;i++){ x -= P[i].w; if (x < 0) return i; } return P.length-1; }
+function spin(v0){
+  if (busy) return;
+  clearCelebration(); busy = true; won = -1; draw();
+  hub.disabled = pill.disabled = true;
+  const dir = Math.sign(v0) || 1, reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const v = Math.min(Math.max(Math.abs(v0), 9), 34), target = (live && result) ? result.index : pick(), seg = SEG();
+  if (live) spent = true;
+  const want = (target + .5 + (Math.random()-.5)*.6) * seg;
+  const minTravel = Math.max(TAU*(reduce ? 1 : 3), v*1.3);
+  let end = -want;
+  if (dir > 0){ while (end < angle + minTravel) end += TAU; } else { while (end > angle - minTravel) end -= TAU; }
+  const D = Math.abs(end - angle), start = angle;
+  const T = Math.min(Math.max(3*D/v, 3.4), reduce ? 2.5 : 7.5);
+  sndWhoosh(); setTimeout(() => sndRoll(Math.min(2.2, T*.45)), (T - Math.min(2.2, T*.45))*1000);
+  const t0 = performance.now(); let prev = start, prevT = t0;
+  (function step(now){
+    const t = Math.min((now - t0)/1000, T), k = 1 - Math.pow(1 - t/T, 3);
+    angle = start + dir*D*k; curSpeed = Math.abs(angle - prev) / Math.max(.001,(now - prevT)/1000); prev = angle; prevT = now;
+    setRot(); track();
+    if (t < T) requestAnimationFrame(step); else land(target);
+  })(t0);
+}
+function land(i){
+  busy = false; won = i; angle = mod(angle, TAU); setRot(); draw(i);
+  wheelEl.classList.remove("won"); void wheelEl.offsetWidth; wheelEl.classList.add("won");
+  const p = prizes()[i];
+  $("gk").textContent = p.win ? "You have won" : "So close";
+  $("gb").innerHTML = p.win ? (/%/.test(p.t) ? `<i>${p.t}</i> ${p.s.toLowerCase()}` : `${p.t} <i>${p.s.toLowerCase()}</i>`) : "Try <i>again</i>";
+  $("gs").textContent = p.win ? "Your code is below" : "Better luck at your next visit";
+  if (p.win){
+    buzz([30,40,30,40,90]);
+    setTimeout(() => { gild.className = "gild on"; sndWin(); dust(); }, 420);
+    setTimeout(() => showCard(p), 2600);
+  } else {
+    buzz(120); phone.classList.remove("shake"); void phone.offsetWidth; phone.classList.add("shake");
+    setTimeout(() => { gild.className = "gild lose on"; sndLose(); }, 300);
+    setTimeout(() => showCard(p), 1700);
+  }
+}
+
+/* ── finger ── */
+let drag = null;
+const ptAngle = (e) => { const b = cv.getBoundingClientRect(); return Math.atan2(e.clientY - (b.top + b.height/2), e.clientX - (b.left + b.width/2)); };
+cv.addEventListener("pointerdown", (e) => {
+  if (busy) return; audio(); if (gate()) return;
+  if (won >= 0){ clearCelebration(); won = -1; draw(); }
+  cv.setPointerCapture(e.pointerId);
+  drag = { last: ptAngle(e), samples: [{ t: performance.now(), a: angle }], moved: 0 };
+});
+cv.addEventListener("pointermove", (e) => {
+  if (!drag) return;
+  const a = ptAngle(e); let d = a - drag.last; if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU;
+  drag.last = a; angle += d; drag.moved += Math.abs(d); setRot();
+  const now = performance.now(); drag.samples.push({ t: now, a: angle });
+  while (drag.samples.length > 2 && now - drag.samples[0].t > 100) drag.samples.shift();
+  const s = drag.samples, dt = (s[s.length-1].t - s[0].t)/1000; curSpeed = dt > 0 ? Math.abs(s[s.length-1].a - s[0].a)/dt : 0;
+  track();
+});
+const release = () => {
+  if (!drag) return;
+  const s = drag.samples, f = s[0], l = s[s.length-1], dt = (l.t - f.t)/1000, v = dt > 0 ? (l.a - f.a)/dt : 0, moved = drag.moved; drag = null;
+  if (Math.abs(v) > 4) spin(v); else if (moved > .15) toast("Flick a little harder");
+};
+cv.addEventListener("pointerup", release); cv.addEventListener("pointercancel", release);
+const tapSpin = () => { audio(); if (gate()) return; if (won >= 0){ clearCelebration(); won = -1; draw(); } spin(16 + Math.random()*10); };
+hub.onclick = tapSpin; pill.onclick = tapSpin;
+
+/* ── celebrations ── */
+let parts = [], raf = 0, timers = [];
+function sizeFx(){ const d = Math.min(window.devicePixelRatio||1, 2); fx.width = phone.clientWidth*d; fx.height = phone.clientHeight*d; fctx.setTransform(d,0,0,d,0,0); }
+function dust(){
+  sizeFx(); const W = phone.clientWidth, H = phone.clientHeight, st = getComputedStyle(phone);
+  const cols = [st.getPropertyValue("--gild-hi").trim(), st.getPropertyValue("--gild").trim(), "#FFF4D6"];
+  for (let i=0;i<170;i++) parts.push({ kind:"dust", x: W*.5 + (Math.random()-.5)*W*.95, y: H*.45 + (Math.random()-.3)*H*.55,
+    vx:(Math.random()-.5)*.25, vy:-.25 - Math.random()*.6, g:0, drag:1, r:0, vr:0, s:.6 + Math.random()*1.6, c: cols[i % cols.length],
+    life:0, max: 240 + Math.random()*180, ph: Math.random()*TAU });
+  if (!raf) raf = requestAnimationFrame(frame);
+}
+function frame(){
+  const W = phone.clientWidth, H = phone.clientHeight; fctx.clearRect(0,0,W,H);
+  parts = parts.filter(p => p.life < p.max && p.y < H + 40);
+  for (const p of parts){
+    p.life++; p.vy += p.g; p.vx *= p.drag; p.vy *= p.drag; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+    const fade = Math.max(0, 1 - p.life/p.max);
+    fctx.save(); fctx.globalAlpha = fade;
+    if (p.kind === "dust"){
+      fctx.globalAlpha = Math.sin(Math.PI*Math.min(1, p.life/p.max)) * (.55 + .45*Math.sin(p.life*.25 + p.ph));
+      fctx.globalCompositeOperation = "lighter";
+      const g = fctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.s*3); g.addColorStop(0,p.c); g.addColorStop(1,"rgba(0,0,0,0)");
+      fctx.fillStyle = g; fctx.beginPath(); fctx.arc(p.x,p.y,p.s*3,0,TAU); fctx.fill();
+    } else if (p.kind === "spark"){
+      p.tail.push([p.x,p.y]); if (p.tail.length > 6) p.tail.shift();
+      fctx.strokeStyle = p.c; fctx.lineWidth = 2; fctx.beginPath(); p.tail.forEach(([x,y],j) => j ? fctx.lineTo(x,y) : fctx.moveTo(x,y)); fctx.stroke();
+      fctx.fillStyle = "#fff"; fctx.fillRect(p.x-1,p.y-1,2,2);
+    } else if (p.kind === "coin"){
+      p.spin += .15; const sx = Math.abs(Math.cos(p.spin));
+      fctx.translate(p.x,p.y); fctx.scale(Math.max(.15,sx),1);
+      const g = fctx.createRadialGradient(-p.w*.2,-p.w*.2,1,0,0,p.w*.6); g.addColorStop(0,"#FFF1B8"); g.addColorStop(.6,"#F2B53A"); g.addColorStop(1,"#B87912");
+      fctx.fillStyle = g; fctx.beginPath(); fctx.arc(0,0,p.w/2,0,TAU); fctx.fill();
+      fctx.strokeStyle = "rgba(120,70,0,.5)"; fctx.lineWidth = 1.5; fctx.beginPath(); fctx.arc(0,0,p.w/2-3,0,TAU); fctx.stroke();
+    } else if (p.kind === "streamer"){
+      fctx.translate(p.x,p.y); fctx.rotate(p.r); fctx.strokeStyle = p.c; fctx.lineWidth = 3; fctx.beginPath();
+      for (let k=0;k<5;k++){ fctx.lineTo(k*5, Math.sin(k + p.life*.2)*4); } fctx.stroke();
+    } else {
+      fctx.translate(p.x,p.y); fctx.rotate(p.r); fctx.fillStyle = p.c; fctx.fillRect(-p.w/2,-p.h/2,p.w,p.h*Math.abs(Math.cos(p.r*2))+1);
+    }
+    fctx.restore();
+  }
+  raf = parts.length ? requestAnimationFrame(frame) : 0;
+}
+function clearCelebration(){
+  timers.forEach(clearTimeout); timers = []; parts = []; gild.className = "gild"; prizeEl.classList.remove("show");
+  hub.disabled = pill.disabled = false; hint.style.visibility = ""; fctx.clearRect(0,0,fx.width,fx.height);
+}
+const CH = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function showCard(p){
+  $("phow").textContent = p.win ? "Show this code at the counter" : "No prize this time. Better luck at the next visit.";
+  $("pcode").textContent = live && result ? (result.code || "") : (cfg.code_prefix || "WIN") + "-" + Array.from({length:4}, () => CH[Math.floor(Math.random()*CH.length)]).join("");
+  $("pcode").hidden = !p.win; $("copy").hidden = !p.win; $("again").hidden = !PREVIEW;
+  prizeEl.classList.add("show");
+}
+$("again").onclick = () => { clearCelebration(); won = -1; draw(); };
+$("copy").onclick = async () => {
+  try { await navigator.clipboard.writeText($("pcode").textContent); toast("Code copied"); }
+  catch(e){ const r = document.createRange(); r.selectNodeContents($("pcode")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Code selected"); }
+};
+let tt = 0; function toast(m){ const el = $("toast"); el.textContent = m; el.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => el.classList.remove("show"), 1400); }
+
+/* ── framing presets ── */
+function applyPreset(k){
+  const P = PRESETS[k], W = phone.clientWidth, H = phone.clientHeight, w = W*.86*P.zoom/100;
+  cfg.zoom = P.zoom; cfg.preset = k;
+  cfg.pos = P.top == null ? 0 : Math.max(-20, Math.min(80, Math.round(((P.top*H + w/2) - .54*H)/H*100)));
+}
+
+/* ═══ THE PAGE ════════════════════════════════════════════════════════
+   ?g=<wheel>    a live wheel: details first, one spin per mobile, the
+                 database picks the prize (wheel_spin) and the wheel is
+                 steered onto it.
+   ?preview=1    MarTech's setup preview: no details, no database; it
+                 draws whatever MarTech posts to it and spins by the odds. */
+const SB_URL = "https://qsxldzqdjdplffxqdokd.supabase.co", SB_KEY = "sb_publishable_6ng_3jnvQbJUZifYTxmRrw_0yhCZuY9";
+const qs = new URLSearchParams(location.search), SLUG = (qs.get("g") || "").toLowerCase().replace(/[^a-z0-9-]/g, ""), PREVIEW = qs.get("preview") === "1";
+let live = false, unlocked = false, spent = false, result = null;
+const KEEP = "wheeldeal:" + SLUG;
+const keep = (v) => { try { localStorage.setItem(KEEP, JSON.stringify(v)); } catch(e){} };
+const kept = () => { try { return JSON.parse(localStorage.getItem(KEEP) || "null"); } catch(e){ return null; } };
+const esc = (t) => String(t == null ? "" : t).replace(/[&<>"]/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" })[c]);
+
+function rpc(fn, args){
+  return fetch(`${SB_URL}/rest/v1/rpc/${fn}`, { method: "POST",
+    headers: { apikey: SB_KEY, Authorization: "Bearer " + SB_KEY, "content-type": "application/json" }, body: JSON.stringify(args) })
+    .then(async (r) => { const j = await r.json().catch(() => null); if (!r.ok) throw new Error((j && (j.message || j.hint)) || ("HTTP " + r.status)); return j; });
+}
+
+function applyGame(g){
+  const c = (g && g.config) || {};
+  cfg.look = LOOKS[c.look] ? c.look : "gold";
+  cfg.preset = c.preset === "" ? "" : (PRESETS[c.preset] ? c.preset : "close");
+  cfg.zoom = +c.zoom || 185; cfg.pos = +c.pos || 0; cfg.sound = c.sound !== false; cfg.code_prefix = (c.code_prefix || "WIN").toUpperCase();
+  ALL = ((g && g.prizes) || []).map((p) => ({ key: p.key, t: p.top || "", s: p.sub || "", win: p.win !== false, w: Math.max(0, +p.weight || 0) || 1 }));
+  if (ALL.length < 2) ALL = [{ t:"Add", s:"prizes", win:true, w:1 }, { t:"in", s:"MarTech", win:true, w:1 }];
+  cfg.n = ALL.length;
+  phone.className = "phone" + (cfg.look === "pop" ? "" : " look-" + cfg.look);
+  const L = LOOKS[cfg.look];
+  $("brand").textContent = c.brand_line || "";
+  $("head").innerHTML = c.headline ? esc(c.headline) + (c.headline_em ? " <em>" + esc(c.headline_em) + "</em>" : "") : L.head;
+  $("sub").textContent = c.subline || "Flick the wheel with your finger";
+  $("fine").textContent = c.fine || "One spin per person. Coupons can't be combined with other offers.";
+  if (c.consent) $("fOkText").textContent = c.consent;
+  document.title = (c.headline ? c.headline + (c.headline_em ? " " + c.headline_em : "") : "Spin to win") + (c.brand_line ? " · " + c.brand_line : "");
+  document.body.style.background = getComputedStyle(phone).getPropertyValue("--bg").trim() || "#120D09";
+  clearCelebration(); won = -1; angle = 0; setRot(); lastSeg = under(0); layout();
+}
+
+function sheet(id, on){ $(id).classList.toggle("show", !!on); }
+function showState(head, sub){ $("stateHead").textContent = head; $("stateSub").textContent = sub || ""; sheet("state", true); sheet("form", false); hint.style.visibility = "hidden"; }
+
+/* a live wheel only spins once the details are in, and only once */
+function gate(){
+  if (PREVIEW) return false;
+  if (!live) return true;
+  if (!unlocked){ sheet("form", true); return true; }
+  if (spent){ toast("You've already spun"); return true; }
+  return false;
+}
+
+/* someone who has already spun sees their result again, wheel parked on it */
+function replay(res){
+  spent = true; unlocked = true; result = res; sheet("form", false);
+  if (res.index >= 0 && res.index < ALL.length){ angle = -(res.index + .5) * SEG(); setRot(); lastSeg = under(angle); land(res.index); $("gk").textContent = "You already spun"; }
+  else { showCard({ win: !!res.win, t: res.label || "", s: "" }); }
+}
+
+const ERR = { bad_name: "Please enter your name.", bad_mobile: "Please enter a 10-digit mobile number.",
+  wheel_closed: "This wheel has closed.", no_prizes_left: "All the prizes have been won. Thank you for joining in." };
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault(); audio();
+  const name = $("fName").value.trim(), mob = $("fMob").value.replace(/\D/g, "").slice(-10);
+  if (name.length < 2) return void ($("fErr").textContent = ERR.bad_name);
+  if (!/^[6-9][0-9]{9}$/.test(mob)) return void ($("fErr").textContent = ERR.bad_mobile);
+  if (!$("fOk").checked) return void ($("fErr").textContent = "Please tick the box to continue.");
+  $("fErr").textContent = ""; $("fGo").disabled = true; $("fGo").textContent = "Unlocking…";
+  try {
+    const r = await rpc("wheel_spin", { p_slug: SLUG, p_name: name, p_mobile: mob, p_test: qs.get("test") === "1" });
+    result = r; keep(r);
+    if (r.duplicate){ replay(r); return; }
+    unlocked = true; sheet("form", false); toast("Now flick the wheel");
+  } catch(err){
+    const k = Object.keys(ERR).find((x) => String(err.message).includes(x));
+    $("fErr").textContent = k ? ERR[k] : "Something went wrong. Check your connection and try again.";
+    if (k === "wheel_closed" || k === "no_prizes_left"){ live = false; showState(ERR[k]); }
+  } finally { $("fGo").disabled = false; $("fGo").textContent = "Unlock my spin"; }
+});
+
+function boot(){
+  if (PREVIEW){
+    window.addEventListener("message", (e) => { if (e.data && e.data.type === "wd-preview") applyGame(e.data.game); });
+    applyGame({ config: { look: "gold", preset: "close" }, prizes: [] });
+    try { parent.postMessage({ type: "wd-ready" }, "*"); } catch(e){}
+    return;
+  }
+  if (!SLUG) return showState("This link is missing its wheel.", "Scan the QR code again.");
+  rpc("wheel_open", { p_slug: SLUG }).then((g) => {
+    if (!g) return showState("This wheel isn't available.");
+    applyGame(g);
+    if (g.status === "draft") return showState("This wheel opens soon.");
+    if (g.status === "closed") return showState("This wheel has closed.", "Thank you for joining in.");
+    live = true; sheet("state", false);
+    const k = kept(); if (k && k.code !== undefined) return replay(k);
+    sheet("form", true);
+  }).catch(() => showState("Couldn't load the wheel.", "Check your connection and try again."));
+}
+
+window.addEventListener("resize", layout);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => draw(won));
+boot();
+})();
+</script>
