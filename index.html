@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.103 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.104 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -11382,7 +11382,7 @@ function brDlvRowHtml(t){
       return `<span class="dvff${img?" img":""}" onclick="event.stopPropagation();dlvOpenFile('${escAttr(a.id)}')" title="${escAttr(a.filename||"")}"${img?` data-sign="${escAttr(a.thumb_path||a.view_path||"")}"`:""}>${img?"":bfIcon(a.filename||"")}</span>`; }).join("")+(files.length>4?`<span class="nsdim">+${files.length-4}</span>`:"")
     :`<span class="nsdim">—</span>`;
   const n=ds.filter(dlvDone).length;
-  const when=done?escHtml(fmtShort(ds.map(d=>d.delivered_at).sort().pop())):(ds.length?`<span class="nsdim">${n} of ${ds.length}</span>`:`<span class="nsdim">—</span>`);
+  const when=done?escHtml(fmtShort(ds.map(d=>(dlvFinalVer(d)||{}).answered_at||"").sort().pop())):(ds.length?`<span class="nsdim">${n} of ${ds.length}</span>`:`<span class="nsdim">—</span>`);
   return `<div class="brl-tr${done?' dim':''}${open?' opened':''}" ${open?`style="--brpj:${escAttr((pj&&pj.colour)||'#0D0D0D')}"`:''} onclick="brToggleOpen(event,'${t.id}')">
     <div class="brl-sp" style="${pj?`background:${escAttr(pj.colour||'#7C3AED')}`:''}"></div>
     <span class="brl-car">${open?'⌄':'›'}</span>
@@ -11469,14 +11469,12 @@ function brDlvMenu(t){
   const anyApproved=ds.some(d=>dlvCanClose(d,t)&&dlvLast(d.id).status==="approved");
   const rows=ds.map(d=>{ const st=dlvState(d), vs=dlvVers(d.id), v=st==="delivered"?dlvFinalVer(d):dlvLast(d.id);
     const due=d.due_date?("due "+fmtShort(d.due_date)+(st!=="delivered"&&brNum(d.due_date)<brToday()?" · late":"")):"";
-    const act=!may?"":st==="delivered"?`<span class="mb ghost" onclick="brDlvDo(event,'reopen','${d.id}')">Reopen</span>`
-      :dlvCanClose(d,t)?`<span class="mb blk" onclick="brDlvDo(event,'close','${d.id}')" title="${v&&v.status==="approved"?"Close it — v"+v.version+" is the final":"Approve v"+(v?v.version:"")+" on the client's behalf and close"}">Mark delivered</span>`
-      :`<span class="mb" onclick="brDlvDo(event,'open','${d.id}')">Open</span>`;
+    const act=`<span class="mb" onclick="brDlvDo(event,'open','${d.id}')">Open</span>`;   /* V118.104 — no Mark delivered / Reopen */
     return `<div class="r"><span class="n">${escHtml(d.name)}${due?`<small>${escHtml(due)}</small>`:""}</span>
       <span class="v">${v?`<b>v${v.version}</b>${vs.length} version${vs.length===1?"":"s"}`:`<i>no version yet</i>`}</span>
       <span class="dlv-p s-${st}">${DLV_WORD[st]}</span>${act}</div>`; }).join("");
   return `<div class="brl-menu stm brl-dlvs" onclick="event.stopPropagation()">
-    <div class="mh">Deliveries${ds.length?` · ${n} of ${ds.length} delivered`:""}${may&&anyApproved?`<span class="all" onclick="brDlvDo(event,'all','${t.id}')">Mark all delivered</span>`:""}</div>
+    <div class="mh">Deliveries${ds.length?` · ${n} of ${ds.length} approved`:""}</div>
     ${rows||`<div class="r none">Nothing named yet</div>`}
     ${may?`<div class="r add"><input class="t" id="brdl-new" placeholder="Add a delivery…" onkeydown="if(event.key==='Enter'){event.preventDefault();brDlvAdd('${t.id}');}"><span class="mb" onclick="brDlvAdd('${t.id}')">Add</span></div>`:""}</div>`;
 }
@@ -14267,7 +14265,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.103 Tbilisi";
+const TOOL_VERSION="V118.104 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -45497,7 +45495,7 @@ function pgLinkSync(){
 /* ── 6 · a task's deliverables ────────────────────────────────────── */
 const DLV={brand:null,ok:false,loading:false,list:[],vers:[],drafts:[]};
 let DLV_OPEN=null, DLV_ADD=null, DLV_PICK=null, DLV_MP=null;
-const DLV_WORD={none:"Not sent",sent:"Sent",approved:"Approved",changes:"Changes asked",delivered:"Delivered"};   /* V118.94 — Delivered closes it */
+const DLV_WORD={none:"Not sent",sent:"Sent",approved:"Approved",changes:"Change request",delivered:"Client approved"};   /* V118.104 — the client's approval closes it; "delivered" is the done state */
 async function dlvLoad(bid){
   DLV.loading=true;
   try{
@@ -45520,18 +45518,24 @@ async function dlvLoad(bid){
 function dlvFor(tid){ return DLV.list.filter(d=>d.task_id===tid).sort((a,b)=>(a.sort-b.sort)||String(a.created_at).localeCompare(String(b.created_at))); }
 function dlvVers(did){ return DLV.vers.filter(v=>v.deliverable_id===did).sort((a,b)=>a.version-b.version); }
 function dlvLast(did){ const vs=dlvVers(did); return vs[vs.length-1]||null; }
-function dlvState(d){ if(d.delivered_at) return "delivered"; const l=dlvLast(d.id); return l?l.status:"none"; }
+/* V118.104 TBILISI — ONE RULE (Chirag, 24 Oct, mockup 12): the version the
+   client approves is the final. No Mark delivered, no Make final. A delivery
+   is done while one of its versions is approved — an older one too (the
+   client may pick v4 over v6). Delivering a NEW version clears the approval:
+   it asks the client again. */
+function dlvApprovedVer(d){ const a=dlvVers(d.id).filter(v=>v.status==="approved"); return a[a.length-1]||null; }
+function dlvState(d){ if(dlvDone(d)) return "delivered"; const l=dlvLast(d.id); return l?(l.status==="approved"?"sent":l.status):"none"; }
 /* ══ V118.94 — CLOSING A DELIVERY (Chirag, 23 Oct, mockup 08 option B) ═══
    Approved says the client said yes; Delivered says we are done — the
    account manager closes the delivery, the approved file is the final,
    no more versions until Reopen. A task whose deliveries are all
    Delivered turns Delivered itself. */
-function dlvDone(d){ return !!d.delivered_at; }
+function dlvDone(d){ return !!dlvApprovedVer(d); }
 function dlvOpenFile(id){ for(const k of Object.keys(ASSETS)){ if((ASSETS[k]||[]).some(a=>a.id===id)){ openLightbox(id,ASSETS[k]); return; } } toast("That file is not available","err"); }
-function dlvFinalVer(d){ return d.delivered_version_id?DLV.vers.find(v=>v.id===d.delivered_version_id)||dlvLast(d.id):dlvLast(d.id); }
+function dlvFinalVer(d){ return dlvApprovedVer(d)||dlvLast(d.id); }
 function dlvFinalFiles(d){ const v=dlvFinalVer(d); return v?dlvAttached(v):[]; }
 function dlvTaskDone(tid){ const ds=dlvFor(tid); return ds.length>0&&ds.every(dlvDone); }
-function dlvCanClose(d,t){ if(!dlvMayEdit(t)||dlvDone(d)) return false; const l=dlvLast(d.id); return !!l&&(l.status==="approved"||l.status==="sent"); }
+function dlvCanClose(d,t){ return false; }   /* V118.104 — no separate closing step */
 async function dlvMarkDelivered(did){
   const d=DLV.list.find(x=>x.id===did); if(!d) return;
   const t=BR.tasks.find(x=>x.id===d.task_id); if(!dlvCanClose(d,t)) return;
@@ -45579,11 +45583,11 @@ function dlvWho(id){ return (id&&(brPersonName(id)||(personById(id)||{}).name))|
 function dlvMayEdit(t){ return !!t&&brIsAM(t)&&DLV.ok; }
 function dlvMayAnswer(t){ return !!t&&DLV.ok&&(brIsAM(t)||brIsClient()); }
 function dlvLine(d){
-  const l=dlvLast(d.id);
-  if(!l) return "not delivered yet"+(d.due_date?" · due "+v38Day(d.due_date):"");
-  if(l.status==="approved") return `v${l.version} approved by ${dlvWho(l.answered_by)} · ${v38Day(l.answered_at)}`;
-  if(l.status==="changes") return `changes asked on v${l.version} · ${v38Day(l.answered_at)}`;
-  return `v${l.version} sent · ${v38Day(l.created_at)}`;
+  const l=dlvLast(d.id), a=dlvApprovedVer(d);
+  if(!l) return "Not sent yet"+(d.due_date?" · due "+v38Day(d.due_date):"");
+  if(dlvDone(d)) return `Client approved v${a.version} · ${v38Day(a.answered_at||a.created_at)}`;
+  if(l.status==="changes") return `Change request on v${l.version} · ${v38Day(l.answered_at||l.created_at)}`;
+  return `Waiting for the client · v${l.version}`;
 }
 function dlvRailHtml(t){
   const ds=dlvFor(t.id), mayE=dlvMayEdit(t), mayA=dlvMayAnswer(t);
@@ -45592,7 +45596,7 @@ function dlvRailHtml(t){
       <button onclick="dlvCreate('${t.id}')">Add</button></div>`:"";
   const cards=ds.map(d=>dlvCardHtml(d,t,mayE,mayA)).join("");   /* V118.103 — the card is its own function now */
   return `<div class="dlv-rail">
-    <div class="dlv-h">Deliveries · ${ds.length}${ds.length&&ds.every(dlvDone)?`<span class="dlv-alldone" title="Every delivery is delivered">✓</span>`:""}${mayE&&ds.some(d=>dlvCanClose(d,t)&&dlvLast(d.id).status==="approved")?`<button class="dlv-all" onclick="event.stopPropagation();dlvMarkAll('${t.id}')" title="Close every approved delivery">Mark all delivered</button>`:""}${mayE?`<button class="dlv-add" onclick="dlvAddOpen('${t.id}')" title="Add a delivery"><i class="ti ti-plus"></i></button>`:""}</div>
+    <div class="dlv-h">Deliveries · ${ds.length}${ds.length&&ds.every(dlvDone)?`<span class="dlv-alldone" title="The client approved every delivery">✓</span>`:""}${mayE?`<button class="dlv-add" onclick="dlvAddOpen('${t.id}')" title="Add a delivery"><i class="ti ti-plus"></i></button>`:""}</div>
     ${add}${cards||(add?"":`<div class="dlv-empty">${mayE?"Nothing named yet.":"Nothing delivered yet."}</div>`)}</div>`;
 }
 /* ══ V118.103 TBILISI · THE DELIVERY CARD, FINAL ON TOP ═════════════════
@@ -45615,79 +45619,76 @@ function dlvRailHtml(t){
      From us" line used to sit flush against the border). */
 let DLV_ALLV=new Set(), DLV_VM=null, DLV_VMV=null, DLV_DRAG=null, DLV_DRAGGING=null, DLV_FP=null;
 function dlvVerName(v){ const fs=dlvAttached(v); if(!fs.length) return "No file on this message"; return (fs[0].filename||"file")+(fs.length>1?` +${fs.length-1}`:""); }
-function dlvIsFinal(d,v){ if(!dlvDone(d)) return false; const f=dlvFinalVer(d); return !!f&&f.id===v.id; }
+function dlvIsFinal(d,v){ return v.status==="approved"; }
 function dlvBoxHtml(d,v,done){
   const a=dlvAttached(v)[0]||null;
   const pic=a?(a.thumb_path||(isPdf(a)?a.view_path:"")||(a.kind==="image"?(a.view_path||""):"")||""):"";
   const ext=a?(tfExt(a)||"file").toUpperCase().slice(0,4):"";
-  const sub=done?`Final · delivered ${v38Day(d.delivered_at)}${d.delivered_by?" · "+dlvWho(d.delivered_by):""}`
-    :`${DLV_WORD[v.status]} · ${v38Day(v.answered_at||v.created_at)}${dlvSender(v)?" · "+dlvSender(v):""}`;
-  const filed=v.filed_at?` · <span class="go" onclick="event.stopPropagation();dlvOpenFiled('${escAttr(v.id)}')">filed in From us ↗</span>`:"";
   return `<div class="dlv-fb${done?" fin":""}" onclick="event.stopPropagation();${v.message_id?`dlvJump('${escAttr(v.message_id)}')`:""}" title="Go to the message">
     <div class="pv"${pic?` data-sign="${escAttr(pic)}"`:""}>${pic?"":"▤"}${a?`<span class="tf-ty ${tfTy(a)}">${escHtml(ext)}</span>`:""}</div>
-    <div class="tx"><div class="nm"><span class="vchip">v${v.version}</span><span class="fnm">${escHtml(a?(a.filename||"file"):"No file on this message")}</span></div>
-      <div class="d">${escHtml(sub)}${filed}</div></div></div>`;
+    <div class="tx"><div class="nm"><span class="vchip">v${v.version}</span><span class="fnm">${escHtml(a?(a.filename||"file")+(dlvAttached(v).length>1?` +${dlvAttached(v).length-1}`:""):"No file on this message")}</span></div></div></div>`;
 }
-function dlvMailLn(v){
-  const dr=v?dlvDraftsOf(v.id)[0]:null; if(!dr) return "";
-  return `<div class="dlv-ln mail"><i class="ti ti-mail"></i><span>Drafted for ${escHtml(dlvMailNames(dr))} · ${escHtml(v38Day(dr.created_at))}${dr.web_link?` · <a href="${escAttr(dr.web_link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Outlook ↗</a>`:""}</span></div>`;
+function dlvMailLn(v){ return ""; }   /* V118.104 — Email moved into the version's ⋯ */
+function dlvVerWord(v){
+  return v.status==="approved"?`✓ Client approved · ${v38Day(v.answered_at||v.created_at)}`
+    :v.status==="changes"?`Change request · ${v38Day(v.answered_at||v.created_at)}`
+    :`Sent · ${v38Day(v.created_at)}`;
 }
-function dlvVerRowsHtml(d,t,vs,mayE){
-  const all=vs.slice().reverse(), unf=DLV_ALLV.has(d.id), shown=unf?all:all.slice(0,2), more=all.length-shown.length;
-  return `<div class="d-vers" onclick="event.stopPropagation()"><div class="lbl tg" onclick="dlvAllV('${d.id}')">All versions · ${vs.length}${all.length>2?` <i class="ti ti-chevron-${unf?"up":"down"}"></i>`:""}</div>
-    ${shown.map(v=>{ const fin=dlvIsFinal(d,v);
-      return `<div class="vr${fin?" fin":""}" data-dv="${escAttr(v.id)}"><span class="vchip">v${v.version}</span>
-        <span class="fn" onclick="dlvVerGo('${escAttr(v.id)}')" title="${escAttr(dlvVerName(v)+" · "+v38Day(v.created_at)+(dlvSender(v)?" · "+dlvSender(v):""))}">${escHtml(dlvVerName(v))}</span>
-        ${fin?`<span class="fin-w">✓ Final</span>`:`<span class="dlv-p s-${v.status}">${escHtml(DLV_WORD[v.status])}</span>`}
-        <span class="dlv-vm"><button class="go" onclick="dlvVerMenu(event,'${escAttr(v.id)}')" title="${mayE&&!brIsClient()?"Final, file, move, remove":"Go to the message"}"><i class="ti ti-dots"></i></button>${DLV_VM===v.id?dlvVerMenuHtml(d,t,v,mayE):""}</span></div>`; }).join("")}
+function dlvVerRowsHtml(d,t,vs,mayE,boxed){
+  const all=vs.slice().reverse().filter(v=>!boxed||v.id!==boxed.id); if(!all.length) return "";
+  const unf=DLV_ALLV.has(d.id), shown=unf?all:all.slice(0,2), more=all.length-shown.length;
+  const head=boxed&&boxed.id===(vs[vs.length-1]||{}).id?"Earlier versions":"Other versions";
+  return `<div class="d-vers" onclick="event.stopPropagation()"><div class="lbl tg" onclick="dlvAllV('${d.id}')">${head} · ${all.length}${all.length>2?` <i class="ti ti-chevron-${unf?"up":"down"}"></i>`:""}</div>
+    ${shown.map(v=>`<div class="vr v2${v.status==="approved"?" fin":""}" data-dv="${escAttr(v.id)}"><span class="vchip">v${v.version}</span>
+        <span class="f" onclick="dlvVerGo('${escAttr(v.id)}')"><span class="nm">${escHtml(dlvVerName(v))}</span><span class="s s-${v.status}">${escHtml(dlvVerWord(v))}</span></span>
+        <span class="dlv-vm"><button class="go" onclick="dlvVerMenu(event,'${escAttr(v.id)}')" title="More"><i class="ti ti-dots"></i></button>${DLV_VM===v.id?dlvVerMenuHtml(d,t,v,mayE):""}</span></div>`).join("")}
     ${more>0?`<div class="more" onclick="dlvAllV('${d.id}')">+ ${more} older</div>`:""}
   </div>`;
 }
 function dlvVerMenuHtml(d,t,v,mayE){
-  const q=escAttr(v.id), fin=dlvIsFinal(d,v), can=mayE&&!brIsClient();
-  const others=dlvFor(t.id).filter(x=>x.id!==d.id&&!dlvDone(x));
+  const q=escAttr(v.id), can=mayE&&!brIsClient(), mayA=dlvMayAnswer(t), files=dlvAttached(v).length;
+  const others=dlvFor(t.id).filter(x=>x.id!==d.id);
   if(DLV_VMV===v.id) return `<div class="dlv-menu vm" onclick="event.stopPropagation()"><div class="mh">Move v${v.version} to</div>
     ${others.map(x=>{ const xs=dlvVers(x.id), nx=(xs.length?Math.max(...xs.map(y=>y.version)):0)+1;
       return `<div class="mi" onclick="dlvVerMove('${q}','${x.id}')">${escHtml(x.name)}<small>as v${nx}</small></div>`; }).join("")}</div>`;
-  return `<div class="dlv-menu vm" onclick="event.stopPropagation()">
-    ${can&&!fin?`<div class="mi" onclick="dlvMakeFinal('${q}')"><i class="ti ti-circle-check"></i>Make v${v.version} the final</div>`:""}
-    ${v.message_id?`<div class="mi" onclick="dlvVerGo('${q}')"><i class="ti ti-arrow-up-right"></i>Go to the message</div>`:""}
-    ${can?`<div class="sep"></div><div class="mi" onclick="dlvFilePick('${q}')"><i class="ti ti-switch-horizontal"></i>Change file</div>
-      ${others.length&&!fin?`<div class="mi" onclick="dlvVerMoveOpen(event,'${q}')"><i class="ti ti-arrow-right"></i>Move to another delivery</div>`:""}
-      ${!fin?`<div class="sep"></div><div class="mi rm" onclick="dlvVerRemove('${q}')"><i class="ti ti-x"></i>Remove this version</div>`:""}`:""}
-  </div>`;
+  const ans=!mayA?"":v.status==="approved"?`<div class="mi" onclick="dlvUndo('${q}')"><i class="ti ti-arrow-back"></i>Undo the approval</div>`
+    :v.status==="changes"?`<div class="mi" onclick="dlvApprove('${q}')"><i class="ti ti-check"></i>Client approved</div><div class="mi" onclick="dlvUndo('${q}')"><i class="ti ti-arrow-back"></i>Undo the change request</div>`
+    :`<div class="mi" onclick="dlvApprove('${q}')"><i class="ti ti-check"></i>Client approved</div><div class="mi" onclick="DLV_VM=null;dlvChangesOpen('${q}')"><i class="ti ti-arrow-back-up"></i>Change request</div>`;
+  const bk=!can?"":v.filed_at?`<div class="mi" onclick="DLV_VM=null;dlvOpenFiled('${q}')"><i class="ti ti-folder-check"></i>In backup<small>open</small></div>`
+    :`<div class="mi${files?"":" off"}" onclick="dlvBackup('${q}')"><i class="ti ti-folder-up"></i>Add to backup</div>`;
+  const L=[];
+  if(ans) L.push(`<div class="mh">The client's answer</div>${ans}`);
+  const mid=[can?`<div class="mi" onclick="DLV_VM=null;dlvMailOpen('${q}')"><i class="ti ti-mail"></i>Email to the client</div>`:"", bk,
+    files?`<div class="mi" onclick="dlvDownload('${q}')"><i class="ti ti-download"></i>Download</div>`:"",
+    v.message_id?`<div class="mi" onclick="dlvVerGo('${q}')"><i class="ti ti-arrow-up-right"></i>Go to the message</div>`:""].join("");
+  if(mid) L.push(mid);
+  if(can) L.push(`<div class="mi" onclick="dlvFilePick('${q}')"><i class="ti ti-switch-horizontal"></i>Change file</div>
+      ${others.length?`<div class="mi" onclick="dlvVerMoveOpen(event,'${q}')"><i class="ti ti-arrow-right"></i>Move to another delivery</div>`:""}
+      <div class="mi rm" onclick="dlvVerRemove('${q}')"><i class="ti ti-x"></i>Remove from deliveries</div>`);
+  return `<div class="dlv-menu vm" onclick="event.stopPropagation()">${L.join('<div class="sep"></div>')}</div>`;
 }
 function dlvCardHtml(d,t,mayE,mayA){
-  const vs=dlvVers(d.id), st=dlvState(d), open=DLV_OPEN===d.id, last=vs[vs.length-1], done=dlvDone(d);
+  const vs=dlvVers(d.id), open=DLV_OPEN===d.id, last=vs[vs.length-1], done=dlvDone(d);
   const nm=DLV_REN===d.id
     ?`<input class="dlv-rn" id="dlv-rn" maxlength="120" value="${escAttr(d.name)}" onclick="event.stopPropagation()"
         onkeydown="if(event.key==='Enter'){event.preventDefault();dlvRename('${d.id}');}if(event.key==='Escape'){DLV_REN=null;render();}" onblur="dlvRename('${d.id}')">`
     :`<span class="t">${escHtml(d.name)}</span>`;
   const drag=mayE&&!brIsClient()&&dlvFor(t.id).length>1;
   const grip=drag?`<span class="dlv-grip" title="Drag to reorder" onmousedown="DLV_DRAG='${d.id}'" onclick="event.stopPropagation()"><i class="ti ti-grip-vertical"></i></span>`:"";
-  const meta=done?`<span class="vchip">v${(dlvFinalVer(d)||{}).version||"?"}</span>delivered ${escHtml(v38Day(d.delivered_at))}${d.delivered_by?" · "+escHtml(dlvWho(d.delivered_by)):""}`
-    :last?`<span class="vchip">v${last.version}</span>${escHtml(v38Day(last.created_at))}${dlvSender(last)?" · "+escHtml(dlvSender(last)):""}`
-    :`not sent yet${d.due_date?" · due "+escHtml(v38Day(d.due_date)):""}`;
-  const more=open&&mayE?`<span class="dlv-mo"><button class="ab more" onclick="dlvMore(event,'${d.id}')" title="Rename, remove"><i class="ti ti-dots"></i></button>
+  const st=!last?"none":done?"ok":last.status==="changes"?"ch":"w";
+  const line=`<div class="d-st ${st}">${done?"✓ ":""}${escHtml(dlvLine(d))}</div>`;
+  const more=mayE&&!brIsClient()?`<span class="dlv-mo"><button class="ab more" onclick="dlvMore(event,'${d.id}')" title="Rename, remove"><i class="ti ti-dots"></i></button>
         ${DLV_MORE===d.id?`<div class="dlv-menu" onclick="event.stopPropagation()"><div class="mi" onclick="dlvRenOpen('${d.id}')"><i class="ti ti-pencil"></i>Rename</div>
-          <div class="mi rm" onclick="dlvRemove('${d.id}')"><i class="ti ti-trash"></i>Remove</div></div>`:""}</span>`:"";
-  const fv=done?dlvFinalVer(d):null, ff=done?dlvFinalFiles(d):[];
-  const act=open&&last&&!done&&(mayA||(mayE&&!brIsClient()))?`<div class="d-act" onclick="event.stopPropagation()">
-      ${mayA?`<button class="ab ok${last.status==="approved"?" on":""}" onclick="dlvApprove('${last.id}')" title="Approve v${last.version}"><i class="ti ti-check"></i>Approve</button>
-      <button class="ab ch${last.status==="changes"?" on":""}" onclick="dlvChangesOpen('${last.id}')" title="Record the changes the client asked for on v${last.version}"><i class="ti ti-arrow-back-up"></i>Changes</button>`:""}
-      ${mayE&&!brIsClient()?`<button class="ab mail" onclick="dlvMailOpen('${last.id}')" title="Draft the email in your Outlook, file attached"><i class="ti ti-mail"></i>Email the client</button>`:""}
-      ${dlvCanClose(d,t)?`<button class="ab done" onclick="dlvMarkDelivered('${d.id}')" title="${last.status==="approved"?"Close this delivery — v"+last.version+" is the final":"The client said yes by phone — approve v"+last.version+" on their behalf and close"}"><i class="ti ti-package-export"></i>Mark delivered</button>`:""}
-    </div>`
-    :(open&&done?`<div class="d-act" onclick="event.stopPropagation()">
-      ${ff.length?ff.map(a=>`<button class="ab" onclick="event.stopPropagation();dlvOpenFile('${escAttr(a.id)}')" title="${escAttr(a.filename||"")}"><i class="ti ti-download"></i>Final (v${fv?fv.version:"?"})${ff.length>1?" · "+escHtml(bfExt(a.filename||"")):""}</button>`).join(""):""}
-      ${mayE&&!brIsClient()?`<button class="ab" onclick="dlvReopen('${d.id}')" title="Open it again for another version"><i class="ti ti-rotate"></i>Reopen</button>`:""}
-    </div>`:"");
-  const box=open&&last?dlvBoxHtml(d,done?(fv||last):last,done):"";
-  const ver=open&&vs.length?dlvVerRowsHtml(d,t,vs,mayE):"";
+          <div class="mi rm" onclick="dlvRemove('${d.id}')"><i class="ti ti-trash"></i>Remove delivery</div></div>`:""}</span>`:"";
+  const boxed=done?dlvApprovedVer(d):last;
+  const box=open&&boxed?dlvBoxHtml(d,boxed,done):"";
+  const act=open&&last&&!done&&last.status==="sent"&&mayA?`<div class="d-act" onclick="event.stopPropagation()">
+      <button class="ab ok" onclick="dlvApprove('${last.id}')" title="Record that the client approved v${last.version}"><i class="ti ti-check"></i>Client approved</button>
+      <button class="ab ch" onclick="dlvChangesOpen('${last.id}')" title="Record the client's change request on v${last.version}"><i class="ti ti-arrow-back-up"></i>Change request</button></div>`:"";
+  const ver=open&&vs.length?dlvVerRowsHtml(d,t,vs,mayE,boxed):"";
   const dnd=drag?` draggable="true" ondragstart="dlvDragStart(event,'${d.id}')" ondragover="dlvDragOver(event,'${d.id}')" ondragleave="this.classList.remove('over')" ondrop="dlvDrop(event,'${d.id}')" ondragend="dlvDragEnd()"`:"";
-  return `<div class="dlv-c${vs.length?"":" todo"}${open?" open":""}${done?" done":""}" data-did="${d.id}"${dnd} onclick="dlvCardToggle('${d.id}')">
-    <div class="d-top">${grip}${nm}<span class="dlv-p s-${st}">${DLV_WORD[st]}</span>${more}</div>
-    ${box?"":`<div class="d-meta">${meta}</div>`}${box}${open&&!done?dlvMailLn(last):""}${act}${ver}</div>`;
+  return `<div class="dlv-c v104${vs.length?"":" todo"}${open?" open":""}${done?" done":""}" data-did="${d.id}"${dnd} onclick="dlvCardToggle('${d.id}')">
+    <div class="d-top">${grip}${nm}${more}</div>${line}${box}${act}${ver}</div>`;
 }
 /* ── the ⋯ on a version ─────────────────────────────────────────────── */
 function dlvAllV(did){ if(DLV_ALLV.has(did)) DLV_ALLV.delete(did); else DLV_ALLV.add(did); render(); }
@@ -45707,48 +45708,30 @@ async function dlvTaskSettle(t){
     if(r2.error){ t.status=was; dbErr(r2); } else { await logTask(t.id,"every delivery is delivered — the task is Delivered"); toast(`${t.title} · Delivered`); }
   }
 }
-async function dlvMakeFinal(vid){
-  const x=dlvVerOf(vid); if(!x||!dlvMayEdit(x.t)||brIsClient()) return;
-  const {v,d,t}=x; DLV_VM=null; DLV_VMV=null;
-  if(v.status!=="approved"){ await dlvAnswer(v.id,"approved"); if(v.status!=="approved") return; }
-  if(dlvAttached(v).length){
-    toast(`Filing v${v.version} under From us…`);
-    try{ const r=await dlvCall("file_final",{version_id:v.id}); v.filed_at=r.filed_at; v.filed_file_id=(r.filed[0]||{}).id||null; if(typeof BF!=="undefined"&&BF.bid===activeBrand) BF.ok=false; }
-    catch(e){ toast("Not filed in From us — "+(e.message||e),"err"); }
-  }
-  const patch={delivered_version_id:v.id,delivered_at:new Date().toISOString(),delivered_by:ME.id||null};
-  const r=await sb.from("task_deliverables").update(patch).eq("id",d.id);
-  if(r.error){ toast("Not saved — "+r.error.message,"err"); render(); return; }
-  Object.assign(d,patch);
-  await logTask(t.id,`made v${v.version} the final of "${d.name}"`);
-  toast(`${d.name} · v${v.version} is the final`);
-  await dlvTaskSettle(t);
-  if(TASK&&TASK.id===t.id){ await loadThread(t.id); }
-  render();
-}
+async function dlvMakeFinal(vid){ return dlvApprove(vid); }   /* V118.104 — approving IS making final */
 async function dlvVerRemove(vid){
   const x=dlvVerOf(vid); if(!x||!dlvMayEdit(x.t)||brIsClient()) return;
   const {v,d,t}=x; DLV_VM=null;
-  if(dlvIsFinal(d,v)){ toast(`v${v.version} is the final — make another version the final first`,"err"); render(); return; }
   if(!confirm(`Remove v${v.version} from ${d.name}?\n\nThe message and its file stay in the conversation. The other versions keep their numbers.`)){ render(); return; }
   const r=await sb.from("deliverable_versions").update({deleted_at:new Date().toISOString()}).eq("id",vid);
   if(r.error){ toast("Not removed — "+r.error.message,"err"); render(); return; }
   DLV.vers=DLV.vers.filter(y=>y.id!==vid);
   await logTask(t.id,`removed v${v.version} of "${d.name}"`);
   toast(`v${v.version} removed from ${d.name}`);
+  await dlvSettle(t);
   render();
 }
 async function dlvVerMove(vid,did2){
   const x=dlvVerOf(vid); if(!x||!dlvMayEdit(x.t)||brIsClient()) return;
   const {v,d,t}=x, d2=DLV.list.find(y=>y.id===did2); DLV_VM=null; DLV_VMV=null;
-  if(!d2||dlvDone(d2)||d2.task_id!==t.id){ render(); return; }
-  if(dlvIsFinal(d,v)){ toast(`v${v.version} is the final of ${d.name}`,"err"); render(); return; }
+  if(!d2||d2.task_id!==t.id){ render(); return; }
   const xs=dlvVers(d2.id), nx=(xs.length?Math.max(...xs.map(y=>y.version)):0)+1, was=v.version;
   const r=await sb.from("deliverable_versions").update({deliverable_id:d2.id,version:nx}).eq("id",vid);
   if(r.error){ toast("Not moved — "+r.error.message,"err"); render(); return; }
   v.deliverable_id=d2.id; v.version=nx; DLV_OPEN=d2.id;
   await logTask(t.id,`moved v${was} of "${d.name}" to "${d2.name}" as v${nx}`);
   toast(`Moved to ${d2.name} as v${nx}`);
+  await dlvSettle(t);
   render();
 }
 /* ── Change file: pick another message of this task that carries a file ─ */
@@ -45787,7 +45770,7 @@ async function dlvFilePickSave(){
   const r=await sb.from("deliverable_versions").update({message_id:F.mid}).eq("id",x.v.id);
   if(r.error){ F.busy=false; dlvFilePickPaint(); toast("Not changed — "+r.error.message,"err"); return; }
   x.v.message_id=F.mid;
-  if(dlvIsFinal(x.d,x.v)&&dlvAttached(x.v).length){   /* the final's file changed — From us follows */
+  if(x.v.filed_at&&dlvAttached(x.v).length){   /* V118.104 — it was in the backup: the backup follows */
     try{ const rf=await dlvCall("file_final",{version_id:x.v.id}); x.v.filed_at=rf.filed_at; x.v.filed_file_id=(rf.filed[0]||{}).id||null; if(typeof BF!=="undefined"&&BF.bid===activeBrand) BF.ok=false; }
     catch(e){ toast("Changed, but From us not updated — "+(e.message||e),"err"); }
   }
@@ -45822,7 +45805,7 @@ document.addEventListener("mouseup",()=>{ if(!DLV_DRAGGING) DLV_DRAG=null; });
 /* ── the tag on a delivered file in the conversation ────────────────── */
 function dlvTagHtml(d,v){
   const fin=dlvIsFinal(d,v);
-  return `<span class="dlv-vt s-${v.status}${fin?" fin":""}" onclick="event.stopPropagation();dlvTagGo('${d.id}')" title="Show it on the delivery card"><b>v${v.version}</b>${escHtml(d.name)} · ${escHtml(DLV_WORD[v.status].toLowerCase())}${fin?" · Final":""}</span>`;
+  return `<span class="dlv-vt s-${v.status}${fin?" fin":""}" onclick="event.stopPropagation();dlvTagGo('${d.id}')" title="Show it on the delivery card"><b>v${v.version}</b>${escHtml(d.name)} · ${escHtml(v.status==="approved"?"client approved":DLV_WORD[v.status].toLowerCase())}</span>`;
 }
 function dlvTagGo(did){
   DLV_OPEN=did; render();
@@ -45886,14 +45869,36 @@ async function dlvRemove(did){
 async function dlvAnswer(vid,status){
   const v=DLV.vers.find(x=>x.id===vid); if(!v) return;
   const t=BR.tasks.find(x=>x.id===v.task_id); if(!dlvMayAnswer(t)) return;
-  const patch={status,answered_by:ME.id||null,answered_at:new Date().toISOString()};
+  const now=new Date().toISOString();
+  const patch=status==="sent"?{status,answered_by:null,answered_at:null}:{status,answered_by:ME.id||null,answered_at:now};
   const r=await sb.from("deliverable_versions").update(patch).eq("id",vid);
   if(r.error){ toast("Not saved — "+r.error.message,"err"); return; }
-  Object.assign(v,patch); render();
+  Object.assign(v,patch);
+  /* V118.104 — only one approved version per delivery: an earlier approval goes back to Sent */
+  if(status==="approved") for(const o of DLV.vers.filter(x=>x.deliverable_id===v.deliverable_id&&x.id!==v.id&&x.status==="approved")){
+    const p2={status:"sent",answered_by:null,answered_at:null};
+    const r2=await sb.from("deliverable_versions").update(p2).eq("id",o.id);
+    if(!r2.error) Object.assign(o,p2);
+  }
+  await dlvSettle(t);
+  render();
+}
+/* the task follows its deliveries: all approved → Delivered; one undone → In progress */
+async function dlvSettle(t){
+  if(!t||!dlvMayEdit(t)||brIsClient()) return;
+  const all=dlvTaskDone(t.id), st=brStatusOf(t);
+  if(all&&st!=="closed"){
+    const was=t.status; t.status="closed";
+    const r=await sb.from("branding_tasks").update({status:"closed"}).eq("id",t.id);
+    if(r.error){ t.status=was; dbErr(r); } else { await logTask(t.id,"the client approved every delivery — the task is Delivered"); toast(`${t.title} · Delivered`); }
+  } else if(!all&&st==="closed"&&dlvFor(t.id).length){
+    const was=t.status; t.status="drafting";
+    const r=await sb.from("branding_tasks").update({status:"drafting"}).eq("id",t.id);
+    if(r.error){ t.status=was; dbErr(r); } else await logTask(t.id,"a delivery is waiting on the client again — the task is In progress");
+  }
 }
 async function dlvAddVersion(did,mid){
   const d=DLV.list.find(x=>x.id===did); if(!d) return false;
-  if(dlvDone(d)){ toast(`${d.name} is delivered — reopen it first`,"err"); return false; }   /* V118.94 */
   const vs=dlvVers(did);
   const row={id:(crypto.randomUUID?crypto.randomUUID():"v"+Date.now()),deliverable_id:did,task_id:d.task_id,brand_id:d.brand_id,
     version:(vs.length?Math.max(...vs.map(v=>v.version)):0)+1,message_id:mid||null,status:"sent",
@@ -45901,6 +45906,13 @@ async function dlvAddVersion(did,mid){
   const r=await sb.from("deliverable_versions").insert([row]);
   if(r.error){ toast("Not recorded — "+r.error.message,"err"); return false; }
   DLV.vers.push(row);
+  /* V118.104 — a new version asks the client again: an earlier approval goes back to Sent */
+  for(const o of DLV.vers.filter(x=>x.deliverable_id===did&&x.id!==row.id&&x.status==="approved")){
+    const p2={status:"sent",answered_by:null,answered_at:null};
+    const r2=await sb.from("deliverable_versions").update(p2).eq("id",o.id);
+    if(!r2.error) Object.assign(o,p2);
+  }
+  { const tt=BR.tasks.find(x=>x.id===d.task_id); if(tt) await dlvSettle(tt); }
   toast(`${d.name} · v${row.version} delivered`);
   return row;
 }
@@ -45917,12 +45929,12 @@ function dlvJump(mid){
   el.classList.add("fb-landed"); setTimeout(()=>el.classList.remove("fb-landed"),1600);
 }
 /* the message box, in deliver mode */
-function dlvMode(tid){ DLV_PICK=tid?{tid,did:(dlvFor(tid).filter(d=>!dlvDone(d))[0]||{}).id||"__new",name:""}:null; render(); }
+function dlvMode(tid){ DLV_PICK=tid?{tid,did:(dlvFor(tid).filter(d=>!dlvDone(d))[0]||dlvFor(tid)[0]||{}).id||"__new",name:""}:null; render(); }
 function dlvPickSet(v){ if(!DLV_PICK) return; DLV_PICK.did=v; render(); if(v==="__new") setTimeout(()=>{ const i=document.getElementById("dlv-pn"); if(i) i.focus(); },40); }
 function dlvBarHtml(t){
   if(DLV_CHG&&DLV_CHG.tid===t.id) return dlvChgBarHtml(t);   /* V118.81 — the Changes bar lives in the same slot */
   if(!DLV_PICK||DLV_PICK.tid!==t.id) return "";   /* V118.77 — Chirag, 20 Oct: the hover row's Deliver is enough */
-  const ds=dlvFor(t.id).filter(x=>!dlvDone(x)), did=DLV_PICK.did, d=ds.find(x=>x.id===did);   /* V118.94 — a delivered one takes no new version */
+  const ds=dlvFor(t.id), did=DLV_PICK.did, d=ds.find(x=>x.id===did);   /* V118.104 — an approved one can take a new version too */
   const next=d?((dlvVers(d.id).length?Math.max(...dlvVers(d.id).map(v=>v.version)):0)+1):1;
   return `<div class="dlv-bar on"><b>Deliver</b>
     <select class="cc-stsel" onchange="dlvPickSet(this.value)">${ds.map(x=>`<option value="${x.id}"${x.id===did?" selected":""}>${escHtml(x.name)}</option>`).join("")}
@@ -46314,17 +46326,37 @@ function dlvChgQuote(chg){
 /* ── 3 · APPROVED → FILED UNDER FROM US ─────────────────────────────── */
 async function dlvApprove(vid){
   const x=dlvVerOf(vid); if(!x||!dlvMayAnswer(x.t)) return;
+  DLV_VM=null;
   await dlvAnswer(vid,"approved");
-  if(x.v.status!=="approved") return;              /* the update was refused */
-  if(brIsClient()||!dlvAttached(x.v).length) return;   /* the manager files; nothing to file without a file */
-  toast(`Filing v${x.v.version} under From us…`);
+  if(x.v.status!=="approved") return;
+  await logTask(x.t.id,`recorded: the client approved v${x.v.version} of "${x.d.name}"`);
+  toast(`${x.d.name} · client approved v${x.v.version}`);
+}
+async function dlvUndo(vid){
+  const x=dlvVerOf(vid); if(!x||!dlvMayAnswer(x.t)) return;
+  DLV_VM=null; const was=x.v.status;
+  await dlvAnswer(vid,"sent");
+  if(x.v.status!=="sent") return;
+  await logTask(x.t.id,`undid the ${was==="approved"?"approval":"change request"} on v${x.v.version} of "${x.d.name}"`);
+}
+/* V118.104 — "Add to backup" (was: filed in From us on approval) */
+async function dlvBackup(vid){
+  const x=dlvVerOf(vid); if(!x||!dlvMayEdit(x.t)||brIsClient()) return;
+  DLV_VM=null; render();
+  if(!dlvAttached(x.v).length){ toast("No file on this message to back up","err"); return; }
+  toast(`Adding v${x.v.version} to the backup…`);
   try{
     const r=await dlvCall("file_final",{version_id:vid});
     x.v.filed_at=r.filed_at; x.v.filed_file_id=(r.filed[0]||{}).id||null;
-    if(typeof BF!=="undefined"&&BF.bid===activeBrand) BF.ok=false;   /* the Files page re-reads */
-    toast(`${x.d.name} v${x.v.version} filed in From us`);
-  }catch(e){ toast("Approved, but not filed — "+escHtml(e.message||e),"err"); }
+    if(typeof BF!=="undefined"&&BF.bid===activeBrand) BF.ok=false;
+    toast(`${x.d.name} v${x.v.version} added to the backup`);
+  }catch(e){ toast("Not added to the backup — "+(e.message||e),"err"); }
   render();
+}
+function dlvDownload(vid){
+  const v=DLV.vers.find(x=>x.id===vid); DLV_VM=null; render();
+  const fs=v?dlvAttached(v):[]; if(!fs.length){ toast("No file on this message","err"); return; }
+  fs.forEach(a=>assetDownload(a.id));
 }
 
 /* ── loading, and the dressing pass ───────────────────────────────── */
@@ -46409,6 +46441,25 @@ function v38Dress(){
 .dlv-pk .n{font-weight:700;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dlv-pk small{color:var(--muted);font-size:11px;}
 .dlv-pk input{margin:0;}
+</style>
+<style id="dlv104-css">
+/* V118.104 TBILISI · the delivery card, one clear step (mockup 12) */
+.dlv-c.v104 .d-st{padding:2px 11px 10px;font-size:11.5px;font-weight:600;line-height:1.35;}
+.dlv-c.v104 .d-st.ok{color:#1E6B2E;}.dlv-c.v104 .d-st.w{color:#2B6CB0;}.dlv-c.v104 .d-st.ch{color:#8A6D00;}.dlv-c.v104 .d-st.none{color:var(--subtle);font-weight:500;}
+.dlv-c.v104 .dlv-fb{margin-top:0;}
+.dlv-c.v104 .dlv-fb .nm .fnm{white-space:normal;word-break:break-all;}
+.dlv-c.v104 .d-act{grid-template-columns:1fr 1fr;}
+.dlv-c.v104 .d-vers .vr.v2{grid-template-columns:26px 1fr 22px;align-items:start;}
+.dlv-c.v104 .d-vers .vr.v2 .vchip{margin-top:1px;}
+.dlv-c.v104 .d-vers .vr.v2 .f{min-width:0;display:flex;flex-direction:column;cursor:pointer;}
+.dlv-c.v104 .d-vers .vr.v2 .f .nm{font-size:11.5px;color:var(--text);word-break:break-all;line-height:1.3;}
+.dlv-c.v104 .d-vers .vr.v2 .f:hover .nm{text-decoration:underline;}
+.dlv-c.v104 .d-vers .vr.v2 .f .s{font-size:10.5px;color:var(--muted);}
+.dlv-c.v104 .d-vers .vr.v2 .f .s.s-approved{color:#1E6B2E;font-weight:700;}.dlv-c.v104 .d-vers .vr.v2 .f .s.s-changes{color:#8A6D00;}
+.dlv-c.v104 .d-top .dlv-mo{margin-left:auto;}
+.dlv-menu .mi.off{opacity:.45;pointer-events:none;}
+.dvch.s-delivered{background:#EEF7EE;border-color:#BFDCC4;color:#1E6B2E;}.dvch.s-delivered b{color:#1E6B2E;}
+.dlv-p.s-delivered{background:#EEF7EE;color:#1E6B2E;}
 </style>
 <style id="hd-css">
 /* ══ V118.41 TBILISI · HELP DESK LIVES IN THE CALENDAR ══════════════════
@@ -47229,8 +47280,8 @@ function xtSheet(kind){
         const l=dlvLast(d.id), s=dlvState(d);
         const acts=[];
         if(l&&mayA){
-          acts.push(`<button class="${l.status==="approved"?"on":""}" onclick="xtAnswer('${l.id}','approved')"><i class="ti ti-check"></i>Approve</button>`);
-          acts.push(`<button class="${l.status==="changes"?"on":""}" onclick="xtAnswer('${l.id}','changes')"><i class="ti ti-arrow-back-up"></i>Changes</button>`);
+          acts.push(`<button class="${l.status==="approved"?"on":""}" onclick="xtAnswer('${l.id}','approved')"><i class="ti ti-check"></i>Client approved</button>`);
+          acts.push(`<button class="${l.status==="changes"?"on":""}" onclick="xtAnswer('${l.id}','changes')"><i class="ti ti-arrow-back-up"></i>Change request</button>`);
         }
         if(l&&l.message_id) acts.push(`<button onclick="xtSheetClose();dlvJump('${escAttr(l.message_id)}')"><i class="ti ti-arrow-up-right"></i>See in chat</button>`);
         return `<div class="xt-dc"><div class="tp">${escHtml(d.name)}<span class="dlv-p s-${s}">${l?"v"+l.version+" · ":""}${escHtml(DLV_WORD[s])}</span></div>
