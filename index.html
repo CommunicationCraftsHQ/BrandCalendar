@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.104 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.105 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14265,7 +14265,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.104 Tbilisi";
+const TOOL_VERSION="V118.105 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -45620,13 +45620,14 @@ function dlvRailHtml(t){
 let DLV_ALLV=new Set(), DLV_VM=null, DLV_VMV=null, DLV_DRAG=null, DLV_DRAGGING=null, DLV_FP=null;
 function dlvVerName(v){ const fs=dlvAttached(v); if(!fs.length) return "No file on this message"; return (fs[0].filename||"file")+(fs.length>1?` +${fs.length-1}`:""); }
 function dlvIsFinal(d,v){ return v.status==="approved"; }
-function dlvBoxHtml(d,v,done){
+function dlvBoxHtml(d,v,done,t,mayE){
   const a=dlvAttached(v)[0]||null;
   const pic=a?(a.thumb_path||(isPdf(a)?a.view_path:"")||(a.kind==="image"?(a.view_path||""):"")||""):"";
   const ext=a?(tfExt(a)||"file").toUpperCase().slice(0,4):"";
   return `<div class="dlv-fb${done?" fin":""}" onclick="event.stopPropagation();${v.message_id?`dlvJump('${escAttr(v.message_id)}')`:""}" title="Go to the message">
     <div class="pv"${pic?` data-sign="${escAttr(pic)}"`:""}>${pic?"":"▤"}${a?`<span class="tf-ty ${tfTy(a)}">${escHtml(ext)}</span>`:""}</div>
-    <div class="tx"><div class="nm"><span class="vchip">v${v.version}</span><span class="fnm">${escHtml(a?(a.filename||"file")+(dlvAttached(v).length>1?` +${dlvAttached(v).length-1}`:""):"No file on this message")}</span></div></div></div>`;
+    <div class="tx"><div class="nm"><span class="vchip">v${v.version}</span><span class="fnm">${escHtml(a?(a.filename||"file")+(dlvAttached(v).length>1?` +${dlvAttached(v).length-1}`:""):"No file on this message")}</span></div></div>
+    ${t?`<span class="dlv-vm" onclick="event.stopPropagation()"><button class="go" onclick="dlvVerMenu(event,'${escAttr(v.id)}')" title="More"><i class="ti ti-dots"></i></button>${DLV_VM===v.id?dlvVerMenuHtml(d,t,v,mayE):""}</span>`:""}</div>`;   /* V118.105 — the boxed version has its ⋯ too (Undo the approval lives there) */
 }
 function dlvMailLn(v){ return ""; }   /* V118.104 — Email moved into the version's ⋯ */
 function dlvVerWord(v){
@@ -45678,10 +45679,10 @@ function dlvCardHtml(d,t,mayE,mayA){
   const st=!last?"none":done?"ok":last.status==="changes"?"ch":"w";
   const line=`<div class="d-st ${st}">${done?"✓ ":""}${escHtml(dlvLine(d))}</div>`;
   const more=mayE&&!brIsClient()?`<span class="dlv-mo"><button class="ab more" onclick="dlvMore(event,'${d.id}')" title="Rename, remove"><i class="ti ti-dots"></i></button>
-        ${DLV_MORE===d.id?`<div class="dlv-menu" onclick="event.stopPropagation()"><div class="mi" onclick="dlvRenOpen('${d.id}')"><i class="ti ti-pencil"></i>Rename</div>
+        ${DLV_MORE===d.id?`<div class="dlv-menu" onclick="event.stopPropagation()">${done&&mayA?`<div class="mi" onclick="DLV_MORE=null;dlvUndo('${dlvApprovedVer(d).id}')"><i class="ti ti-arrow-back"></i>Undo the approval (v${dlvApprovedVer(d).version})</div>`:""}<div class="mi" onclick="dlvRenOpen('${d.id}')"><i class="ti ti-pencil"></i>Rename</div>
           <div class="mi rm" onclick="dlvRemove('${d.id}')"><i class="ti ti-trash"></i>Remove delivery</div></div>`:""}</span>`:"";
   const boxed=done?dlvApprovedVer(d):last;
-  const box=open&&boxed?dlvBoxHtml(d,boxed,done):"";
+  const box=open&&boxed?dlvBoxHtml(d,boxed,done,t,mayE):"";
   const act=open&&last&&!done&&last.status==="sent"&&mayA?`<div class="d-act" onclick="event.stopPropagation()">
       <button class="ab ok" onclick="dlvApprove('${last.id}')" title="Record that the client approved v${last.version}"><i class="ti ti-check"></i>Client approved</button>
       <button class="ab ch" onclick="dlvChangesOpen('${last.id}')" title="Record the client's change request on v${last.version}"><i class="ti ti-arrow-back-up"></i>Change request</button></div>`:"";
@@ -46457,6 +46458,10 @@ function v38Dress(){
 .dlv-c.v104 .d-vers .vr.v2 .f .s{font-size:10.5px;color:var(--muted);}
 .dlv-c.v104 .d-vers .vr.v2 .f .s.s-approved{color:#1E6B2E;font-weight:700;}.dlv-c.v104 .d-vers .vr.v2 .f .s.s-changes{color:#8A6D00;}
 .dlv-c.v104 .d-top .dlv-mo{margin-left:auto;}
+.dlv-c.v104 .dlv-fb .dlv-vm{align-self:flex-start;margin:-2px -4px 0 auto;flex:none;}
+.dlv-c.v104 .dlv-fb .dlv-vm .go{display:grid;place-items:center;width:22px;height:22px;border-radius:6px;color:var(--muted);cursor:pointer;}
+.dlv-c.v104 .dlv-fb .dlv-vm .go:hover{background:rgba(13,13,13,.06);color:var(--text);}
+.dlv-c.v104 .dlv-mo .dlv-menu{min-width:210px;}
 .dlv-menu .mi.off{opacity:.45;pointer-events:none;}
 .dvch.s-delivered{background:#EEF7EE;border-color:#BFDCC4;color:#1E6B2E;}.dvch.s-delivered b{color:#1E6B2E;}
 .dlv-p.s-delivered{background:#EEF7EE;color:#1E6B2E;}
