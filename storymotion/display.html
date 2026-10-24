@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>StoryMotion · Smart Labs</title>
-<meta name="cc-tool-version" content="V1.4 New Jersey">
+<meta name="cc-tool-version" content="V1.5 New Jersey">
 <style>
 /* Fonts inlined as WOFF2 data URIs — the file runs fully offline */
 @font-face { font-family: "Bricolage Grotesque"; font-weight: 700; font-style: normal; font-display: swap;
@@ -774,7 +774,7 @@ html, body {
 </div>
 
 <div id="smJoin" class="off"><div class="qr" id="smQr"></div><div><div class="k">Use your phone</div><div class="t">Scan to control<br>this screen</div><div class="c" id="smCode">····</div></div></div>
-<div id="smGate"><h2>StoryMotion</h2><p>Sign in to MarTech on this computer, then open StoryMotion from there.</p><a href="../martech/">Open MarTech</a></div>
+<div id="smGate"><h2>StoryMotion</h2><p id="smGateMsg">Sign in to MarTech on this computer, then open StoryMotion from there.</p><a href="../martech/">Open MarTech</a></div>
 <div class="demo-note">Kiosk stack demo · Chromium kiosk mode · GSAP inlined · videos embedded</div>
 
 <script>/*!
@@ -1495,6 +1495,109 @@ window.SMRelay = function (room, onMsg, onStatus) {
       busy: transitioning || (performance.now() - lastChange < SETTLE_MS) });
     if (st !== lastSent || Date.now() - lastSentAt > 1500) sendState();
   }, 300);
+
+  /* ---- SM-SETUPS: a saved setup from MarTech (display.html?s=<slug>) ----
+     Uses the setup's fixed phone code, opens only while it is Live,
+     and records what happened on the screen. No visitor details. */
+  const slug = (params.get("s") || "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 40);
+  if (slug) {
+    const SB = "https://qsxldzqdjdplffxqdokd.supabase.co";
+    const KEY = "sb_publishable_6ng_3jnvQbJUZifYTxmRrw_0yhCZuY9";
+    const TK = "sb-qsxldzqdjdplffxqdokd-auth-token";
+    const gate = document.getElementById("smGate");
+    const gateMsg = document.getElementById("smGateMsg");
+    function shut(msg) { if (gateMsg) gateMsg.textContent = msg; gate.style.display = "flex"; }
+    function open_() { gate.style.display = "none"; }
+    let setup = null, refreshing = null;
+
+    async function token() {
+      let s = null; try { s = JSON.parse(localStorage.getItem(TK) || "null"); } catch (e) {}
+      if (!s || !s.access_token) return null;
+      if ((s.expires_at || 0) * 1000 - Date.now() > 90000) return s.access_token;
+      if (!refreshing) refreshing = (async () => {
+        try {
+          const r = await fetch(SB + "/auth/v1/token?grant_type=refresh_token", { method: "POST",
+            headers: { apikey: KEY, "Content-Type": "application/json" },
+            body: JSON.stringify({ refresh_token: s.refresh_token }) });
+          if (!r.ok) return null;
+          const n = await r.json();
+          if (!n.expires_at) n.expires_at = Math.floor(Date.now() / 1000) + (n.expires_in || 3600);
+          try { localStorage.setItem(TK, JSON.stringify(n)); } catch (e) {}
+          return n.access_token;
+        } catch (e) { return null; } finally { setTimeout(() => { refreshing = null; }, 0); }
+      })();
+      return refreshing;
+    }
+    async function api(path, opts) {
+      const t = await token(); if (!t) throw new Error("signed-out");
+      const o = opts || {};
+      return fetch(SB + "/rest/v1/" + path, Object.assign({}, o, { headers: Object.assign({ apikey: KEY,
+        Authorization: "Bearer " + t, "Content-Type": "application/json" }, o.headers || {}) }));
+    }
+    async function check() {
+      try {
+        const r = await api("storymotion_setups?select=id,code,status,title&deleted_at=is.null&slug=eq." + encodeURIComponent(slug));
+        if (!r.ok) throw new Error("http");
+        const rows = await r.json();
+        if (!rows.length) { setup = null; shut("This setup is not there, or you cannot see it. Open it again from MarTech."); return; }
+        setup = rows[0];
+        if (setup.code !== room) {               /* wrong code in the address: use the setup's own */
+          location.replace("display.html?s=" + slug + "&room=" + setup.code); return;
+        }
+        if (setup.status !== "live") shut("“" + setup.title + "” is " + setup.status + ". Set it to Live in MarTech to open this screen.");
+        else open_();
+      } catch (e) {
+        if (e.message === "signed-out") shut("Sign in to MarTech on this computer, then open StoryMotion from there.");
+        /* a network blip keeps the screen as it was */
+      }
+    }
+    shut("Opening…");
+    check();
+    setInterval(check, 60000);
+
+    /* what happened on the screen */
+    const queue = [];
+    function log(kind, extra) {
+      if (!setup || setup.status !== "live") return;
+      queue.push(Object.assign({ setup_id: setup.id, session: sess, kind: kind, at: new Date().toISOString() }, extra || {}));
+      flush();
+    }
+    let flushing = false;
+    async function flush(keep) {
+      if (flushing || !queue.length) return; flushing = true;
+      const batch = queue.splice(0, 50);
+      try {
+        const r = await api("storymotion_events", { method: "POST", keepalive: !!keep,
+          headers: { Prefer: "return=minimal" }, body: JSON.stringify(batch) });
+        if (!r.ok && r.status >= 500) queue.unshift(...batch);   /* server busy: try again */
+      } catch (e) { if (queue.length < 400) queue.unshift(...batch); }
+      flushing = false;
+    }
+    setInterval(flush, 15000);
+
+    let sess = null, startAt = 0, lastView = "";
+    function where() {
+      if (current === "attract") return "";
+      const sec = current === "detail" && activeDivision ? activeDivision.key : "home";
+      return videoOpen ? sec + " · video" : sec;
+    }
+    setInterval(() => {
+      const w = where();
+      if (!sess && w) {
+        sess = crypto.randomUUID(); startAt = Date.now(); lastView = "";
+        log("start", { via: Date.now() - phoneSeen < 6000 ? "phone" : "touch" });
+      }
+      if (sess && w && w !== lastView) { lastView = w; log("view", { section: w }); }
+      if (sess && !w) {
+        log("end", { secs: Math.round((Date.now() - startAt) / 1000) });
+        sess = null; lastView = "";
+      }
+    }, 400);
+    addEventListener("pagehide", () => {
+      if (sess) { log("end", { secs: Math.round((Date.now() - startAt) / 1000) }); sess = null; }
+      flush(true);
+    });
+  }
 })();
 
 </script>
