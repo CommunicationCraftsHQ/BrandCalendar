@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.101 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.102 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -4248,6 +4248,26 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
 .pr-rc.on .nm{color:var(--acc);}
 .pr-cpanel .th-sheet{margin-top:10px;}.pr-cpanel .br-thread{max-height:min(50vh,480px);}
 /* sizes */
+/* V118.102 — a whole set in one go */
+.pr-szbar{display:flex;align-items:center;gap:8px;margin-top:12px;}
+.pr-szbar .nsdim{font-size:12px;}
+.pr-szwrap.dz{outline:2px dashed var(--cc-blue,#378ADD);outline-offset:6px;border-radius:10px;}
+.pr-drop{margin-top:12px;border:1px solid var(--cc-line,#E3E6EA);border-radius:10px;background:#fff;overflow:hidden;}
+.pr-droph{display:flex;align-items:center;font-weight:600;font-size:13px;padding:9px 12px;border-bottom:1px solid var(--cc-line,#E3E6EA);background:#FAFBFC;}
+.pr-droph .x{margin-left:auto;cursor:pointer;opacity:.55;}
+.pr-droph .x:hover{opacity:1;}
+.pr-dlist{max-height:240px;overflow:auto;padding:4px 0;}
+.pr-dl{display:flex;align-items:center;gap:10px;padding:6px 12px;font-size:12.5px;border-left:3px solid transparent;}
+.pr-dl b{font-weight:600;flex:0 0 auto;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pr-dl span{color:#6B7280;flex:1;min-width:0;}
+.pr-dl i{font-style:normal;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;}
+.pr-dl.ok{border-left-color:#639922;} .pr-dl.ok i{color:#639922;}
+.pr-dl.warn{border-left-color:#EF9F27;background:#FFFBF3;} .pr-dl.warn i{color:#B97708;}
+.pr-dl.bad{border-left-color:#D14343;background:#FFF6F6;} .pr-dl.bad i{color:#D14343;}
+.pr-dacts{display:flex;align-items:center;gap:8px;padding:9px 12px;border-top:1px solid var(--cc-line,#E3E6EA);background:#FAFBFC;}
+.pr-dacts .nsdim{font-size:12px;}
+.pr-leadsec{margin-top:12px;}
+.pr-qn{display:block;margin-top:4px;}
 .pr-szwrap{display:grid;grid-template-columns:250px minmax(0,1fr);gap:14px;align-items:start;margin-top:12px;}
 .pr-szlist{display:grid;gap:6px;}
 .pr-szr{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:10px;align-items:center;background:#fff;border:1px solid var(--div);border-radius:9px;padding:6px 8px;cursor:pointer;}
@@ -4294,6 +4314,11 @@ select.pr-fv.cc-stsel{height:34px;padding:0 28px 0 10px;background-color:#fff;}
 .pr-qacts .cc-stsel{height:30px;border:1px solid var(--div);border-radius:8px;padding:0 26px 0 9px;font:inherit;font-size:12px;background-color:#fff;}
 .pr-fixed{font-size:11.5px;color:var(--subtle);padding:8px 13px 12px;}
 @media (max-width:900px){ .pr-cbody,.pr-szwrap{grid-template-columns:1fr;} }
+/* V118.102 — Sizes is the tab a creative opens on now, so the picture
+   is the point of the panel. Side by side, the rail leaves the preview
+   196px on a 1180 screen, which is a stamp. Under 1280 the list goes
+   above the picture and the picture gets the whole width. */
+@media (max-width:1280px){ .pr-szwrap{grid-template-columns:minmax(0,1fr);} .pr-szbar .nsdim{display:none;} }
 .pr-hist{font-size:12.5px;padding:4px 0;}
 .pr-main > .prbox{margin-top:12px;}
 @media (max-width:900px){ .pr-body{grid-template-columns:1fr;} }
@@ -14242,7 +14267,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.101 Tbilisi";
+const TOOL_VERSION="V118.102 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -19099,7 +19124,9 @@ function startRealtime(){
 const EXPORT_LIBS={
   docx:{url:"https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js",global:"docx"},
   exceljs:{url:"https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js",global:"ExcelJS"},
-  pptxgenjs:{url:"https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js",global:"PptxGenJS"}
+  pptxgenjs:{url:"https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js",global:"PptxGenJS"},
+  /* V118.102 — one zip for a creative's whole set of sizes */
+  jszip:{url:"https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js",global:"JSZip"}
 };
 function loadExportLib(key){
   return new Promise((res,rej)=>{
@@ -29088,7 +29115,9 @@ const PR={key:null,loading:false,err:null,list:[],objs:[],bobjs:[],segs:[],bsegs
   streams:{},auds:{},months:{},cr:[],crc:{},
   open:null,seg:"running",obj:"",sg:"",sort:"updated",q:"",cols:null,edit:null,prog:null,aud:null,
   f:null,   /* V117.9 — the kit's filters; null until the page is first drawn */
-  creative:null,th:{id:null,msgs:[],acts:[],loading:false,err:""},staged:[],draft:"",sizes:{},qs:{},ctab:"talk",sz:null};
+  creative:null,th:{id:null,msgs:[],acts:[],loading:false,err:""},staged:[],draft:"",sizes:{},qs:{},ctab:"sizes",sz:null,
+  drop:null, /* V118.102 — files read and matched, waiting to be placed */
+  zip:null}; /* V118.102 — the creative whose set is being zipped */
 
 const PR_CST={drafting:["Draft","#EF9F27"],review:["For review","#378ADD"],approved:["Approved","#639922"],
   live:["Live","#2EA05A"],paused:["Paused","#B08A3A"],ended:["Ended","#AAAAAA"]};   /* V118.87 — the suite's journey words */
@@ -29625,48 +29654,70 @@ function prCrStream(c){ return (PR.streams[c.promotion_id]||[]).find(x=>x.id===c
 function prCrPlatKey(c){ const s=prCrStream(c); return s?(PR_PLAT[s.platform]?s.platform:"other"):"other"; }
 function prIsLeadPromo(p){ return /lead/i.test(String(p.objective_key||""))||/^leads?$/i.test(String(prUnit(p)||"")); }
 /* the rows the Sizes tab draws: real rows first, then the platform's suggestions not yet made */
-function prSizeRows(c){
+/* V118.102 — `lead` drops the 1.91:1 slot. That ratio is the link-ad
+   image; a lead form opens inside Facebook and has no link, so the row
+   was asking for a file nobody would ever use. A row ALREADY MADE is
+   never hidden — only the suggestion goes. */
+function prSizeRows(c,lead){
   const real=prSizes(c.id), key=prCrPlatKey(c);
-  const sug=(PR_SIZES[key]||PR_SIZES.other).filter(d=>!real.some(z=>z.ratio===d[0]))
+  const sug=(PR_SIZES[key]||PR_SIZES.other).filter(d=>!(lead&&d[0]==="1.91:1")).filter(d=>!real.some(z=>z.ratio===d[0]))
     .map(d=>({id:"sug:"+d[0],creative_id:c.id,ratio:d[0],label:d[1],width:d[2],height:d[3],asset_id:null,_sug:true}));
   return real.concat(sug);
 }
 function prSzAsset(z){ return z&&z.asset_id?assetById(z.asset_id):null; }
 function prSzFiles(z){ return z&&!z._sug?(assetsFor("creative_size",z.id)||[]).slice().sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at))):[]; }
 function prCrPanelHtml(p,c){
-  const canE=canCap("edit_ad_creatives"), tab=PR.ctab||"talk", t=PR_CTASK;
-  const zs=prSizeRows(c), zin=zs.filter(z=>z.asset_id).length, qs=prQs(c.id), lead=prIsLeadPromo(p)&&prCrPlatKey(c)==="meta";
+  const canE=canCap("edit_ad_creatives"), tab=(PR.ctab==="copy"?"copy":"sizes"), t=PR_CTASK;
+  const lead=prIsLeadPromo(p)&&prCrPlatKey(c)==="meta";
+  const zs=prSizeRows(c,lead), zin=zs.filter(z=>z.asset_id).length, qs=prQs(c.id);
   const nMsg=TASK.id===c.id?(TASK.msgs||[]).length:((PR.crc[c.id]||[]).length);
+  /* V118.102 — THE CREATIVE HAS TWO TABS. Chirag, 24 October: the
+     promotion’s own conversation already carries anything that needs
+     saying, and the creative’s activity log was a tab nobody opened.
+     Both are gone. The log is still WRITTEN by prLog — only its tab
+     went, so the record survives if it is ever wanted. */
   let body;
-  if(tab==="talk"){
-    if(!t||TASK.id!==c.id||TASK.loading) body=`<div class="th-load">Loading the conversation…</div>`;
-    else if(TASK.err) body=`<div class="th-load">Could not load it — ${escHtml(TASK.err)}</div>`;
-    else body=`<div class="th-sheet"><div class="th-strip" onclick="thStripTop(event)"><span class="k">Brief</span><span class="tx">${escHtml(thBriefWords(t))}</span><span class="go"><i class="ti ti-arrow-up"></i> Back to brief</span></div>
-      <div class="br-thread">${brBriefPin(t)}${threadHtml(t,brMsgsFor("team"))}</div>${canComment()?thComposerHtml(t,"team",[]):""}</div>`;
-  } else if(tab==="sizes"){
+  if(tab==="sizes"){
     const sel=zs.find(z=>z.id===PR.sz)||zs.find(z=>z.asset_id)||zs[0];
-    body=`<div class="pr-szwrap"><div class="pr-szlist">${zs.map(z=>{ const a=prSzAsset(z), src=a?(a.thumb_path||a.view_path||""):"";
+    /* V118.102 — THE WHOLE SET AT ONCE. Drop or pick any number of
+       files; each is measured in the browser, matched to a size by its
+       ratio, and SHOWN before a byte is written. Download all zips the
+       finals. */
+    body=`<div class="pr-szbar">
+        ${canE?`<button class="btn btn-s" onclick="prSzPickMany('${escAttr(c.id)}')"><i class="ti ti-upload"></i> Add files</button>`:""}
+        <button class="btn btn-s" ${PR.zip===c.id||!zin?"disabled":""} onclick="prSzZip('${escAttr(c.id)}')"><i class="ti ti-download"></i> ${PR.zip===c.id?"Zipping…":"Download all"}</button>
+        <span class="nsdim">${canE?"Drop a whole set here — we work out the sizes":""}</span></div>
+      ${prSzDropHtml()}
+      <div class="pr-szwrap"${canE?` ondragover="event.preventDefault();this.classList.add('dz')" ondragleave="this.classList.remove('dz')" ondrop="event.preventDefault();this.classList.remove('dz');prSzScan('${escAttr(c.id)}',event.dataTransfer.files)"`:""}><div class="pr-szlist">${zs.map(z=>{ const a=prSzAsset(z), src=a?(a.thumb_path||a.view_path||""):"";
         return `<div class="pr-szr${sel&&sel.id===z.id?" on":""}" onclick="event.stopPropagation();PR.sz='${escAttr(z.id)}';render()">
           <span class="prtimg${z._sug||!a?" empty":""}"${src?` data-sign="${escAttr(src)}"`:""}>${src?"":escHtml(z.ratio)}</span>
           <span class="tx"><b>${escHtml(z.label||z.ratio)} <small>${escHtml(z.ratio)}</small></b><small>${z.width&&z.height?`${z.width} × ${z.height}`:""}${a&&a.bytes?" · "+escHtml(kbmb(a.bytes)):""}</small></span>
           ${a?`<i class="ti ti-check tk"></i>`:canE?`<span class="add" onclick="event.stopPropagation();prSzPickFile('${escAttr(c.id)}','${escAttr(z.id)}')">+ add</span>`:""}</div>`; }).join("")}
         ${canE?`<span class="pr-szadd" onclick="event.stopPropagation();prSzCustom('${escAttr(c.id)}')"><i class="ti ti-plus"></i> Another size</span>`:""}</div>
       <div class="pr-szbig">${sel?prSzBigHtml(c,sel,canE):""}</div></div>
-      <input type="file" id="pr-szfile" accept="image/*,video/*,.pdf" style="display:none" onchange="prSzUpload(this.dataset.cid,this.dataset.sid,this.files);this.value=''">`;
+      <input type="file" id="pr-szfile" accept="image/*,video/*,.pdf" style="display:none" onchange="prSzUpload(this.dataset.cid,this.dataset.sid,this.files);this.value=''">
+      <input type="file" id="pr-szmany" multiple accept="image/*,video/*,.pdf" style="display:none" onchange="prSzScan(this.dataset.cid,this.files);this.value=''">`;
   } else if(tab==="copy"){
+    /* V118.102 — COPY IS THE CONTAINER, LEAD FORM THE SECTION INSIDE
+       IT. Merging the other way round would have cost a Google
+       creative its Copy, because the lead section only ever shows for
+       Meta on a Leads promotion while Copy shows for everything.
+       On a lead creative, Link and Tracking hide: the form opens
+       inside Facebook, so there is no destination to send anyone to
+       and nothing to hang a UTM on. A value already saved is kept,
+       just not shown. */
     const key=prCrPlatKey(c), F=(l,k,ta)=>`<label class="pr-fk">${l}</label>${ta?`<textarea class="pr-fv" id="prc-${k}" rows="3" ${canE?"":"disabled"}>${escHtml(c[k]||"")}</textarea>`:`<input class="pr-fv" id="prc-${k}" value="${escAttr(c[k]||"")}" ${canE?"":"disabled"}>`}`;
+    const others=PR.cr.filter(x=>x.id!==c.id&&prQs(x.id).length);
     body=`<div class="prbox pr-form"><div class="prbh">Copy · ${escHtml((PR_PLAT[key]||PR_PLAT.other).label)}${canE?`<span class="prbx-t" onclick="prCrCopySave('${escAttr(c.id)}')">Save</span>`:""}</div>
       <div class="pr-formg">
         ${F(key==="google"?"Headlines":"Primary text","primary_text",true)}
         ${F(key==="google"?"Long headline":"Headline","headline")}
         ${F("Description","description",true)}
         <label class="pr-fk">Call to action</label><select class="pr-fv cc-stsel" id="prc-cta" ${canE?"":"disabled"}>${[""].concat(PR_CTA).map(x=>`<option value="${escAttr(x)}"${(c.cta||"")===x?" selected":""}>${x||"—"}</option>`).join("")}</select>
-        ${F(key==="google"?"Final URL":"Link","link")}
-        ${F("Tracking","tracking")}
-      </div></div>`;
-  } else if(tab==="lead"){
-    const others=PR.cr.filter(x=>x.id!==c.id&&prQs(x.id).length);
-    body=`<div class="prbox pr-form"><div class="prbh">Lead form · Meta, Leads</div>
+        ${lead?"":`${F(key==="google"?"Final URL":"Link","link")}
+        ${F("Tracking","tracking")}`}
+      </div></div>`
+      +(lead?`<div class="prbox pr-form pr-leadsec"><div class="prbh">Lead form · Meta, Leads</div>
       <div class="pr-qs">${qs.length?qs.map((q,i)=>`<div class="pr-qq" data-q="${escAttr(q.id)}">
           <span class="n">${i+1}</span>
           <div class="qb"><input class="pr-fv" value="${escAttr(q.question||"")}" placeholder="The question" ${canE?"":"disabled"} onblur="prQSave('${escAttr(q.id)}',{question:this.value})">
@@ -29676,11 +29727,7 @@ function prCrPanelHtml(p,c){
         :`<div class="nsdim" style="font-size:12.5px;padding:4px 0 8px">No questions yet — name, phone and email are always on the form.</div>`}</div>
       ${canE?`<div class="pr-qacts"><span class="pr-szadd" onclick="prQAdd('${escAttr(c.id)}')"><i class="ti ti-plus"></i> Question</span>
         ${others.length?`<select class="cc-stsel" onchange="if(this.value){prQCopy('${escAttr(c.id)}',this.value);this.value='';}"><option value="">Copy from another creative…</option>${others.map(o=>`<option value="${escAttr(o.id)}">${escHtml(o.title||"Untitled")} · ${prQs(o.id).length}</option>`).join("")}</select>`:""}</div>`:""}
-      <div class="pr-fixed">Name, phone and email are always asked.</div></div>`;
-  } else {
-    const acts=(TASK.id===c.id?(TASK.acts||[]):[]);
-    body=`<div class="prbox"><div class="prbh">History</div><div class="prbb">${acts.length?acts.map(a=>`<div class="pr-hist"><b>${escHtml(a.actor_name||"")}</b> ${escHtml(a.action||"")}<span class="nsdim"> · ${escHtml(fmtShort(a.created_at))}</span></div>`).join("")
-      :`<div class="nsdim" style="font-size:12.5px">Nothing yet</div>`}</div></div>`;
+      <div class="pr-fixed">Name, phone and email are always asked.</div></div>`:"");
   }
   const T=(k,l)=>`<span class="${tab===k?"on":""}" onclick="event.stopPropagation();prCTab('${k}')">${l}</span>`;
   const st=Object.keys(PR_CST).map(k=>`<option value="${k}"${c.status===k?" selected":""}>${PR_CST[k][0]}</option>`).join("");
@@ -29688,11 +29735,10 @@ function prCrPanelHtml(p,c){
   const rail=`<div class="pr-crail">
     <div class="prbox"><div class="pr-cthumb"${thumb?` data-sign="${escAttr(thumb)}"`:""}>${thumb?"":'<i class="ti ti-photo"></i>'}</div>
       <div class="prbb" style="padding:8px 11px 10px"><div class="pr-cl" onclick="prCTab('sizes')"><b>Sizes</b> · ${zin} of ${zs.length} in<small>${zs.map(z=>escHtml(z.label||z.ratio)+(z.asset_id?" ✓":" —")).join(" · ")}</small></div></div></div>
-    <div class="prbox"><div class="prbh">Copy<span class="prbx-t" onclick="prCTab('copy')">›</span></div><div class="prbb pr-cl" onclick="prCTab('copy')">${c.headline||c.primary_text?`${escHtml(c.headline||String(c.primary_text||"").slice(0,60))}<small>${escHtml([c.cta,c.link].filter(Boolean).join(" → "))}</small>`:`<span class="nsdim">Nothing written yet</span>`}</div></div>
-    ${lead?`<div class="prbox"><div class="prbh">Lead form<span class="prbx-t" onclick="prCTab('lead')">›</span></div><div class="prbb pr-cl" onclick="prCTab('lead')">${qs.length?`${qs.length} question${qs.length===1?"":"s"}<small>${escHtml(qs.map(q=>q.question).filter(Boolean).slice(0,3).join(" · "))}</small>`:`<span class="nsdim">No questions yet</span>`}</div></div>`:""}
+    <div class="prbox"><div class="prbh">Copy<span class="prbx-t" onclick="prCTab('copy')">›</span></div><div class="prbb pr-cl" onclick="prCTab('copy')">${c.headline||c.primary_text?`${escHtml(c.headline||String(c.primary_text||"").slice(0,60))}<small>${escHtml([c.cta,lead?"":c.link].filter(Boolean).join(" → "))}</small>`:`<span class="nsdim">Nothing written yet</span>`}${lead?`<small class="pr-qn">${qs.length?`${qs.length} question${qs.length===1?"":"s"} · ${escHtml(qs.map(q=>q.question).filter(Boolean).slice(0,2).join(" · "))}`:"No lead questions yet"}</small>`:""}</div></div>
     <div class="prbox"><div class="prbh">Details${canE?`<span class="prbx-t" onclick="prCrEditOpen('${escAttr(c.id)}')">Edit</span>`:""}</div><div class="prbb pr-cl nsdim" style="cursor:default">${escHtml(c.format||"")} · ${escHtml(bfWho(c.created_by)||"")}${c.created_at?" · "+escHtml(fmtShort(c.created_at)):""}</div></div></div>`;
   return `<div class="pr-cpanel" onclick="event.stopPropagation()"><div class="pr-cin">
-    <div class="br-tabs pr-ctabs">${T("talk","Conversation"+(nMsg?` · ${nMsg}`:""))}${T("sizes","Sizes"+(zs.length?` · ${zin} of ${zs.length}`:""))}${T("copy","Copy")}${lead?T("lead","Lead form"+(qs.length?` · ${qs.length}`:"")):""}${T("history","History")}
+    <div class="br-tabs pr-ctabs">${T("sizes","Sizes"+(zs.length?` · ${zin} of ${zs.length}`:""))}${T("copy","Copy"+(lead&&qs.length?` · ${qs.length} question${qs.length===1?"":"s"}`:""))}
       <span class="br-gap"></span><span class="prcst pl"><i class="ti ${(PR_PLAT[prCrPlatKey(c)]||PR_PLAT.other).icon}"></i>${escHtml(prCrPlat(c))}</span>
       <select class="tk-st cc-stsel" onchange="prCrStatus('${escAttr(c.id)}',this.value)" ${canE?"":"disabled"}>${st}</select>
       <button class="br-ico" onclick="prCopyLink('${escAttr(p.id)}','${escAttr(c.id)}')" title="Copy a link that opens this creative" aria-label="Copy link"><i class="ti ti-link"></i></button>
@@ -29722,6 +29768,142 @@ async function prSzEnsure(cid,sid){
   (PR.sizes[cid]=PR.sizes[cid]||[]).push(row);
   return row.id;
 }
+/* ══ V118.102 · A WHOLE SET IN ONE GO ════════════════════════════════
+   Chirag, 24 October: "we should be able to upload and download
+   multiple images in one go and the tool should identify the sizes on
+   its own, and if the sizes are not proper, it should also point it
+   out."
+
+   Every file is MEASURED IN THE BROWSER BEFORE ANYTHING IS WRITTEN,
+   and the person sees where each one is going before pressing Place.
+   The flagging is the point of the whole thing: a size that is quietly
+   too small is worse than one that is missing, because nobody looks at
+   it again.
+   ══════════════════════════════════════════════════════════════════ */
+const PR_RTOL=0.02;          /* 1080×1351 is still 4:5 */
+
+/* a file's real pixels. An image through Image(), a video through a
+   <video>; a PDF cannot be measured and is never placed by guess. */
+function prMeasure(file){
+  return new Promise(res=>{
+    const url=URL.createObjectURL(file), done=v=>{ URL.revokeObjectURL(url); res(v); };
+    if(/^image\//.test(file.type)){
+      const im=new Image();
+      im.onload=()=>done({w:im.naturalWidth,h:im.naturalHeight});
+      im.onerror=()=>done(null); im.src=url; return;
+    }
+    if(/^video\//.test(file.type)){
+      const v=document.createElement("video");
+      v.onloadedmetadata=()=>done({w:v.videoWidth,h:v.videoHeight});
+      v.onerror=()=>done(null); v.preload="metadata"; v.src=url; return;
+    }
+    done(null);
+  });
+}
+/* which row a measured file belongs to, if any */
+function prMatchSize(rows,m){
+  if(!m||!m.w||!m.h) return null;
+  const r=m.w/m.h;
+  let best=null,bd=1e9;
+  rows.forEach(z=>{ if(!z.width||!z.height) return;
+    const want=z.width/z.height, d=Math.abs(r-want)/want;
+    if(d<=PR_RTOL&&d<bd){ bd=d; best=z; } });
+  return best;
+}
+/* read every dropped file, work out where it goes, and show it */
+async function prSzScan(cid,files){
+  const list=[...(files||[])]; if(!list.length) return;
+  const c=PR.cr.find(x=>x.id===cid); if(!c) return;
+  const p=PR.list.find(x=>x.id===c.promotion_id);
+  const lead=p?(prIsLeadPromo(p)&&prCrPlatKey(c)==="meta"):false;
+  const rows=prSizeRows(c,lead);
+  PR.drop={cid:cid,busy:false,items:[]}; render();
+  const taken={};                       /* a slot only takes one new final */
+  for(const f of list){
+    const m=await prMeasure(f);
+    const z=prMatchSize(rows,m);
+    let state,why="";
+    if(!z){ state="none"; why=m?`${m.w} × ${m.h} matches no size we use`:"this file cannot be measured"; }
+    else if(z.asset_id||taken[z.id]){ state="version"; why="that size already has a final — this goes in as an earlier file"; }
+    else {
+      taken[z.id]=1; state="place";
+      if(m.w<z.width||m.h<z.height) { state="small"; why=`${m.w} × ${m.h}, wants ${z.width} × ${z.height}`; }
+    }
+    PR.drop.items.push({file:f,m:m,z:z||null,state:state,why:why});
+    render();
+  }
+}
+/* write them. Only now does anything leave the browser. */
+async function prSzPlace(){
+  const d=PR.drop; if(!d||d.busy) return;
+  d.busy=true; render();
+  let made=0;
+  for(const it of d.items){
+    if(!it.z) continue;
+    const real=await prSzEnsure(d.cid,it.z.id); if(!real) continue;
+    const rows=await uploadMany([it.file],{ownerKind:"creative_size",ownerId:real,brandId:activeBrand,
+      onTick:()=>{ if(view==="promotions") render(); }});
+    const a=rows&&rows[0]; if(!a) continue;
+    /* a size that already has a final keeps it — the new file is an
+       earlier file until somebody promotes it */
+    if(it.state!=="version") await prSzMakeFinal(real,a.id,true);
+    made++;
+  }
+  await prLog(d.cid,`added ${made} file${made===1?"":"s"} to the sizes`);
+  PR.drop=null; render();
+}
+function prSzDropShut(){ PR.drop=null; render(); }
+function prSzDropHtml(){
+  const d=PR.drop; if(!d) return "";
+  const n=d.items.filter(x=>x.z).length, bad=d.items.filter(x=>!x.z).length;
+  const line=it=>{
+    const nm=escHtml(it.file.name);
+    if(it.state==="none")    return `<div class="pr-dl bad"><b>${nm}</b><span>${escHtml(it.why)}</span><i>held back</i></div>`;
+    if(it.state==="small")   return `<div class="pr-dl warn"><b>${nm}</b><span>${escHtml(it.z.label||it.z.ratio)} — ${escHtml(it.why)}</span><i>under size</i></div>`;
+    if(it.state==="version") return `<div class="pr-dl warn"><b>${nm}</b><span>${escHtml(it.z.label||it.z.ratio)} — ${escHtml(it.why)}</span><i>earlier file</i></div>`;
+    return `<div class="pr-dl ok"><b>${nm}</b><span>${escHtml(it.z.label||it.z.ratio)} · ${it.m.w} × ${it.m.h}</span><i>✓</i></div>`;
+  };
+  return `<div class="pr-drop"><div class="pr-droph">What these files will do
+      <span class="x" onclick="prSzDropShut()">✕</span></div>
+    <div class="pr-dlist">${d.items.map(line).join("")||'<div class="nsdim" style="padding:8px 0">Reading…</div>'}</div>
+    <div class="pr-dacts">${bad?`<span class="nsdim">${bad} held back — add ${bad===1?"it":"them"} by hand, or as another size</span>`:""}
+      <span style="flex:1"></span>
+      <button class="btn btn-g" onclick="prSzDropShut()">Cancel</button>
+      <button class="btn btn-p" ${d.busy||!n?"disabled":""} onclick="prSzPlace()">${d.busy?"Placing…":`Place ${n} file${n===1?"":"s"}`}</button></div></div>`;
+}
+function prSzPickMany(cid){ const i=document.getElementById("pr-szmany"); if(!i) return; i.dataset.cid=cid; i.click(); }
+
+/* ── download the lot ─────────────────────────────────────────────── */
+async function prSzZip(cid){
+  const c=PR.cr.find(x=>x.id===cid); if(!c) return;
+  if(!canDownload()){ capDenied("Downloading a file"); return; }
+  const p=PR.list.find(x=>x.id===c.promotion_id);
+  const lead=p?(prIsLeadPromo(p)&&prCrPlatKey(c)==="meta"):false;
+  const have=prSizeRows(c,lead).filter(z=>z.asset_id);
+  if(!have.length){ toast("Nothing to download yet","err"); return; }
+  PR.zip=cid; render();
+  try{
+    const JSZip=await loadExportLib("jszip");
+    const zip=new JSZip(), base=prFileSafe(c.title||"Creative");
+    let n=0,left=0;
+    for(const z of have){
+      const a=assetById(z.asset_id);
+      /* a master lives in SharePoint, not our bucket, so it cannot be
+         zipped — it is counted out loud rather than dropped quietly */
+      if(!a||!a.storage_path){ left++; continue; }
+      const url=await signedUrl(a.storage_path); if(!url){ left++; continue; }
+      const buf=await (await fetch(url)).arrayBuffer();
+      const ext=((a.filename||"").split(".").pop()||"jpg").toLowerCase();
+      zip.file(base+" — "+prFileSafe(z.label||z.ratio)+"."+ext,buf); n++;
+    }
+    if(!n) throw new Error("none of these files could be fetched");
+    dlBlob(await zip.generateAsync({type:"blob"}),base+" — sizes.zip");
+    toast(left?(n+" downloaded, "+left+" could not be zipped"):(n+" file"+(n===1?"":"s")+" downloaded"),left?"err":"ok");
+  }catch(e){ toast("Download failed: "+(e.message||""),"err"); }
+  PR.zip=null; render();
+}
+function prFileSafe(t){ return String(t||"").replace(/[\\/:*?"<>|]/g,"-").trim()||"file"; }
+
 async function prSzUpload(cid,sid,files){
   const list=[...(files||[])]; if(!list.length) return;
   const real=await prSzEnsure(cid,sid); if(!real) return;
@@ -30862,7 +31044,7 @@ function prCrPlat(c){
 let PR_CTASK=null;
 function prCrOpen(pid,cid){
   if(PR.creative===cid&&PR.open===pid&&PR.tab==="creatives"){ prCrBack(); return; }
-  PR.open=pid; PR.tab="creatives"; PR.creative=cid; PR.ctab="talk"; PR.sz=null; PR.staged=[]; PR.draft="";
+  PR.open=pid; PR.tab="creatives"; PR.creative=cid; PR.ctab="sizes"; PR.sz=null; PR.staged=[]; PR.draft="";
   if(!PR_TASK||PR_TASK.id!==pid){ const p=PR.list.find(x=>x.id===pid); if(p) PR_TASK=prTaskOf(p); }
   const c=PR.cr.find(x=>x.id===cid);
   PR_CTASK=c?{id:c.id,_promo:true,_creative:true,title:c.title||"",brand_id:c.brand_id||activeBrand,owner_id:c.created_by||null,project_id:null,status:"in_progress",brief:c.brief||"",archived_at:null,created_at:c.created_at}:null;
@@ -30918,7 +31100,7 @@ async function meetMarkSeen(mid,brandId){
   if(!MEET_SEEN_OK) return;
   try{ await sb.from("meeting_seen").upsert({user_email:me,meeting_id:mid,brand_id:brandId||activeBrand,seen_at:now}); }catch(e){}
 }
-function prCrBack(){ PR.creative=null; PR_CTASK=null; PR.sz=null; render(); }
+function prCrBack(){ PR.creative=null; PR_CTASK=null; PR.sz=null; PR.drop=null; PR.zip=null; render(); }
 async function prThLoad(cid){
   PR.th={id:cid,msgs:[],acts:[],loading:true,err:""};
   try{
