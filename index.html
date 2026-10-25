@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.108 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.109 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14265,7 +14265,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.108 Tbilisi";
+const TOOL_VERSION="V118.109 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -50005,7 +50005,7 @@ function plMomCardHtml(){
 }
 </style>
 <style id="v118107-css">
-/* V118.107 Tbilisi — plan mode · V118.108 the Excel sheet */
+/* V118.107 Tbilisi — plan mode · V118.108 the Excel sheet · V118.109 in the black bar */
 #pm-root{position:relative;}
 /* plan colours — the only thing that changes between Live and Plan */
 :root{--pm:#334E68;--pm-d:#243B53;--pm-bg:#DFE5EC;--pm-soft:#F2F5F8;--pm-line:#B3C0CE;--pm-ink:var(--text);}
@@ -50828,11 +50828,31 @@ function ordered(kind){
 function refMap(){ const m={}; Object.keys(KREF).forEach(k=>ordered(k).forEach((e,i)=>{ m[e.id]=KREF[k]+String(i+1).padStart(2,"0"); })); return m; }
 
 /* ── download ─────────────────────────────────────────────────────── */
-async function download(){
-  const P=X(), d=P.D(); if(!d||!d.ok) return;
+function span(){
+  const d=X().D(); if(!d) return null;
+  const ks=[...new Set(d.entries.map(kOf).concat(d.months.map(kOf)))].sort((a,b)=>a-b);
+  if(!ks.length) return null;
+  const f=X().fromYm(ks[0]), l=X().fromYm(ks[ks.length-1]);
+  return {f,l,n:ks.length,lines:d.entries.length,txt:`${MN3[f.m]} ${f.y}${ks.length>1?` to ${MN3[l.m]} ${l.y}`:""}`};
+}
+window.pmxlSpan=span;
+const bname=()=>{ const b=brands[activeBrand]; return (b&&b.name)||"Brand"; };
+const safe=s=>String(s).replace(/[\\/:*?"<>|]/g,"").trim();
+async function download(blank){
+  const P=X(), d=P.D(); if(!d||!d.ok){ toast("Open the plan first, then try again","err"); return; }
   const EJ=await loadExportLib("exceljs");
   const wb=new EJ.Workbook();
+  const sp=span();
+  /* the label on the box: which brand, what it is, which months */
+  const ab=wb.addWorksheet("About",{properties:{tabColor:{argb:"FF334E68"}}});
+  ab.columns=[{width:18},{width:70}];
+  const what=blank?"Plan sheet · blank template":"Plan sheet";
+  [["Brand",bname()],["What",what],["Months",blank||!sp?"—":sp.txt],["Downloaded",new Date().toLocaleString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})+(ME&&ME.email?" · "+ME.email:"")],
+   ["Upload it",`Marketing Calendar › ${bname()} › Plan › Plan mode › Import (black bar) › Fill the plan from a sheet`]].forEach((r,i)=>{
+    const row=ab.getRow(i+1); row.values=r; row.getCell(1).font={bold:true,color:{argb:"FF334E68"}}; row.alignment={vertical:"top",wrapText:true}; });
+  ab.getRow(1).getCell(2).font={bold:true,size:14};
   const lk=wb.addWorksheet("_lists"); lk.state="veryHidden";
+  lk.getCell(1,5).value="cc-plan-sheet"; lk.getCell(2,5).value=activeBrand; lk.getCell(3,5).value=bname();
   const MONTHS=P.MNF.slice(1), FM=P.FMTS.map(FMTW), PL=P.pillars().map(p=>p.name||"").filter(Boolean);
   MONTHS.forEach((v,i)=>lk.getCell(i+1,1).value=v);
   FM.forEach((v,i)=>lk.getCell(i+1,2).value=v);
@@ -50845,7 +50865,7 @@ async function download(){
   /* Months */
   const wm=wb.addWorksheet("Months",{views:[{state:"frozen",ySplit:1}]});
   wm.columns=[{header:"Year",width:8},{header:"Month",width:12},{header:"Objective",width:50},{header:"Theme",width:50},{header:"Goals (one per line)",width:60}];
-  d.months.slice().sort((a,b)=>kOf(a)-kOf(b)).forEach((m,i)=>{ const r=wm.getRow(i+2);
+  (blank?[]:d.months.slice().sort((a,b)=>kOf(a)-kOf(b))).forEach((m,i)=>{ const r=wm.getRow(i+2);
     r.values=[m.year,P.MNF[m.month],m.objective||"",m.theme||"",(Array.isArray(m.goals)?m.goals:[]).filter(Boolean).join("\n")]; });
   for(let r=2;r<=LAST;r++) wm.getRow(r).alignment={vertical:"top",wrapText:true};
   listOn(wm,2,null,"A",12); head(wm);
@@ -50853,7 +50873,7 @@ async function download(){
   Object.keys(SHEETS).forEach(kind=>{
     const ws=wb.addWorksheet(SHEETS[kind],{views:[{state:"frozen",ySplit:1,xSplit:2}]});
     ws.columns=COLS[kind].map(h=>({header:h,width:WID[h]||14}));
-    ordered(kind).forEach((e,i)=>{
+    (blank?[]:ordered(kind)).forEach((e,i)=>{
       const feeds=(e.feeds||[]).map(f=>refs[f]).filter(Boolean).join(", ");
       const pl=e.pillar_id&&P.pillars().find(p=>p.id===e.pillar_id);
       const base=[e.id,refs[e.id],e.year,P.MNF[e.month]];
@@ -50875,7 +50895,7 @@ async function download(){
   P.pillars().forEach((p,i)=>{ wp.getRow(i+2).values=[p.name||"",p.purpose||"",(p.series||[]).join(", ")]; wp.getRow(i+2).alignment={vertical:"top",wrapText:true}; });
   head(wp);
   const buf=await wb.xlsx.writeBuffer();
-  const b=brands[activeBrand], name=`Plan - ${(b&&b.name||"brand").replace(/[\\/:*?"<>|]/g,"")}.xlsx`;
+  const name=safe(`${bname()} - Plan sheet - ${blank?"blank template":(sp?sp.txt:"empty")}`)+".xlsx";
   const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})); a.download=name;
   document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
 }
@@ -50972,8 +50992,10 @@ async function upload(file){
   if(!window.XLSX){ toast("The Excel reader did not load — reload the page","err"); return; }
   try{
     const wb=XLSX.read(await file.arrayBuffer(),{type:"array",cellDates:true});
+    const L=wb.Sheets["_lists"], mark=L&&L["E1"]&&L["E1"].v, sbid=L&&L["E2"]&&L["E2"].v, sbn=L&&L["E3"]&&L["E3"].v;
+    if(mark!=="cc-plan-sheet"){ toast("This is not a plan sheet. Download one from the black bar's Export menu in Plan mode.","err"); return; }
+    if(sbid!==activeBrand){ toast(`This plan sheet is for ${sbn||"another brand"}. Open ${sbn||"that brand"}'s Plan to upload it.`,"err"); return; }
     const rep=plan(wb);
-    if(!rep.sheetsSeen.length){ toast("This is not a plan sheet — download one from Plan mode first","err"); return; }
     XL.rep=rep; XL.name=file.name; XL.open=false; paintDlg();
   }catch(e){ toast("The sheet could not be read: "+(e.message||e),"err"); }
 }
@@ -51009,7 +51031,7 @@ function paintDlg(){
   const line=(ic,lbl,k)=>`<div class="pm-dl"><i class="ti ${ic}"></i><b>${lbl}</b><span>${cnt(k)} new · ${chg(k)} changed</span></div>`;
   const ma=r.months.filter(m=>m.add).length, mc=r.months.length-ma;
   const nothing=!r.adds.length&&!r.changes.length&&!r.months.length;
-  host.innerHTML=`<div class="pm-scrim" data-pmx="close"><div class="pm-dlg pmxl" data-pmx="none"><div class="pm-dh"><b>Upload to the plan</b><i class="ti ti-x" data-pmx="close"></i></div>
+  host.innerHTML=`<div class="pm-scrim" data-pmx="close"><div class="pm-dlg pmxl" data-pmx="none"><div class="pm-dh"><b>Fill ${H(bname())}'s plan from a sheet</b><i class="ti ti-x" data-pmx="close"></i></div>
     <div class="pmxl-f"><i class="ti ti-file-spreadsheet"></i>${H(XL.name||"")}</div>
     <div class="pm-dl"><i class="ti ti-target"></i><b>Months</b><span>${ma} new · ${mc} changed</span></div>
     ${line("ti-photo","Posts","post")}${line("ti-clipboard-text","Tasks","task")}${line("ti-video","Production","production")}${line("ti-users","Influencers","influencer")}
@@ -51017,25 +51039,30 @@ function paintDlg(){
     <div class="pm-dn">${nothing?"Nothing in the sheet is different from the plan.":"Lines left out of the sheet stay in the plan. Nothing is sent to the live calendar until you commit a month."}</div>
     <div class="pm-db"><button class="btn btn-w btn-sm" data-pmx="close">Cancel</button>${nothing?"":`<button class="btn btn-sm pm-commit" data-pmx="apply"${XL.busy?" disabled":""}><i class="ti ti-upload"></i> ${XL.busy?"Saving…":"Update the plan"}</button>`}</div></div></div>`;
 }
-function dressXl(){
-  const strip=document.getElementById("calstrip"); if(!strip) return;
-  const has=strip.querySelector(".pmxl-b");
-  if(!document.documentElement.classList.contains("pm-on")||X().pmLive()){ if(has) has.remove(); return; }
-  if(has) return;
-  strip.insertAdjacentHTML("beforeend",`<div class="pmxl-b"><button class="tab-item pmxl-btn" data-pmx="menu" title="Excel"><i class="ti ti-file-spreadsheet"></i> Excel <i class="ti ti-chevron-down"></i></button>
-    <div class="pmxl-m${XL.open?" open":""}"><div class="pmxl-i" data-pmx="down"><i class="ti ti-download"></i>Download the plan sheet</div><div class="pmxl-i" data-pmx="up"><i class="ti ti-upload"></i>Upload a filled sheet</div></div>
-    <input type="file" accept=".xlsx,.xls" class="pmxl-in" hidden></div>`);
+function dressXl(){ const b=document.querySelector("#calstrip .pmxl-b"); if(b) b.remove(); }
+/* import and export live in the black bar only (Chirag, 26 Oct) */
+function menu(){
+  const el=document.getElementById("export-panel"); if(!el) return;
+  const sp=span();
+  el.innerHTML=`<div class="brk-ioh"><i class="ti ti-upload"></i>Import</div>
+    <div class="brow act" data-pmx="up"><i class="ti ti-file-upload"></i><span class="bnm">Fill the plan from a sheet</span></div>
+    <div class="brow act" data-pmx="blank"><i class="ti ti-file-spreadsheet"></i><span class="bnm">Blank plan template</span></div>
+    <div class="brk-iosep"></div>
+    <div class="brk-ioh"><i class="ti ti-download"></i>Export</div>
+    <div class="exscope"><div>${H(bname())} · Plan${sp?" · "+H(sp.txt):""}<br><span class="dim">${sp?`${sp.n} month${sp.n===1?"":"s"} · ${sp.lines} line${sp.lines===1?"":"s"}`:"Nothing planned yet"}</span></div></div>
+    <div class="brow act" data-pmx="down"><i class="ti ti-table"></i><span class="bnm">The plan as a sheet</span></div>`;
 }
+(function(){ const base=buildExportPanel; buildExportPanel=function(){ const o=base.apply(this,arguments); try{ if(window.pmIsPlan&&window.pmIsPlan()) menu(); }catch(e){ console.warn("[pmxl]",e); } return o; }; })();
 (function(){ const base=render; render=function(){ const o=base.apply(this,arguments); try{ XL.open=false; dressXl(); }catch(e){ console.warn("[pmxl]",e); } return o; }; })();
 document.addEventListener("click",e=>{
   const t=e.target.closest("[data-pmx]");
-  const m=document.querySelector(".pmxl-m");
-  if(!t){ if(m&&m.classList.contains("open")&&!e.target.closest(".pmxl-b")) m.classList.remove("open"); return; }
+  if(!t) return;
   const a=t.dataset.pmx; e.stopPropagation();
   if(a==="none") return;
-  if(a==="menu"){ if(m) m.classList.toggle("open"); return; }
-  if(a==="down"){ if(m) m.classList.remove("open"); download().catch(er=>toast("The sheet could not be made: "+(er.message||er),"err")); return; }
-  if(a==="up"){ if(m) m.classList.remove("open"); const i=document.querySelector(".pmxl-in"); if(i){ i.value=""; i.click(); } return; }
+  if(a==="down"||a==="blank"){ closeAllPops(); download(a==="blank").catch(er=>toast("The sheet could not be made: "+(er.message||er),"err")); return; }
+  if(a==="up"){ let i=document.getElementById("pmxl-file");
+    if(!i){ i=document.createElement("input"); i.type="file"; i.accept=".xlsx,.xls"; i.id="pmxl-file"; i.className="pmxl-in"; i.hidden=true; document.body.appendChild(i); }
+    i.value=""; i.click(); closeAllPops(); return; }
   if(a==="close"){ if(t.classList.contains("pm-scrim")&&e.target!==t) return; if(XL.busy) return; XL.rep=null; paintDlg(); return; }
   if(a==="apply"){ apply(); return; }
 },true);
