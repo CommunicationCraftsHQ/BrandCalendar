@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Spin the wheel</title>
-<meta name="cc-tool-version" content="V2.0 New Jersey">
+<meta name="cc-tool-version" content="V2.1 New Jersey">
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -458,7 +458,9 @@ function drawStar(x, y, s, a) {
 
 /* ── screens ── */
 let screen = "welcome";
-function show(id) { screen = id; document.querySelectorAll(".scr").forEach((s) => s.classList.toggle("on", s.id === id)); }
+function show(id) { screen = id; document.querySelectorAll(".scr").forEach((s) => s.classList.toggle("on", s.id === id)); step(id); }
+/* the setup preview keeps MarTech's step bar in step */
+function step(id) { if (PREVIEW) try { parent.postMessage({ type: "wd-step", step: id }, "*"); } catch (e) {} }
 function showState(head, sub) {
   document.body.classList.add("ready");
   show("welcome"); $("head").textContent = head; $("stateSub").textContent = sub || ""; $("stateSub").hidden = !sub; $("begin").hidden = true;
@@ -477,6 +479,7 @@ const ERR = { bad_name: "Please enter your name.", bad_mobile: "Please enter a 1
   wheel_closed: "This wheel has closed.", no_prizes_left: "All the prizes have been won. Thank you for joining in." };
 $("f").addEventListener("submit", async (e) => {
   e.preventDefault(); if (goB.disabled) return;
+  if (PREVIEW) { unlocked = true; show("wheel"); return; }
   if (!$("ok").checked) { $("ferr").textContent = "Please tick the box to continue."; return; }
   ctx(); goB.disabled = true; goB.textContent = "Unlocking…";
   try {
@@ -587,7 +590,7 @@ function liftOut(i) {
   $("done").dataset.href = lose && site ? (/^https?:/.test(site) ? site : "https://" + site) : "";
   if (lose && TESTING) { $("done").textContent = "Spin again (test)"; $("done").dataset.href = ""; }
   const inn = $("msgIn"); inn.style.top = (T + H * .13) + "px"; inn.style.width = (W * .78) + "px";
-  requestAnimationFrame(() => m.classList.add("on"));
+  requestAnimationFrame(() => m.classList.add("on")); step(lose ? "lose" : "win");
   if (!lose) for (let n = 0; n < 46; n++) setTimeout(() => addMote(true, T + H * .3), 1600 + n * 24);
   clearInterval(trickle);
   if (!lose) trickle = setInterval(() => { if ($("wheel").classList.contains("zoom")) addMote(true, T + H * .35); else clearInterval(trickle); }, 420);
@@ -673,11 +676,25 @@ dial.addEventListener("pointerup", release); dial.addEventListener("pointercance
 hub.addEventListener("click", () => spin(1, 1.2));
 $("spinBtn").addEventListener("click", () => spin(1, 1.2));
 
+/* V2.1: MarTech's step bar jumps the preview to any screen */
+let gotoT = 0;
+function goto(s) {
+  clearTimeout(gotoT); $("app").classList.remove("redeeming"); reset(); result = null; unlocked = true;
+  if (["welcome", "form", "wheel"].includes(s)) { show(s); return; }
+  const i = P.findIndex((p) => (s === "lose" ? !p.win : p.win));
+  if (i < 0) { show("wheel"); return; }
+  show("wheel"); rot = -(i * SEG + SEG / 2); rotor.setAttribute("transform", `rotate(${rot})`);
+  $("hint").style.opacity = 0; hub.classList.remove("idle");
+  land(i, false);
+  if (s === "redeem") gotoT = setTimeout(openRedeem, 1300);
+}
+
 /* ── start ── */
 function boot() {
   if (PREVIEW) {
     window.addEventListener("message", (e) => {
-      if (e.data && e.data.type === "wd-preview") { const at = screen; applyGame(e.data.game); show(at === "form" ? "welcome" : at); unlocked = true; }
+      if (e.data && e.data.type === "wd-preview") { const at = screen; applyGame(e.data.game); show(["welcome", "form", "wheel"].includes(at) ? at : "wheel"); unlocked = true; }
+      if (e.data && e.data.type === "wd-goto") goto(e.data.step);
     });
     applyGame({ config: {}, prizes: [] });
     try { parent.postMessage({ type: "wd-ready" }, "*"); } catch (e) {}
@@ -689,7 +706,10 @@ function boot() {
     applyGame(g);
     if (g.status === "draft") return showState("This wheel opens soon.");
     if (g.status === "closed") return showState("This wheel has closed.", "Thank you for joining in.");
-    live = true; TESTING = g.status === "testing"; $("testTag").hidden = !TESTING; $("rdAgain").hidden = !TESTING;
+    /* V2.1: a test (Testing status, or MarTech's "Open a test spin" link) always starts fresh */
+    const TESTLINK = qs.get("test") === "1";
+    if (TESTLINK) { try { localStorage.removeItem(KEEP); } catch (e) {} }
+    live = true; TESTING = g.status === "testing" || TESTLINK; $("testTag").hidden = !TESTING; $("rdAgain").hidden = !TESTING;
     const k = TESTING ? null : kept(); if (k && k.code !== undefined && k.index !== undefined) replay(k);
   }).catch(() => showState("Couldn't load the wheel.", "Check your connection and try again."));
 }

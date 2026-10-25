@@ -6,7 +6,7 @@
 </head>
 <body>
 <title>Fund II Investor Profile</title>
-<meta name="cc-tool-version" content="V1.2 New Jersey">
+<meta name="cc-tool-version" content="V1.3 New Jersey">
 <meta name="cc-survey-version" content="09">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -940,8 +940,10 @@ function lab(arr,id){var x=arr.find(function(o){return o.id===id;});return x?(x.
    it. If the hall Wi-Fi drops, it is sent again when the phone is back
    online, and every 15 seconds while the page is open. */
 var sendP=null;
+/* V1.3: MarTech's "Open a test survey" link (?test=1) marks the entry as a test: unlimited, never counted */
+var TEST_RUN=/[?&]test=1/.test(location.search);
 function entryPayload(){
-  return {name:S.name, mobile:S.mobile.replace(/\D/g,""), consent:S.consent,
+  return {is_test:TEST_RUN, name:S.name, mobile:S.mobile.replace(/\D/g,""), consent:S.consent,
     consent_text:document.querySelector("#consentLbl span:last-child").textContent,
     interest:S.interest, next_step:S.next, profile:S.profile, fit:S.fit,
     answers:{ticket:[TICKETS[S.ticket]], goal:[lab(GOALS,S.goal)], ranking:S.rank.map(function(id){return lab(RIGHTS,id);}),

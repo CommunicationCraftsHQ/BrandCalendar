@@ -7,7 +7,7 @@
 /* V1.8: nothing shows until the wheel's own look is known (no flash of the default yellow) */
 body:not(.wd-ready){background:#120D09!important}body:not(.wd-ready)>*{visibility:hidden}</style>
 <title>Spin to win</title>
-<meta name="cc-tool-version" content="V1.9 New Jersey">
+<meta name="cc-tool-version" content="V2.0 New Jersey">
 <meta name="robots" content="noindex">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -555,7 +555,17 @@ $("form").addEventListener("submit", async (e) => {
 
 function boot(){
   if (PREVIEW){
-    window.addEventListener("message", (e) => { if (e.data && e.data.type === "wd-preview") applyGame(e.data.game); });
+    window.addEventListener("message", (e) => {
+      if (e.data && e.data.type === "wd-preview") applyGame(e.data.game);
+      /* V2.0: MarTech's step bar jumps the preview to a screen */
+      if (e.data && e.data.type === "wd-goto"){
+        const s = e.data.step; clearCelebration(); won = -1; angle = 0; setRot(); draw(); sheet("form", s === "form");
+        if (s === "win" || s === "lose"){
+          const i = prizes().findIndex((q) => (s === "lose" ? !q.win : q.win));
+          if (i >= 0){ angle = -(i + .5) * SEG(); setRot(); lastSeg = under(angle); land(i); }
+        }
+      }
+    });
     applyGame({ config: { look: "gold", preset: "close" }, prizes: [] });
     try { parent.postMessage({ type: "wd-ready" }, "*"); } catch(e){}
     return;
@@ -568,7 +578,9 @@ function boot(){
     applyGame(g);
     if (g.status === "draft") return showState("This wheel opens soon.");
     if (g.status === "closed") return showState("This wheel has closed.", "Thank you for joining in.");
-    live = true; TESTING = g.status === "testing"; sheet("state", false);
+    /* V2.0: a test (Testing status or the "Open a test spin" link) always starts fresh */
+    if (qs.get("test") === "1") { try { localStorage.removeItem(KEEP); } catch(e){} }
+    live = true; TESTING = g.status === "testing" || qs.get("test") === "1"; sheet("state", false);
     const k = TESTING ? null : kept(); if (k && k.code !== undefined) return replay(k);
     sheet("form", true);
   }).catch(() => showState("Couldn't load the wheel.", "Check your connection and try again."));
