@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.106 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.107 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14265,7 +14265,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.106 Tbilisi";
+const TOOL_VERSION="V118.107 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -50004,5 +50004,783 @@ function plMomCardHtml(){
   .prlist{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;}   /* the Promotions table was cut off; now it scrolls sideways inside its own card */
 }
 </style>
+<style id="v118107-css">
+/* V118.107 Tbilisi — plan mode */
+#pm-root{position:relative;}
+/* plan colours — the only thing that changes between Live and Plan */
+:root{--pm:#334E68;--pm-d:#243B53;--pm-bg:#DFE5EC;--pm-soft:#F2F5F8;--pm-line:#B3C0CE;--pm-ink:var(--text);}
+
+:root.pm-on #main,:root.pm-on body{background-color:var(--pm-bg)!important;}
+:root.pm-on #main .month-card{border-color:var(--pm-line)!important;border-style:dashed!important;}
+:root.pm-on #main .month-card.pl-hero{background:var(--pm-soft)!important;border-color:var(--pm)!important;border-style:solid!important;}
+:root.pm-on #main .bd-card,:root.pm-on #main .pl-mline,:root.pm-on #main .pl-sheet.pl-open{border-color:var(--pm-line)!important;border-style:dashed!important;}
+:root.pm-on #main .mp-hero{background:var(--pm-soft)!important;box-shadow:none!important;}
+:root.pm-on #main .pl-cnt,:root.pm-on #main .pl-cnt b{color:var(--pm-ink);}
+:root.pm-on .pm-mode .tab-item.on{background:var(--pm)!important;color:#fff!important;}
+:root.pm-on #main .pt-tabs span.on{color:var(--pm-d);border-bottom-color:var(--pm);} :root.pm-on #main .pt-tabs span.on em{background:var(--pm);}
+:root.pm-on #main .mpv-start{color:var(--pm);}
+:root.pm-on #main .mp-sub-add,:root.pm-on #main .pt-log,:root.pm-on #main .pt-all,:root.pm-on #main .bd-chev{color:var(--pm)!important;}
+:root.pm-on #sb-months .mpj.on{background:var(--pm)!important;border-color:var(--pm)!important;color:#fff!important;}
+/* calendar marks */
+.mc-day{position:relative;} .pm-day{cursor:pointer;}
+.sp-ring.pm-ring{background:transparent!important;color:var(--pm-d)!important;box-shadow:inset 0 0 0 1.5px var(--pm)!important;border:0!important;font-weight:800;}
+.pm-n{position:absolute;right:2px;top:-2px;font-size:9px;font-weight:800;color:#fff;background:var(--text);border-radius:99px;padding:0 4px;line-height:13px;}
+.pm-shoot{position:absolute;left:4px;top:-2px;font-size:11px;color:var(--muted);}
+:root.pm-on .mc-count.pm-cntc{background:var(--pm-soft)!important;color:var(--pm-d)!important;}
+
+/* pills */
+.pm-pill{display:inline-flex;align-items:center;font-size:11px;font-weight:700;border-radius:99px;padding:2px 8px;background:color-mix(in srgb,var(--pc) 12%,#fff);color:var(--pc);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;}
+.pm-pill.none{--pc:#8A8A8A;}
+.pm-st{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;border-radius:99px;padding:3px 10px;color:var(--pm-d);background:var(--pm-soft);box-shadow:inset 0 0 0 1px var(--pm-line);white-space:nowrap;}
+.pm-st.ready{background:var(--pm);color:#fff;box-shadow:none;} .pm-st.done{color:#1E7A45;background:#EAF6EE;box-shadow:inset 0 0 0 1px #BFE3CB;}
+.st.pm-stp{background:var(--pm-soft)!important;color:var(--pm-d)!important;}
+.st.pm-stc{background:#F4F4F2!important;color:#7A7A7A!important;}
+.btn.pm-commit{background:var(--pm);color:#fff;border:0;} .btn.pm-commit:hover{background:var(--pm-d);} .btn.pm-commit[disabled]{opacity:.35;cursor:default;}
+/* the month's header: name, status, counts, action on one clean line */
+.pm-sheet{padding:0!important;}
+.pm-mh{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:18px;padding:16px 20px 14px;}
+.pm-mt{display:flex;align-items:baseline;gap:8px;} .pm-mt h2{font-size:22px;margin:0;letter-spacing:-.01em;} .pm-mt .yr{font-size:14px;color:var(--subtle);font-weight:600;margin-right:6px;}
+.pm-mt .pm-st{align-self:center;}
+.pm-mc{display:flex;flex-wrap:wrap;gap:6px;} .pm-mc .ct{font-size:12.5px;color:var(--muted);background:rgba(13,13,13,.04);border-radius:99px;padding:4px 10px;} .pm-mc .ct b{color:var(--text);margin-right:3px;} .pm-mc .ct.zero{opacity:.55;}
+.pm-ma{display:flex;gap:8px;}
+.pm-sheet>.mp-hero{margin:0 14px 14px!important;}
+/* the month card: labelled fields */
+.pm-hero{padding:18px 20px 6px!important;}
+.pm-f2{display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px;align-items:baseline;padding:8px 0;border-bottom:1px solid rgba(13,13,13,.06);}
+.pm-fl{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);display:flex;flex-direction:column;gap:4px;}
+.pm-fl .mp-sub-add{font-size:10.5px;cursor:pointer;}
+.pm-f2 .mpv-obj{font-size:17px;font-weight:700;outline:none;}
+.pm-f2 .mpv-theme{font-size:14px;color:var(--text);margin:0;outline:none;}
+.pm-f2 .mp-goals,.pm-f2 .pt-camp{margin:0!important;}
+.pm-hero .pt-tabs{margin-top:10px;}
+/* lines */
+.pm-tp .pt-h,.pm-tp .pt-r{grid-template-columns:52px minmax(0,1fr) 150px 150px 110px!important;}
+.pm-tt .pt-h,.pm-tt .pt-r{grid-template-columns:minmax(0,1fr) 140px 110px 80px!important;}
+.pm-r{cursor:pointer;} .pm-cv{font-size:13px;color:var(--subtle);margin-right:6px;}
+.pm-item.open{background:#fff;border-radius:12px;box-shadow:0 0 0 1px var(--div),0 6px 18px rgba(13,13,13,.06);margin:6px 0;}
+.pm-item.open .pm-r{border-bottom:0;}
+.pm-item.flash{animation:pmf 1.6s ease;} @keyframes pmf{0%{background:#FFF3C4}100%{}}
+.pm-x{padding:0 14px 14px 66px;}
+.pm-v{background:#FAFAF8;border:1px solid var(--div);border-radius:10px;padding:12px 14px;font-size:13.5px;line-height:1.6;min-height:90px;outline:none;}
+.pm-v p{margin:0 0 8px;} .pm-v p:last-child{margin:0;}
+.pm-v:focus{border-color:var(--pm);background:#fff;} .pm-v:empty::before{content:attr(data-ph);color:var(--subtle);}
+.pm-xm{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:12px;color:var(--muted);} .pm-xm i{font-size:13px;margin-right:5px;color:var(--subtle);} .pm-xm .w{color:#8A5A00;}
+.pm-none{padding:18px 4px;font-size:13px;color:var(--muted);}
+.pm-empty{display:flex!important;align-items:center;justify-content:space-between;gap:12px;padding:20px!important;margin:0 14px 14px;} .pm-empty span{color:var(--muted);font-size:13.5px;}
+.pm-goplan{background:var(--pm);color:#fff;border:0;}
+/* planned months */
+.pm-board{padding:14px 16px!important;overflow-x:auto;}
+.pm-bh{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.pm-board table{width:100%;border-collapse:collapse;font-size:13px;}
+.pm-board th{text-align:center;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:6px 8px 8px;cursor:pointer;}
+.pm-board th small{color:var(--subtle);}
+.pm-board th.l,.pm-board td.l{text-align:left;width:200px;cursor:default;}
+.pm-board td{text-align:center;padding:7px 8px;border-top:1px solid #F1EFEA;cursor:pointer;}
+.pm-board td.on,.pm-board th.on{background:var(--pm-soft);} .pm-board th.on{color:var(--pm-d);box-shadow:inset 0 -2px 0 var(--pm);}
+.pm-board td b{font-size:14px;} .pm-board .z{color:#CFCCC4;}
+.pm-board tr.sub td{border-top:0;padding:3px 8px;font-size:12px;color:var(--muted);} .pm-sub{padding-left:22px;display:inline-block;}
+.pm-rl{font-size:12.5px;font-weight:700;color:var(--text);display:inline-flex;gap:7px;align-items:center;} .pm-rl i{color:var(--subtle);font-size:15px;}
+.pm-bt{font-size:11.5px;font-weight:700;color:var(--pm-d);background:var(--pm-soft);border-radius:99px;padding:2px 8px;white-space:nowrap;}
+.pm-q{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:11.5px;color:var(--muted);line-height:1.35;text-align:left;}
+.pm-board tr.q td{vertical-align:top;} .pm-board tr.st td{border-top:1px solid var(--div);padding-top:10px;}
+/* day pop-up */
+.pm-pop{position:absolute;z-index:50;width:320px;background:#fff;border-radius:14px;box-shadow:0 18px 44px rgba(13,13,13,.18);border:1px solid var(--div);padding:10px;}
+.pm-poph{display:flex;align-items:baseline;gap:8px;padding:2px 4px 8px;} .pm-poph b{font-size:14px;} .pm-poph span{font-size:12px;color:var(--subtle);} .pm-poph i{cursor:pointer;color:var(--subtle);}
+.pm-popi{display:flex;gap:9px;align-items:flex-start;padding:8px;border-radius:10px;font-size:12px;color:var(--muted);cursor:pointer;margin-top:4px;background:#FAFAF8;}
+.pm-popi:hover{background:var(--pm-soft);} .pm-popi b{color:var(--text);font-size:12.5px;} .pm-popi>i{font-size:15px;color:var(--muted);margin-top:1px;} .pm-popi .go{margin-left:auto;color:var(--subtle);}
+/* commit box */
+.pm-scrim{position:fixed;inset:0;background:rgba(13,13,13,.32);z-index:2000;display:flex;align-items:flex-start;justify-content:center;padding-top:140px;}
+.pm-dlg{width:520px;background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.25);padding:18px 20px;}
+.pm-dh{display:flex;align-items:center;margin-bottom:12px;} .pm-dh b{font-size:16px;flex:1;} .pm-dh i{color:var(--subtle);cursor:pointer;}
+.pm-dl{display:grid;grid-template-columns:22px 130px minmax(0,1fr);gap:8px;align-items:baseline;padding:8px 0;border-top:1px solid #F1EFEA;font-size:13px;}
+.pm-dl i{font-size:16px;color:var(--muted);} .pm-dl span{color:var(--muted);} .pm-dl.z b{color:var(--muted);}
+.pm-dn{font-size:12.5px;color:var(--muted);background:#F7F6F2;border-radius:10px;padding:10px 12px;margin-top:8px;}
+.pm-db{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
+#sb-months .mpj{cursor:pointer;}
+
+/* one card per month: the sheet is the card, nothing nested inside it draws another box */
+.pm-sheet>.mp-hero,.pm-sheet>.pm-hero{background:transparent!important;border:0!important;box-shadow:none!important;margin:0!important;padding:0 20px 10px!important;border-radius:0!important;}
+:root.pm-on #main .pm-sheet>.mp-hero{background:transparent!important;}
+.pm-sheet .mp-sg,.pm-sheet .pt-sec{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;}
+.pm-sheet .mp-g.pt-g{padding-top:4px!important;}
+.pm-sheet .pt-t{margin:0!important;}
+:root.pm-on #main .pm-sheet.pl-open{background:#fff!important;border-style:solid!important;border-color:var(--pm-line)!important;}
+.pm-mh{padding:18px 20px 8px;}
+.pm-item.open{box-shadow:0 0 0 1px var(--div)!important;}
+.pm-v{background:#fff;}
+.pm-empty{margin:0 20px 18px!important;background:var(--pm-soft)!important;border:0!important;}
+.pm-item.open{box-shadow:none!important;background:var(--pm-soft)!important;border-radius:10px;}
+/* mockup 05: pillar, series, waiting on, made from */
+.pm-wt{font-size:13px;color:#B45309;margin-left:8px;}
+.pm-fx{display:grid;grid-template-columns:repeat(3,auto) minmax(220px,1fr);gap:10px 22px;margin-top:12px;align-items:start;}
+.pm-fx .pm-fd:last-child{grid-column:1/-1;}
+.pm-fd label{display:block;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);margin-bottom:5px;}
+.pm-dd{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 9px;border:1px solid var(--div);border-radius:8px;background:#fff;font-size:12.5px;cursor:pointer;}
+.pm-dd>.ti-chevron-down{font-size:12px;color:var(--subtle);} .pm-dd .pt-tag{margin:0;}
+.pm-in{display:block;min-height:28px;padding:5px 9px;border:1px solid var(--div);border-radius:8px;background:#fff;font-size:12.5px;outline:none;line-height:1.45;}
+.pm-in.on{background:#FFF7E6;border-color:#F1D9A8;color:#7A4B00;} .pm-in:empty::before{content:attr(data-ph);color:var(--subtle);}
+.pm-lk{display:flex;flex-wrap:wrap;gap:6px;}
+.pm-lc{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:99px;background:#fff;border:1px solid var(--div);font-size:12px;font-weight:600;color:var(--text);cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pm-lc:hover{border-color:var(--pm);color:var(--pm-d);} .pm-lc i{font-size:13px;color:var(--subtle);} .pm-lc.add{border-style:dashed;color:var(--subtle);}
+.pm-feed{display:block;margin-top:5px;} .pm-feed .pm-lc{font-weight:500;}
+.pm-tr2{align-items:start!important;}
+.pm-feeds{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:4px 0 14px 66px;}
+.pm-feeds label{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);margin-right:4px;}
+/* Strategy: Content pillars */
+.pm-pt td{vertical-align:top;} .pm-pr{cursor:pointer;} .pm-pr:hover td{background:#FAFAF8;}
+.pm-pdot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;}
+.pm-pp{font-size:13px;color:var(--muted);max-width:460px;line-height:1.45;}
+.pm-pn{white-space:nowrap;font-size:12.5px;color:var(--muted);} .pm-pt .pt-tag{display:inline-block;margin:0 4px 4px 0;}
+.pm-prx td{background:#FAFAF8;padding:4px 14px 16px!important;}
+.pm-rules{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;}
+.pm-rule label{display:block;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);margin-bottom:4px;}
+.pm-rule div{background:#fff;border:1px solid var(--div);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.5;outline:none;min-height:20px;}
+.pm-eg{display:block;color:var(--muted);font-size:12px;margin-top:4px;}
+.pm-rule.add label{color:var(--acc);cursor:pointer;} .pm-rule.add div{display:none;}
+.pm-pr.open td{background:#FAFAF8;}
+.pm-pt{table-layout:fixed!important;width:100%!important;}
+.pm-pt th,.pm-pt td{white-space:normal!important;overflow:hidden;}
+.pm-pt th:nth-child(1),.pm-pt td:nth-child(1){width:200px!important;}
+.pm-pt th:nth-child(2),.pm-pt td:nth-child(2){width:38%!important;}
+.pm-pt th:nth-child(4),.pm-pt td:nth-child(4){width:100px!important;}
+.pm-pt th:nth-child(5),.pm-pt td:nth-child(5){width:32px!important;}
+.pm-pt .pm-prx td{width:auto!important;}
+.pm-pp{max-width:none!important;}
+
+/* V118.107 — built */
+#calstrip.pl-row > .pm-mode{order:-1;margin-right:12px;flex:none;}
+:root.pm-on #calstrip.pl-row > .pl-cnt,:root.pm-on #calstrip.pl-row > .pl-tc:not(.pm-tc),:root.pm-on #calstrip.pl-row > .mc-today:not(.pm-today),:root.pm-on #calstrip.pl-row > .mom-add{display:none!important;}
+#calstrip.pl-row > .pm-cnt{order:1;margin-right:auto;font-size:13px;color:var(--text);white-space:nowrap;} #calstrip.pl-row > .pm-cnt b{font-weight:700;}
+#calstrip.pl-row > .pm-tc{order:2;} #calstrip.pl-row > .pm-today{order:3;}
+.pm-tc .lbl{cursor:default;}
+:root.pm-on #calstrip{background:transparent;}
+.pm-yy{font-size:11px;color:var(--subtle);font-weight:600;}
+.mc-door{cursor:pointer;display:flex;align-items:center;gap:5px;}
+.st.pm-stw{background:#FFF4E0!important;color:#8A5A00!important;}
+.pm-st.z{color:var(--subtle);background:transparent;box-shadow:inset 0 0 0 1px var(--div);}
+.pm-ph{color:var(--subtle);font-size:12.5px;}
+.pm-tx{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:6px 9px;border:1px solid var(--div);border-radius:8px;background:#fff;color:var(--text);outline:none;}
+.pm-tx:focus,.pm-sel:focus,.pm-v:focus{border-color:var(--pm);}
+.pm-tx.on{background:#FFF7E6;border-color:#F1D9A8;color:#7A4B00;}
+.pm-sel{font:inherit;font-size:12.5px;height:30px;padding:0 8px;border:1px solid var(--div);border-radius:8px;background:#fff;color:var(--text);max-width:100%;}
+.pm-sel.pm-add{border-style:dashed;color:var(--subtle);}
+textarea.pm-v{width:100%;box-sizing:border-box;font:inherit;font-size:13.5px;line-height:1.6;min-height:96px;resize:vertical;}
+.pm-x{padding:4px 14px 14px 66px;display:flex;flex-direction:column;gap:10px;}
+.pm-x .pm-fd label{display:block;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);margin-bottom:5px;}
+.pm-fx{display:grid;grid-template-columns:120px 170px minmax(140px,1fr) 130px;gap:10px 18px;margin-top:0;align-items:start;}
+.pm-fx .pm-fd.w{grid-column:1/-1;} .pm-fx .pm-fd.wide{grid-column:1/-1;}
+.pm-fx .pm-fd:last-child{grid-column:1/-1;}
+.pm-tt .pm-fx,.pm-tr .pm-fx{grid-template-columns:200px 170px minmax(0,1fr);}
+.pm-xf{display:flex;justify-content:space-between;align-items:center;}
+.pm-cm{font-size:12px;color:#1E7A45;display:inline-flex;gap:5px;align-items:center;}
+.pm-del{border:0;background:transparent;font:inherit;font-size:12px;color:var(--subtle);cursor:pointer;display:inline-flex;gap:5px;align-items:center;padding:4px 6px;border-radius:6px;}
+.pm-del:hover,.pm-del.arm{color:#B42318;background:#FDECEA;}
+.pm-lc span[data-pm]{display:inline-flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;}
+.pm-lx{font-size:12px;color:var(--subtle);cursor:pointer;margin-left:2px;} .pm-lx:hover{color:#B42318;}
+.pm-goals{display:flex;flex-direction:column;gap:6px;}
+.pm-goal{display:flex;align-items:center;gap:8px;} .pm-goal>.ti-circle{font-size:13px;color:var(--subtle);} .pm-goal .pm-tx{border-color:transparent;background:transparent;padding:4px 6px;} .pm-goal .pm-tx:hover,.pm-goal .pm-tx:focus{border-color:var(--div);background:#fff;}
+.pm-f2 .pm-obj{font-size:17px;font-weight:700;border-color:transparent;background:transparent;padding:4px 6px;} .pm-f2 .pm-thm{border-color:transparent;background:transparent;padding:4px 6px;font-size:14px;}
+.pm-f2 .pm-obj:hover,.pm-f2 .pm-obj:focus,.pm-f2 .pm-thm:hover,.pm-f2 .pm-thm:focus{border-color:var(--div);background:#fff;}
+.pm-f2{align-items:center;}
+.pm-addl{padding:10px 0 4px;}
+.pm-tr .pt-h,.pm-tr .pt-r{grid-template-columns:52px minmax(0,1fr) 160px 110px!important;}
+.pm-ti .pt-h,.pm-ti .pt-r{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 110px!important;}
+.pm-wait{padding:60px 20px;text-align:center;color:var(--muted);font-size:14px;line-height:1.7;}
+.pm-dn.warn{background:#FFF4E0;color:#8A5A00;margin-top:8px;}
+.pm-dl{grid-template-columns:22px 120px minmax(0,1fr);}
+/* Strategy · Content pillars */
+.pm-pin{width:100%;box-sizing:border-box;}
+.pm-nmw{display:flex;align-items:center;gap:4px;} .pm-pdot{flex:none;cursor:pointer;width:12px;height:12px;}
+.pm-pta{width:100%;box-sizing:border-box;font:inherit;font-size:13px;line-height:1.45;border:1px solid transparent;border-radius:6px;padding:5px 7px;background:transparent;resize:vertical;min-height:30px;color:var(--text);}
+.pm-pta:hover,.pm-pta:focus{border-color:var(--div);background:#fff;outline:none;}
+.pm-pa{white-space:nowrap;text-align:right;} .pm-pa i{cursor:pointer;color:var(--subtle);font-size:15px;margin-left:6px;} .pm-pa .ti-x:hover,.pm-pa .ti-x.arm{color:#B42318;}
+.pm-pt th:nth-child(5),.pm-pt td:nth-child(5){width:58px!important;}
+.pm-pt th:nth-child(3),.pm-pt td:nth-child(3){width:24%!important;}
+.pm-pt .cp-new td{display:table-cell!important;}
+.pm-rule{position:relative;} .pm-rule .pm-rl2{width:100%;box-sizing:border-box;font:inherit;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);border:0;background:transparent;padding:0 0 4px;outline:none;}
+.pm-rule textarea{width:100%;box-sizing:border-box;font:inherit;background:#fff;border:1px solid var(--div);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.5;outline:none;resize:vertical;}
+.pm-rule .pm-lx{position:absolute;right:0;top:0;}
+.pm-rule.add span{color:var(--acc);cursor:pointer;font-size:12.5px;font-weight:600;display:inline-flex;gap:5px;align-items:center;}
+.pm-pr{cursor:default;}
+
+</style>
+<script>
+/* ══ V118.107 TBILISI · PLAN MODE (mockup 05, "build it") ══════════════
+   Chirag, 25 Oct: the Plan page plans the whole strategy — posts, tasks,
+   production, influencers — on a shadow calendar. Live | Plan sits at the
+   start of the page's row. Plan mode is Slate, so you always know you are
+   planning. Committing a month writes it to the live calendar:
+     posts → Posts (Not started) · tasks → Tasks · production → a shoot
+     request · influencers → the month's influencer lines · objective,
+     theme, goals → the month card.
+   Everything in plan mode is typed by hand or worked out from what was
+   typed. Content pillars live on the Strategy page.
+   Super-admin only until released. Computer only — the phone keeps its
+   own Plan page.
+   Tables: brand_pillars, plan_months, plan_entries (01 - Plan mode -
+   migration.sql). */
+(function(){
+const PM={on:false,bid:null,sel:null,tab:"post",open:{},pop:null,dlg:null,busy:false,
+  data:{} /* bid -> {ok,err,pillars,months,entries} */, popen:{}};
+window.PM=PM;
+const H=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const MNF=["","January","February","March","April","May","June","July","August","September","October","November","December"];
+const MS3=MNF.map(m=>m.slice(0,3));
+const WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const PCOL=["#B45309","#7E22CE","#0E7C7B","#C2410C","#1D4ED8","#BE185D","#4D7C0F","#475569"];
+const FMTS=["static","carousel","reel","story","video"];
+const KIND={post:"post",task:"task",prod:"production",infl:"influencer"};
+const now=()=>new Date().toISOString();
+const ym=(y,m)=>y*12+(m-1);
+const fromYm=k=>({y:Math.floor(k/12),m:k%12+1});
+const nDays=(y,m)=>new Date(y,m,0).getDate();
+const wdOf=(y,m,d)=>WD[new Date(y,m-1,d).getDay()];
+const today=()=>{ const t=new Date(); return {y:t.getFullYear(),m:t.getMonth()+1}; };
+function pmAllowed(){ return typeof isSuperAdmin==="function"&&isSuperAdmin()&&!(typeof mfNarrow==="function"&&mfNarrow()); }
+function pmLive(){ return !(PM.on&&pmAllowed()&&view==="mplan"&&typeof plOn==="function"&&plOn()); }
+window.pmIsPlan=()=>!pmLive();
+function D(){ return PM.data[activeBrand]||null; }
+const uuid=()=>(crypto.randomUUID?crypto.randomUUID():"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==="x"?r:(r&3|8)).toString(16);}));
+const fmtWord=f=>f?f.charAt(0).toUpperCase()+f.slice(1):"—";
+const fmtIcon=f=>/video|reel/i.test(f)?"ti-movie":/story/i.test(f)?"ti-circle-dashed":/carousel/i.test(f)?"ti-carousel-horizontal":"ti-photo";
+
+/* ── the data ─────────────────────────────────────────────────────── */
+async function pmLoad(bid,force){
+  if(!bid) return;
+  const have=PM.data[bid];
+  if(have&&(have.ok||have.loading)&&!force) return;
+  PM.data[bid]={ok:false,loading:true,pillars:[],months:[],entries:[]};
+  try{
+    const q=t=>sb.from(t).select("*").eq("brand_id",bid).is("deleted_at",null);
+    const [a,b,c]=await Promise.all([q("brand_pillars").order("sort_order"),q("plan_months"),q("plan_entries").order("sort_order")]);
+    const err=(a&&a.error)||(b&&b.error)||(c&&c.error);
+    if(err){ PM.data[bid]={ok:false,loading:false,err:err.message||String(err),pillars:[],months:[],entries:[]}; }
+    else PM.data[bid]={ok:true,loading:false,pillars:a.data||[],months:b.data||[],entries:c.data||[]};
+  }catch(e){ PM.data[bid]={ok:false,loading:false,err:String(e),pillars:[],months:[],entries:[]}; }
+  if(activeBrand===bid){
+    if(view==="mplan") render();
+    else if(view==="brief") pmPaintPillars();
+  }
+}
+window.pmLoad=pmLoad;
+async function pmWrite(table,row){
+  row.updated_at=now();
+  const r=await sb.from(table).upsert(row);
+  if(r&&r.error){ toast("Save failed: "+r.error.message,"err"); return false; }
+  return true;
+}
+function clean(o){ const r={}; Object.keys(o).forEach(k=>{ if(k.charAt(0)!=="_") r[k]=o[k]; }); return r; }
+const saveEntry=e=>pmWrite("plan_entries",clean(e));
+const saveMonth=m=>pmWrite("plan_months",clean(m));
+const savePillar=p=>pmWrite("brand_pillars",clean(p));
+
+/* ── reading the plan ─────────────────────────────────────────────── */
+const monthRow=(y,m)=>{ const d=D(); return d?d.months.find(x=>x.year===y&&x.month===m)||null:null; };
+const entriesIn=(y,m,k)=>{ const d=D(); if(!d) return [];
+  return d.entries.filter(e=>e.year===y&&e.month===m&&(!k||e.kind===k)).sort((a,b)=>((a.day||a.due_date&&Number(a.due_date.slice(8))||99)-(b.day||b.due_date&&Number(b.due_date.slice(8))||99))||(a.sort_order-b.sort_order)); };
+const entry=id=>{ const d=D(); return d?d.entries.find(e=>e.id===id):null; };
+const pillar=id=>{ const d=D(); return d&&id?d.pillars.find(p=>p.id===id)||null:null; };
+const pillars=()=>{ const d=D(); return d?d.pillars.slice().sort((a,b)=>a.sort_order-b.sort_order):[]; };
+function plannedKeys(){
+  const d=D(); if(!d) return [];
+  const s=new Set(); d.months.forEach(x=>s.add(ym(x.year,x.month))); d.entries.forEach(x=>s.add(ym(x.year,x.month)));
+  return [...s].sort((a,b)=>a-b);
+}
+function selKey(){
+  if(PM.sel!=null&&PM.bid===activeBrand) return PM.sel;
+  const t=today(), tk=ym(t.y,t.m), ks=plannedKeys();
+  const next=ks.find(k=>k>=tk);
+  const d=D(); if(!d||!d.ok) return tk;      /* not read yet — decide once it is */
+  PM.bid=activeBrand; PM.sel=next!=null?next:tk; return PM.sel;
+}
+const isCommitted=e=>!!e.committed_at;
+const changedSince=e=>!!(e.committed_at&&e.updated_at&&new Date(e.updated_at)-new Date(e.committed_at)>2000);
+const feedsOf=e=>(e.feeds||[]).map(entry).filter(Boolean);
+const madeFor=p=>{ const d=D(); return d?d.entries.filter(e=>(e.kind==="task"||e.kind==="production")&&(e.feeds||[]).includes(p.id)):[]; };
+function postShort(p){ return `${p.day?p.day+" "+MS3[p.month]:MS3[p.month]} · ${H(p.title||"Untitled post")}`; }
+function pill(p){ if(!p) return `<span class="pm-pill none">No pillar</span>`;
+  return `<span class="pm-pill" style="--pc:${H(p.colour||"#475569")}">${H(p.name||"Untitled")}</span>`; }
+function monthState(y,m){
+  const mr=monthRow(y,m), es=entriesIn(y,m), t=today(), k=ym(y,m), tk=ym(t.y,t.m);
+  if(!mr&&!es.length) return "none";
+  const open=es.filter(e=>!isCommitted(e)).length;
+  if(mr&&mr.committed_at&&!open) return "done";
+  if(k<=tk+1) return "ready";
+  return "plan";
+}
+function stPill(y,m){
+  const s=monthState(y,m);
+  if(s==="done") return `<span class="pm-st done"><i class="ti ti-check"></i> Committed</span>`;
+  if(s==="ready") return `<span class="pm-st ready">Ready to commit</span>`;
+  if(s==="plan") return `<span class="pm-st">In plan</span>`;
+  return `<span class="pm-st z">Not planned</span>`;
+}
+function lineSt(e){
+  if(changedSince(e)) return `<span class="st pm-stw">Changed</span>`;
+  if(isCommitted(e)) return `<span class="st pm-stc">Committed</span>`;
+  return `<span class="st pm-stp">Planned</span>`;
+}
+
+/* ── the row: Live | Plan at its start ──────────────────────────────── */
+function dressRow(){
+  const strip=document.getElementById("calstrip");
+  if(strip) strip.querySelectorAll(".pm-mode,.pm-cnt,.pm-tc,.pm-today").forEach(x=>x.remove());
+  if(!strip||!(view==="mplan"&&pmAllowed()&&typeof plOn==="function"&&plOn())){ document.documentElement.classList.remove("pm-on"); return; }
+  const plan=!pmLive();
+  document.documentElement.classList.toggle("pm-on",plan);
+  strip.insertAdjacentHTML("afterbegin",`<div class="tab-pill pm-mode"><button class="tab-item${plan?"":" on"}" data-pm="mode" data-v="live">Live</button><button class="tab-item${plan?" on":""}" data-pm="mode" data-v="plan">Plan</button></div>`);
+  if(!plan) return;
+  const k=selKey(), {y,m}=fromYm(k);
+  const c=n=>entriesIn(y,m,n).length;
+  strip.insertAdjacentHTML("beforeend",`<span class="pm-cnt"><b>${c("post")}</b> post${c("post")===1?"":"s"} · ${c("production")} production · ${c("task")} task${c("task")===1?"":"s"}</span>
+    <div class="pl-tc pm-tc"><button class="arw" data-pm="step" data-v="-1" title="Earlier month"><i class="ti ti-chevron-left"></i></button><button class="lbl" data-pm="none">${MNF[m]} ${y}</button><button class="arw" data-pm="step" data-v="1" title="Later month"><i class="ti ti-chevron-right"></i></button></div>
+    <button class="mc-today pm-today" data-pm="today">Today</button>`);
+}
+
+/* ── the three months ─────────────────────────────────────────────── */
+function monthCard(k){
+  const {y,m}=fromYm(k), ps=entriesIn(y,m,"post"), pr=entriesIn(y,m,"production");
+  const first=(new Date(y,m-1,1).getDay()+6)%7, n=nDays(y,m);
+  let cells=""; for(let i=0;i<first;i++) cells+=`<div class="mc-empty"></div>`;
+  for(let d=1;d<=n;d++){
+    const dp=ps.filter(p=>p.day===d), sh=pr.some(p=>p.day===d);
+    if(!dp.length&&!sh){ cells+=`<div class="mc-day">${d}</div>`; continue; }
+    cells+=`<div class="mc-day has-ev pm-day" data-pm="day" data-v="${k}|${d}">${dp.length?`<span class="sp-ring pm-ring">${d}</span>`:d}${dp.length>1?`<span class="pm-n">${dp.length}</span>`:""}${sh?`<span class="pm-shoot" title="Production"><i class="ti ti-video"></i></span>`:""}</div>`;
+  }
+  return `<div class="month-card${k===selKey()?" pl-hero":""}"><div class="mc-head"><div class="mc-name mc-door" data-pm="goto" data-v="${k}">${MNF[m]}${y!==today().y?` <small class="pm-yy">${y}</small>`:""}<i class="ti ti-chevron-right mc-chev"></i></div>
+    <div style="display:flex;gap:4px;flex-shrink:0;">${ps.length?`<span class="mc-count pm-cntc">${ps.length} post${ps.length===1?"":"s"}</span>`:`<span class="mc-count" style="opacity:.4;">—</span>`}</div></div>
+    <div class="mc-grid"><div class="mc-dow">M</div><div class="mc-dow">T</div><div class="mc-dow">W</div><div class="mc-dow">T</div><div class="mc-dow">F</div><div class="mc-dow">S</div><div class="mc-dow">S</div>${cells}</div></div>`;
+}
+function strip(){ const k=selKey(); return `<div class="pl-row1" id="pl-row1"><div class="pl-wrap"><div class="pl-strip pm-strip">${[k-1,k,k+1].map(monthCard).join("")}</div></div></div>`; }
+
+/* ── planned months ───────────────────────────────────────────────── */
+function board(){
+  const t=today(), tk=ym(t.y,t.m);
+  let ks=plannedKeys().filter(k=>k>=tk-1);
+  if(!ks.length) return "";
+  ks=ks.slice(0,8);
+  const sel=selKey();
+  const cols=ks.map(k=>{const {y,m}=fromYm(k);return `<th class="${k===sel?"on":""}" data-pm="goto" data-v="${k}">${MS3[m]} <small>${String(y).slice(2)}</small></th>`;}).join("");
+  const r=(lbl,fn,cls)=>`<tr class="${cls||""}"><td class="l">${lbl}</td>${ks.map(k=>{const {y,m}=fromYm(k);return `<td class="${k===sel?"on":""}" data-pm="goto" data-v="${k}">${fn(y,m)}</td>`;}).join("")}</tr>`;
+  const n=v=>v?`<b>${v}</b>`:`<span class="z">—</span>`;
+  const pls=pillars();
+  const done=ks.filter(k=>{const {y,m}=fromYm(k);return monthState(y,m)==="done";}).length;
+  const f=fromYm(ks[0]), l=fromYm(ks[ks.length-1]);
+  return `<div class="mpv-eng pl-eng"><div class="bd-card pm-board"><div class="pm-bh"><span class="bd-lbl" style="margin:0;">Planned months</span><span class="bd-chip">${ks.length} month${ks.length===1?"":"s"}</span><span class="bd-chip">${MS3[f.m]} ${f.y}${ks.length>1?` – ${MS3[l.m]} ${l.y}`:""}</span><span class="bd-chip">${done} committed</span></div>
+    <table><thead><tr><th class="l"></th>${cols}</tr></thead><tbody>
+    ${r(`<span class="pm-rl"><i class="ti ti-photo"></i> Social media</span>`,(y,m)=>n(entriesIn(y,m,"post").length),"tot")}
+    ${pls.map(p=>r(`<span class="pm-sub">${pill(p)}</span>`,(y,m)=>{const v=entriesIn(y,m,"post").filter(e=>e.pillar_id===p.id).length;return v||`<span class="z">—</span>`;},"sub")).join("")}
+    ${r(`<span class="pm-rl"><i class="ti ti-clipboard-text"></i> Tasks</span>`,(y,m)=>n(entriesIn(y,m,"task").length))}
+    ${r(`<span class="pm-rl"><i class="ti ti-video"></i> Production</span>`,(y,m)=>{const p=entriesIn(y,m,"production");return p.length?`<span class="pm-bt">${p.length}${p[0].day?` · ${p[0].day} ${MS3[m]}`:""}</span>`:`<span class="z">—</span>`;})}
+    ${r(`<span class="pm-rl"><i class="ti ti-users"></i> Influencers</span>`,(y,m)=>n(entriesIn(y,m,"influencer").length))}
+    ${r(`<span class="pm-rl"><i class="ti ti-bulb"></i> Theme</span>`,(y,m)=>{const mr=monthRow(y,m);return `<span class="pm-q">${H(mr&&mr.theme||"")}</span>`;},"q")}
+    ${r("",(y,m)=>stPill(y,m),"st")}
+    </tbody></table></div></div>`;
+}
+
+/* ── one line, and the one box it opens to ──────────────────────────── */
+function daySel(e,y,m){
+  let o=`<option value="">—</option>`; for(let d=1;d<=nDays(y,m);d++) o+=`<option value="${d}"${e.day===d?" selected":""}>${d} ${wdOf(y,m,d)}</option>`;
+  return `<select class="pm-sel" data-pmf="day" data-id="${e.id}">${o}</select>`;
+}
+function pillarSel(e){
+  return `<select class="pm-sel" data-pmf="pillar_id" data-id="${e.id}"><option value="">No pillar</option>${pillars().map(p=>`<option value="${p.id}"${e.pillar_id===p.id?" selected":""}>${H(p.name||"Untitled")}</option>`).join("")}</select>`;
+}
+function fmtSel(e){
+  return `<select class="pm-sel" data-pmf="format" data-id="${e.id}"><option value="">—</option>${FMTS.map(f=>`<option value="${f}"${e.format===f?" selected":""}>${fmtWord(f)}</option>`).join("")}</select>`;
+}
+function postPicker(e,y,m){
+  const have=new Set(e.feeds||[]);
+  const ps=entriesIn(y,m,"post").concat(entriesIn(fromYm(ym(y,m)+1).y,fromYm(ym(y,m)+1).m,"post")).filter(p=>!have.has(p.id));
+  if(!ps.length) return "";
+  return `<select class="pm-sel pm-add" data-pmf="feed_add" data-id="${e.id}"><option value="">+ Link a post</option>${ps.map(p=>`<option value="${p.id}">${p.day?p.day+" "+MS3[p.month]+" · ":""}${H((p.title||"Untitled post").slice(0,60))}</option>`).join("")}</select>`;
+}
+function feedChips(e){
+  return feedsOf(e).map(p=>`<span class="pm-lc"><span data-pm="jump" data-v="${p.id}"><i class="ti ti-arrow-right"></i>${postShort(p)}</span><i class="ti ti-x pm-lx" data-pm="feed_rm" data-v="${e.id}|${p.id}" title="Unlink"></i></span>`).join("");
+}
+function inp(e,f,ph,cls){ return `<input class="pm-tx ${cls||""}" data-pmf="${f}" data-id="${e.id}" value="${H(e[f]||"")}" placeholder="${H(ph)}">`; }
+function area(e,f,ph){ return `<textarea class="pm-v" data-pmf="${f}" data-id="${e.id}" rows="4" placeholder="${H(ph)}">${H(e[f]||"")}</textarea>`; }
+function delBtn(e){ return `<button class="pm-del" data-pm="del" data-v="${e.id}" title="Remove from the plan"><i class="ti ti-trash"></i> Remove</button>`; }
+
+function postLines(y,m){
+  const ps=entriesIn(y,m,"post");
+  return ps.map(p=>{ const o=!!PM.open[p.id], pl=pillar(p.pillar_id), mf=madeFor(p);
+    return `<div class="pm-item${o?" open":""}" id="pmr-${p.id}"><div class="pt-r go pm-r" data-pm="row" data-v="${p.id}">
+      <span class="pt-d">${p.day?`<b>${p.day}</b><span>${wdOf(y,m,p.day)}</span>`:`<b>—</b><span>day</span>`}</span>
+      <span class="pt-nm"><i class="ti ti-chevron-${o?"down":"right"} pm-cv"></i><span class="pm-ttl">${H(p.title||"Untitled post")}</span>${p.series?`<span class="pt-tag">${H(p.series)}</span>`:""}${p.waiting_on?`<i class="ti ti-hourglass pm-wt" title="Waiting on: ${H(p.waiting_on)}"></i>`:""}</span>
+      <span>${pl?pill(pl):`<span class="pm-ph">—</span>`}</span><span class="pt-fmt">${p.format?`<i class="ti ${fmtIcon(p.format)}"></i>${fmtWord(p.format)}`:`<span class="pm-ph">—</span>`}</span>${lineSt(p)}</div>
+      ${o?`<div class="pm-x">
+        <div class="pm-fd"><label>One-line plan</label>${inp(p,"title","What is this post?","pm-tt1")}</div>
+        <div class="pm-fd"><label>Brief and copy</label>${area(p,"body","Write the brief, the copy and anything else for this post…")}</div>
+        <div class="pm-fx">
+          <div class="pm-fd"><label>Day</label>${daySel(p,y,m)}</div>
+          <div class="pm-fd"><label>Pillar</label>${pillarSel(p)}</div>
+          <div class="pm-fd"><label>Series</label><input class="pm-tx" data-pmf="series" data-id="${p.id}" value="${H(p.series||"")}" placeholder="None" list="pm-ser-${p.id}"><datalist id="pm-ser-${p.id}">${(pl&&pl.series||[]).map(s=>`<option value="${H(s)}">`).join("")}</datalist></div>
+          <div class="pm-fd"><label>Format</label>${fmtSel(p)}</div>
+          <div class="pm-fd w"><label>Waiting on</label>${inp(p,"waiting_on","Nothing — add what this post is waiting on",p.waiting_on?"on":"")}</div>
+          <div class="pm-fd wide"><label>Made from</label><span class="pm-lk">${mf.length?mf.map(t=>`<span class="pm-lc" data-pm="gotab" data-v="${t.kind==="task"?"task":"prod"}|${t.id}"><i class="ti ${t.kind==="task"?"ti-clipboard-text":"ti-video"}"></i>${t.kind==="task"?"Task":"Production"} · ${H((t.title||"").slice(0,48))}</span>`).join(""):`<span class="pm-ph">Nothing yet — link it from a task or a production</span>`}</span></div>
+        </div>
+        <div class="pm-xf">${isCommitted(p)?`<span class="pm-cm"><i class="ti ti-check"></i> On the live calendar since ${new Date(p.committed_at).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}${changedSince(p)?" · changed in the plan after that":""}</span>`:"<span></span>"}${delBtn(p)}</div>
+      </div>`:""}</div>`; }).join("")||`<div class="pm-none">No posts planned for ${MNF[m]} yet.</div>`;
+}
+function taskLines(y,m){
+  return entriesIn(y,m,"task").map(t=>{ const o=!!PM.open[t.id];
+    return `<div class="pm-item${o?" open":""}" id="pmr-${t.id}"><div class="pt-r go pm-r pm-tr2" data-pm="row" data-v="${t.id}">
+      <span class="pt-nm b"><i class="ti ti-chevron-${o?"down":"right"} pm-cv"></i><span class="pm-ttl">${H(t.title||"Untitled task")}</span>${feedsOf(t).length?`<span class="pm-feed">${feedsOf(t).map(p=>`<span class="pm-lc" data-pm="jump" data-v="${p.id}"><i class="ti ti-arrow-right"></i>${postShort(p)}</span>`).join("")}</span>`:""}</span>
+      <span class="pt-sub">${H(t.owner||"—")}</span>${lineSt(t)}<span class="pt-due">${t.due_date?`${Number(t.due_date.slice(8))} ${MS3[Number(t.due_date.slice(5,7))]}`:"—"}</span></div>
+      ${o?`<div class="pm-x">
+        <div class="pm-fd"><label>Task</label>${inp(t,"title","What has to be done?","pm-tt1")}</div>
+        <div class="pm-fd"><label>Brief</label>${area(t,"body","Anything the person doing it needs to know…")}</div>
+        <div class="pm-fx">
+          <div class="pm-fd"><label>Owner</label>${inp(t,"owner","Who does it?")}</div>
+          <div class="pm-fd"><label>Due</label><input type="date" class="pm-tx" data-pmf="due_date" data-id="${t.id}" value="${H(t.due_date||"")}"></div>
+          <div class="pm-fd wide"><label>Feeds</label><span class="pm-lk">${feedChips(t)}${postPicker(t,y,m)}</span></div>
+        </div>
+        <div class="pm-xf"><span></span>${delBtn(t)}</div></div>`:""}</div>`; }).join("")||`<div class="pm-none">No tasks planned for ${MNF[m]} yet.</div>`;
+}
+function prodLines(y,m){
+  return entriesIn(y,m,"production").map(s=>{ const o=!!PM.open[s.id], fd=feedsOf(s);
+    return `<div class="pm-item${o?" open":""}" id="pmr-${s.id}"><div class="pt-r go pm-r" data-pm="row" data-v="${s.id}">
+      <span class="pt-d">${s.day?`<b>${s.day}</b><span>${wdOf(y,m,s.day)}</span>`:`<b>—</b><span>day</span>`}</span>
+      <span class="pt-nm b"><i class="ti ti-chevron-${o?"down":"right"} pm-cv"></i><span class="pm-ttl">${H(s.title||"Untitled shoot")}</span></span>
+      <span class="pt-sub">${fd.length?`Feeds ${fd.length} post${fd.length===1?"":"s"}`:"—"}</span>${lineSt(s)}</div>
+      ${o?`<div class="pm-x">
+        <div class="pm-fd"><label>Shoot</label>${inp(s,"title","What is being shot?","pm-tt1")}</div>
+        <div class="pm-fd"><label>Where · what</label>${area(s,"body","Where, how long, who is needed…")}</div>
+        <div class="pm-fx"><div class="pm-fd"><label>Day</label>${daySel(s,y,m)}</div>
+          <div class="pm-fd wide"><label>Feeds</label><span class="pm-lk">${feedChips(s)}${postPicker(s,y,m)}</span></div></div>
+        <div class="pm-xf"><span></span>${delBtn(s)}</div></div>`:fd.length?`<div class="pm-feeds"><label>Feeds ${fd.length} post${fd.length===1?"":"s"}</label>${fd.map(p=>`<span class="pm-lc" data-pm="jump" data-v="${p.id}"><i class="ti ti-arrow-right"></i>${postShort(p)}</span>`).join("")}</div>`:""}</div>`; }).join("")||`<div class="pm-none">No production planned for ${MNF[m]} yet.</div>`;
+}
+function inflLines(y,m){
+  return entriesIn(y,m,"influencer").map(f=>{ const o=!!PM.open[f.id];
+    return `<div class="pm-item${o?" open":""}" id="pmr-${f.id}"><div class="pt-r go pm-r" data-pm="row" data-v="${f.id}">
+      <span class="pt-nm b"><i class="ti ti-chevron-${o?"down":"right"} pm-cv"></i><span class="pm-ttl">${H(f.title||"Untitled influencer")}</span></span><span class="pt-sub">${H((f.body||"").split("\n")[0].slice(0,60))||"—"}</span>${lineSt(f)}</div>
+      ${o?`<div class="pm-x"><div class="pm-fd"><label>Influencer</label>${inp(f,"title","Name or handle","pm-tt1")}</div>
+        <div class="pm-fd"><label>Brief</label>${area(f,"body","What they will do, when, the deliverables…")}</div>
+        <div class="pm-xf"><span></span>${delBtn(f)}</div></div>`:""}</div>`; }).join("")||`<div class="pm-none">No influencers planned for ${MNF[m]} yet.</div>`;
+}
+
+/* ── the open month ───────────────────────────────────────────────── */
+function openSheet(k){
+  const {y,m}=fromYm(k), mr=monthRow(y,m), es=entriesIn(y,m);
+  const open=es.filter(e=>!isCommitted(e)).length;
+  const canCommit=!!mr&&(open>0||!mr.committed_at);
+  const head=`<div class="pm-mh"><div class="pm-mt"><h2>${MNF[m]}</h2><span class="yr">${y}</span>${stPill(y,m)}</div><span></span>
+    <div class="pm-ma">${canCommit?`<button class="btn btn-sm pm-commit" data-pm="commit"><i class="ti ti-arrow-big-right-lines"></i> Commit ${MNF[m]}</button>`:""}</div></div>`;
+  if(!mr&&!es.length) return `<div class="mpv-sheet pl-sheet pl-open pm-sheet" id="pm-open">${head}<div class="pm-empty"><span>${MNF[m]} ${y} has no plan yet.</span><button class="btn btn-sm pm-goplan" data-pm="start" data-v="${k}"><i class="ti ti-plus"></i> Plan ${MNF[m]}</button></div></div>`;
+  const ps=entriesIn(y,m,"post"), per=pillars().map(p=>[p,ps.filter(e=>e.pillar_id===p.id).length]).filter(x=>x[1]);
+  const goals=(mr&&Array.isArray(mr.goals)?mr.goals:[]);
+  const tab=(t,ic,l,n)=>`<span class="${PM.tab===t?"on":""}" data-pm="tab" data-v="${t}"><i class="ti ${ic}"></i>${l}<em>${n}</em></span>`;
+  const T=PM.tab;
+  const sec=T==="post"?`<div class="pt-t pt-tp pm-tp"><div class="pt-h"><span>Day</span><span>One-line plan</span><span>Pillar</span><span>Format</span><span>Status</span></div>${postLines(y,m)}</div>`
+    :T==="task"?`<div class="pt-t pt-tt pm-tt"><div class="pt-h"><span>Task</span><span>Owner</span><span>Status</span><span>Due</span></div>${taskLines(y,m)}</div>`
+    :T==="prod"?`<div class="pt-t pt-tr pm-tr"><div class="pt-h"><span>Day</span><span>Shoot</span><span>Feeds</span><span>Status</span></div>${prodLines(y,m)}</div>`
+    :`<div class="pt-t pm-ti"><div class="pt-h"><span>Influencer</span><span>Brief</span><span>Status</span></div>${inflLines(y,m)}</div>`;
+  const addW={post:"post",task:"task",prod:"production",infl:"influencer"}[T];
+  return `<div class="mpv-sheet pl-sheet pl-open pm-sheet" id="pm-open">${head}
+    <div class="month-card mp-hero mp-pan mp-wide pt-hero pm-hero">
+      <div class="pm-f2"><div class="pm-fl">Objective</div><input class="pm-tx pm-obj" data-pmm="objective" value="${H(mr&&mr.objective||"")}" placeholder="What this month is for…"></div>
+      <div class="pm-f2"><div class="pm-fl">Theme</div><input class="pm-tx pm-thm" data-pmm="theme" value="${H(mr&&mr.theme||"")}" placeholder="The month's theme…"></div>
+      <div class="pm-f2"><div class="pm-fl">Goals<span class="mp-sub-add" data-pm="goal_add">+ Add</span></div><div class="pm-goals">${goals.map((g,i)=>`<span class="pm-goal"><i class="ti ti-circle"></i><input class="pm-tx" data-pmg="${i}" value="${H(g)}" placeholder="A goal…"><i class="ti ti-x pm-lx" data-pm="goal_rm" data-v="${i}" title="Remove"></i></span>`).join("")||`<span class="pm-ph">No goals yet</span>`}</div></div>
+      <div class="pm-f2"><div class="pm-fl">Pillars</div><div class="pt-camp">${per.map(([p,n])=>`<span class="pt-cc"><span class="dot" style="background:${H(p.colour)}"></span><b>${n}</b>&nbsp;${H(p.name)}</span>`).join("")||`<span class="pm-ph">${pillars().length?"No post has a pillar yet":"Add content pillars on the Strategy page"}</span>`}</div></div>
+      <div class="pt-tabs">${tab("post","ti-photo","Social media",ps.length)}${tab("task","ti-clipboard-text","Tasks",entriesIn(y,m,"task").length)}${tab("prod","ti-video","Production",entriesIn(y,m,"production").length)}${tab("infl","ti-users","Influencers",entriesIn(y,m,"influencer").length)}</div>
+      <div class="mp-g pt-g"><div class="mp-sg pt-sec">${sec}<div class="pm-addl"><span class="mpv-start" data-pm="add" data-v="${T}"><i class="ti ti-plus"></i> Add a ${addW}</span></div></div></div>
+    </div></div>`;
+}
+function closedLine(k){
+  const {y,m}=fromYm(k), mr=monthRow(y,m), c=n=>entriesIn(y,m,n).length;
+  return `<div class="mpv-sheet pl-sheet pl-fold"><div class="pl-mline" data-pm="goto" data-v="${k}" style="cursor:pointer">
+    <div class="mvn"><b>${MNF[m]}</b><span>${y}</span></div><div class="mvo${mr&&mr.objective?"":" none"}">${H(mr&&mr.objective||"No objective yet")}</div>
+    <div class="pl-mcts"><span class="ct${c("post")?"":" zero"}"><b>${c("post")}</b> posts</span><span class="ct${c("task")?"":" zero"}"><b>${c("task")}</b> tasks</span><span class="ct${c("production")?"":" zero"}"><b>${c("production")}</b> production</span></div>
+    <div class="mvr">${stPill(y,m)}<i class="ti ti-chevron-right cvr"></i></div></div></div>`;
+}
+function sheets(){
+  const sel=selKey(), ks=plannedKeys().filter(k=>k!==sel);
+  const t=today(), tk=ym(t.y,t.m);
+  const later=ks.filter(k=>k>=tk-1);
+  const last=Math.max(sel,...plannedKeys(),tk), nx=fromYm(last+1);
+  return `<div class="mpv-scroll pl-sheets">${openSheet(sel)}${later.map(closedLine).join("")}<div class="mpv-addnext"><span class="mpv-start" data-pm="start" data-v="${last+1}"><i class="ti ti-plus"></i> Plan ${MNF[nx.m]} ${nx.y}</span></div></div>`;
+}
+function pop(){
+  if(!PM.pop) return "";
+  const {k,d,x,yy}=PM.pop, {y,m}=fromYm(k);
+  const ps=entriesIn(y,m,"post").filter(p=>p.day===d), sh=entriesIn(y,m,"production").filter(p=>p.day===d);
+  return `<div class="pm-pop" style="left:${x}px;top:${yy}px"><div class="pm-poph"><b>${d} ${MNF[m]}</b><span>${wdOf(y,m,d)}</span><span style="flex:1"></span><i class="ti ti-x" data-pm="popx"></i></div>
+    ${sh.map(s=>`<div class="pm-popi" data-pm="gotab" data-v="prod|${s.id}"><i class="ti ti-video"></i><span><b>${H(s.title||"Production")}</b><br>Production</span><i class="ti ti-chevron-right go"></i></div>`).join("")}
+    ${ps.map(p=>{const pl=pillar(p.pillar_id);return `<div class="pm-popi" data-pm="jump" data-v="${p.id}"><i class="ti ${fmtIcon(p.format)}"></i><span><b>${H(p.title||"Untitled post")}</b><br>${[pl&&H(pl.name),p.series&&H(p.series),p.format&&fmtWord(p.format)].filter(Boolean).join(" · ")||"Post"}</span><i class="ti ti-chevron-right go"></i></div>`;}).join("")}</div>`;
+}
+function dlg(){
+  if(!PM.dlg) return "";
+  const {y,m}=fromYm(selKey()), mr=monthRow(y,m);
+  const w=n=>entriesIn(y,m,n).filter(e=>!isCommitted(e));
+  const ps=w("post"), tk=w("task"), pr=w("production"), inf=w("influencer");
+  const bad=ps.filter(p=>!p.day).length;
+  return `<div class="pm-scrim" data-pm="dlgx"><div class="pm-dlg" data-pm="none"><div class="pm-dh"><b>Commit ${MNF[m]} ${y} to the live calendar</b><i class="ti ti-x" data-pm="dlgx"></i></div>
+    <div class="pm-dl"><i class="ti ti-photo"></i><b>${ps.length} post${ps.length===1?"":"s"}</b><span>${ps.length?"go to Posts on their days, with the one-line plan as the idea and the brief in the notes. Status: Not started.":"nothing new to send."}</span></div>
+    <div class="pm-dl"><i class="ti ti-video"></i><b>${pr.length} production</b><span>${pr.length?"go to the Production Planner as shoot requests for their days.":"nothing new to send."}</span></div>
+    <div class="pm-dl"><i class="ti ti-clipboard-text"></i><b>${tk.length} task${tk.length===1?"":"s"}</b><span>${tk.length?"go to Tasks with their brief and due date. Status: Not started.":"nothing new to send."}</span></div>
+    <div class="pm-dl"><i class="ti ti-users"></i><b>${inf.length} influencer${inf.length===1?"":"s"}</b><span>${inf.length?`go to ${MNF[m]}'s influencer lines, awaiting approval.`:"nothing new to send."}</span></div>
+    <div class="pm-dl z"><i class="ti ti-target"></i><b>Objective, theme, goals</b><span>become ${MNF[m]}'s month card.</span></div>
+    ${bad?`<div class="pm-dn warn"><i class="ti ti-alert-triangle"></i> ${bad} post${bad===1?" has":"s have"} no day. ${bad===1?"It":"They"} will go on the 1st.</div>`:""}
+    <div class="pm-dn">Lines already on the live calendar are not sent again. The plan keeps its copy.</div>
+    <div class="pm-db"><button class="btn btn-w btn-sm" data-pm="dlgx">Cancel</button><button class="btn btn-sm pm-commit" data-pm="docommit"${PM.busy?" disabled":""}><i class="ti ti-arrow-big-right-lines"></i> ${PM.busy?"Committing…":"Commit "+MNF[m]}</button></div></div></div>`;
+}
+function sidebar(){
+  const {y}=fromYm(selKey());
+  const st=document.getElementById("sb-stats");
+  const have=plannedKeys().filter(k=>fromYm(k).y===y);
+  if(st) st.innerHTML=`<div class="s-stat-num">${have.length}<span style="font-size:16px;color:var(--subtle);">/12</span></div><div class="s-stat-lbl">months planned in ${y}</div>`;
+  const j=document.querySelector("#sb-months .mpv-jump"); if(!j) return;
+  j.innerHTML=MS3.slice(1).map((s,i)=>{const k=ym(y,i+1);return `<span class="mpj${have.includes(k)?"":" empty"}${k===selKey()?" on":""}" data-pm="goto" data-v="${k}">${s}</span>`;}).join("");
+  const note=j.nextElementSibling; if(note&&!note.children.length) note.textContent=y+" · planned months";
+}
+function pmRender(){
+  const main=document.getElementById("main"); if(!main) return;
+  const d=D();
+  if(!d||d.loading){ pmLoad(activeBrand); main.innerHTML=`<div class="mpv plpage" id="pm-root"><div class="pm-wait">Opening the plan…</div></div>`; return; }
+  if(!d.ok){ main.innerHTML=`<div class="mpv plpage" id="pm-root"><div class="pm-wait"><b>The plan could not be opened.</b><br>${H(d.err||"")}<br><span class="mpv-start" data-pm="reload">Try again</span></div></div>`; return; }
+  const sc=main.scrollTop, row=main.querySelector(":scope > #calstrip");
+  main.innerHTML=`<div class="mpv plpage" id="pm-root">${strip()}${board()}${sheets()}${pop()}${dlg()}</div>`;
+  if(row) main.insertBefore(row,main.firstChild);   /* the row is the nav's own — keep it */
+  main.scrollTop=sc;
+}
+
+/* ── wiring into the page ─────────────────────────────────────────── */
+(function(){
+  const base=renderMonthPlanView;
+  renderMonthPlanView=function(){
+    if(pmLive()) return base.apply(this,arguments);
+    return pmRender();
+  };
+  const baseR=render;
+  render=function(){
+    const out=baseR.apply(this,arguments);
+    try{ dressRow(); if(!pmLive()) sidebar(); }catch(e){ console.warn("[pm]",e); }
+    return out;
+  };
+  try{ PM.on=localStorage.getItem("pmOn")==="1"; }catch(e){}
+  const baseP=pickBrand;
+  pickBrand=function(){ PM.sel=null; PM.open={}; PM.pop=null; PM.dlg=null; return baseP.apply(this,arguments); };
+})();
+function setOn(v){ PM.on=v; try{ localStorage.setItem("pmOn",v?"1":"0"); }catch(e){} PM.pop=null; PM.dlg=null; if(v) pmLoad(activeBrand); render(); }
+function paint(){ if(!pmLive()){ pmRender(); dressRow(); sidebar(); } }
+function scrollTo(id){ requestAnimationFrame(()=>{ const el=document.getElementById(id), main=document.getElementById("main"); if(el&&main){ const d=el.getBoundingClientRect().top-main.getBoundingClientRect().top; main.scrollTop=Math.max(0,main.scrollTop+d-90); el.classList.add("flash"); setTimeout(()=>el.classList.remove("flash"),1600); } }); }
+function ensureMonth(k){
+  const d=D(); const {y,m}=fromYm(k); let mr=monthRow(y,m);
+  if(!mr){ mr={id:uuid(),brand_id:activeBrand,year:y,month:m,objective:"",theme:"",goals:[],committed_at:null,committed_by:null};
+    d.months.push(mr); saveMonth(mr); }
+  return mr;
+}
+function addEntry(t){
+  const d=D(), k=selKey(), {y,m}=fromYm(k); ensureMonth(k);
+  const kind=KIND[t];
+  const e={id:uuid(),brand_id:activeBrand,year:y,month:m,kind,day:null,due_date:null,title:"",body:"",format:kind==="post"?"static":"",pillar_id:null,series:"",waiting_on:"",owner:"",feeds:[],sort_order:entriesIn(y,m,kind).length,committed_at:null,committed_ref:null};
+  d.entries.push(e); PM.open[e.id]=true; saveEntry(e); paint();
+  requestAnimationFrame(()=>{ const i=document.querySelector(`#pmr-${e.id} .pm-tt1`); if(i) i.focus(); scrollTo("pmr-"+e.id); });
+}
+async function delEntry(id){
+  const d=D(), e=entry(id); if(!e) return;
+  if(!confirmIn(id)) return;
+  d.entries=d.entries.filter(x=>x!==e);
+  d.entries.forEach(x=>{ if((x.feeds||[]).includes(id)){ x.feeds=x.feeds.filter(f=>f!==id); saveEntry(x); } });
+  paint();
+  const r=await sb.from("plan_entries").update({deleted_at:now()}).eq("id",id);
+  if(r&&r.error) toast("Save failed: "+r.error.message,"err");
+}
+/* a second click on Remove does it — no browser dialog */
+const ARM={};
+function confirmIn(id){ if(ARM[id]&&Date.now()-ARM[id]<4000){ delete ARM[id]; return true; } ARM[id]=Date.now();
+  const b=document.querySelector(`#pmr-${id} .pm-del`); if(b){ b.classList.add("arm"); b.innerHTML=`<i class="ti ti-trash"></i> Click again to remove`; } return false; }
+
+/* ── commit ───────────────────────────────────────────────────────── */
+async function doCommit(){
+  if(PM.busy) return;
+  const d=D(), k=selKey(), {y,m}=fromYm(k), mr=ensureMonth(k), bid=activeBrand, b=brands[bid];
+  const w=n=>entriesIn(y,m,n).filter(e=>!isCommitted(e));
+  PM.busy=true; paint();
+  let uid=ME&&ME.id||null; if(!uid){ try{ const u=await sb.auth.getUser(); uid=u&&u.data&&u.data.user&&u.data.user.id||null; }catch(e){} }
+  const stamp=now(); let ok=0, bad=0;
+  const done=async(e,ref)=>{ e.committed_at=stamp; e.committed_ref=ref; e.updated_at=stamp; ok++; await sb.from("plan_entries").update({committed_at:stamp,committed_ref:ref,updated_at:stamp}).eq("id",e.id); };
+  /* posts */
+  for(const e of w("post")){
+    try{
+      const pl=pillar(e.pillar_id);
+      const notes=[e.body||"",e.waiting_on?"Waiting on: "+e.waiting_on:"",pl?"Pillar: "+pl.name+(e.series?" · "+e.series:""):(e.series?"Series: "+e.series:"")].filter(Boolean).join("\n\n");
+      const p=normalizeSocial({id:newSocialId(),brand_id:bid,event_id:"",year:y,month:m,date:e.day||1,time:"",format:FMTS.includes(e.format)?e.format:"static",status:"not_started",synced:true,
+        content:{facebook:emptyVariant(),instagram:emptyVariant(),concept:e.title||""},notes});
+      b.social=b.social||[]; b.social.push(p);
+      await dbSaveSocialPost(p); await done(e,p.id);
+    }catch(er){ bad++; console.warn("[pm] post",er); }
+  }
+  /* tasks */
+  for(const e of w("task")){
+    const fd=feedsOf(e).map(p=>"For the post: "+(p.day?p.day+" "+MS3[p.month]+" · ":"")+(p.title||"")).join("\n");
+    const brief=[e.body||"",e.owner?"Owner: "+e.owner:"",fd].filter(Boolean).join("\n\n");
+    const r=await sb.from("branding_tasks").insert([{brand_id:bid,title:e.title||"Untitled task",brief,delivery_date:e.due_date||null,status:"not_started",updated_at:stamp}]).select("id").single();
+    if(r.error){ bad++; toast("A task could not be sent: "+r.error.message,"err"); continue; }
+    await done(e,r.data.id);
+  }
+  /* production → a shoot request */
+  for(const e of w("production")){
+    const fd=feedsOf(e).map(p=>"· "+(p.day?p.day+" "+MS3[p.month]+" · ":"")+(p.title||"")).join("\n");
+    const note=[e.title||"",e.body||"",fd?"Feeds these posts:\n"+fd:""].filter(Boolean).join("\n\n");
+    const row={brand_id:bid,requested_by:uid,requested_at:stamp,request_note:note,rough_year:y,rough_month:m,
+      pref_kind:e.day?"day":"month",pref_date:e.day?`${y}-${String(m).padStart(2,"0")}-${String(e.day).padStart(2,"0")}`:null,requested_email:(ME&&ME.email)||null};
+    const r=await sb.from("productions").insert([row]).select("id").single();
+    if(r.error){ bad++; toast("A shoot request could not be sent: "+r.error.message,"err"); continue; }
+    await done(e,r.data.id);
+  }
+  /* the month card */
+  try{
+    const mp=monthPlanFor(bid,y,m);
+    if(mr.objective) mp.objective_line=mr.objective;
+    if(mr.theme) mp.key_theme=mr.theme;
+    await dbSaveMonthPlan(bid,y,m);
+    mp.items=mp.items||[];
+    const have=new Set(mp.items.filter(i=>i.category==="goal").map(i=>(i.label||"").trim().toLowerCase()));
+    for(const g of (mr.goals||[])){ const t=String(g||"").trim(); if(!t||have.has(t.toLowerCase())) continue;
+      const it={id:newMonthItemId(),category:"goal",label:t,status:"open",sort_order:mp.items.length}; mp.items.push(it); await dbSaveMonthItem(it,bid,y,m); }
+    for(const e of w("influencer")){
+      const it={id:newMonthItemId(),category:"influencer",label:e.title||"Influencer",status:"pending",sort_order:mp.items.length}; mp.items.push(it);
+      await dbSaveMonthItem(it,bid,y,m); await done(e,it.id);
+    }
+  }catch(er){ bad++; console.warn("[pm] month",er); }
+  mr.committed_at=stamp; mr.committed_by=uid; await saveMonth(mr);
+  PM.busy=false; PM.dlg=null;
+  toast(bad?`${MNF[m]} committed with ${bad} problem${bad===1?"":"s"} — check the lines still marked Planned`:`${MNF[m]} is on the live calendar`,bad?"err":"");
+  render();
+}
+
+/* ── clicks and edits ─────────────────────────────────────────────── */
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-pm]");
+  if(!t){ if(PM.pop&&!e.target.closest(".pm-pop")&&document.getElementById("pm-root")){ PM.pop=null; paint(); } return; }
+  const a=t.dataset.pm, v=t.dataset.v;
+  if(a==="none"||t.disabled) return;
+  e.stopPropagation();
+  if(a==="mode"){ setOn(v==="plan"); return; }
+  if(pmLive()) return;
+  if(a==="reload"){ pmLoad(activeBrand,true); return; }
+  if(a==="step"){ PM.sel=selKey()+Number(v); PM.pop=null; render(); return; }
+  if(a==="today"){ const t0=today(); PM.sel=ym(t0.y,t0.m); PM.pop=null; render(); return; }
+  if(a==="goto"){ PM.sel=Number(v); PM.pop=null; render(); scrollTo("pm-open"); return; }
+  if(a==="start"){ const k=Number(v); ensureMonth(k); PM.sel=k; PM.tab="post"; render(); scrollTo("pm-open"); return; }
+  if(a==="tab"){ PM.tab=v; paint(); return; }
+  if(a==="row"){ if(e.target.closest("input,select,textarea,.pm-lc")) return; PM.open[v]=!PM.open[v]; paint(); return; }
+  if(a==="add"){ addEntry(v); return; }
+  if(a==="del"){ delEntry(v); return; }
+  if(a==="day"){ const [k,d]=v.split("|").map(Number); const r=t.getBoundingClientRect(), root=document.getElementById("pm-root").getBoundingClientRect();
+    PM.pop={k,d,x:Math.max(0,Math.min(r.left-root.left,root.width-330)),yy:r.bottom-root.top+6}; paint(); return; }
+  if(a==="popx"){ PM.pop=null; paint(); return; }
+  if(a==="jump"){ const p=entry(v); if(!p) return; PM.sel=ym(p.year,p.month); PM.tab="post"; PM.open[v]=true; PM.pop=null; render(); scrollTo("pmr-"+v); return; }
+  if(a==="gotab"){ const [tb,id]=v.split("|"); const x=entry(id); if(x) PM.sel=ym(x.year,x.month); PM.tab=tb; PM.open[id]=true; PM.pop=null; render(); scrollTo("pmr-"+id); return; }
+  if(a==="feed_rm"){ const [id,pid]=v.split("|"); const x=entry(id); if(!x) return; x.feeds=(x.feeds||[]).filter(f=>f!==pid); saveEntry(x); paint(); return; }
+  if(a==="goal_add"){ const mr=ensureMonth(selKey()); mr.goals=(mr.goals||[]).concat([""]); saveMonth(mr); paint();
+    requestAnimationFrame(()=>{ const g=document.querySelectorAll(".pm-goals [data-pmg]"); if(g.length) g[g.length-1].focus(); }); return; }
+  if(a==="goal_rm"){ const mr=ensureMonth(selKey()); mr.goals=(mr.goals||[]).filter((_,i)=>i!==Number(v)); saveMonth(mr); paint(); return; }
+  if(a==="commit"){ PM.dlg=true; paint(); return; }
+  if(a==="dlgx"){ if(t.classList.contains("pm-scrim")&&e.target!==t) return; if(PM.busy) return; PM.dlg=null; paint(); return; }
+  if(a==="docommit"){ doCommit(); return; }
+},true);
+/* text: saved when you leave the box, the page is not redrawn under you */
+document.addEventListener("change",e=>{
+  const t=e.target; if(!t.closest||!t.closest("#pm-root")) return;
+  if(t.dataset.pmm){ const mr=ensureMonth(selKey()); mr[t.dataset.pmm]=t.value; saveMonth(mr); return; }
+  if(t.dataset.pmg!=null){ const mr=ensureMonth(selKey()); const g=(mr.goals||[]).slice(); g[Number(t.dataset.pmg)]=t.value; mr.goals=g; saveMonth(mr); return; }
+  const f=t.dataset.pmf, x=f&&entry(t.dataset.id); if(!x) return;
+  if(f==="feed_add"){ if(!t.value) return; x.feeds=(x.feeds||[]).concat([t.value]); saveEntry(x); paint(); return; }
+  if(f==="day") x.day=t.value?Number(t.value):null;
+  else if(f==="pillar_id") x.pillar_id=t.value||null;
+  else if(f==="due_date") x.due_date=t.value||null;
+  else x[f]=t.value;
+  x.updated_at=now(); saveEntry(x);
+  if(t.tagName==="SELECT"||f==="due_date") paint();
+  else if(f==="title"){ const l=document.querySelector(`#pmr-${x.id} .pm-r .pm-ttl`); if(l) l.textContent=x.title||"Untitled"; }
+},true);
+
+/* ── Strategy · Content pillars ───────────────────────────────────── */
+function pillarsCard(){
+  const d=D();
+  const ps=pillars();
+  const posts=id=>d?d.entries.filter(e=>e.kind==="post"&&e.pillar_id===id).length:0;
+  const rows=!d||d.loading?`<tr><td colspan="5" class="pm-ph">Reading the pillars…</td></tr>`:!d.ok?`<tr><td colspan="5" class="pm-ph">The pillars could not be read. ${H(d.err||"")}</td></tr>`:
+    ps.map(p=>{ const o=!!PM.popen[p.id];
+    return `<tr class="pm-pr${o?" open":""}" data-pp="${p.id}"><td class="w-nm"><div class="pm-nmw"><span class="pm-pdot" style="background:${H(p.colour)}" data-pmp="colour" data-v="${p.id}" title="Change the colour"></span><input class="vb-ce pm-pin" data-pmpf="name" data-id="${p.id}" value="${H(p.name)}" placeholder="Pillar name"></div></td>
+      <td><textarea class="pm-pta" rows="1" data-pmpf="purpose" data-id="${p.id}" placeholder="What this pillar is for…">${H(p.purpose)}</textarea></td>
+      <td><input class="vb-ce pm-pin" data-pmpf="series" data-id="${p.id}" value="${H((p.series||[]).join(", "))}" placeholder="Series, comma separated"></td>
+      <td class="pm-pn"><b>${posts(p.id)}</b> posts</td>
+      <td class="pm-pa"><i class="ti ti-chevron-${o?"down":"right"}" data-pmp="open" data-v="${p.id}" title="Rules"></i><i class="ti ti-x" data-pmp="del" data-v="${p.id}" title="Remove"></i></td></tr>
+      ${o?`<tr class="pm-prx"><td colspan="5"><div class="pm-rules">${(p.rules||[]).map((r,i)=>`<div class="pm-rule"><input class="pm-rl2" data-pmr="label" data-i="${i}" data-id="${p.id}" value="${H(r.label||"")}" placeholder="Rule (e.g. Tone)"><textarea rows="2" data-pmr="text" data-i="${i}" data-id="${p.id}" placeholder="How this pillar does it…">${H(r.text||"")}</textarea><i class="ti ti-x pm-lx" data-pmp="rule_rm" data-v="${p.id}|${i}"></i></div>`).join("")}<div class="pm-rule add"><span data-pmp="rule_add" data-v="${p.id}"><i class="ti ti-plus"></i> Add a rule</span></div></div></td></tr>`:""}`; }).join("");
+  return `<div class="mk-card sx-card sx-o pm-pcard"><div class="bd-sec" id="bd-pl"><div class="bd-secnum">03</div><div class="bd-sectitle">Content pillars</div><div class="bd-secrule"></div><div class="bd-secsub">${ps.length?ps.length+" pillar"+(ps.length===1?"":"s"):""}</div></div>
+    <div id="pl-host"><table class="vb-t a3 cp-t pm-pt"><thead><tr><th>Pillar</th><th>Purpose</th><th>Series</th><th>In the plan</th><th></th></tr></thead><tbody>${rows}
+    ${d&&d.ok?`<tr class="vb-new cp-new"><td class="w-nm" colspan="5"><input class="vb-ce" data-pmp-new="1" placeholder="Add a pillar…"></td></tr>`:""}</tbody></table></div></div>`;
+}
+function renumber(){
+  const w=document.querySelector("#main .bd-wrap"); if(!w) return;
+  let n=0; w.querySelectorAll(":scope > .mk-card > .bd-sec .bd-secnum").forEach(x=>{ n++; x.textContent=String(n).padStart(2,"0"); });
+}
+function pmPaintPillars(){
+  if(view!=="brief"||!pmAllowed()||(typeof briefEdit!=="undefined"&&briefEdit)) return;
+  const w=document.querySelector("#main .bd-wrap"); if(!w) return;
+  if(!D()) pmLoad(activeBrand);
+  const html=pillarsCard();
+  const old=w.querySelector(".pm-pcard");
+  if(old){ old.outerHTML=html; }
+  else{
+    const tg=document.getElementById("bd-vb"), card=tg&&tg.closest(".mk-card");
+    if(card) card.insertAdjacentHTML("afterend",html); else w.insertAdjacentHTML("beforeend",html);
+  }
+  renumber();
+  const nav=document.querySelector('#sb-months .bd-navi[data-tgt="bd-vb"]');
+  if(nav&&!document.querySelector('#sb-months .bd-navi[data-tgt="bd-pl"]')){
+    const c=nav.cloneNode(true); c.dataset.tgt="bd-pl"; c.setAttribute("onclick","bdJump('bd-pl')"); c.classList.remove("on");
+    const nm=c.querySelector(".nm"); if(nm) nm.textContent="Content pillars"; else c.textContent="Content pillars";
+    const ct=c.querySelector(".ct"); if(ct) ct.textContent=pillars().length||"";
+    nav.after(c);
+  } else { const ct=document.querySelector('#sb-months .bd-navi[data-tgt="bd-pl"] .ct'); if(ct) ct.textContent=pillars().length||""; }
+}
+window.pmPaintPillars=pmPaintPillars;
+(function(){
+  const base=renderBrief;
+  renderBrief=function(){ const out=base.apply(this,arguments); try{ pmPaintPillars(); }catch(e){ console.warn("[pm] pillars",e); } return out; };
+  const baseS=buildBriefSidebar;
+  buildBriefSidebar=function(){ const out=baseS.apply(this,arguments); try{ if(document.querySelector(".pm-pcard")) pmPaintPillars(); }catch(e){} return out; };
+})();
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-pmp]"); if(!t||!t.closest(".pm-pcard")) return;
+  const a=t.dataset.pmp, v=t.dataset.v, d=D(); if(!d||!d.ok) return;
+  if(a==="open"){ PM.popen[v]=!PM.popen[v]; pmPaintPillars(); return; }
+  const p=pillar(String(v).split("|")[0]); if(!p) return;
+  if(a==="colour"){ const i=PCOL.indexOf(p.colour); p.colour=PCOL[(i+1)%PCOL.length]; savePillar(p); pmPaintPillars(); return; }
+  if(a==="del"){
+    if(!(p._arm&&Date.now()-p._arm<4000)){ p._arm=Date.now(); t.classList.add("arm"); t.title="Click again to remove"; toast("Click × again to remove "+(p.name||"this pillar")); return; }
+    d.pillars=d.pillars.filter(x=>x!==p); d.entries.forEach(x=>{ if(x.pillar_id===p.id){ x.pillar_id=null; saveEntry(x); } });
+    sb.from("brand_pillars").update({deleted_at:now()}).eq("id",p.id).then(r=>{ if(r&&r.error) toast("Save failed: "+r.error.message,"err"); });
+    pmPaintPillars(); return; }
+  if(a==="rule_add"){ p.rules=(p.rules||[]).concat([{label:"",text:""}]); savePillar(p); pmPaintPillars();
+    requestAnimationFrame(()=>{ const r=document.querySelectorAll(`[data-pmr="label"][data-id="${p.id}"]`); if(r.length) r[r.length-1].focus(); }); return; }
+  if(a==="rule_rm"){ const i=Number(String(v).split("|")[1]); p.rules=(p.rules||[]).filter((_,k)=>k!==i); savePillar(p); pmPaintPillars(); return; }
+},true);
+document.addEventListener("change",e=>{
+  const t=e.target; if(!t.closest||!t.closest(".pm-pcard")) return;
+  const d=D(); if(!d||!d.ok) return;
+  if(t.dataset.pmpNew){ const name=t.value.trim(); if(!name) return;
+    const used=d.pillars.map(p=>p.colour);
+    const p={id:uuid(),brand_id:activeBrand,name,colour:PCOL.find(c=>!used.includes(c))||PCOL[d.pillars.length%PCOL.length],purpose:"",rules:[],series:[],sort_order:d.pillars.length};
+    d.pillars.push(p); savePillar(p); pmPaintPillars();
+    requestAnimationFrame(()=>{ const n=document.querySelector(".pm-pcard [data-pmp-new]"); if(n) n.focus(); }); return; }
+  const p=pillar(t.dataset.id); if(!p) return;
+  if(t.dataset.pmpf==="series") p.series=t.value.split(",").map(s=>s.trim()).filter(Boolean);
+  else if(t.dataset.pmpf) p[t.dataset.pmpf]=t.value;
+  else if(t.dataset.pmr){ const i=Number(t.dataset.i); const rs=(p.rules||[]).slice(); rs[i]={...(rs[i]||{}),[t.dataset.pmr]:t.value}; p.rules=rs; }
+  savePillar(p);
+  if(t.dataset.pmpf==="name"){ const ct=document.querySelector('#sb-months .bd-navi[data-tgt="bd-pl"] .ct'); if(ct) ct.textContent=pillars().length||""; }
+},true);
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&e.target&&e.target.dataset&&(e.target.dataset.pmpNew||e.target.classList.contains("pm-tx")&&e.target.tagName==="INPUT")){ e.target.blur(); }
+},true);
+})();
+
+</script>
 </body>
 </html>
