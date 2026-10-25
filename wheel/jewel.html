@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Spin the wheel</title>
-<meta name="cc-tool-version" content="V1.9 New Jersey">
+<meta name="cc-tool-version" content="V2.0 New Jersey">
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,6 +25,10 @@ button,input{font:inherit;color:inherit}
 #app{position:relative;max-width:440px;height:100dvh;margin:0 auto;overflow:hidden;
   background:radial-gradient(120% 70% at 50% 42%,#6A1A26 0%,var(--wine) 45%,var(--wine-deep) 100%)}
 body:not(.ready) .scr{visibility:hidden}
+/* V2.0: Testing — a small tag, and spin again as often as you like */
+#testTag{position:absolute;top:calc(10px + env(safe-area-inset-top));right:12px;z-index:9;font-size:10px;letter-spacing:.24em;text-transform:uppercase;font-weight:500;
+  color:#3A0A12;background:var(--gold-grad);border-radius:999px;padding:5px 10px}
+.tt{font-family:var(--sans);font-size:.42em;letter-spacing:.16em;vertical-align:middle;margin-left:.5em;padding:3px 7px;border-radius:6px;background:rgba(217,176,96,.18);color:var(--gold-hi)}
 #dust{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
 
 /* ── screens ── */
@@ -193,6 +197,7 @@ body:not(.ready) .scr{visibility:hidden}
 </svg>
 
 <div id="app">
+  <div id="testTag" hidden>Test mode</div>
   <canvas id="dust"></canvas>
 
   <!-- 1 · welcome -->
@@ -262,6 +267,7 @@ body:not(.ready) .scr{visibility:hidden}
     <div class="rd-acts">
       <button class="btn line" id="cta" hidden>Explore the collection</button>
       <button class="ghost" id="rdBack">Back to my prize</button>
+      <button class="ghost" id="rdAgain" hidden>Spin again (test)</button>
     </div>
   </section>
 
@@ -459,7 +465,7 @@ function showState(head, sub) {
 }
 
 /* ── the details, then the spin ── */
-let live = false, unlocked = false, result = null;
+let live = false, unlocked = false, result = null, TESTING = false;
 const nameI = $("name"), phoneI = $("phone"), goB = $("go");
 const digits = () => phoneI.value.replace(/\D/g, "").slice(0, 10);
 const okName = () => nameI.value.trim().length >= 2, okPhone = () => /^[6-9]\d{9}$/.test(digits());
@@ -475,7 +481,7 @@ $("f").addEventListener("submit", async (e) => {
   ctx(); goB.disabled = true; goB.textContent = "Unlocking…";
   try {
     const r = await rpc("wheel_spin", { p_slug: SLUG, p_name: nameI.value.trim(), p_mobile: digits(), p_test: qs.get("test") === "1" });
-    result = { ...r, name: nameI.value.trim() }; keep(result);
+    result = { ...r, name: nameI.value.trim() }; if (!r.test) keep(result);
     if (r.duplicate) { replay(result); return; }
     unlocked = true; show("wheel");
   } catch (err) {
@@ -574,11 +580,12 @@ function liftOut(i) {
   $("rDetail").textContent = lose ? (cfg.lose_line || "Thank you for spinning.") : (cfg.subline || "");
   $("rDetail").style.maxWidth = (W * .5) + "px";
   $("rCode").style.display = lose ? "none" : "";
-  $("rCodeTxt").textContent = (result && result.code) || (PREVIEW ? (cfg.code_prefix || "WIN") + "-7Q4K" : "");
+  $("rCodeTxt").innerHTML = esc((result && result.code) || (PREVIEW ? (cfg.code_prefix || "WIN") + "-7Q4K" : "")) + (result && result.test ? '<span class="tt">TEST</span>' : "");
   const site = (cfg.site_url || "").trim();
   $("done").textContent = lose ? (site ? "Visit " + site.replace(/^https?:\/\//, "").replace(/\/$/, "") : "Done") : (cfg.redeem_label || "Redeem");
   lastWin = lose ? -1 : i;
   $("done").dataset.href = lose && site ? (/^https?:/.test(site) ? site : "https://" + site) : "";
+  if (lose && TESTING) { $("done").textContent = "Spin again (test)"; $("done").dataset.href = ""; }
   const inn = $("msgIn"); inn.style.top = (T + H * .13) + "px"; inn.style.width = (W * .78) + "px";
   requestAnimationFrame(() => m.classList.add("on"));
   if (!lose) for (let n = 0; n < 46; n++) setTimeout(() => addMote(true, T + H * .3), 1600 + n * 24);
@@ -606,6 +613,7 @@ function reset() {
   $("app").classList.remove("redeeming"); lastWin = -1;
 }
 $("done").addEventListener("click", () => {
+  if (TESTING && $("msg").classList.contains("lose")) { again(); return; }
   if ($("done").dataset.href) { location.href = $("done").dataset.href; return; }
   openRedeem();
 });
@@ -616,7 +624,7 @@ function openRedeem() {
   $("rdPrize").textContent = [p.t, p.s].filter(Boolean).join(" ");
   $("rdSub").textContent = cfg.subline || "";
   $("rdSub").hidden = !cfg.subline;
-  $("rdCode").textContent = (result && result.code) || (PREVIEW ? (cfg.code_prefix || "WIN") + "-7Q4K" : "");
+  $("rdCode").innerHTML = esc((result && result.code) || (PREVIEW ? (cfg.code_prefix || "WIN") + "-7Q4K" : "")) + (result && result.test ? '<span class="tt">TEST</span>' : "");
   $("rdCodeNote").textContent = cfg.fine || "Show this at the counter";
   const steps = String(cfg.redeem_steps || "Visit any " + (cfg.brand_line || "of our") + " store before the offer ends.\nPick the piece you love.\nShow this code at billing. Our team will apply your prize.")
     .split(/\n+/).map((x) => x.trim()).filter(Boolean);
@@ -628,6 +636,9 @@ function openRedeem() {
   $("cta").dataset.href = url ? (/^https?:/.test(url) ? url : "https://" + url) : "";
   $("app").classList.add("redeeming"); show("redeem");
 }
+/* Testing: back to the details for another run */
+function again() { $("app").classList.remove("redeeming"); reset(); result = null; unlocked = false; show("form"); }
+$("rdAgain").addEventListener("click", again);
 $("rdBack").addEventListener("click", () => { $("app").classList.remove("redeeming"); show("wheel"); });
 $("cta").addEventListener("click", () => { if ($("cta").dataset.href) window.open($("cta").dataset.href, "_blank", "noopener"); });
 
@@ -678,8 +689,8 @@ function boot() {
     applyGame(g);
     if (g.status === "draft") return showState("This wheel opens soon.");
     if (g.status === "closed") return showState("This wheel has closed.", "Thank you for joining in.");
-    live = true;
-    const k = kept(); if (k && k.code !== undefined && k.index !== undefined) replay(k);
+    live = true; TESTING = g.status === "testing"; $("testTag").hidden = !TESTING; $("rdAgain").hidden = !TESTING;
+    const k = TESTING ? null : kept(); if (k && k.code !== undefined && k.index !== undefined) replay(k);
   }).catch(() => showState("Couldn't load the wheel.", "Check your connection and try again."));
 }
 addEventListener("resize", () => { if (!spent) size(); });

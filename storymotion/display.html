@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>StoryMotion · Smart Labs</title>
-<meta name="cc-tool-version" content="V1.5 New Jersey">
+<meta name="cc-tool-version" content="V1.6 New Jersey">
 <style>
 /* Fonts inlined as WOFF2 data URIs — the file runs fully offline */
 @font-face { font-family: "Bricolage Grotesque"; font-weight: 700; font-style: normal; font-display: swap;
@@ -1544,7 +1544,8 @@ window.SMRelay = function (room, onMsg, onStatus) {
         if (setup.code !== room) {               /* wrong code in the address: use the setup's own */
           location.replace("display.html?s=" + slug + "&room=" + setup.code); return;
         }
-        if (setup.status !== "live") shut("“" + setup.title + "” is " + setup.status + ". Set it to Live in MarTech to open this screen.");
+        /* V2.6: Testing opens the screen too; its sessions are marked test */
+        if (setup.status !== "live" && setup.status !== "testing") shut("“" + setup.title + "” is " + setup.status + ". Set it to Testing or Live in MarTech to open this screen.");
         else open_();
       } catch (e) {
         if (e.message === "signed-out") shut("Sign in to MarTech on this computer, then open StoryMotion from there.");
@@ -1558,8 +1559,8 @@ window.SMRelay = function (room, onMsg, onStatus) {
     /* what happened on the screen */
     const queue = [];
     function log(kind, extra) {
-      if (!setup || setup.status !== "live") return;
-      queue.push(Object.assign({ setup_id: setup.id, session: sess, kind: kind, at: new Date().toISOString() }, extra || {}));
+      if (!setup || (setup.status !== "live" && setup.status !== "testing")) return;
+      queue.push(Object.assign({ setup_id: setup.id, session: sess, kind: kind, at: new Date().toISOString(), is_test: setup.status === "testing" }, extra || {}));
       flush();
     }
     let flushing = false;
