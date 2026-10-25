@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Spin the wheel</title>
-<meta name="cc-tool-version" content="V2.2 New Jersey">
+<meta name="cc-tool-version" content="V2.3 New Jersey">
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -128,7 +128,7 @@ body:not(.ready) .scr{visibility:hidden}
 #msg .act{width:calc(100% - 56px);max-width:320px;top:auto!important;bottom:calc(26px + env(safe-area-inset-bottom))}
 #msg .r{opacity:0;transform:translateY(8px)}
 #msg.on .r{opacity:1;transform:none;transition:opacity .8s ease,transform .9s cubic-bezier(.2,.7,.2,1)}
-#msg.on .r1{transition-delay:1.5s}#msg.on .r2{transition-delay:1.75s}#msg.on .r3{transition-delay:2.15s}#msg.on .r4{transition-delay:2.4s}#msg.on .r5{transition-delay:2.65s}#msg.on .r6{transition-delay:2.9s}
+#msg.on .r1{transition-delay:1.5s}#msg.on .r2{transition-delay:2.05s;transition-duration:.55s}#msg.on .r3{transition-delay:2.15s}#msg.on .r4{transition-delay:2.4s}#msg.on .r5{transition-delay:2.65s}#msg.on .r6{transition-delay:2.9s}
 #msg .spark{width:16px;height:16px;margin:8px 0 10px}
 /* V1.8: after Done the light keeps moving and a next step appears */
 #msg.on .spark{animation:twinkle2 2.8s ease-in-out 3.2s infinite}
@@ -176,7 +176,10 @@ body:not(.ready) .scr{visibility:hidden}
   -webkit-mask:radial-gradient(circle at 0 50%,transparent 11px,#000 11.5px) left/51% 100% no-repeat,radial-gradient(circle at 100% 50%,transparent 11px,#000 11.5px) right/51% 100% no-repeat;
   mask:radial-gradient(circle at 0 50%,transparent 11px,#000 11.5px) left/51% 100% no-repeat,radial-gradient(circle at 100% 50%,transparent 11px,#000 11.5px) right/51% 100% no-repeat}
 .ticket::after{content:"";position:absolute;top:0;bottom:0;width:38%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.7),transparent);animation:btnsheen 4.2s ease-in-out 2.6s infinite}
-.tk-stub{flex:none;width:62px;display:grid;place-items:center;padding-left:6px;background:var(--gold-grad)}
+.tk-stub{flex:none;width:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding-left:6px;background:var(--gold-grad)}
+/* V2.3: a test code says TEST in the stub, so the code itself never moves */
+.tk-tt{display:none;font-style:normal;font-size:9.5px;line-height:1;letter-spacing:.16em;font-weight:600;text-transform:uppercase;color:#3A0A12}
+.ticket.test .tk-tt{display:block}
 .tk-stub svg{width:26px;height:26px}
 .tk-perf{flex:none;width:0;border-left:2px dashed rgba(169,122,44,.75)}
 .tk-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding-right:14px}
@@ -283,7 +286,7 @@ body:not(.ready) .scr{visibility:hidden}
     <div class="rd-stage">
       <div class="kicker">How to redeem</div>
       <div class="rd-prize" id="rdPrize"></div>
-      <div class="tkw"><div class="ticket"><div class="tk-stub"><svg viewBox="-50 -50 100 100"><use href="#star" x="-50" y="-50" width="100" height="100" fill="#3A0A12"/></svg></div><div class="tk-perf"></div><div class="tk-main"><span id="rdCodeNote">Your prize code</span><b id="rdCode"></b></div></div></div>
+      <div class="tkw"><div class="ticket"><div class="tk-stub"><svg viewBox="-50 -50 100 100"><use href="#star" x="-50" y="-50" width="100" height="100" fill="#3A0A12"/></svg><i class="tk-tt">Test</i></div><div class="tk-perf"></div><div class="tk-main"><span id="rdCodeNote">Your prize code</span><b id="rdCode"></b></div></div></div>
       <p class="rd-how" id="rdHow"></p>
       <p class="rd-fine" id="rdFine"></p>
     </div>
@@ -304,7 +307,7 @@ body:not(.ready) .scr{visibility:hidden}
       <p class="detail r r4" id="rDetail"></p>
     </div>
     <div class="act" id="msgAct">
-      <div class="r r5" id="rCode"><div class="tkw"><div class="ticket"><div class="tk-stub"><svg viewBox="-50 -50 100 100"><use href="#star" x="-50" y="-50" width="100" height="100" fill="#3A0A12"/></svg></div><div class="tk-perf"></div><div class="tk-main"><span id="rCodeNote">Show this at the counter</span><b id="rCodeTxt"></b></div></div></div></div>
+      <div class="r r5" id="rCode"><div class="tkw"><div class="ticket"><div class="tk-stub"><svg viewBox="-50 -50 100 100"><use href="#star" x="-50" y="-50" width="100" height="100" fill="#3A0A12"/></svg><i class="tk-tt">Test</i></div><div class="tk-perf"></div><div class="tk-main"><span id="rCodeNote">Show this at the counter</span><b id="rCodeTxt"></b></div></div></div></div>
       <div class="r r6" style="width:100%" id="doneRow"><button class="btn" id="done">Redeem</button></div>
     </div>
   </div>
@@ -313,7 +316,7 @@ body:not(.ready) .scr{visibility:hidden}
 <script>
 "use strict";
 (function () {
-/* ═══ WheelDeal · the Jewel look · V2.2 New Jersey ═══════════════════
+/* ═══ WheelDeal · the Jewel look · V2.3 New Jersey ═══════════════════
    A fresh template beside Gold, Neon and Pop (Chirag, 24 Oct 2026, from
    "03 - Jewelchic WheelDeal - mockup.html"). wheel/index.html sends a
    wheel whose look is "jewel" here, with the same address query.
@@ -573,11 +576,15 @@ function liftOut(i) {
   const k = d.width / 400, cy = d.top + d.height / 2, mid = i * SEG + SEG / 2;
   const LIFT = 1.1, OUT = 10, C = 110, chord = 2 * 176 * Math.sin(Math.PI / N);
   segs[i].dataset.fill = segs[i].getAttribute("fill"); segs[i].setAttribute("fill", "#22050B"); segs[i].classList.remove("fade");
-  labels[i].style.opacity = 0;
+  labels[i].classList.remove("fade"); labels[i].style.opacity = 0;
   const lift = $("lift"); lift.innerHTML = "";
   const [x0, y0] = pt(176, i * SEG), [x1, y1] = pt(176, i * SEG + SEG), path = `M0 0L${x0} ${y0}A176 176 0 0 1 ${x1} ${y1}Z`;
   el("path", { d: path, fill: "url(#liftFill)" }, lift);
   const sheen = el("path", { d: path, fill: "url(#sheen)" }, lift);
+  /* V2.3: the prize's own words ride up with the piece, then dissolve into the big prize text — they never blink out */
+  const ghost = labels[i].cloneNode(true); ghost.removeAttribute("class"); ghost.style.cssText = "opacity:1;transition:opacity .9s ease";
+  lift.appendChild(ghost);
+  ghostT = setTimeout(() => (lose ? (ghost.style.opacity = 0) : morph(ghost)), lose ? 1500 : 1450);
   outline.setAttribute("d", path); lift.appendChild(outline);
   const [cx, cyy] = pt(C, mid), [ux, uy] = pt(1, mid);
   const lifted = { top: 176 * LIFT - C * LIFT + C + OUT, apex: C - C * LIFT + OUT };
@@ -607,7 +614,8 @@ function liftOut(i) {
   $("rPrize").style.fontSize = Math.round(Math.min(64, W * .19 * (big.length > 5 ? .62 : 1))) + "px";
   $("rDetail").textContent = lose ? (cfg.lose_line || "Thank you for spinning.") : (cfg.subline || "");
   $("rCode").style.display = lose ? "none" : ""; $("rDetail").style.maxWidth = "";
-  $("rCodeTxt").innerHTML = esc((result && result.code) || (PREVIEW ? (cfg.code_prefix || "WIN") + "-7Q4K" : "")) + (result && result.test ? '<span class="tt">TEST</span>' : "");
+  $("rCodeTxt").textContent = (result && result.code) || (PREVIEW ? (cfg.code_prefix || "WIN") + "-7Q4K" : "");
+  document.querySelectorAll(".ticket").forEach((t) => t.classList.toggle("test", !!(result && result.test)));
   const site = (cfg.site_url || "").trim();
   $("done").textContent = lose ? (site ? "Visit " + site.replace(/^https?:\/\//, "").replace(/\/$/, "") : "Done") : (cfg.redeem_label || "Redeem");
   lastWin = lose ? -1 : i;
@@ -621,7 +629,26 @@ function liftOut(i) {
   clearInterval(trickle);
   if (!lose) trickle = setInterval(() => { if ($("wheel").classList.contains("zoom")) addMote(true, T + H * .35); else clearInterval(trickle); }, 420);
 }
-let trickle = 0, lastWin = -1;
+let trickle = 0, lastWin = -1, ghostT = 0;
+/* V2.3: the prize on the piece glides and shrinks into the place of the big prize text, then hands over to it */
+function morph(g) {
+  const tx = g.querySelectorAll("text"), big = tx[0], sm = tx[1], pz = $("rPrize"), node = pz.firstChild;
+  if (!big || !node || !big.getScreenCTM()) { g.style.opacity = 0; return; }
+  const C = big.getScreenCTM(), M = Math.hypot(C.a, C.b), inv = C.inverse();
+  const rg = document.createRange(); rg.selectNodeContents(node); const tr = rg.getBoundingClientRect();
+  const lift = new DOMMatrix(getComputedStyle(pz).transform).m42 || 0, gb = big.getBoundingClientRect();
+  const loc = (x, y) => new DOMPoint(x, y).matrixTransform(inv);
+  const from = loc(gb.left + gb.width / 2, gb.top + gb.height / 2), to = loc(tr.left + tr.width / 2, tr.top - lift + tr.height / 2);
+  const k = parseFloat(getComputedStyle(pz).fontSize) / (+big.getAttribute("font-size") * M);
+  const base = g.getAttribute("transform") || "", t0 = performance.now(), dur = 700;
+  if (sm) { sm.style.transition = "opacity .45s ease"; sm.style.opacity = 0; }
+  (function step(t) {
+    const q = Math.min(1, (t - t0) / dur), e = q < .5 ? 4 * q * q * q : 1 - Math.pow(-2 * q + 2, 3) / 2, sc = 1 + (k - 1) * e;
+    g.setAttribute("transform", `${base} translate(${from.x + (to.x - from.x) * e} ${from.y + (to.y - from.y) * e}) scale(${sc}) translate(${-from.x} ${-from.y})`);
+    if (q < 1) ghostR = requestAnimationFrame(step); else { g.style.transition = "opacity .6s ease"; g.style.opacity = 0; }
+  })(t0);
+}
+let ghostR = 0;
 /* V2.2: the prize never runs past the edges of the lifted piece. The piece narrows to its point,
    so the words are checked against the piece's width at their lowest line and shrunk to fit. */
 function fitWedge(top, W, H) {
@@ -654,7 +681,7 @@ function sweepSheen() {
 }
 function reset() {
   $("msg").classList.remove("on"); $("wheel").classList.remove("zoom"); dial.style.transform = "";
-  $("lift").innerHTML = ""; $("lift").removeAttribute("transform"); outline.setAttribute("d", "");
+  clearTimeout(ghostT); cancelAnimationFrame(ghostR); $("lift").innerHTML = ""; $("lift").removeAttribute("transform"); outline.setAttribute("d", "");
   if (glow) glow.setAttribute("opacity", 0);
   segs.forEach((s) => { s.style.opacity = 1; if (s.dataset.fill) { s.setAttribute("fill", s.dataset.fill); delete s.dataset.fill; } s.classList.add("fade"); });
   labels.forEach((g) => { g.style.opacity = 1; g.classList.add("fade"); });
@@ -672,7 +699,7 @@ function openRedeem() {
   const i = lastWin; if (i < 0) return;
   const p = P[i];
   $("rdPrize").textContent = [p.t, p.s].filter(Boolean).join(" ");
-  $("rdCode").innerHTML = esc((result && result.code) || (PREVIEW ? (cfg.code_prefix || "WIN") + "-7Q4K" : "")) + (result && result.test ? '<span class="tt">TEST</span>' : "");
+  $("rdCode").textContent = (result && result.code) || (PREVIEW ? (cfg.code_prefix || "WIN") + "-7Q4K" : "");
   $("rdCodeNote").textContent = cfg.fine || "Show this at the counter";
   requestAnimationFrame(() => fitCode($("rdCode")));
   /* V2.2: one line on how, one line on when — nothing more */
@@ -761,6 +788,88 @@ function boot() {
 }
 addEventListener("resize", () => { if (!spent) size(); });
 boot();
+})();
+</script>
+<script>
+/* V2.3: glitter rain on a win (Chirag chose option C from mockup 06). Fires on wins only. */
+(function () {
+const FX = "C";
+const app = document.getElementById("app"), wheel = document.getElementById("wheel"), msg = document.getElementById("msg");
+const cv = document.createElement("canvas");
+cv.style.cssText = "position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:6";
+app.appendChild(cv);
+const c = cv.getContext("2d"), DPR = Math.min(2, window.devicePixelRatio || 1); let W = 0, H = 0;
+function size() { const r = app.getBoundingClientRect(); W = r.width; H = r.height; cv.width = W * DPR; cv.height = H * DPR; c.setTransform(DPR, 0, 0, DPR, 0, 0); }
+size(); addEventListener("resize", size);
+const rnd = (a, b) => a + Math.random() * (b - a), pick = (a) => a[Math.random() * a.length | 0];
+const GOLD = ["#FFF6DA", "#F8E2A6", "#EED39A", "#E3BF74", "#FFFFFF", "#D9B060"];
+let parts = [], timers = [];
+const later = (ms, f) => timers.push(setTimeout(f, ms));
+function clear() { timers.forEach(clearTimeout); timers = []; parts = []; }
+const add = (p) => parts.push(Object.assign({ x: 0, y: 0, vx: 0, vy: 0, g: 0, drag: 1, s: 2, rot: rnd(0, 6.3), vr: rnd(-.08, .08), life: 0, max: 80, k: "star", col: pick(GOLD), tw: rnd(0, 6) }, p));
+
+/* where things are, in the page's own pixels */
+const A = () => app.getBoundingClientRect();
+function piece() { const K = corners(); if (!K) return null;
+  const x = Math.min(K.c1.x, K.c2.x), w = Math.abs(K.c2.x - K.c1.x), y = Math.min(K.mid.y, K.c1.y, K.c2.y), h = K.apex.y - y;
+  return { x, y, w, h, cx: x + w / 2, cy: y + h * .3 }; }
+function along(f) { const o = document.querySelector("#lift .outline"); if (!o) return { x: 0, y: 0 };
+  const L = o.getTotalLength(), p = o.getPointAtLength(L * f).matrixTransform(o.getScreenCTM()), a = A(); return { x: p.x - a.left, y: p.y - a.top }; }
+function corners() { const o = document.querySelector("#lift .outline"); if (!o) return null; const L = o.getTotalLength(), e = 176 / L;
+  return { c1: along(e), mid: along(.5), c2: along(1 - e), apex: along(0) }; }
+function ticket() { const t = document.querySelector("#rCode .ticket"); if (!t) return null; const r = t.getBoundingClientRect(), a = A();
+  return { x: r.left - a.left, y: r.top - a.top, w: r.width, h: r.height, cx: r.left - a.left + r.width / 2, cy: r.top - a.top + r.height / 2 }; }
+
+/* drawing */
+function star(x, y, s, rot) { c.save(); c.translate(x, y); c.rotate(rot); c.beginPath(); c.moveTo(0, -s * 2.4); c.quadraticCurveTo(0, 0, s * 2.4, 0);
+  c.quadraticCurveTo(0, 0, 0, s * 2.4); c.quadraticCurveTo(0, 0, -s * 2.4, 0); c.quadraticCurveTo(0, 0, 0, -s * 2.4); c.fill(); c.restore(); }
+function ray(L, w) { c.beginPath(); c.moveTo(0, -w); c.lineTo(L, 0); c.lineTo(0, w); c.lineTo(-L, 0); c.closePath(); c.fill(); }
+function glint(x, y, s, rot, a) {
+  c.save(); c.translate(x, y); c.globalCompositeOperation = "lighter";
+  const g = c.createRadialGradient(0, 0, 0, 0, 0, s); g.addColorStop(0, `rgba(255,250,232,${a})`); g.addColorStop(.3, `rgba(248,226,166,${a * .45})`); g.addColorStop(1, "rgba(248,226,166,0)");
+  c.fillStyle = g; c.beginPath(); c.arc(0, 0, s, 0, 7); c.fill();
+  c.rotate(rot); c.fillStyle = `rgba(255,248,226,${a})`; ray(s * 2.4, s * .06); c.rotate(Math.PI / 2); ray(s * 2.4, s * .06);
+  c.rotate(Math.PI / 4); c.globalAlpha = .55; ray(s * 1.1, s * .045); c.rotate(Math.PI / 2); ray(s * 1.1, s * .045);
+  c.restore(); }
+(function loop() {
+  c.clearRect(0, 0, W, H);
+  parts = parts.filter((p) => p.life < p.max && p.y < H + 40);
+  for (const p of parts) {
+    p.life++; p.vx *= p.drag; p.vy = p.vy * p.drag + p.g; p.x += p.vx + (p.sway ? Math.sin(p.life * .06 + p.tw) * p.sway : 0); p.y += p.vy; p.rot += p.vr; p.tw += .18;
+    const fade = Math.max(0, Math.min(1, p.life / 6, (p.max - p.life) / (p.max * .45)));
+    if (p.k === "glint") { const q = p.life / p.max, s = p.s * Math.sin(Math.PI * q); glint(p.x, p.y, s, p.rot, Math.min(1, 1.6 * Math.sin(Math.PI * q))); continue; }
+    if (p.k === "ring") { const q = p.life / p.max; c.save(); c.globalCompositeOperation = "lighter"; c.strokeStyle = `rgba(248,226,166,${.5 * (1 - q)})`; c.lineWidth = 1 + 2.5 * (1 - q);
+      c.beginPath(); c.arc(p.x, p.y, p.s * (.15 + q), 0, 7); c.stroke(); c.restore(); continue; }
+    c.globalAlpha = fade * (p.k === "flake" ? .55 + .45 * Math.abs(Math.cos(p.rot * 2)) : .75 + .25 * Math.sin(p.tw)); c.fillStyle = p.col;
+    if (p.k === "flake") { c.save(); c.translate(p.x, p.y); c.rotate(p.rot); c.fillRect(-p.s, -p.s * .5 * Math.abs(Math.cos(p.rot * 1.7)) - .3, p.s * 2, p.s * Math.abs(Math.cos(p.rot * 1.7)) + .6); c.restore(); }
+    else if (p.k === "dot") { c.beginPath(); c.arc(p.x, p.y, p.s, 0, 7); c.fill(); }
+    else star(p.x, p.y, p.s, p.rot);
+  }
+  c.globalAlpha = 1; requestAnimationFrame(loop);
+})();
+
+/* ── the effect ── */
+const FXS = {
+  /* C · Glitter rain: fine gold foil drifts down over the piece; a short sprinkle falls over the coupon */
+  C: { piece() { const P = piece(); if (!P) return; const t0 = performance.now();
+         (function rain(t) { const q = (t - t0) / 2600; if (q > 1) return;
+           for (let n = 0; n < 5; n++) add({ k: "flake", x: Math.random() < .7 ? rnd(P.x, P.x + P.w) : rnd(0, W), y: rnd(-30, -4), vx: rnd(-.3, .3), vy: rnd(1.2, 2.8), sway: rnd(.3, .9), s: rnd(1.4, 3.4), vr: rnd(-.12, .12), max: 520 });
+           requestAnimationFrame(rain); })(t0);
+         const K = corners(); if (K) add({ k: "glint", x: K.mid.x, y: K.mid.y, s: 38, max: 50 }); },
+       coupon() { const T = ticket(); if (!T) return;
+         for (let n = 0; n < 70; n++) add({ k: "flake", x: rnd(T.x, T.x + T.w), y: T.y - rnd(10, 70), vx: rnd(-.3, .3), vy: rnd(.8, 1.8), sway: rnd(.2, .6), s: rnd(1.2, 2.8), vr: rnd(-.12, .12), max: rnd(60, 100) }); } }
+};
+
+/* when it fires: the piece has settled about 1.5 s after the camera moves in; the coupon arrives at 2.65 s */
+let was = false;
+new MutationObserver(() => {
+  const on = wheel.classList.contains("zoom");
+  if (on && !was) { was = true; if (msg.classList.contains("lose")) return; const fx = FXS[FX]; if (!fx) return;
+    later(1550, fx.piece); later(2700, fx.coupon); }
+  if (!on && was) { was = false; clear(); }
+}).observe(wheel, { attributes: true, attributeFilter: ["class"] });
+/* the glitter belongs to the win screen: it stops when Redeem opens */
+new MutationObserver(() => { if (app.classList.contains("redeeming")) clear(); }).observe(app, { attributes: true, attributeFilter: ["class"] });
 })();
 </script>
 </body>
