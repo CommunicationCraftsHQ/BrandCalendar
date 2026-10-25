@@ -7,7 +7,7 @@
 /* V1.8: nothing shows until the wheel's own look is known (no flash of the default yellow) */
 body:not(.wd-ready){background:#120D09!important}body:not(.wd-ready)>*{visibility:hidden}</style>
 <title>Spin to win</title>
-<meta name="cc-tool-version" content="V2.0 New Jersey">
+<meta name="cc-tool-version" content="V2.1 New Jersey">
 <meta name="robots" content="noindex">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -576,8 +576,11 @@ function boot(){
     /* V1.7: a Jewel wheel has its own page; the QR and the address stay the same */
     if (g.config && g.config.look === "jewel") { location.replace("jewel.html" + location.search); return; }
     applyGame(g);
-    if (g.status === "draft") return showState("This wheel opens soon.");
-    if (g.status === "closed") return showState("This wheel has closed.", "Thank you for joining in.");
+    /* V2.1 (26 Oct 2026): a test link opens in every status; visitors only while Live or Testing */
+    if (qs.get("test") !== "1") {
+      if (g.status === "draft") return showState("This wheel opens soon.");
+      if (g.status === "closed" || g.status === "archived") return showState("This wheel has closed.", "Thank you for joining in.");
+    }
     /* V2.0: a test (Testing status or the "Open a test spin" link) always starts fresh */
     if (qs.get("test") === "1") { try { localStorage.removeItem(KEEP); } catch(e){} }
     live = true; TESTING = g.status === "testing" || qs.get("test") === "1"; sheet("state", false);

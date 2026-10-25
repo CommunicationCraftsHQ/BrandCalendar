@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Spin the wheel</title>
-<meta name="cc-tool-version" content="V2.4 New Jersey">
+<meta name="cc-tool-version" content="V2.5 New Jersey">
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -857,8 +857,11 @@ function boot() {
   rpc("wheel_open", { p_slug: SLUG }).then((g) => {
     if (!g) return showState("This wheel isn't available.");
     applyGame(g);
-    if (g.status === "draft") return showState("This wheel opens soon.");
-    if (g.status === "closed") return showState("This wheel has closed.", "Thank you for joining in.");
+    /* V2.5 (26 Oct 2026): a test link opens in every status; visitors only while Live or Testing */
+    if (qs.get("test") !== "1") {
+      if (g.status === "draft") return showState("This wheel opens soon.");
+      if (g.status === "closed" || g.status === "archived") return showState("This wheel has closed.", "Thank you for joining in.");
+    }
     /* V2.1: a test (Testing status, or MarTech's "Open a test spin" link) always starts fresh */
     const TESTLINK = qs.get("test") === "1";
     if (TESTLINK) { try { localStorage.removeItem(KEEP); } catch (e) {} }
