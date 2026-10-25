@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.107 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.108 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14265,7 +14265,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.107 Tbilisi";
+const TOOL_VERSION="V118.108 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -50005,7 +50005,7 @@ function plMomCardHtml(){
 }
 </style>
 <style id="v118107-css">
-/* V118.107 Tbilisi — plan mode */
+/* V118.107 Tbilisi — plan mode · V118.108 the Excel sheet */
 #pm-root{position:relative;}
 /* plan colours — the only thing that changes between Live and Plan */
 :root{--pm:#334E68;--pm-d:#243B53;--pm-bg:#DFE5EC;--pm-soft:#F2F5F8;--pm-line:#B3C0CE;--pm-ink:var(--text);}
@@ -50202,6 +50202,15 @@ textarea.pm-v{width:100%;box-sizing:border-box;font:inherit;font-size:13.5px;lin
 .pm-rule .pm-lx{position:absolute;right:0;top:0;}
 .pm-rule.add span{color:var(--acc);cursor:pointer;font-size:12.5px;font-weight:600;display:inline-flex;gap:5px;align-items:center;}
 .pm-pr{cursor:default;}
+/* V118.108 — Excel */
+#calstrip.pl-row > .pmxl-b{order:9;margin-left:6px;position:relative;flex:none;}
+.pmxl-btn{display:inline-flex!important;align-items:center;gap:6px;height:32px;padding:0 12px!important;border:1px solid var(--div)!important;border-radius:10px!important;background:#fff!important;font-weight:600;cursor:pointer;white-space:nowrap;}
+.pmxl-btn .ti-chevron-down{font-size:12px;color:var(--subtle);}
+.pmxl-m{display:none;position:absolute;right:0;top:38px;z-index:60;background:#fff;border:1px solid var(--div);border-radius:12px;box-shadow:0 14px 34px rgba(13,13,13,.16);padding:6px;min-width:230px;}
+.pmxl-m.open{display:block;}
+.pmxl-i{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;font-size:13px;cursor:pointer;white-space:nowrap;} .pmxl-i:hover{background:var(--pm-soft);} .pmxl-i i{font-size:16px;color:var(--muted);}
+.pmxl-f{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:-4px 0 8px;} .pmxl-f i{font-size:16px;color:#1E7A45;}
+.pmxl-p ul{margin:6px 0 0;padding-left:18px;max-height:180px;overflow:auto;} .pmxl-p li{margin:2px 0;}
 
 </style>
 <script>
@@ -50740,6 +50749,8 @@ function pmPaintPillars(){
   } else { const ct=document.querySelector('#sb-months .bd-navi[data-tgt="bd-pl"] .ct'); if(ct) ct.textContent=pillars().length||""; }
 }
 window.pmPaintPillars=pmPaintPillars;
+/* V118.108 — the Excel sheet reads and writes the plan through these */
+window.PMX={D,entriesIn,pillars,monthRow,saveEntry,saveMonth,ensureMonth,paint,uuid,ym,fromYm,pmLive,FMTS,MNF,today};
 (function(){
   const base=renderBrief;
   renderBrief=function(){ const out=base.apply(this,arguments); try{ pmPaintPillars(); }catch(e){ console.warn("[pm] pillars",e); } return out; };
@@ -50779,6 +50790,257 @@ document.addEventListener("change",e=>{
 document.addEventListener("keydown",e=>{
   if(e.key==="Enter"&&e.target&&e.target.dataset&&(e.target.dataset.pmpNew||e.target.classList.contains("pm-tx")&&e.target.tagName==="INPUT")){ e.target.blur(); }
 },true);
+})();
+
+</script>
+<script>
+/* ══ V118.108 TBILISI · THE PLAN AS AN EXCEL SHEET ═════════════════════
+   Chirag, 26 Oct: "Can I download the excel format for the plan page so I
+   can fill it and upload it" — then "go" on this layout:
+     Months · Posts · Tasks · Production · Influencers · Pillars (read only)
+   One sheet, both directions. The download carries what is already
+   planned; a grey ID finds the same line again on upload, so a filled
+   download changes lines instead of adding them twice. Refs (P01, T01…)
+   let a task or a shoot name the posts it feeds. Uploading only fills
+   the plan — committing a month stays a separate step.
+   Lines missing from the sheet are left alone, never removed. */
+(function(){
+const X=()=>window.PMX;
+const H=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const MN3=["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const FMTW=f=>f?f.charAt(0).toUpperCase()+f.slice(1):"";
+const KREF={post:"P",task:"T",production:"S",influencer:"I"};
+const SHEETS={post:"Posts",task:"Tasks",production:"Production",influencer:"Influencers"};
+const COLS={
+  post:["ID","Ref","Year","Month","Day","One-line plan","Brief and copy","Pillar","Series","Format","Waiting on"],
+  task:["ID","Ref","Year","Month","Task","Brief","Owner","Due date","For posts"],
+  production:["ID","Ref","Year","Month","Day","Shoot","Where and what","Feeds posts"],
+  influencer:["ID","Ref","Year","Month","Name or handle","Brief"]};
+const WID={ID:12,Ref:7,Year:8,Month:10,Day:7,"One-line plan":44,"Brief and copy":60,Pillar:20,Series:18,Format:11,"Waiting on":28,
+  Task:44,Brief:50,Owner:16,"Due date":13,"For posts":16,Shoot:36,"Where and what":44,"Feeds posts":16,"Name or handle":28};
+const XL={open:false,rep:null,busy:false};
+window.PMXL=XL;
+const kOf=e=>e.year*12+(e.month-1);
+function ordered(kind){
+  const d=X().D(); if(!d) return [];
+  return d.entries.filter(e=>e.kind===kind).sort((a,b)=>kOf(a)-kOf(b)||((a.day||(a.due_date?Number(a.due_date.slice(8)):99))-(b.day||(b.due_date?Number(b.due_date.slice(8)):99)))||(a.sort_order-b.sort_order));
+}
+function refMap(){ const m={}; Object.keys(KREF).forEach(k=>ordered(k).forEach((e,i)=>{ m[e.id]=KREF[k]+String(i+1).padStart(2,"0"); })); return m; }
+
+/* ── download ─────────────────────────────────────────────────────── */
+async function download(){
+  const P=X(), d=P.D(); if(!d||!d.ok) return;
+  const EJ=await loadExportLib("exceljs");
+  const wb=new EJ.Workbook();
+  const lk=wb.addWorksheet("_lists"); lk.state="veryHidden";
+  const MONTHS=P.MNF.slice(1), FM=P.FMTS.map(FMTW), PL=P.pillars().map(p=>p.name||"").filter(Boolean);
+  MONTHS.forEach((v,i)=>lk.getCell(i+1,1).value=v);
+  FM.forEach((v,i)=>lk.getCell(i+1,2).value=v);
+  PL.forEach((v,i)=>lk.getCell(i+1,3).value=v);
+  const head=ws=>{ const r=ws.getRow(1); r.font={bold:true,color:{argb:"FFFFFFFF"},size:11}; r.height=22;
+    r.eachCell(c=>{ c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF334E68"}}; c.alignment={vertical:"middle"}; }); };
+  const LAST=300, refs=refMap();
+  const listOn=(ws,col,from,list,n)=>{ if(!n) return; for(let r=2;r<=LAST;r++) ws.getCell(r,col).dataValidation={type:"list",allowBlank:true,formulae:[`=_lists!$${list}$1:$${list}$${n}`],showErrorMessage:true}; };
+  const greyId=ws=>{ for(let r=2;r<=LAST;r++){ ws.getCell(r,1).font={color:{argb:"FFA8A6A1"},size:9}; ws.getRow(r).alignment={vertical:"top",wrapText:true}; } };
+  /* Months */
+  const wm=wb.addWorksheet("Months",{views:[{state:"frozen",ySplit:1}]});
+  wm.columns=[{header:"Year",width:8},{header:"Month",width:12},{header:"Objective",width:50},{header:"Theme",width:50},{header:"Goals (one per line)",width:60}];
+  d.months.slice().sort((a,b)=>kOf(a)-kOf(b)).forEach((m,i)=>{ const r=wm.getRow(i+2);
+    r.values=[m.year,P.MNF[m.month],m.objective||"",m.theme||"",(Array.isArray(m.goals)?m.goals:[]).filter(Boolean).join("\n")]; });
+  for(let r=2;r<=LAST;r++) wm.getRow(r).alignment={vertical:"top",wrapText:true};
+  listOn(wm,2,null,"A",12); head(wm);
+  /* the four kinds */
+  Object.keys(SHEETS).forEach(kind=>{
+    const ws=wb.addWorksheet(SHEETS[kind],{views:[{state:"frozen",ySplit:1,xSplit:2}]});
+    ws.columns=COLS[kind].map(h=>({header:h,width:WID[h]||14}));
+    ordered(kind).forEach((e,i)=>{
+      const feeds=(e.feeds||[]).map(f=>refs[f]).filter(Boolean).join(", ");
+      const pl=e.pillar_id&&P.pillars().find(p=>p.id===e.pillar_id);
+      const base=[e.id,refs[e.id],e.year,P.MNF[e.month]];
+      const v=kind==="post"?base.concat([e.day||null,e.title||"",e.body||"",pl?pl.name:"",e.series||"",FMTW(e.format),e.waiting_on||""])
+        :kind==="task"?base.concat([e.title||"",e.body||"",e.owner||"",e.due_date?new Date(e.due_date+"T00:00:00Z"):null,feeds])
+        :kind==="production"?base.concat([e.day||null,e.title||"",e.body||"",feeds])
+        :base.concat([e.title||"",e.body||""]);
+      ws.getRow(i+2).values=v;
+    });
+    greyId(ws); head(ws);
+    const c=n=>COLS[kind].indexOf(n)+1;
+    listOn(ws,c("Month"),null,"A",12);
+    if(kind==="post"){ listOn(ws,c("Format"),null,"B",FM.length); listOn(ws,c("Pillar"),null,"C",PL.length); }
+    if(kind==="task") for(let r=2;r<=LAST;r++) ws.getCell(r,c("Due date")).numFmt="d mmm yyyy";
+  });
+  /* Pillars, to read */
+  const wp=wb.addWorksheet("Pillars",{views:[{state:"frozen",ySplit:1}]});
+  wp.columns=[{header:"Pillar",width:24},{header:"Purpose",width:60},{header:"Series",width:44}];
+  P.pillars().forEach((p,i)=>{ wp.getRow(i+2).values=[p.name||"",p.purpose||"",(p.series||[]).join(", ")]; wp.getRow(i+2).alignment={vertical:"top",wrapText:true}; });
+  head(wp);
+  const buf=await wb.xlsx.writeBuffer();
+  const b=brands[activeBrand], name=`Plan - ${(b&&b.name||"brand").replace(/[\\/:*?"<>|]/g,"")}.xlsx`;
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})); a.download=name;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
+}
+window.pmxlDownload=download;
+
+/* ── reading a filled sheet ───────────────────────────────────────── */
+const txt=v=>v==null?"":(v instanceof Date?v.toISOString().slice(0,10):String(v)).replace(/\r/g,"").trim();
+function monthNo(v){
+  if(v==null||v==="") return null;
+  if(typeof v==="number") return v>=1&&v<=12?Math.round(v):null;
+  const s=String(v).trim().toLowerCase(); if(/^\d+$/.test(s)){ const n=Number(s); return n>=1&&n<=12?n:null; }
+  const i=MN3.findIndex(m=>m&&s.slice(0,3)===m.toLowerCase()); return i>0?i:null;
+}
+function isoDate(v){
+  if(v==null||v==="") return null;
+  if(v instanceof Date&&!isNaN(v)) return new Date(v.getTime()+12*3600e3).toISOString().slice(0,10);
+  if(typeof v==="number"){ const d=new Date(Date.UTC(1899,11,30)+v*864e5); return d.toISOString().slice(0,10); }
+  const s=String(v).trim(); let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(m) return `${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`;
+  m=s.match(/^(\d{1,2})[\/\-. ](\d{1,2})[\/\-. ](\d{4})$/); if(m) return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+  const t=Date.parse(s); if(!isNaN(t)){ const d=new Date(t); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+  return "bad";
+}
+function rowsOf(wb,name){
+  const sh=wb.Sheets[name]; if(!sh) return null;
+  const a=XLSX.utils.sheet_to_json(sh,{header:1,raw:true,defval:null});
+  if(!a.length) return [];
+  const hd=a[0].map(h=>String(h||"").trim().toLowerCase());
+  return a.slice(1).map((r,i)=>{ const o={_row:i+2}; hd.forEach((h,j)=>{ if(h) o[h]=r[j]; }); return o; })
+    .filter(o=>Object.keys(o).some(k=>k!=="_row"&&o[k]!=null&&String(o[k]).trim()!==""));
+}
+function plan(wb){
+  const P=X(), d=P.D(), probs=[], adds=[], changes=[], months=[];
+  const byId={}; d.entries.forEach(e=>byId[e.id]=e);
+  const pil={}; P.pillars().forEach(p=>{ pil[String(p.name||"").trim().toLowerCase()]=p.id; });
+  const fm={}; P.FMTS.forEach(f=>fm[f]=f);
+  const refTo={};          /* sheet ref -> entry id (existing or new) */
+  const pending=[];        /* [want, feedsText, kind, sheet, row] */
+  const sheetsSeen=[];
+  Object.keys(SHEETS).forEach(kind=>{
+    const rows=rowsOf(wb,SHEETS[kind]); if(rows==null) return; sheetsSeen.push(SHEETS[kind]);
+    rows.forEach(r=>{
+      const at=`${SHEETS[kind]} row ${r._row}`;
+      const y=Number(r.year), m=monthNo(r.month);
+      if(!(y>=2020&&y<=2100)||!m){ probs.push(`${at}: needs a Year and a Month`); return; }
+      const id=txt(r.id), old=id&&byId[id]&&byId[id].kind===kind?byId[id]:null;
+      if(id&&!old) probs.push(`${at}: the ID is not in this brand's plan — added as a new line`);
+      const w={year:y,month:m};
+      const dim=new Date(y,m,0).getDate();
+      const day=v=>{ if(v==null||v==="") return null; const n=Number(v); if(n>=1&&n<=dim) return Math.round(n); probs.push(`${at}: day ${txt(v)} is not in ${MN3[m]} ${y} — left blank`); return null; };
+      if(kind==="post"){
+        w.day=day(r.day); w.title=txt(r["one-line plan"]); w.body=txt(r["brief and copy"]); w.series=txt(r.series); w.waiting_on=txt(r["waiting on"]);
+        const pn=txt(r.pillar).toLowerCase(); w.pillar_id=pn?(pil[pn]||null):null;
+        if(pn&&!pil[pn]) probs.push(`${at}: pillar "${txt(r.pillar)}" is not on the Strategy page — left blank`);
+        const f=txt(r.format).toLowerCase(); w.format=f?(fm[f]||""):""; if(f&&!fm[f]) probs.push(`${at}: format "${txt(r.format)}" is not one of ${P.FMTS.map(FMTW).join(", ")} — left blank`);
+      } else if(kind==="task"){
+        w.title=txt(r.task); w.body=txt(r.brief); w.owner=txt(r.owner);
+        const dd=isoDate(r["due date"]); if(dd==="bad"){ probs.push(`${at}: due date "${txt(r["due date"])}" is not a date — left blank`); w.due_date=null; } else w.due_date=dd;
+      } else if(kind==="production"){
+        w.day=day(r.day); w.title=txt(r.shoot); w.body=txt(r["where and what"]);
+      } else { w.title=txt(r["name or handle"]); w.body=txt(r.brief); }
+      if(!w.title&&!w.body){ probs.push(`${at}: has no ${kind==="post"?"one-line plan":kind==="task"?"task":kind==="production"?"shoot":"name"} — skipped`); return; }
+      const eid=old?old.id:P.uuid();
+      const ref=txt(r.ref).toUpperCase(); if(ref){ if(refTo[ref]) probs.push(`${at}: ref ${ref} is used twice — the first one counts`); else refTo[ref]=eid; }
+      pending.push({kind,old,eid,w,feeds:kind==="task"?txt(r["for posts"]):kind==="production"?txt(r["feeds posts"]):null,at});
+    });
+  });
+  /* feeds, now that every ref is known */
+  pending.forEach(p=>{
+    if(p.feeds!=null){
+      const ids=[]; p.feeds.split(/[\s,;]+/).filter(Boolean).forEach(rf=>{ const id=refTo[rf.toUpperCase()]; const isPost=id&&(pending.some(q=>q.eid===id&&q.kind==="post")||(byId[id]&&byId[id].kind==="post"));
+        if(isPost) ids.push(id); else probs.push(`${p.at}: ${rf} is not a post ref on the Posts tab — not linked`); });
+      p.w.feeds=ids;
+    }
+    if(p.old){
+      const diff=Object.keys(p.w).filter(k=>JSON.stringify(p.w[k]??null)!==JSON.stringify(k==="feeds"?(p.old.feeds||[]):(p.old[k]??(typeof p.w[k]==="string"?"":null))));
+      if(diff.length) changes.push({e:p.old,w:p.w,diff});
+    } else adds.push({kind:p.kind,id:p.eid,w:p.w});
+  });
+  /* months */
+  const mrows=rowsOf(wb,"Months");
+  if(mrows){ sheetsSeen.unshift("Months"); mrows.forEach(r=>{
+    const y=Number(r.year), m=monthNo(r.month), at=`Months row ${r._row}`;
+    if(!(y>=2020&&y<=2100)||!m){ probs.push(`${at}: needs a Year and a Month`); return; }
+    const goals=txt(r["goals (one per line)"]??r.goals).split("\n").map(s=>s.replace(/^[\s•\-–*]+/,"").trim()).filter(Boolean);
+    const w={objective:txt(r.objective),theme:txt(r.theme),goals};
+    const old=P.monthRow(y,m);
+    if(!old) months.push({y,m,w,add:true});
+    else if(old.objective!==w.objective||old.theme!==w.theme||JSON.stringify(old.goals||[])!==JSON.stringify(goals)) months.push({y,m,w,add:false});
+  }); }
+  return {adds,changes,months,probs,sheetsSeen};
+}
+async function upload(file){
+  if(!file) return;
+  if(!window.XLSX){ toast("The Excel reader did not load — reload the page","err"); return; }
+  try{
+    const wb=XLSX.read(await file.arrayBuffer(),{type:"array",cellDates:true});
+    const rep=plan(wb);
+    if(!rep.sheetsSeen.length){ toast("This is not a plan sheet — download one from Plan mode first","err"); return; }
+    XL.rep=rep; XL.name=file.name; XL.open=false; paintDlg();
+  }catch(e){ toast("The sheet could not be read: "+(e.message||e),"err"); }
+}
+async function apply(){
+  const P=X(), d=P.D(), rep=XL.rep; if(!rep||XL.busy) return;
+  XL.busy=true; paintDlg();
+  const now=new Date().toISOString(); let bad=0;
+  for(const mo of rep.months){
+    const mr=P.ensureMonth(P.ym(mo.y,mo.m)); Object.assign(mr,mo.w); if(!(await P.saveMonth(mr))) bad++;
+  }
+  for(const a of rep.adds){
+    P.ensureMonth(P.ym(a.w.year,a.w.month));
+    const n=d.entries.filter(e=>e.kind===a.kind&&e.year===a.w.year&&e.month===a.w.month).length;
+    const e=Object.assign({id:a.id,brand_id:activeBrand,kind:a.kind,day:null,due_date:null,title:"",body:"",format:"",pillar_id:null,series:"",waiting_on:"",owner:"",feeds:[],sort_order:n,committed_at:null,committed_ref:null},a.w);
+    d.entries.push(e); if(!(await P.saveEntry(e))) bad++;
+  }
+  for(const c of rep.changes){
+    if(c.w.year!==c.e.year||c.w.month!==c.e.month) P.ensureMonth(P.ym(c.w.year,c.w.month));
+    Object.assign(c.e,c.w); if(!(await P.saveEntry(c.e))) bad++;
+  }
+  XL.busy=false; XL.rep=null; paintDlg();
+  toast(bad?`The sheet went in with ${bad} line${bad===1?"":"s"} not saved`:`Plan updated from the sheet`,bad?"err":"");
+  P.paint();
+}
+
+/* ── the button and the check box ─────────────────────────────────── */
+function paintDlg(){
+  let host=document.getElementById("pmxl-dlg");
+  if(!XL.rep){ if(host) host.remove(); return; }
+  if(!host){ host=document.createElement("div"); host.id="pmxl-dlg"; document.body.appendChild(host); }
+  const r=XL.rep, P=X();
+  const cnt=k=>r.adds.filter(a=>a.kind===k).length, chg=k=>r.changes.filter(c=>c.e.kind===k).length;
+  const line=(ic,lbl,k)=>`<div class="pm-dl"><i class="ti ${ic}"></i><b>${lbl}</b><span>${cnt(k)} new · ${chg(k)} changed</span></div>`;
+  const ma=r.months.filter(m=>m.add).length, mc=r.months.length-ma;
+  const nothing=!r.adds.length&&!r.changes.length&&!r.months.length;
+  host.innerHTML=`<div class="pm-scrim" data-pmx="close"><div class="pm-dlg pmxl" data-pmx="none"><div class="pm-dh"><b>Upload to the plan</b><i class="ti ti-x" data-pmx="close"></i></div>
+    <div class="pmxl-f"><i class="ti ti-file-spreadsheet"></i>${H(XL.name||"")}</div>
+    <div class="pm-dl"><i class="ti ti-target"></i><b>Months</b><span>${ma} new · ${mc} changed</span></div>
+    ${line("ti-photo","Posts","post")}${line("ti-clipboard-text","Tasks","task")}${line("ti-video","Production","production")}${line("ti-users","Influencers","influencer")}
+    ${r.probs.length?`<div class="pm-dn warn pmxl-p"><b>${r.probs.length} thing${r.probs.length===1?"":"s"} to check</b><ul>${r.probs.slice(0,12).map(p=>`<li>${H(p)}</li>`).join("")}${r.probs.length>12?`<li>…and ${r.probs.length-12} more</li>`:""}</ul></div>`:""}
+    <div class="pm-dn">${nothing?"Nothing in the sheet is different from the plan.":"Lines left out of the sheet stay in the plan. Nothing is sent to the live calendar until you commit a month."}</div>
+    <div class="pm-db"><button class="btn btn-w btn-sm" data-pmx="close">Cancel</button>${nothing?"":`<button class="btn btn-sm pm-commit" data-pmx="apply"${XL.busy?" disabled":""}><i class="ti ti-upload"></i> ${XL.busy?"Saving…":"Update the plan"}</button>`}</div></div></div>`;
+}
+function dressXl(){
+  const strip=document.getElementById("calstrip"); if(!strip) return;
+  const has=strip.querySelector(".pmxl-b");
+  if(!document.documentElement.classList.contains("pm-on")||X().pmLive()){ if(has) has.remove(); return; }
+  if(has) return;
+  strip.insertAdjacentHTML("beforeend",`<div class="pmxl-b"><button class="tab-item pmxl-btn" data-pmx="menu" title="Excel"><i class="ti ti-file-spreadsheet"></i> Excel <i class="ti ti-chevron-down"></i></button>
+    <div class="pmxl-m${XL.open?" open":""}"><div class="pmxl-i" data-pmx="down"><i class="ti ti-download"></i>Download the plan sheet</div><div class="pmxl-i" data-pmx="up"><i class="ti ti-upload"></i>Upload a filled sheet</div></div>
+    <input type="file" accept=".xlsx,.xls" class="pmxl-in" hidden></div>`);
+}
+(function(){ const base=render; render=function(){ const o=base.apply(this,arguments); try{ XL.open=false; dressXl(); }catch(e){ console.warn("[pmxl]",e); } return o; }; })();
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-pmx]");
+  const m=document.querySelector(".pmxl-m");
+  if(!t){ if(m&&m.classList.contains("open")&&!e.target.closest(".pmxl-b")) m.classList.remove("open"); return; }
+  const a=t.dataset.pmx; e.stopPropagation();
+  if(a==="none") return;
+  if(a==="menu"){ if(m) m.classList.toggle("open"); return; }
+  if(a==="down"){ if(m) m.classList.remove("open"); download().catch(er=>toast("The sheet could not be made: "+(er.message||er),"err")); return; }
+  if(a==="up"){ if(m) m.classList.remove("open"); const i=document.querySelector(".pmxl-in"); if(i){ i.value=""; i.click(); } return; }
+  if(a==="close"){ if(t.classList.contains("pm-scrim")&&e.target!==t) return; if(XL.busy) return; XL.rep=null; paintDlg(); return; }
+  if(a==="apply"){ apply(); return; }
+},true);
+document.addEventListener("change",e=>{ const t=e.target; if(t&&t.classList&&t.classList.contains("pmxl-in")) upload(t.files&&t.files[0]); },true);
+window.pmxlUpload=upload;
 })();
 
 </script>
