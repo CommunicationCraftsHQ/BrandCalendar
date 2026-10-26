@@ -7,7 +7,7 @@
 /* V1.8: nothing shows until the wheel's own look is known (no flash of the default yellow) */
 body:not(.wd-ready){background:#120D09!important}body:not(.wd-ready)>*{visibility:hidden}</style>
 <title>Spin to win</title>
-<meta name="cc-tool-version" content="V2.1 New Jersey">
+<meta name="cc-tool-version" content="V2.2 New Jersey">
 <meta name="robots" content="noindex">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -553,10 +553,16 @@ $("form").addEventListener("submit", async (e) => {
   } finally { $("fGo").disabled = false; $("fGo").textContent = "Unlock my spin"; }
 });
 
+const LOOK_PAGE = { jewel: "jewel.html", crimson: "crimson.html" };
 function boot(){
   if (PREVIEW){
     window.addEventListener("message", (e) => {
-      if (e.data && e.data.type === "wd-preview") applyGame(e.data.game);
+      if (e.data && e.data.type === "wd-preview") {
+        /* V2.2: a look with its own page previews on that page (the parent sends again when it loads) */
+        const lk = e.data.game && e.data.game.config && e.data.game.config.look;
+        if (LOOK_PAGE[lk]) { location.replace(LOOK_PAGE[lk] + location.search); return; }
+        applyGame(e.data.game);
+      }
       /* V2.0: MarTech's step bar jumps the preview to a screen */
       if (e.data && e.data.type === "wd-goto"){
         const s = e.data.step; clearCelebration(); won = -1; angle = 0; setRot(); draw(); sheet("form", s === "form");
@@ -574,7 +580,8 @@ function boot(){
   rpc("wheel_open", { p_slug: SLUG }).then((g) => {
     if (!g) return showState("This wheel isn't available.");
     /* V1.7: a Jewel wheel has its own page; the QR and the address stay the same */
-    if (g.config && g.config.look === "jewel") { location.replace("jewel.html" + location.search); return; }
+    /* V2.2: Crimson (Atul Bakery) has its own page too */
+    if (g.config && LOOK_PAGE[g.config.look]) { location.replace(LOOK_PAGE[g.config.look] + location.search); return; }
     applyGame(g);
     /* V2.1 (26 Oct 2026): a test link opens in every status; visitors only while Live or Testing */
     if (qs.get("test") !== "1") {
