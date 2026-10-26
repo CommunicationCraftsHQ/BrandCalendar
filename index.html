@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.114 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.115 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -11965,7 +11965,7 @@ function brVisible(){
      thing this hides on its own is the archive. */
   let out=brBaseRows();
   if(brCV()) out=out.filter(t=>!t.client_hidden);
-  out=out.filter(t=>fltKeep(t,brFilter.f,brValsOf));
+  { const open=BR_OPEN; out=out.filter(t=>t.id===open||fltKeep(t,brFilter.f,brValsOf)); }   /* V118.115 — the task you have open stays in view even when it no longer matches (it turned Delivered under Open tasks) */
   if((brFilter.q||"").trim()){
     /* The task name, the project it belongs to and the brief — the three
        things somebody would type looking for a job they half remember. */
@@ -12120,7 +12120,7 @@ function buildBrandingSidebar(){
   base.forEach(t=>{ if(t.project_id) pc.set(t.project_id,(pc.get(t.project_id)||0)+1); else none++;
                     brTagIds(t).forEach(id=>tc.set(id,(tc.get(id)||0)+1)); });
   const pSel=btsSel("project"), tSel=btsSel("tag"), pNone=btsEmptySel("project");
-  const clear=!pSel.length&&!tSel.length&&!pNone;
+  const clear=!(brFilter.f||[]).some(fltActive)&&!(brFilter.q||"").trim();   /* V118.115 — All tasks means no filter at all */
   const row=(kind,x,c,on)=>{
     if(BTS.ren===x.id) return `<div class="mdb-trow menu" onclick="event.stopPropagation()"><input class="mdb-ren" id="bts-ren" value="${escAttr(x.name)}"
         onkeydown="if(event.key==='Enter'){event.preventDefault();btsRename('${kind}','${x.id}',this.value);}if(event.key==='Escape'){BTS.ren=null;buildBrandingSidebar();}"
@@ -12141,11 +12141,170 @@ function buildBrandingSidebar(){
     `<div class="mdb-trow${clear?" on":""}" onclick="btsClear()"><span class="nm">All tasks</span><span class="ct">${base.length}</span></div>`+
     projects.map(p=>row("project",p,pc.get(p.id)||0,pSel.includes(p.id))).join("")+
     (none?`<div class="mdb-trow${pNone?" on":""}" onclick="btsPickNone()"><span class="nm">No project</span><span class="ct">${none}</span></div>`:"")+
+    bfavHtml()+   /* V118.115 — favourites sit between Projects and Tags */
     head("tag","Tags")+addRow("tag")+
     (tags.length?tags.map(t=>row("tag",t,tc.get(t.id)||0,tSel.includes(t.id))).join("")
                 :`<div class="mdb-trow" style="color:var(--subtle);cursor:default">No tags yet</div>`);
   const r=document.getElementById("bts-ren")||document.getElementById("bts-add"); if(r){ r.focus(); if(r.id==="bts-ren") r.select(); }
 }
+/* ══ V118.115 TBILISI · FAVOURITE FILTERS ═══════════════════════════════
+   Chirag, 26 Oct (mockup 01 Favourite filters, "build"): a Favourites
+   section in the Tasks left panel, between Projects and Tags. Two are
+   built in — Open tasks (not Delivered, not Cancelled, not archived; the
+   page opens on it) and Archived — and anyone can save their own from
+   the filter bar ("☆ Save as favourite"). Saved ones are personal
+   (task_favourites, one row per person per favourite) and carry ⋯ with
+   Rename · Update to the current filter · Remove. Clicking the favourite
+   that is on switches it off. A favourite writes the same kit filter
+   the + Filter door writes, so the bar, the count and the panel agree.
+   The Filter menu offers only Status and Archived now; Project and Tag
+   stay as fields (the panel still writes them), Ac Manager, Late and
+   Unread are simply not offered. */
+const BFAV_BUILTIN=[
+  {id:"__open",name:"Open tasks",builtin:true,spec:{f:[{k:"status",op:"is not",vals:["closed","cancelled"]}]}},
+  {id:"__arch",name:"Archived",builtin:true,spec:{f:[{k:"archived",op:"is",vals:["yes"]}]}}];
+let BFAV={mine:[],ok:false,tried:false,menu:null,ren:null,save:false,busy:false,defaulted:false};
+async function bfavLoad(){
+  if(BFAV.tried) return; BFAV.tried=true;
+  try{ const r=await sb.from("task_favourites").select("*").is("deleted_at",null).order("sort").order("created_at");
+       if(!r.error){ BFAV.mine=(r.data||[]).filter(x=>!x.deleted_at); BFAV.ok=true; } }catch(e){}
+  if(view==="branding") render();
+}
+function bfavAll(){ return BFAV_BUILTIN.concat(BFAV.mine.map(x=>({id:x.id,name:x.name,spec:x.spec||{f:[]}}))); }
+function bfavNorm(spec){
+  const f=((spec&&spec.f)||[]).map(x=>({k:x.k,op:x.op||"is",vals:[...(x.vals||[])].map(String).sort()}))
+    .filter(x=>fltActive({op:x.op,vals:new Set(x.vals)}))
+    .sort((a,b)=>(a.k+"|"+a.op).localeCompare(b.k+"|"+b.op));
+  return {f,q:String((spec&&spec.q)||"").trim()};
+}
+function bfavNow(){ return {f:(brFilter.f||[]).map(x=>({k:x.k,op:fltOpOf(x),vals:[...(x.vals||[])]})),q:brFilter.q||"",sort:brSort}; }
+function bfavSame(a,b){ return JSON.stringify(bfavNorm(a))===JSON.stringify(bfavNorm(b)); }
+function bfavOnId(){ const now=bfavNow(); const n=bfavNorm(now); if(!n.f.length&&!n.q) return null; const h=bfavAll().find(x=>bfavSame(x.spec,now)); return h?h.id:null; }
+function bfavSet(spec){
+  brFilter.f=((spec&&spec.f)||[]).map(x=>({k:x.k,op:x.op||"is",vals:new Set(x.vals||[])}));
+  brFilter.q=String((spec&&spec.q)||"");
+}
+function bfavCount(spec){
+  const keep={f:brFilter.f,q:brFilter.q}; let n=0;
+  try{ bfavSet(spec); n=brVisible().length; }catch(e){}
+  brFilter.f=keep.f; brFilter.q=keep.q; return n;
+}
+function bfavPick(id){
+  const x=bfavAll().find(y=>y.id===id); if(!x) return;
+  BFAV.menu=null;
+  if(bfavOnId()===id){ brFilter.f=[]; brFilter.q=""; }
+  else { bfavSet(x.spec); if(x.spec&&x.spec.sort&&BR_SORT[x.spec.sort]&&x.spec.sort!==brSort){ brSort=x.spec.sort; try{ localStorage.setItem(BR_SORT_LS,brSort); }catch(e){} } }
+  btsRefresh();
+}
+function bfavHtml(){
+  const on=bfavOnId(), may=!!ME&&!!ME.email;
+  const row=x=>{
+    if(BFAV.ren===x.id) return `<div class="mdb-trow menu" onclick="event.stopPropagation()"><input class="mdb-ren" id="bfav-ren" value="${escAttr(x.name)}"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();bfavRename('${x.id}',this.value);}if(event.key==='Escape'){BFAV.ren=null;buildBrandingSidebar();}"
+        onblur="bfavRename('${x.id}',this.value)"></div>`;
+    const m=BFAV.menu===x.id, own=!x.builtin;
+    return `<div class="mdb-trow bfav${on===x.id?" on":""}${m?" menu":""}" data-fav="${escAttr(x.id)}" onclick="bfavPick('${escAttr(x.id)}')">
+      <span class="bfav-st">★</span><span class="nm">${escHtml(x.name)}</span><span class="ct${own?" hasm":""}">${bfavCount(x.spec)}</span>
+      ${own?`<button class="mdb-tmb" title="${escAttr(x.name)} options" onclick="bfavMenu(event,'${escAttr(x.id)}')"><i class="ti ti-dots"></i></button>`:""}
+      ${m?`<div class="mdb-menu" onclick="event.stopPropagation()">
+        <div class="mdb-mi" onclick="BFAV.menu=null;BFAV.ren='${escAttr(x.id)}';buildBrandingSidebar()"><i class="ti ti-pencil"></i>Rename</div>
+        <div class="mdb-mi" onclick="bfavUpdate('${escAttr(x.id)}')"><i class="ti ti-refresh"></i>Update to the current filter</div>
+        <div class="mdb-msep"></div>
+        <div class="mdb-mi red" onclick="bfavRemove('${escAttr(x.id)}')"><i class="ti ti-x"></i>Remove</div></div>`:""}</div>`;
+  };
+  return `<div class="s-lbl sb-head" style="margin-top:18px"><span>Favourites</span></div>`+bfavAll().map(row).join("");
+}
+function bfavMenu(e,id){ e.stopPropagation(); BFAV.menu=BFAV.menu===id?null:id; buildBrandingSidebar(); }
+document.addEventListener("click",e=>{
+  if(view!=="branding") return;
+  if(BFAV.menu&&!(e.target.closest&&e.target.closest(".mdb-menu"))){ BFAV.menu=null; buildBrandingSidebar(); }
+  if(BFAV.save&&!(e.target.closest&&e.target.closest(".bfav-w"))){ BFAV.save=false; render(); }
+});
+/* ── saving from the bar ─────────────────────────────────────────── */
+function bfavSaveHtml(){
+  const n=bfavNorm(bfavNow());
+  if(!n.f.length&&!n.q) return "";
+  if(bfavOnId()) return "";
+  return `<span class="bfav-w" onclick="event.stopPropagation()"><button class="bfav-save" data-fav-save onclick="bfavSaveOpen(event)">☆ Save as favourite</button>${BFAV.save?`
+    <div class="bfav-pop"><div class="h">Save as favourite</div>
+      <input id="bfav-name" maxlength="60" placeholder="Name it" onkeydown="if(event.key==='Enter'){event.preventDefault();bfavSave();}if(event.key==='Escape'){BFAV.save=false;render();}">
+      <div class="what">${escHtml(bfavWords(bfavNow()))}</div>
+      <div class="bt"><button class="btn btn-g" onclick="BFAV.save=false;render()">Cancel</button><button class="btn btn-p" ${BFAV.busy?"disabled":""} onclick="bfavSave()">Save</button></div></div>`:""}</span>`;
+}
+function bfavWords(spec){
+  const n=bfavNorm(spec), L=[];
+  n.f.forEach(f=>{
+    const fd=BR_FIELDS.find(x=>x.k===f.k); const lab=fd?fd.label:f.k;
+    const nm=v=>{ if(f.k==="status") return BR_STATUS[v]||v; if(f.k==="project") return (brProject(v)||{}).name||v; if(f.k==="tag") return (brTag(v)||{}).name||v;
+                  if(f.k==="owner") return brPersonName(v)||v; return v==="yes"?"Yes":v==="no"?"No":v; };
+    L.push(fltOpNeedsValues(f.op)?`${lab} ${f.op} ${f.vals.map(nm).join(", ")}`:`${lab} ${f.op}`);
+  });
+  if(n.q) L.push(`search “${n.q}”`);
+  if(spec&&spec.sort&&BR_SORT[spec.sort]) L.push(`sorted by ${BR_SORT[spec.sort]}`);
+  return "Saves: "+L.join(" · ");
+}
+function bfavSaveOpen(e){ if(e) e.stopPropagation(); BFAV.save=!BFAV.save; render(); setTimeout(()=>{ const i=document.getElementById("bfav-name"); if(i) i.focus(); },40); }
+async function bfavSave(){
+  const i=document.getElementById("bfav-name"), name=String(i?i.value:"").trim().slice(0,60);
+  if(!name){ toast("Give the favourite a name","err"); return; }
+  if(bfavAll().some(x=>x.name.toLowerCase()===name.toLowerCase())){ toast(`There is already a favourite called “${escHtml(name)}”`,"err"); return; }
+  const me=String(ME.email||"").toLowerCase(); if(!me) return;
+  const row={id:crypto.randomUUID(),user_email:me,name,spec:bfavNow(),sort:BFAV.mine.length,created_at:new Date().toISOString(),deleted_at:null};
+  BFAV.busy=true;
+  const r=await sb.from("task_favourites").insert([row]);
+  BFAV.busy=false;
+  if(r.error){ toast("Not saved — "+escHtml(r.error.message),"err"); return; }
+  BFAV.mine.push(row); BFAV.save=false; render();
+  toast(`★ ${escHtml(name)} saved`);
+}
+async function bfavRename(id,v){
+  if(BFAV.ren!==id) return; BFAV.ren=null;
+  const x=BFAV.mine.find(y=>y.id===id), name=String(v||"").trim().slice(0,60);
+  if(!x||!name||name===x.name){ buildBrandingSidebar(); return; }
+  const r=await sb.from("task_favourites").update({name,updated_at:new Date().toISOString()}).eq("id",id);
+  if(r.error){ toast("Not renamed — "+escHtml(r.error.message),"err"); buildBrandingSidebar(); return; }
+  x.name=name; buildBrandingSidebar();
+}
+async function bfavUpdate(id){
+  BFAV.menu=null;
+  const x=BFAV.mine.find(y=>y.id===id); if(!x) return;
+  const n=bfavNorm(bfavNow()); if(!n.f.length&&!n.q){ toast("Pick a filter first, then update","err"); buildBrandingSidebar(); return; }
+  const spec=bfavNow();
+  const r=await sb.from("task_favourites").update({spec,updated_at:new Date().toISOString()}).eq("id",id);
+  if(r.error){ toast("Not updated — "+escHtml(r.error.message),"err"); return; }
+  x.spec=spec; render(); toast(`★ ${escHtml(x.name)} updated`);
+}
+async function bfavRemove(id){
+  BFAV.menu=null;
+  const x=BFAV.mine.find(y=>y.id===id); if(!x) return;
+  const r=await sb.from("task_favourites").update({deleted_at:new Date().toISOString()}).eq("id",id);
+  if(r.error){ toast("Not removed — "+escHtml(r.error.message),"err"); return; }
+  BFAV.mine=BFAV.mine.filter(y=>y.id!==id); render(); toast(`${escHtml(x.name)} removed`);
+}
+/* ── the Filter menu offers Status and Archived only ─────────────── */
+const BR_MENU_FIELDS=["status","archived"];
+(function(){
+  const base=fltAddHtml;
+  fltAddHtml=function(id){
+    if(id!=="tasks") return base.apply(this,arguments);
+    const h=fltHost(id), all=h.fields;
+    h.fields=all.filter(fd=>BR_MENU_FIELDS.includes(fd.k));
+    try{ return base.apply(this,arguments); } finally { h.fields=all; }
+  };
+})();
+/* ── the page opens on Open tasks; favourites load once ─────────── */
+(function(){
+  const base=render;
+  render=function(){
+    try{
+      if(view==="branding"&&ME&&ME.id){
+        if(!BFAV.tried) bfavLoad();
+        if(!BFAV.defaulted){ BFAV.defaulted=true; if(!(brFilter.f||[]).length&&!(brFilter.q||"").trim()) bfavSet(BFAV_BUILTIN[0].spec); }
+      }
+    }catch(e){}
+    return base.apply(this,arguments);
+  };
+})();
 function btsMenuHtml(kind,x,c){
   const others=(kind==="project"?BR.projects:BR.tags).filter(y=>y.id!==x.id).sort((a,b)=>a.name.localeCompare(b.name));
   if(BTS.merge) return `<div class="mdb-menu" onclick="event.stopPropagation()"><div class="brfb-top">Merge “${escHtml(x.name)}” into</div>
@@ -12180,7 +12339,7 @@ function btsPickNone(){
   if(!had) brFilter.f.push({k:"project",op:"is empty",vals:new Set()});
   btsRefresh();
 }
-function btsClear(){ brFilter.f=(brFilter.f||[]).filter(f=>f.k!=="project"&&f.k!=="tag"); btsRefresh(); }
+function btsClear(){ brFilter.f=[]; brFilter.q=""; btsRefresh(); }   /* V118.115 — All tasks shows everything (favourites included) */
 /* a shared link: ?p=branding&project=<id> or &tag=<id> */
 function btsFromUrl(q){
   const pj=q.get("project"), tg=q.get("tag"); if(!pj&&!tg) return;
@@ -13474,7 +13633,7 @@ function renderBranding(){
    <div class="fb">
      <input class="fi fb-q" placeholder="Search tasks…" value="${escAttr(brFilter.q||"")}"
         oninput="brSetQ(this.value)" onclick="event.stopPropagation()">
-     ${BR.ok?fltChipsHtml("tasks"):""}
+     ${BR.ok?fltChipsHtml("tasks"):""}${BR.ok&&!brCV()?bfavSaveHtml():""}
      <span class="fb-end">
        ${BR.ok?`<span data-gate="br-count">${fltCountHtml(rows.length,filtered&&rows.length!==total?total:rows.length,
           brArchivedOnly()?"Archived task":"Branding task")}${brDlvView?`<span class="dv-cnt">· ${rows.filter(t=>dlvTaskDone(t.id)).length} fully delivered</span>`:""}</span>`:""}
@@ -14265,7 +14424,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.114 Tbilisi";
+const TOOL_VERSION="V118.115 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -46465,6 +46624,20 @@ function v38Dress(){
 .dlv-menu .mi.off{opacity:.45;pointer-events:none;}
 .dvch.s-delivered{background:#EEF7EE;border-color:#BFDCC4;color:#1E6B2E;}.dvch.s-delivered b{color:#1E6B2E;}
 .dlv-p.s-delivered{background:#EEF7EE;color:#1E6B2E;}
+</style>
+<style id="bfav-css">
+/* V118.115 TBILISI · favourite filters */
+.mdb-trow.bfav .bfav-st{flex:none;width:14px;text-align:center;font-size:12px;color:#C9A227;}
+.mdb-trow.bfav.on .bfav-st{color:#F2D26B;}
+.bfav-w{position:relative;display:inline-flex;}
+.bfav-save{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 11px;border-radius:999px;font-size:12px;font-weight:700;color:#8A6D00;background:#FBF3DC;border:1px solid #EBD9A2;cursor:pointer;white-space:nowrap;}
+.bfav-save:hover{border-color:#D9BF6E;}
+.bfav-pop{position:absolute;left:0;top:calc(100% + 6px);z-index:900;width:300px;background:var(--surface,#fff);border:1px solid var(--div);border-radius:12px;box-shadow:0 18px 46px rgba(13,13,13,.18);padding:12px;}
+.bfav-pop .h{font-weight:700;font-size:13px;margin-bottom:8px;}
+.bfav-pop input{width:100%;height:34px;border:1px solid var(--div);border-radius:8px;padding:0 10px;font:inherit;font-size:13px;box-sizing:border-box;}
+.bfav-pop input:focus{outline:none;border-color:var(--text);}
+.bfav-pop .what{margin-top:8px;font-size:11.5px;color:var(--muted);line-height:1.45;}
+.bfav-pop .bt{display:flex;justify-content:flex-end;gap:8px;margin-top:12px;}
 </style>
 <style id="hd-css">
 /* ══ V118.41 TBILISI · HELP DESK LIVES IN THE CALENDAR ══════════════════
