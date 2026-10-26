@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.112 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.114 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14265,7 +14265,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.112 Tbilisi";
+const TOOL_VERSION="V118.114 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -50367,7 +50367,7 @@ function stPill(y,m){
   const s=monthState(y,m);
   if(s==="done") return `<span class="pm-st done"><i class="ti ti-check"></i> Committed</span>`;
   if(s==="ready") return `<span class="pm-st ready">Ready to commit</span>`;
-  if(s==="plan") return `<span class="pm-st">In plan</span>`;
+  if(s==="plan") return `<span class="pm-st">In planner</span>`;
   return `<span class="pm-st z">Not planned</span>`;
 }
 function lineSt(e){
@@ -50383,7 +50383,7 @@ function dressRow(){
   if(!strip||!(view==="mplan"&&pmAllowed()&&typeof plOn==="function"&&plOn())){ document.documentElement.classList.remove("pm-on"); return; }
   const plan=!pmLive();
   document.documentElement.classList.toggle("pm-on",plan);
-  strip.insertAdjacentHTML("afterbegin",`<div class="tab-pill pm-mode"><button class="tab-item${plan?"":" on"}" data-pm="mode" data-v="live">Live</button><button class="tab-item${plan?" on":""}" data-pm="mode" data-v="plan">Plan</button></div>`);
+  strip.insertAdjacentHTML("afterbegin",`<div class="tab-pill pm-mode"><button class="tab-item${plan?"":" on"}" data-pm="mode" data-v="live">Live</button><button class="tab-item${plan?" on":""}" data-pm="mode" data-v="plan">Planner</button></div>`);
   if(!plan) return;
   const k=selKey(), {y,m}=fromYm(k);
   const c=n=>entriesIn(y,m,n).length;
@@ -50455,7 +50455,7 @@ function feedChips(e){
 }
 function inp(e,f,ph,cls){ return `<input class="pm-tx ${cls||""}" data-pmf="${f}" data-id="${e.id}" value="${H(e[f]||"")}" placeholder="${H(ph)}">`; }
 function area(e,f,ph){ return `<textarea class="pm-v" data-pmf="${f}" data-id="${e.id}" rows="4" placeholder="${H(ph)}">${H(e[f]||"")}</textarea>`; }
-function delBtn(e){ return `<button class="pm-del" data-pm="del" data-v="${e.id}" title="Remove from the plan"><i class="ti ti-trash"></i> Remove</button>`; }
+function delBtn(e){ return `<button class="pm-del" data-pm="del" data-v="${e.id}" title="Remove from the planner"><i class="ti ti-trash"></i> Remove</button>`; }
 
 function postLines(y,m){
   /* V118.111 — the box is the live post's box: Focus, Caption, Hashtags,
@@ -50471,7 +50471,7 @@ function postLines(y,m){
       ${o?`<div class="pm-x6"><div class="m6-box">
         <div class="m6-top">
           <label class="m6-date"><i class="ti ti-calendar-event"></i><input class="fi" type="date" data-pmf="date" data-id="${p.id}" value="${dd?`${p.year}-${mm}-${dd}`:""}"></label>
-          <span class="m6-r">${isCommitted(p)?`<span class="pm-cm"><i class="ti ti-check"></i> On the live calendar since ${new Date(p.committed_at).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}${changedSince(p)?" · changed after that":""}</span>`:""}${lineSt(p)}<i class="ti ti-trash m6-del" data-pm="del" data-v="${p.id}" title="Remove from the plan"></i></span>
+          <span class="m6-r">${isCommitted(p)?`<span class="pm-cm"><i class="ti ti-check"></i> On the live calendar since ${new Date(p.committed_at).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}${changedSince(p)?" · changed after that":""}</span>`:""}${lineSt(p)}<i class="ti ti-trash m6-del" data-pm="del" data-v="${p.id}" title="Remove from the planner"></i></span>
         </div>
         <div class="m6-body">
           <div class="fl2">Focus <span class="m6-sub">· one-line idea</span></div>
@@ -50488,7 +50488,7 @@ function postLines(y,m){
             <textarea class="fi ta m6-bt" data-pmf="body" data-id="${p.id}" rows="3" placeholder="e.g. bright flat-lay, 3 product shots, logo bottom-right, warm tone…">${H(p.body||"")}</textarea></div></div>
         </div>
         <div class="m6-plan">
-          <div class="m6-ph"><i class="ti ti-map-2"></i> Plan only</div>
+          <div class="m6-ph"><i class="ti ti-map-2"></i> Planner only</div>
           <div class="m6-pg">
             <div><div class="fl2">Pillar</div>${pillarSel(p).replace('class="pm-sel"','class="fi"')}</div>
             <div><div class="fl2">Series</div><input class="fi" data-pmf="series" data-id="${p.id}" value="${H(p.series||"")}" placeholder="None" list="pm-ser-${p.id}"><datalist id="pm-ser-${p.id}">${(pl&&pl.series||[]).map(s=>`<option value="${H(s)}">`).join("")}</datalist></div>
@@ -50507,7 +50507,7 @@ function linkPicker(p){
   if(!c.length) return mfNone(p);
   return `<select class="fi pm-add m6-link" data-pmf="madefrom_add" data-id="${p.id}"><option value="">+ Link</option>${c.map(e=>`<option value="${e.id}">${e.kind==="task"?"Task":"Production"} · ${H((e.title||"Untitled").slice(0,50))}${e.day?" · "+e.day+" "+MNF[e.month].slice(0,3):""}</option>`).join("")}</select>`;
 }
-function mfNone(p){ return madeFor(p).length?"":`<span class="pm-ph">No shoot or task in the plan yet</span>`; }
+function mfNone(p){ return madeFor(p).length?"":`<span class="pm-ph">No shoot or task in the planner yet</span>`; }
 /* the reference picture — the same kind of file a live post's design brief keeps,
    kept under this line's id; the post made on commit carries the same id, so it arrives with it */
 function briefSlot(p){
@@ -50525,10 +50525,10 @@ function brReady(){ if(typeof brInSync==="function"&&!brInSync()&&typeof brSync=
 function personName(id){ const p=(typeof PEOPLE!=="undefined"?PEOPLE:[]).find(x=>x.id===id); return p?(p.name||p.email||"").split("@")[0]:""; }
 function chip(e,f,v,label,multi,sub){ const on=multi?(e[f]||[]).includes(v):e[f]===v;
   return `<span class="m8-c${on?" on":""}${sub?" sh":""}" data-pm="chip" data-v="${e.id}|${f}|${H(v)}|${multi?1:0}">${sub?`<span>${label}</span><small>${sub}</small>`:label}</span>`; }
-function feedsStrip(e){ return `<div class="m6-plan"><div class="m6-ph"><i class="ti ti-map-2"></i> Plan only</div>
+function feedsStrip(e){ return `<div class="m6-plan"><div class="m6-ph"><i class="ti ti-map-2"></i> Planner only</div>
   <div class="m6-mf"><span class="fl2" style="margin:0">Feeds</span>${feedChips(e)}${postPicker(e,e.year,e.month).replace('class="pm-sel pm-add"','class="fi pm-add m6-link"')}</div></div>`; }
 function topBar(e,ic,word){ return `<div class="m6-top"><span class="m8-h"><i class="ti ${ic}"></i> ${word}</span>
-  <span class="m6-r">${isCommitted(e)?`<span class="pm-cm"><i class="ti ti-check"></i> Sent ${new Date(e.committed_at).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}${changedSince(e)?" · changed after that":""}</span>`:""}${lineSt(e)}<i class="ti ti-trash m6-del" data-pm="del" data-v="${e.id}" title="Remove from the plan"></i></span></div>`; }
+  <span class="m6-r">${isCommitted(e)?`<span class="pm-cm"><i class="ti ti-check"></i> Sent ${new Date(e.committed_at).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}${changedSince(e)?" · changed after that":""}</span>`:""}${lineSt(e)}<i class="ti ti-trash m6-del" data-pm="del" data-v="${e.id}" title="Remove from the planner"></i></span></div>`; }
 function taskLines(y,m){
   const ok=brReady();
   return entriesIn(y,m,"task").map(t=>{ const o=!!PM.open[t.id], am=personName(t.owner_id);
@@ -50641,7 +50641,7 @@ function dlg(){
     <div class="pm-dl"><i class="ti ti-users"></i><b>${inf.length} influencer${inf.length===1?"":"s"}</b><span>${inf.length?`go to ${MNF[m]}'s influencer lines, awaiting approval.`:"nothing new to send."}</span></div>
     <div class="pm-dl z"><i class="ti ti-target"></i><b>Objective, theme, goals</b><span>become ${MNF[m]}'s month card.</span></div>
     ${bad?`<div class="pm-dn warn"><i class="ti ti-alert-triangle"></i> ${bad} post${bad===1?" has":"s have"} no day. ${bad===1?"It":"They"} will go on the 1st.</div>`:""}
-    <div class="pm-dn">Lines already on the live calendar are not sent again. The plan keeps its copy.</div>
+    <div class="pm-dn">Lines already on the live calendar are not sent again. The planner keeps its copy.</div>
     <div class="pm-db"><button class="btn btn-w btn-sm" data-pm="dlgx">Cancel</button><button class="btn btn-sm pm-commit" data-pm="docommit"${PM.busy?" disabled":""}><i class="ti ti-arrow-big-right-lines"></i> ${PM.busy?"Committing…":"Commit "+MNF[m]}</button></div></div></div>`;
 }
 function sidebar(){
@@ -50656,8 +50656,8 @@ function sidebar(){
 function pmRender(){
   const main=document.getElementById("main"); if(!main) return;
   const d=D();
-  if(!d||d.loading){ pmLoad(activeBrand); main.innerHTML=`<div class="mpv plpage" id="pm-root"><div class="pm-wait">Opening the plan…</div></div>`; return; }
-  if(!d.ok){ main.innerHTML=`<div class="mpv plpage" id="pm-root"><div class="pm-wait"><b>The plan could not be opened.</b><br>${H(d.err||"")}<br><span class="mpv-start" data-pm="reload">Try again</span></div></div>`; return; }
+  if(!d||d.loading){ pmLoad(activeBrand); main.innerHTML=`<div class="mpv plpage" id="pm-root"><div class="pm-wait">Opening the planner…</div></div>`; return; }
+  if(!d.ok){ main.innerHTML=`<div class="mpv plpage" id="pm-root"><div class="pm-wait"><b>The planner could not be opened.</b><br>${H(d.err||"")}<br><span class="mpv-start" data-pm="reload">Try again</span></div></div>`; return; }
   const sc=main.scrollTop, row=main.querySelector(":scope > #calstrip");
   main.innerHTML=`<div class="mpv plpage" id="pm-root">${strip()}${board()}${sheets()}${pop()}${dlg()}</div>`;
   if(row) main.insertBefore(row,main.firstChild);   /* the row is the nav's own — keep it */
@@ -50725,7 +50725,7 @@ async function delEntry(id){
 const ARM={};
 function confirmIn(id){ if(ARM[id]&&Date.now()-ARM[id]<4000){ delete ARM[id]; return true; } ARM[id]=Date.now();
   const b=document.querySelector(`#pmr-${id} .pm-del`); if(b){ b.classList.add("arm"); b.innerHTML=`<i class="ti ti-trash"></i> Click again to remove`; }
-  else{ const t=document.querySelector(`#pmr-${id} .m6-del`); if(t) t.classList.add("arm"); toast("Click the bin again to remove this post from the plan"); }
+  else{ const t=document.querySelector(`#pmr-${id} .m6-del`); if(t) t.classList.add("arm"); toast("Click the bin again to remove this post from the planner"); }
   return false; }
 
 /* ── commit ───────────────────────────────────────────────────────── */
@@ -50897,7 +50897,7 @@ function pillarsCard(){
       <td class="pm-pa"><i class="ti ti-chevron-${o?"down":"right"}" data-pmp="open" data-v="${p.id}" title="Rules"></i><i class="ti ti-x" data-pmp="del" data-v="${p.id}" title="Remove"></i></td></tr>
       ${o?`<tr class="pm-prx"><td colspan="5"><div class="pm-rules">${(p.rules||[]).map((r,i)=>`<div class="pm-rule"><input class="pm-rl2" data-pmr="label" data-i="${i}" data-id="${p.id}" value="${H(r.label||"")}" placeholder="Rule (e.g. Tone)"><textarea rows="2" data-pmr="text" data-i="${i}" data-id="${p.id}" placeholder="How this pillar does it…">${H(r.text||"")}</textarea><i class="ti ti-x pm-lx" data-pmp="rule_rm" data-v="${p.id}|${i}"></i></div>`).join("")}<div class="pm-rule add"><span data-pmp="rule_add" data-v="${p.id}"><i class="ti ti-plus"></i> Add a rule</span></div></div></td></tr>`:""}`; }).join("");
   return `<div class="mk-card sx-card sx-o pm-pcard"><div class="bd-sec" id="bd-pl"><div class="bd-secnum">03</div><div class="bd-sectitle">Content pillars</div><div class="bd-secrule"></div><div class="bd-secsub">${ps.length?ps.length+" pillar"+(ps.length===1?"":"s"):""}</div></div>
-    <div id="pl-host"><table class="vb-t a3 cp-t pm-pt"><thead><tr><th>Pillar</th><th>Purpose</th><th>Series</th><th>In the plan</th><th></th></tr></thead><tbody>${rows}
+    <div id="pl-host"><table class="vb-t a3 cp-t pm-pt"><thead><tr><th>Pillar</th><th>Purpose</th><th>Series</th><th>In the planner</th><th></th></tr></thead><tbody>${rows}
     ${d&&d.ok?`<tr class="vb-new cp-new"><td class="w-nm" colspan="5"><input class="vb-ce" data-pmp-new="1" placeholder="Add a pillar…"></td></tr>`:""}</tbody></table></div></div>`;
 }
 function renumber(){
@@ -51022,16 +51022,16 @@ window.pmxlSpan=span;
 const bname=()=>{ const b=brands[activeBrand]; return (b&&b.name)||"Brand"; };
 const safe=s=>String(s).replace(/[\\/:*?"<>|]/g,"").trim();
 async function download(blank){
-  const P=X(), d=P.D(); if(!d||!d.ok){ toast("Open the plan first, then try again","err"); return; }
+  const P=X(), d=P.D(); if(!d||!d.ok){ toast("Open the planner first, then try again","err"); return; }
   const EJ=await loadExportLib("exceljs");
   const wb=new EJ.Workbook();
   const sp=span();
   /* the label on the box: which brand, what it is, which months */
   const ab=wb.addWorksheet("About",{properties:{tabColor:{argb:"FF334E68"}}});
   ab.columns=[{width:18},{width:70}];
-  const what=blank?"Plan sheet · blank template":"Plan sheet";
+  const what=blank?"Planner sheet · blank template":"Planner sheet";
   [["Brand",bname()],["What",what],["Months",blank||!sp?"—":sp.txt],["Downloaded",new Date().toLocaleString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})+(ME&&ME.email?" · "+ME.email:"")],
-   ["Upload it",`Marketing Calendar › ${bname()} › Plan › Plan mode › Import (black bar) › Fill the plan from a sheet`]].forEach((r,i)=>{
+   ["Upload it",`Marketing Calendar › ${bname()} › Plan › Planner › Import (black bar) › Fill the planner from a sheet`]].forEach((r,i)=>{
     const row=ab.getRow(i+1); row.values=r; row.getCell(1).font={bold:true,color:{argb:"FF334E68"}}; row.alignment={vertical:"top",wrapText:true}; });
   ab.getRow(1).getCell(2).font={bold:true,size:14};
   const lk=wb.addWorksheet("_lists"); lk.state="veryHidden";
@@ -51086,7 +51086,7 @@ async function download(blank){
   P.pillars().forEach((p,i)=>{ wp.getRow(i+2).values=[p.name||"",p.purpose||"",(p.series||[]).join(", ")]; wp.getRow(i+2).alignment={vertical:"top",wrapText:true}; });
   head(wp);
   const buf=await wb.xlsx.writeBuffer();
-  const name=safe(`${bname()} - Plan sheet - ${blank?"blank template":(sp?sp.txt:"empty")}`)+".xlsx";
+  const name=safe(`${bname()} - Planner sheet - ${blank?"blank template":(sp?sp.txt:"empty")}`)+".xlsx";
   const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})); a.download=name;
   document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
 }
@@ -51140,7 +51140,7 @@ function plan(wb){
       const y=Number(r.year), m=monthNo(r.month);
       if(!(y>=2020&&y<=2100)||!m){ probs.push(`${at}: needs a Year and a Month`); return; }
       const id=txt(r.id), old=id&&byId[id]&&byId[id].kind===kind?byId[id]:null;
-      if(id&&!old) probs.push(`${at}: the ID is not in this brand's plan — added as a new line`);
+      if(id&&!old) probs.push(`${at}: the ID is not in this brand's planner — added as a new line`);
       const w={year:y,month:m};
       const dim=new Date(y,m,0).getDate();
       const day=v=>{ if(v==null||v==="") return null; const n=Number(v); if(n>=1&&n<=dim) return Math.round(n); probs.push(`${at}: day ${txt(v)} is not in ${MN3[m]} ${y} — left blank`); return null; };
@@ -51204,8 +51204,8 @@ async function upload(file){
   try{
     const wb=XLSX.read(await file.arrayBuffer(),{type:"array",cellDates:true});
     const L=wb.Sheets["_lists"], mark=L&&L["E1"]&&L["E1"].v, sbid=L&&L["E2"]&&L["E2"].v, sbn=L&&L["E3"]&&L["E3"].v;
-    if(mark!=="cc-plan-sheet"){ toast("This is not a plan sheet. Download one from the black bar's Export menu in Plan mode.","err"); return; }
-    if(sbid!==activeBrand){ toast(`This plan sheet is for ${sbn||"another brand"}. Open ${sbn||"that brand"}'s Plan to upload it.`,"err"); return; }
+    if(mark!=="cc-plan-sheet"){ toast("This is not a planner sheet. Download one from the black bar's Export menu in the Planner.","err"); return; }
+    if(sbid!==activeBrand){ toast(`This planner sheet is for ${sbn||"another brand"}. Open ${sbn||"that brand"}'s Planner to upload it.`,"err"); return; }
     const rep=plan(wb);
     XL.rep=rep; XL.name=file.name; XL.open=false; paintDlg();
   }catch(e){ toast("The sheet could not be read: "+(e.message||e),"err"); }
@@ -51228,7 +51228,7 @@ async function apply(){
     Object.assign(c.e,c.w); if(!(await P.saveEntry(c.e))) bad++;
   }
   XL.busy=false; XL.rep=null; paintDlg();
-  toast(bad?`The sheet went in with ${bad} line${bad===1?"":"s"} not saved`:`Plan updated from the sheet`,bad?"err":"");
+  toast(bad?`The sheet went in with ${bad} line${bad===1?"":"s"} not saved`:`Planner updated from the sheet`,bad?"err":"");
   P.paint();
 }
 
@@ -51242,13 +51242,13 @@ function paintDlg(){
   const line=(ic,lbl,k)=>`<div class="pm-dl"><i class="ti ${ic}"></i><b>${lbl}</b><span>${cnt(k)} new · ${chg(k)} changed</span></div>`;
   const ma=r.months.filter(m=>m.add).length, mc=r.months.length-ma;
   const nothing=!r.adds.length&&!r.changes.length&&!r.months.length;
-  host.innerHTML=`<div class="pm-scrim" data-pmx="close"><div class="pm-dlg pmxl" data-pmx="none"><div class="pm-dh"><b>Fill ${H(bname())}'s plan from a sheet</b><i class="ti ti-x" data-pmx="close"></i></div>
+  host.innerHTML=`<div class="pm-scrim" data-pmx="close"><div class="pm-dlg pmxl" data-pmx="none"><div class="pm-dh"><b>Fill ${H(bname())}'s planner from a sheet</b><i class="ti ti-x" data-pmx="close"></i></div>
     <div class="pmxl-f"><i class="ti ti-file-spreadsheet"></i>${H(XL.name||"")}</div>
     <div class="pm-dl"><i class="ti ti-target"></i><b>Months</b><span>${ma} new · ${mc} changed</span></div>
     ${line("ti-photo","Posts","post")}${line("ti-clipboard-text","Tasks","task")}${line("ti-video","Production","production")}${line("ti-users","Influencers","influencer")}
     ${r.probs.length?`<div class="pm-dn warn pmxl-p"><b>${r.probs.length} thing${r.probs.length===1?"":"s"} to check</b><ul>${r.probs.slice(0,12).map(p=>`<li>${H(p)}</li>`).join("")}${r.probs.length>12?`<li>…and ${r.probs.length-12} more</li>`:""}</ul></div>`:""}
-    <div class="pm-dn">${nothing?"Nothing in the sheet is different from the plan.":"Lines left out of the sheet stay in the plan. Nothing is sent to the live calendar until you commit a month."}</div>
-    <div class="pm-db"><button class="btn btn-w btn-sm" data-pmx="close">Cancel</button>${nothing?"":`<button class="btn btn-sm pm-commit" data-pmx="apply"${XL.busy?" disabled":""}><i class="ti ti-upload"></i> ${XL.busy?"Saving…":"Update the plan"}</button>`}</div></div></div>`;
+    <div class="pm-dn">${nothing?"Nothing in the sheet is different from the planner.":"Lines left out of the sheet stay in the planner. Nothing is sent to the live calendar until you commit a month."}</div>
+    <div class="pm-db"><button class="btn btn-w btn-sm" data-pmx="close">Cancel</button>${nothing?"":`<button class="btn btn-sm pm-commit" data-pmx="apply"${XL.busy?" disabled":""}><i class="ti ti-upload"></i> ${XL.busy?"Saving…":"Update the planner"}</button>`}</div></div></div>`;
 }
 function dressXl(){ const b=document.querySelector("#calstrip .pmxl-b"); if(b) b.remove(); }
 /* import and export live in the black bar only (Chirag, 26 Oct) */
@@ -51256,12 +51256,12 @@ function menu(){
   const el=document.getElementById("export-panel"); if(!el) return;
   const sp=span();
   el.innerHTML=`<div class="brk-ioh"><i class="ti ti-upload"></i>Import</div>
-    <div class="brow act" data-pmx="up"><i class="ti ti-file-upload"></i><span class="bnm">Fill the plan from a sheet</span></div>
-    <div class="brow act" data-pmx="blank"><i class="ti ti-file-spreadsheet"></i><span class="bnm">Blank plan template</span></div>
+    <div class="brow act" data-pmx="up"><i class="ti ti-file-upload"></i><span class="bnm">Fill the planner from a sheet</span></div>
+    <div class="brow act" data-pmx="blank"><i class="ti ti-file-spreadsheet"></i><span class="bnm">Blank planner template</span></div>
     <div class="brk-iosep"></div>
     <div class="brk-ioh"><i class="ti ti-download"></i>Export</div>
-    <div class="exscope"><div>${H(bname())} · Plan${sp?" · "+H(sp.txt):""}<br><span class="dim">${sp?`${sp.n} month${sp.n===1?"":"s"} · ${sp.lines} line${sp.lines===1?"":"s"}`:"Nothing planned yet"}</span></div></div>
-    <div class="brow act" data-pmx="down"><i class="ti ti-table"></i><span class="bnm">The plan as a sheet</span></div>`;
+    <div class="exscope"><div>${H(bname())} · Planner${sp?" · "+H(sp.txt):""}<br><span class="dim">${sp?`${sp.n} month${sp.n===1?"":"s"} · ${sp.lines} line${sp.lines===1?"":"s"}`:"Nothing planned yet"}</span></div></div>
+    <div class="brow act" data-pmx="down"><i class="ti ti-table"></i><span class="bnm">The planner as a sheet</span></div>`;
 }
 (function(){ const base=buildExportPanel; buildExportPanel=function(){ const o=base.apply(this,arguments); try{ if(window.pmIsPlan&&window.pmIsPlan()) menu(); }catch(e){ console.warn("[pmxl]",e); } return o; }; })();
 (function(){ const base=render; render=function(){ const o=base.apply(this,arguments); try{ XL.open=false; dressXl(); }catch(e){ console.warn("[pmxl]",e); } return o; }; })();
@@ -51302,5 +51302,641 @@ window.pmxlUpload=upload;
 })();
 
 </script>
+<style id="mood-boards-css">
+/* ══ V118.113 TBILISI — GENERAL MOOD BOARDS ══ */
+.mbg-row i.vis{font-size:14px;color:var(--subtle);flex:none;}
+.mdb-trow.on i.vis{color:rgba(255,255,255,.7);}
+.mdb-lnk{position:absolute;right:8px;bottom:8px;display:inline-flex;align-items:center;gap:3px;height:22px;padding:0 7px;border-radius:6px;
+  background:rgba(13,13,13,.62);color:#fff;font-size:11px;font-weight:700;z-index:3;}
+.mdb-lnk i{font-size:12px;}
+.mdb-tile:hover .mdb-lnk{display:none;}
+.mdb-sel .mdb-tile .mdb-lnk{display:none;}
+.mbg-brl{max-height:340px;overflow-y:auto;margin-top:10px;border:1px solid var(--div);border-radius:10px;padding:4px;}
+.mbg-brl .brfb-opt{cursor:pointer;}
+.mbg-brl .brfb-opt.dim{opacity:.5;cursor:default;}
+.mbg-from{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);}
+.mbg-from b{color:var(--text);}
+.mbg-from i{font-size:14px;}
+</style>
+<script id="mood-boards">
+/* ══ V118.113 TBILISI — GENERAL MOOD BOARDS ═══════════════════════════
+   Chirag, 26 Oct: "a door to mood boards which will not be associated
+   with any particular brand… generic references. Any item can be
+   transferred to any brand mood board or linked inside a post, a task or
+   any other activity. The door can be from the homepage. Private, so only
+   I can see it, or public, where anyone can access it."
+   Picked A1 (several named boards, each private or public) and B1 as a
+   LINK: "it should not duplicate the content, increase the size of the
+   data. It should simply show two places."
+
+   · A board is a row in mood_boards; its pictures and tags are the same
+     mood_items / mood_tags rows, carrying board_id instead of brand_id.
+     The page, the grid, the drawer, the tags and Add are the brand mood
+     board's own code — only WHERE a row lives changes (mbgHome).
+   · "Send to brand" writes one mood_item_links row per brand. The brand's
+     board reads its own pictures plus the linked ones; a linked picture
+     wears the brand's own tags (on the link), so the general board's tags
+     and the brand's never mix. Taking it off the brand board removes the
+     link only.
+   · Each picture has Copy link; pasted into any message box it opens the
+     picture. A board link opens the board.
+   · The door is a tab on All brands, next to Calendar. In preview: only
+     the Super administrator sees it (page_mood_boards).
+   Data: 01 - Mood boards - migration.sql. */
+const MBG={list:[],ok:false,loading:false,err:"",menu:null,ren:null,newOpen:false,send:null,links:{},names:{}};
+const MBG_LS="cc-mbg-last";
+MDB.gen=false; MDB.board=null; MDB.pendingItem=null;
+function mbgOn(){ return !!MDB.gen&&!(activeBrand&&brands[activeBrand]); }
+function mbgBoard(id){ return MBG.list.find(b=>b.id===(id||MDB.board))||null; }
+function mbgMine(b){ return !!b&&!!ME&&b.owner_id===ME.id; }
+/* a brand's rows never name board_id, so they still save before the migration has run */
+function mbgHome(){ return mbgOn()?{brand_id:null,board_id:MDB.board}:{brand_id:activeBrand}; }
+function mbgMay(){ return typeof pageOpen==="function"&&pageOpen("page_mood_boards"); }
+function mbgUrl(extra){ return location.origin+location.pathname+"?"+extra; }
+function mbgClip(url,msg){
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(()=>toast(msg),()=>toast(escHtml(url)));
+  else toast(escHtml(url));
+}
+async function mbgLoadList(){
+  MBG.loading=true;
+  const r=await sb.from("mood_boards").select("*").is("deleted_at",null).order("created_at");
+  MBG.loading=false;
+  if(r.error){ MBG.err=r.error.message; MBG.ok=false; return; }
+  MBG.list=(r.data||[]).filter(b=>!b.deleted_at); MBG.ok=true; MBG.err="";
+  MBG.list.forEach(b=>{ MBG.names[b.id]=b.name; });
+}
+function mbgSorted(){
+  const by=(a,b)=>String(a.name).localeCompare(String(b.name));
+  return MBG.list.filter(mbgMine).sort(by).concat(MBG.list.filter(b=>!mbgMine(b)).sort(by));
+}
+async function mbgChunks(ids,fn){
+  const out=[];
+  for(let i=0;i<ids.length;i+=80){ const r=await fn(ids.slice(i,i+80)); if(r.error) throw new Error(r.error.message); out.push(...(r.data||[])); }
+  return out;
+}
+
+/* ── the door: a tab on All brands ─────────────────────────────────── */
+async function mbgOpen(id){
+  if(!mbgMay()){ toast("Mood boards are not open to you yet","err"); return; }
+  closeAllPops();
+  if(!MBG.ok) await mbgLoadList();
+  let last=null; try{ last=localStorage.getItem(MBG_LS); }catch(e){}
+  const pick=[id,MDB.board,last].find(k=>k&&mbgBoard(k));
+  MDB.board=pick||((mbgSorted()[0]||{}).id)||null;
+  MDB.gen=true; MBG.menu=null; MBG.ren=null; if(MDB.open) mdbClose(true);
+  if(activeBrand&&brands[activeBrand]){
+    const sel=document.getElementById("brand-sel"); if(sel) sel.value="";
+    view="mood"; setBrand("");
+  } else if(view!=="mood") setView("mood"); else render();
+  const m=document.getElementById("main"); if(m) m.scrollTop=0;
+}
+function mbgPick(id){
+  if(MBG.ren) return;
+  MDB.board=id; MBG.menu=null; try{ localStorage.setItem(MBG_LS,id); }catch(e){}
+  MDB.f=[]; MDB.q=""; MDB.sel=null; if(MDB.open) mdbClose(true);
+  render();
+}
+
+/* ── the route and the page ─────────────────────────────────────────── */
+(function(){
+  const base=viewRoute;
+  viewRoute=function(v){
+    if(v==="mood"&&mbgOn()) return {render:renderMood,sidebar:buildMoodSidebar,needs:"edit",page:"page_mood_boards"};
+    return base(v);
+  };
+  const baseRender=render;
+  render=function(){
+    if(MDB.gen&&activeBrand&&brands[activeBrand]) MDB.gen=false;
+    return baseRender.apply(this,arguments);
+  };
+  const baseTabs=renderBnTabs;
+  renderBnTabs=function(){
+    const out=baseTabs.apply(this,arguments);
+    try{
+      const el=document.getElementById("bn-tabs");
+      if(el&&el.style.display!=="none"&&!(activeBrand&&brands[activeBrand])&&mbgMay()&&!el.querySelector('[data-ac="mbg"]')){
+        const on=view==="mood"&&mbgOn();
+        const html=`<button class="bntab${on?" on":""}" data-ac="mbg" onclick="mbgOpen()" aria-current="${on?"page":"false"}"><i class="ti ti-layout-board"></i> Mood boards${pagePreview("page_mood_boards")?'<span class="pvt"><i class="ti ti-lock"></i>Preview</span>':""}</button>`;
+        const cal=el.querySelector('[data-ac="cal"]');
+        if(cal) cal.insertAdjacentHTML("afterend",html); else el.insertAdjacentHTML("beforeend",html);
+      }
+    }catch(e){}
+    return out;
+  };
+})();
+(function(){
+  const baseMood=renderMood;
+  renderMood=function(){
+    if(mbgOn()&&!MDB.board){
+      const mc=document.getElementById("main");
+      mc.innerHTML=`<div style="padding:0 32px 20px;"><div class="mdb-card"><div class="mdb-empty">
+        ${MBG.ok?(MBG.list.length?"Pick a board on the left.":"No boards yet."):(MBG.err?"Could not load the boards — "+escHtml(MBG.err):"Loading the boards…")}
+        ${MBG.ok&&!MBG.list.length?`<div style="margin-top:14px"><button class="btn btn-p" onclick="mbgNewOpen(event)"><i class="ti ti-plus"></i> New board</button></div>`:""}</div></div></div>`;
+      if(!MBG.ok&&!MBG.loading) mbgLoadList().then(()=>{ if(view==="mood"&&mbgOn()){ if(!MDB.board&&MBG.list.length) MDB.board=mbgSorted()[0].id; render(); } });
+      return;
+    }
+    return baseMood.apply(this,arguments);
+  };
+})();
+
+/* ── the left panel: boards, then the open board's tags ────────────── */
+(function(){
+  const baseSide=buildMoodSidebar;
+  buildMoodSidebar=function(){
+    if(!mbgOn()) return baseSide.apply(this,arguments);
+    const sm=document.getElementById("sb-months"); if(!sm) return;
+    if(MDB.board) baseSide.apply(this,arguments);
+    else { const st=document.getElementById("sb-stats"); if(st) st.innerHTML=""; sm.innerHTML=""; }
+    const rows=mbgSorted().map(b=>{
+      const mine=mbgMine(b), on=b.id===MDB.board, m=MBG.menu===b.id;
+      if(MBG.ren===b.id) return `<div class="mdb-trow menu" onclick="event.stopPropagation()"><input class="mdb-ren" id="mbg-ren" value="${escAttr(b.name)}"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();mbgRename('${b.id}',this.value);}if(event.key==='Escape'){MBG.ren=null;buildMoodSidebar();}"
+          onblur="mbgRename('${b.id}',this.value)"></div>`;
+      const who=mine?"":` · ${escAttr(mdbWho(b.owner_id))}`;
+      return `<div class="mdb-trow mbg-row${on?" on":""}${m?" menu":""}" data-board="${b.id}" onclick="mbgPick('${b.id}')" title="${b.is_public?"Public — everyone on the team":"Private — only you"}${who}">
+        <i class="ti ${b.is_public?"ti-world":"ti-lock"} vis"></i><span class="nm">${escHtml(b.name)}</span>
+        <button class="mdb-tmb" title="Board options" onclick="mbgMenu(event,'${b.id}')"><i class="ti ti-dots"></i></button>
+        ${m?mbgMenuHtml(b):""}</div>`;
+    }).join("");
+    const add=MBG.newOpen?`<div class="mdb-trow menu" onclick="event.stopPropagation()"><input class="mdb-ren" id="mbg-new" placeholder="Board name"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();mbgCreate(this.value);}if(event.key==='Escape'){MBG.newOpen=false;buildMoodSidebar();}"
+        onblur="setTimeout(()=>{ if(MBG.newOpen){ MBG.newOpen=false; buildMoodSidebar(); } },150)"></div>`:"";
+    const head=`<div class="mbg-side"><div class="s-lbl sb-head"><span>Mood boards</span><button class="mdb-tmb sb-plus" title="New board" onclick="mbgNewOpen(event)"><i class="ti ti-plus"></i></button></div>
+      ${rows}${add}${!rows&&!add?`<div class="mdb-trow" style="color:var(--subtle);cursor:default">No boards yet</div>`:""}</div>`;
+    const up=sm.querySelector(".mdb-up");
+    if(up) up.outerHTML=head+'<div style="height:16px"></div>'; else sm.insertAdjacentHTML("afterbegin",head);
+    const r=document.getElementById("mbg-ren")||document.getElementById("mbg-new"); if(r){ r.focus(); if(r.select) r.select(); }
+  };
+})();
+function mbgMenuHtml(b){
+  const mine=mbgMine(b);
+  return `<div class="mdb-menu" onclick="event.stopPropagation()">
+    <div class="mdb-mi" onclick="mbgCopyBoard('${b.id}')"><i class="ti ti-link"></i>Copy link</div>
+    ${mine?`<div class="mdb-msep"></div>
+    <div class="mdb-mi" onclick="MBG.menu=null;MBG.ren='${b.id}';buildMoodSidebar()"><i class="ti ti-pencil"></i>Rename</div>
+    <div class="mdb-mi" onclick="mbgSetPublic('${b.id}',${!b.is_public})"><i class="ti ${b.is_public?"ti-lock":"ti-world"}"></i>${b.is_public?"Make private":"Make public"}</div>
+    <div class="mdb-msep"></div>
+    <div class="mdb-mi red" onclick="mbgTrash('${b.id}')"><i class="ti ti-trash"></i>Move to Trash</div>`
+    :`<div class="mdb-msep"></div><div class="mdb-mi" style="cursor:default;color:var(--muted)"><i class="ti ti-user"></i>${escHtml(mdbWho(b.owner_id))}'s board</div>`}</div>`;
+}
+function mbgMenu(e,id){ e.stopPropagation(); MBG.menu=MBG.menu===id?null:id; buildMoodSidebar(); }
+document.addEventListener("click",e=>{
+  if(view!=="mood"||!MBG.menu) return;
+  if(!(e.target.closest&&e.target.closest(".mdb-menu"))){ MBG.menu=null; buildMoodSidebar(); }
+});
+function mbgNewOpen(e){
+  if(e) e.stopPropagation();
+  if(view!=="mood"||!mbgOn()){ mbgOpen().then(()=>{ MBG.newOpen=true; buildMoodSidebar(); }); return; }
+  MBG.newOpen=true; MBG.menu=null; buildMoodSidebar();
+}
+async function mbgCreate(v){
+  v=String(v||"").trim(); MBG.newOpen=false;
+  if(!v){ buildMoodSidebar(); return; }
+  const row={id:crypto.randomUUID(),name:v,owner_id:ME.id,is_public:false};
+  const r=await sb.from("mood_boards").insert([row]).select("*");
+  if(r.error){ toast("The board was not made — "+escHtml(r.error.message),"err"); buildMoodSidebar(); return; }
+  const b=((r.data||[]).find(x=>x&&x.id===row.id))||Object.assign({created_at:new Date().toISOString()},row);
+  MBG.list.push(b); MBG.names[b.id]=b.name;
+  toast(`“${escHtml(v)}” made — private, only you can see it`);
+  mbgPick(b.id);
+}
+async function mbgRename(id,v){
+  if(MBG.ren!==id) return; MBG.ren=null;
+  const b=mbgBoard(id); v=String(v||"").trim();
+  if(!b||!v||v===b.name){ buildMoodSidebar(); return; }
+  const r=await sb.from("mood_boards").update({name:v,updated_at:new Date().toISOString()}).eq("id",id).select("id");
+  if(r.error||!(r.data||[]).length){ toast("Not renamed"+(r.error?" — "+escHtml(r.error.message):""),"err"); buildMoodSidebar(); return; }
+  b.name=v; MBG.names[id]=v; buildMoodSidebar();
+}
+async function mbgSetPublic(id,pub){
+  MBG.menu=null; const b=mbgBoard(id); if(!b) return;
+  const r=await sb.from("mood_boards").update({is_public:pub,updated_at:new Date().toISOString()}).eq("id",id).select("id");
+  if(r.error||!(r.data||[]).length){ toast("Not changed"+(r.error?" — "+escHtml(r.error.message):""),"err"); buildMoodSidebar(); return; }
+  b.is_public=pub; buildMoodSidebar();
+  toast(pub?`“${escHtml(b.name)}” is public — everyone on the team can open it`:`“${escHtml(b.name)}” is private — only you can see it`);
+}
+function mbgTrash(id){
+  MBG.menu=null; buildMoodSidebar();
+  const b=mbgBoard(id); if(!b) return;
+  mdbModal(`Move “${escHtml(b.name)}” to Trash?`,
+    `The board and its pictures leave the list. Pictures already sent to a brand leave that brand's board too. It can be restored from Trash.`,
+    "Move to Trash", async()=>{
+      const r=await sb.from("mood_boards").update({deleted_at:new Date().toISOString()}).eq("id",id).select("id");
+      if(r.error||!(r.data||[]).length){ toast("Not moved"+(r.error?" — "+escHtml(r.error.message):""),"err"); return; }
+      MBG.list=MBG.list.filter(x=>x.id!==id);
+      if(MDB.board===id){ MDB.board=((mbgSorted()[0]||{}).id)||null; MDB.bid=null; }
+      toast("Moved to Trash"); render();
+    });
+}
+function mbgCopyBoard(id){ MBG.menu=null; buildMoodSidebar(); const b=mbgBoard(id); mbgClip(mbgUrl("p=mood&mb="+encodeURIComponent(id)),`Link to “${escHtml(b?b.name:"the board")}” copied`); }
+function mbgCopyItem(id){
+  const x=MDB.items.find(i=>i.id===id); if(!x) return;
+  const q=mbgOn()?"p=mood&mb="+encodeURIComponent(MDB.board)+"&item="+encodeURIComponent(id)
+                 :"b="+encodeURIComponent(activeBrand)+"&p=mood&item="+encodeURIComponent(id);
+  mbgClip(mbgUrl(q),"Link to this reference copied — paste it in any message box");
+}
+
+/* ── the data: a board's own rows, or a brand's rows plus its links ── */
+mdbEnsure=function(){
+  if(mbgOn()){
+    if(!MDB.board) return;
+    const k="board:"+MDB.board;
+    if(MDB.bid!==k){ MDB.f=[]; MDB.q=""; MDB.sel=null; if(MDB.open) mdbClose(true); mdbLoad(k); }
+    return;
+  }
+  if(!activeBrand||!brands[activeBrand]) return;
+  if(MDB.bid!==activeBrand){ MDB.f=[]; MDB.q=""; MDB.sel=null; if(MDB.open) mdbClose(true); mdbLoad(activeBrand); }
+};
+mdbLoad=async function(key){
+  MDB.bid=key; MDB.loading=true; MDB.ok=false; MDB.err="";
+  const isB=String(key||"").indexOf("board:")===0, id=isB?key.slice(6):key;
+  let openAfter=null;
+  try{
+    let items=[], tags=[];
+    if(isB){
+      const [i,t]=await Promise.all([
+        sb.from("mood_items").select("*").eq("board_id",id).is("deleted_at",null).order("created_at",{ascending:false}),
+        sb.from("mood_tags").select("*").eq("board_id",id).is("deleted_at",null).order("name")]);
+      const bad=[i,t].find(r=>r.error); if(bad) throw new Error(bad.error.message);
+      items=(i.data||[]).filter(x=>x.board_id===id&&!x.deleted_at);
+      tags=(t.data||[]).filter(x=>x.board_id===id&&!x.deleted_at);
+      const ls=items.length?await mbgChunks(items.map(x=>x.id),c=>sb.from("mood_item_links").select("*").in("item_id",c).is("deleted_at",null)):[];
+      MBG.links={}; ls.filter(l=>!l.deleted_at).forEach(l=>{ (MBG.links[l.item_id]=MBG.links[l.item_id]||[]).push(l); });
+    }else{
+      const [i,t,l]=await Promise.all([
+        sb.from("mood_items").select("*").eq("brand_id",id).is("deleted_at",null).order("created_at",{ascending:false}),
+        sb.from("mood_tags").select("*").eq("brand_id",id).is("deleted_at",null).order("name"),
+        sb.from("mood_item_links").select("*").eq("brand_id",id).is("deleted_at",null)]);
+      const bad=[i,t].find(r=>r.error); if(bad) throw new Error(bad.error.message);
+      items=(i.data||[]).filter(x=>x.brand_id===id&&!x.deleted_at);
+      tags=(t.data||[]).filter(x=>x.brand_id===id&&!x.deleted_at);
+      /* before the migration the links table is not there: the board is just the brand's own */
+      const links=((l&&!l.error&&l.data)||[]).filter(x=>x.brand_id===id&&!x.deleted_at);
+      if(links.length){
+        const got=await mbgChunks([...new Set(links.map(x=>x.item_id))],c=>sb.from("mood_items").select("*").in("id",c).is("deleted_at",null));
+        const by=new Map(got.filter(x=>!x.deleted_at).map(x=>[x.id,x]));
+        links.forEach(lk=>{ const x=by.get(lk.item_id); if(x&&!items.some(y=>y.id===x.id)) items.push(Object.assign({},x,{tag_ids:(lk.tag_ids||[]).slice(),_link:lk})); });
+        const need=[...new Set(got.map(x=>x.board_id).filter(b=>b&&!MBG.names[b]))];
+        if(need.length){ const r=await sb.from("mood_boards").select("id,name").in("id",need); ((r&&r.data)||[]).forEach(b=>{ MBG.names[b.id]=b.name; }); }
+      }
+    }
+    if(MDB.bid!==key) return;
+    MDB.items=items; MDB.tags=tags; MDB.counts={};
+    try{
+      const cs=items.length?await mbgChunks(items.map(x=>x.id),c=>sb.from("post_comments").select("id,mood_item_id,deleted_at").in("mood_item_id",c)):[];
+      cs.forEach(x=>{ if(x.mood_item_id&&!x.deleted_at) MDB.counts[x.mood_item_id]=(MDB.counts[x.mood_item_id]||0)+1; });
+    }catch(e){}
+    MDB.ok=true;
+    if(MDB.pendingTag){
+      const tg=mdbTag(MDB.pendingTag); MDB.pendingTag=null;
+      MDB.f=MDB.f.filter(f=>f.k!=="tag");
+      if(tg) MDB.f.push(fltNew("tag",[tg.id]));
+      else toast("That tag is no longer on this board. Showing every reference.","err");
+    }
+    if(MDB.pendingItem){
+      const it=MDB.pendingItem; MDB.pendingItem=null;
+      if(MDB.items.some(x=>x.id===it)) openAfter=it;
+      else toast("That reference is no longer on this board.","err");
+    }
+  }catch(e){ MDB.err=String(e&&e.message||e); }
+  MDB.loading=false;
+  if(view==="mood"||view==="brief") render();
+  if(view==="brief"&&typeof cpPaint==="function") cpPaint();
+  if(openAfter&&view==="mood") setTimeout(()=>mdbOpen(openAfter),0);
+};
+
+/* ── writes go where the row lives ─────────────────────────────────── */
+mdbWriteTags=async function(changes){
+  const now=new Date().toISOString(); let fail="";
+  for(const c of changes){
+    const x=MDB.items.find(i=>i.id===c.id);
+    const r=x&&x._link
+      ?await sb.from("mood_item_links").update({tag_ids:c.tag_ids,updated_at:now}).eq("id",x._link.id).select("id")
+      :await sb.from("mood_items").update({tag_ids:c.tag_ids,updated_at:now}).eq("id",c.id).select("id");
+    if(r.error){ fail=r.error.message; continue; }
+    if(x){ x.tag_ids=c.tag_ids; if(x._link) x._link.tag_ids=c.tag_ids; }
+  }
+  return fail;
+};
+mdbSnap=function(ids){
+  return {items:MDB.items.filter(x=>ids.includes(x.id)).map(x=>({id:x.id,link:x._link?x._link.id:null,tag_ids:(x.tag_ids||[]).slice(),deleted_at:x.deleted_at||null})),
+          tags:MDB.tags.map(t=>({...t}))};
+};
+mdbRestore=async function(s){
+  const now=new Date().toISOString();
+  for(const t of s.tags){
+    const cur=mdbTag(t.id);
+    if(!cur||cur.name!==t.name) await sb.from("mood_tags").update({name:t.name,deleted_at:null,updated_at:now}).eq("id",t.id);
+  }
+  for(const x of s.items){
+    if(x.link) await sb.from("mood_item_links").update({tag_ids:x.tag_ids,deleted_at:x.deleted_at,updated_at:now}).eq("id",x.link);
+    else await sb.from("mood_items").update({tag_ids:x.tag_ids,deleted_at:x.deleted_at,updated_at:now}).eq("id",x.id);
+  }
+  toast("Undone"); await mdbLoad(MDB.bid);
+};
+mdbTagIdsFor=async function(names){
+  const out=[];
+  for(const raw of names){
+    const nm=String(raw||"").trim(); if(!nm) continue;
+    let t=MDB.tags.find(x=>x.name.toLowerCase()===nm.toLowerCase());
+    if(!t){
+      const row=Object.assign({id:crypto.randomUUID(),name:nm,created_by:ME.id||null},mbgHome());
+      const r=await sb.from("mood_tags").insert([row]).select("*");
+      if(r.error){ toast("Tag “"+escHtml(nm)+"” was not created — "+escHtml(r.error.message),"err"); continue; }
+      t=(r.data&&r.data.find&&r.data.find(x=>x.id===row.id))||row; MDB.tags.push(t);
+    }
+    if(!out.includes(t.id)) out.push(t.id);
+  }
+  return out;
+};
+(function(){
+  const baseRow=mdbRowFrom;
+  mdbRowFrom=function(){ return Object.assign(baseRow.apply(this,arguments),mbgHome()); };
+  /* a board's own pictures are kept under boards/<board>/ */
+  const basePath=mediaPath;
+  mediaPath=function(brandId){
+    if(!brandId&&view==="mood"&&mbgOn()&&MDB.board){ const a=[...arguments]; a[0]="boards/"+MDB.board; return basePath.apply(this,a); }
+    return basePath.apply(this,arguments);
+  };
+  const baseOpen=mdbAddOpen;
+  mdbAddOpen=function(){
+    if(mbgOn()){
+      if(!MDB.board){ toast("Make a board first","err"); return; }
+      const keep=activeBrand; activeBrand="__mbg__";   /* the guard only asks "is there a home"; restored at once */
+      try{ return baseOpen.apply(this,arguments); }finally{ activeBrand=keep; }
+    }
+    return baseOpen.apply(this,arguments);
+  };
+  const baseDraw=mdbAddDraw;
+  mdbAddDraw=function(){
+    const out=baseDraw.apply(this,arguments);
+    if(mbgOn()){ const t=document.getElementById("mdb-add-t"); const b=mbgBoard(); if(t) t.textContent=`Add to “${b?b.name:"this board"}”`; }
+    return out;
+  };
+})();
+mdbCallFn=async function(body){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session) throw new Error("Your sign-in has expired. Reload the page.");
+  let r;
+  try{
+    r=await fetch(MDB_FN,{method:"POST",headers:{authorization:"Bearer "+(session.access_token||""),"content-type":"application/json"},
+      body:JSON.stringify(Object.assign(mbgOn()?{board_id:MDB.board}:{brand_id:activeBrand},body))});
+  }catch(e){ throw new Error("Could not reach the server. Check your connection and try again."); }
+  const text=await r.text(); let out={};
+  try{ out=text?JSON.parse(text):{}; }catch(e){ out={}; }
+  if(!r.ok) throw new Error(out.error||("The server refused ("+r.status+")."));
+  return out;
+};
+
+/* ── Trash: a linked picture leaves THIS board only ─────────────────── */
+mdbTrashOne=async function(id){
+  const x=MDB.items.find(i=>i.id===id); if(!x) return;
+  if(x._link){
+    if(!confirm(`Take “${x.title||"this reference"}” off ${(brands[activeBrand]||{}).name||"this brand"}'s board?\n\nIt stays on its general board.`)) return;
+    const snap=mdbSnap([id]);
+    const r=await sb.from("mood_item_links").update({deleted_at:new Date().toISOString()}).eq("id",x._link.id).select("id");
+    if(r.error){ toast("Could not take it off — "+escHtml(r.error.message),"err"); return; }
+    MDB.items=MDB.items.filter(i=>i.id!==id); mdbClose(true); mdbRefresh();
+    mdbUndoToast("Taken off this board",snap); return;
+  }
+  const n=mbgOn()?(MBG.links[id]||[]).length:0;
+  if(!confirm(`Move “${x.title||"this reference"}” to Trash?\n\n${n?`It also leaves ${n} brand board${n===1?"":"s"}. `:""}Its conversation stays with it and it can be restored.`)) return;
+  const snap=mdbSnap([id]);
+  const r=await sb.from("mood_items").update({deleted_at:new Date().toISOString()}).eq("id",id).select("id");
+  if(r.error){ toast("Could not move it — "+escHtml(r.error.message),"err"); return; }
+  MDB.items=MDB.items.filter(i=>i.id!==id); mdbClose(true); mdbRefresh();
+  mdbUndoToast("Moved to Trash",snap);
+};
+mdbBulkTrash=async function(){
+  const ids=[...MDB.sel]; if(!ids.length) return;
+  const linked=ids.filter(id=>{ const x=MDB.items.find(i=>i.id===id); return x&&x._link; });
+  const own=ids.filter(id=>!linked.includes(id));
+  const msg=[own.length?`Move ${own.length} reference${own.length===1?"":"s"} to Trash`:"",
+             linked.length?`take ${linked.length} linked reference${linked.length===1?"":"s"} off this board (they stay on their general board)`:""].filter(Boolean).join(" and ");
+  if(!confirm(msg.charAt(0).toUpperCase()+msg.slice(1)+"?")) return;
+  const snap=mdbSnap(ids), now=new Date().toISOString(); let fail="";
+  for(const id of own){ const r=await sb.from("mood_items").update({deleted_at:now}).eq("id",id).select("id"); if(r.error) fail=r.error.message; }
+  for(const id of linked){ const x=MDB.items.find(i=>i.id===id); const r=await sb.from("mood_item_links").update({deleted_at:now}).eq("id",x._link.id).select("id"); if(r.error) fail=r.error.message; }
+  MDB.items=MDB.items.filter(x=>!ids.includes(x.id)); MDB.sel=new Set(); mdbRefresh();
+  if(fail) toast("Some were not moved — "+escHtml(fail),"err");
+  else mdbUndoToast(`${ids.length} off the board`,snap);
+};
+
+/* ── a message on a board picture has no brand ─────────────────────── */
+(function(){
+  const basePost=mdbPost;
+  mdbPost=async function(){
+    if(!mbgOn()) return basePost.apply(this,arguments);
+    if(MDB.staged.length){ toast("Files cannot go on a general board's conversation yet. Paste a link instead.","err"); return; }
+    if(MDB.posting) return; MDB.posting=true;
+    try{
+      const id=MDB.open; const box=document.getElementById("mdbc-in");
+      const body=box?rtValue(box):"";
+      if(!id||!body) return;
+      const row={id:"c"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36),
+        mood_item_id:id, brand_id:null, body, author_kind:"team", author_name:actorName(),
+        author_email:ME.email||"", author_id:ME.id||null, mentions:brMentions(body)};
+      const pend={...row,created_at:new Date().toISOString(),_pending:true};
+      const r=await wSendAtOnce({box,
+        show(){ if(MDB.th&&MDB.th.id===id){ MDB.th.msgs=(MDB.th.msgs||[]).concat([pend]); if(MDB.open===id) mdbDrawer(); } },
+        send(){ return sb.from("post_comments").insert([row]); },
+        hide(){ if(MDB.th&&MDB.th.msgs){ MDB.th.msgs=MDB.th.msgs.filter(m=>m!==pend); if(MDB.open===id) mdbDrawer(); } }});
+      if(r.error){ toast("Could not post — "+escHtml(r.error.message),"err"); return; }
+      await mdbThLoad(id);
+    }finally{ MDB.posting=false; }
+  };
+})();
+
+/* ── the grid, the drawer, the selection bar learn about links ─────── */
+(function(){
+  const baseTile=mdbTileHtml;
+  mdbTileHtml=function(x){
+    let h=baseTile.apply(this,arguments);
+    let badge="";
+    if(x._link) badge=`<span class="mdb-lnk" title="From the general board “${escAttr(MBG.names[x.board_id]||"")}”"><i class="ti ti-link"></i></span>`;
+    else if(mbgOn()&&(MBG.links[x.id]||[]).length){ const n=MBG.links[x.id].length; badge=`<span class="mdb-lnk" title="On ${n} brand board${n===1?"":"s"}"><i class="ti ti-link"></i>${n}</span>`; }
+    if(badge) h=h.replace(/<\/div>\s*$/,badge+"</div>");
+    return h;
+  };
+  const baseDw=mdbDrawer;
+  mdbDrawer=function(){
+    const out=baseDw.apply(this,arguments);
+    try{
+      const dw=document.getElementById("mdb-dw"); const x=MDB.items.find(i=>i.id===MDB.open);
+      if(!dw||!x) return out;
+      const top=dw.querySelector(".mdb-top");
+      if(top&&!top.querySelector(".mbg-cp")){
+        const tr=top.querySelector('[onclick^="mdbTrashOne"]');
+        if(tr){ tr.insertAdjacentHTML("beforebegin",`<button class="mdb-ib mbg-cp" onclick="mbgCopyItem('${x.id}')" title="Copy link — paste it in a post, a task or any message"><i class="ti ti-link"></i></button>`);
+                if(x._link) tr.title="Take off this board"; }
+      }
+      const body=dw.querySelector(".mdb-body");
+      if(body&&!body.querySelector(".mbg-place")){
+        let html="";
+        if(x._link){
+          html=`<div class="mbg-place mbg-from"><i class="ti ti-link"></i>From the general board <b>${escHtml(MBG.names[x.board_id]||"a private board")}</b></div>`;
+        }else if(mbgOn()){
+          const ls=(MBG.links[x.id]||[]).filter(l=>brands[l.brand_id]);
+          html=`<div class="mbg-place"><div class="mdb-l">Also on</div><div class="mdb-tags">
+            ${ls.map(l=>`<span class="mdb-tag">${escHtml(brands[l.brand_id].name)}<i class="ti ti-x" title="Take it off ${escAttr(brands[l.brand_id].name)}'s board" onclick="mbgUnlink('${l.id}')"></i></span>`).join("")}
+            <button class="mdb-addtag" style="width:auto;cursor:pointer" onclick="mbgSendOpen(['${x.id}'])">+ Send to brand</button></div></div>`;
+        }
+        if(html){ const sl=body.querySelector(".mdb-sl"); if(sl) sl.insertAdjacentHTML("afterend",html); else body.insertAdjacentHTML("afterbegin",html); }
+      }
+    }catch(e){}
+    return out;
+  };
+  const baseSel=mdbSelBar;
+  mdbSelBar=function(){
+    const h=baseSel.apply(this,arguments);
+    if(!mbgOn()) return h;
+    const dis=MDB.sel&&MDB.sel.size?"":' style="opacity:.45;pointer-events:none"';
+    return h.replace(/(<span class="brfb-w"[^>]*><button class="btn btn-s btn-sm" onclick="mdbBulkTrash\(\)")/,
+      `<span class="brfb-w"${dis}><button class="btn btn-s btn-sm" onclick="mbgSendOpen()"><i class="ti ti-send"></i> Send to brand</button></span>$1`);
+  };
+  const baseCopyTag=mdbCopyTag;
+  mdbCopyTag=function(id){
+    if(!mbgOn()) return baseCopyTag.apply(this,arguments);
+    MDB.tmenu=null; buildMoodSidebar();
+    const t=mdbTag(id); if(!t) return;
+    mbgClip(mbgUrl("p=mood&mb="+encodeURIComponent(MDB.board)+"&tag="+encodeURIComponent(id)),`Link to “${escHtml(t.name)}” copied`);
+  };
+})();
+async function mbgUnlink(linkId){
+  const r=await sb.from("mood_item_links").update({deleted_at:new Date().toISOString()}).eq("id",linkId).select("id");
+  if(r.error){ toast("Not taken off — "+escHtml(r.error.message),"err"); return; }
+  Object.keys(MBG.links).forEach(k=>{ MBG.links[k]=MBG.links[k].filter(l=>l.id!==linkId); });
+  toast("Taken off that brand's board"); mdbDrawer(); mdbGrid();
+}
+
+/* ── Send to brand: one link per brand, no copy ────────────────────── */
+function mbgSendOpen(ids){
+  ids=ids||(MDB.sel?[...MDB.sel]:[]); if(!ids.length) return;
+  MBG.send={ids,pick:new Set(),q:"",busy:false};
+  MDB.pop=null;
+  let ov=document.getElementById("ov-mbg-send");
+  if(!ov){
+    document.body.insertAdjacentHTML("beforeend",`<div class="overlay" id="ov-mbg-send" style="z-index:950" onclick="if(event.target===this)mbgSendClose()">
+      <div class="modal" style="max-width:440px"><div class="modal-top"><div class="modal-title" id="mbg-send-t"></div>
+        <button class="modal-x" onclick="mbgSendClose()">✕</button></div>
+      <div class="modal-body" id="mbg-send-b"></div>
+      <div class="modal-foot" id="mbg-send-f"></div></div></div>`);
+  }
+  mbgSendDraw(); openM("mbg-send");
+  setTimeout(()=>{ const i=document.getElementById("mbg-send-q"); if(i) i.focus(); },60);
+}
+function mbgSendClose(){ if(MBG.send&&MBG.send.busy) return; closeM("mbg-send"); MBG.send=null; }
+function mbgSendHas(bid){ const S=MBG.send; return S.ids.every(id=>(MBG.links[id]||[]).some(l=>l.brand_id===bid)); }
+function mbgSendDraw(){
+  const S=MBG.send; if(!S) return;
+  const n=S.ids.length;
+  document.getElementById("mbg-send-t").textContent=`Send ${n} reference${n===1?"":"s"} to a brand`;
+  const q=S.q.trim().toLowerCase();
+  const list=Object.entries(brands).filter(([k,b])=>b&&b.name&&(!q||b.name.toLowerCase().indexOf(q)>-1))
+    .sort((a,b)=>a[1].name.localeCompare(b[1].name));
+  const rows=list.map(([k,b])=>{
+    const has=mbgSendHas(k), on=S.pick.has(k);
+    return `<div class="brfb-opt${on?" on":""}${has?" dim":""}" ${has?"":`onclick="mbgSendTick('${k}')"`}><span class="bx">${on||has?"✓":""}</span>
+      <span class="nm">${escHtml(b.name)}</span><span class="ct">${has?"Already there":""}</span></div>`;
+  }).join("")||'<div class="brfb-none">No brand matches</div>';
+  const keep=document.getElementById("mbg-send-q"), at=keep?keep.selectionStart:null;
+  const listEl=document.getElementById("mbg-send-l");
+  if(keep&&listEl){ listEl.innerHTML=rows; }
+  else document.getElementById("mbg-send-b").innerHTML=`<input class="fi" id="mbg-send-q" placeholder="Find a brand" value="${escAttr(S.q)}" oninput="MBG.send.q=this.value;mbgSendDraw()">
+    <div class="mbg-brl" id="mbg-send-l">${rows}</div>`;
+  if(keep&&at!=null){ try{ keep.setSelectionRange(at,at); }catch(e){} }
+  const k=S.pick.size;
+  document.getElementById("mbg-send-f").innerHTML=`<button class="btn btn-s" onclick="mbgSendClose()">Cancel</button>
+    <button class="btn btn-p" ${k&&!S.busy?"":"disabled"} onclick="mbgSendGo()">${S.busy?"Sending…":k?`Send to ${k} brand${k===1?"":"s"}`:"Send"}</button>`;
+}
+function mbgSendTick(k){ const S=MBG.send; S.pick.has(k)?S.pick.delete(k):S.pick.add(k); mbgSendDraw(); }
+async function mbgSendGo(){
+  const S=MBG.send; if(!S||S.busy||!S.pick.size) return;
+  S.busy=true; mbgSendDraw();
+  const rows=[];
+  S.pick.forEach(bid=>S.ids.forEach(id=>{ if(!(MBG.links[id]||[]).some(l=>l.brand_id===bid))
+    rows.push({id:crypto.randomUUID(),item_id:id,brand_id:bid,tag_ids:[],created_by:ME.id||null}); }));
+  let fail="";
+  if(rows.length){
+    const r=await sb.from("mood_item_links").insert(rows).select("*");
+    if(r.error) fail=r.error.message;
+    else { const mine=new Set(rows.map(x=>x.id)), back=(r.data||[]).filter(x=>x&&mine.has(x.id));
+      (back.length?back:rows).forEach(l=>{ (MBG.links[l.item_id]=MBG.links[l.item_id]||[]).push(l); }); }
+  }
+  S.busy=false;
+  if(fail){ toast("Not sent — "+escHtml(fail),"err"); mbgSendDraw(); return; }
+  const names=[...S.pick].map(k=>(brands[k]||{}).name).filter(Boolean);
+  closeM("mbg-send"); MBG.send=null;
+  toast(`Sent to ${escHtml(names.join(", "))}. Nothing was copied — it shows in both places.`);
+  if(MDB.sel){ MDB.sel=null; mdbBar(); }
+  mdbGrid(); if(MDB.open) mdbDrawer();
+}
+
+/* ── the address: ?p=mood&mb=<board>, and &item=<reference> ────────── */
+(function(){
+  if(typeof URL_KEYS!=="undefined"&&URL_KEYS.indexOf("mb")<0) URL_KEYS.push("mb");
+  const baseState=urlState;
+  urlState=function(){
+    const q=baseState.apply(this,arguments);
+    if(view==="mood"&&mbgOn()&&MDB.board){ q.delete("b"); q.set("mb",MDB.board); }
+    return q;
+  };
+  const baseApply=urlApply;
+  urlApply=async function(q){
+    try{
+      if(q&&q.get("p")==="mood"){
+        if(q.get("item")) MDB.pendingItem=q.get("item");
+        if(q.get("mb")&&!q.get("b")){
+          if(!mbgMay()){ toast("Mood boards are not open to you yet","err"); }
+          else{
+            if(!MBG.ok) await mbgLoadList();
+            if(!mbgBoard(q.get("mb"))){ MDB.pendingItem=null; toast("That mood board is private or no longer there.","err"); }
+            MDB.gen=true; MDB.board=mbgBoard(q.get("mb"))?q.get("mb"):(MDB.board||((mbgSorted()[0]||{}).id)||null);
+            if(activeBrand&&brands[activeBrand]){ const sel=document.getElementById("brand-sel"); if(sel) sel.value=""; activeBrand=""; }
+          }
+        }
+      }
+    }catch(e){}
+    const out=await baseApply.apply(this,arguments);
+    if(q&&q.get("p")==="mood"&&view==="mood"){
+      render();
+      /* the board was already loaded: open the reference now */
+      const it=MDB.pendingItem;
+      if(it&&MDB.ok&&MDB.items.some(x=>x.id===it)){ MDB.pendingItem=null; setTimeout(()=>mdbOpen(it),0); }
+    }
+    return out;
+  };
+  /* a pasted link to a reference or a board reads as a Mood board pill */
+  const baseLink=wSuiteLink;
+  wSuiteLink=function(u){
+    const s=baseLink.apply(this,arguments);
+    try{
+      const x=new URL(u), q=x.searchParams;
+      if(q.get("p")==="mood"&&(q.get("item")||q.get("mb"))&&(!s||s.kind==="page"||s.kind==="tool"||s.kind==="mood"))
+        return {kind:"mood",id:q.get("tag")||q.get("item")||q.get("mb"),brand:q.get("b")||"",tool:"Marketing Calendar"};
+    }catch(e){}
+    return s;
+  };
+})();
+
+/* ── a board in Trash can be restored by its owner ─────────────────── */
+try{
+  if(typeof TR_KINDS==="object"&&!TR_KINDS.mood_boards){
+    TR_KINDS.mood_boards={label:"Mood board",plural:"Mood boards",icon:"layout-board",page:"Mood boards",name:r=>r.name};
+    if(typeof TR_ORDER!=="undefined"&&TR_ORDER.indexOf("mood_boards")<0) TR_ORDER.push("mood_boards");
+  }
+}catch(e){}
+
+/* THIS SCRIPT CAN ARRIVE AFTER BOOT HAS DRAWN THE PAGE: draw the tabs
+   once more, and if the address asked for a board, go there. */
+try{
+  if(typeof ME==="object"&&ME&&ME.id){
+    renderBnTabs();
+    const q=new URLSearchParams(window.__URL_AT_LOAD||"");
+    if(q.get("p")==="mood"&&q.get("mb")&&!q.get("b")&&view!=="mood"){ if(q.get("item")) MDB.pendingItem=q.get("item"); mbgOpen(q.get("mb")); }
+  }
+}catch(e){}
+</script>
+
 </body>
 </html>
