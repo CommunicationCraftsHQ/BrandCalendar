@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Spin the wheel</title>
-<meta name="cc-tool-version" content="V2.5 New Jersey">
+<meta name="cc-tool-version" content="V2.6 New Jersey">
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -238,6 +238,26 @@ body:not(.ready) .scr{visibility:hidden}
 [hidden]{display:none!important}
 .ferr{min-height:18px;font-size:13px;color:#F0A08F;text-align:center}
 #stateSub{margin-top:-6px}
+/* V2.6 — everything fits its container on every phone (Chirag, 26 Oct 2026) */
+.h1{font-size:clamp(30px,11vw,44px)}
+#fHead{font-size:clamp(28px,10vw,40px)!important}
+.sub,#redeem .rd-fine{overflow-wrap:anywhere}
+.field input,.field.ph .cc{font-size:clamp(24px,9vw,36px)}
+.field.ph input{padding-left:clamp(60px,20vw,80px)}
+.field.ph label{left:clamp(60px,20vw,80px)}
+.halo{width:min(250px,64vw,30dvh);height:min(250px,64vw,30dvh)}
+#welcome .stage{gap:clamp(10px,2.6dvh,22px);min-height:0}
+.tkw{max-width:100%;display:flex;justify-content:center}
+.ticket{width:min(310px,100%);height:auto;min-height:88px}
+.tk-main{min-width:0;overflow:hidden;padding:10px 12px 10px 8px}
+.tk-main span{white-space:normal;text-align:center;line-height:1.3;font-size:10px;letter-spacing:.12em;max-width:100%;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;padding:0 2px}
+.tk-main b{max-width:100%;overflow:hidden}
+#redeem .rd-prize,#msg .who{max-width:100%;white-space:nowrap;overflow:hidden;padding:0 16px}
+#redeem .rd-how{max-width:min(320px,100%);font-size:clamp(18px,5.6vw,22px)}
+#msg .act{width:min(320px,calc(100% - 40px))}
+.prize small{font-size:max(11px,.27em)!important}
+
 /* V2.4 · the collab lockup: a perforated split ticket — Jewelchic on the coupon's gold stub,
    the partner on its ivory paper, two small bites at the tear line (Chirag, mockup 12, G3) */
 #app.collab .plate{background:none!important;box-shadow:none!important;padding:0!important;border:0!important;border-radius:0!important}
@@ -688,6 +708,7 @@ function liftOut(i) {
   m.classList.toggle("lose", lose);
   const nm = ((result && result.name) || nameI.value || "").trim().split(/\s+/)[0];
   $("rFor").textContent = lose ? (nm ? "Thank you, " + nm : "Thank you") : (nm ? "For you, " + nm : "For you");
+  fitLine($("rFor"), 15, 10);
   $("rFor").style.top = (T - 34) + "px";
   const big = lose ? (cfg.lose_head || "Not this time") : p.t, small = lose ? "" : p.s;
   $("rPrize").innerHTML = esc(big) + (small ? "<small>" + esc(small) + "</small>" : "");
@@ -749,7 +770,11 @@ function fitWedge(top, W, H) {
   }
 }
 /* the code is never wider than its coupon */
-function fitCode(b) { b.style.fontSize = ""; let fs = 42; while (b.scrollWidth > b.parentNode.clientWidth - 4 && fs > 22) { fs -= 2; b.style.fontSize = fs + "px"; } }
+function fitCode(b) { b.style.fontSize = ""; let fs = parseFloat(getComputedStyle(b).fontSize) || 42; const room = () => b.parentNode.clientWidth - 24;
+  while (b.scrollWidth > room() && fs > 16) { fs -= 1; b.style.fontSize = fs + "px"; } }
+/* V2.6: a one-line text shrinks until it fits its box */
+function fitLine(e, max, min) { if (!e) return; e.style.whiteSpace = ""; e.style.fontSize = max + "px"; let fs = max; while (e.scrollWidth > e.clientWidth + 1 && fs > min) { fs -= 1; e.style.fontSize = fs + "px"; }
+  if (e.scrollWidth > e.clientWidth + 1) e.style.whiteSpace = "normal"; /* still too long at the smallest size: it wraps */ }
 function sweepSheen() {
   const g = $("sheen"), t0 = performance.now();
   (function go(t) {
@@ -781,7 +806,7 @@ function openRedeem() {
   $("rdPrize").textContent = [p.t, p.s].filter(Boolean).join(" ");
   $("rdCode").textContent = (result && result.code) || (PREVIEW ? (cfg.code_prefix || "WIN") + "-7Q4K" : "");
   $("rdCodeNote").textContent = cfg.fine || "Show this at the counter";
-  requestAnimationFrame(() => fitCode($("rdCode")));
+  requestAnimationFrame(() => { fitCode($("rdCode")); fitLine($("rdPrize"), 62, 26); });
   /* V2.2: one line on how, one line on when — nothing more */
   $("rdHow").textContent = String(cfg.redeem_steps || "Show this code at billing in any " + (cfg.brand_line || "of our") + " store.").split(/\n+/).map((x) => x.trim()).filter(Boolean).join(" ");
   $("rdFine").textContent = cfg.redeem_fine || cfg.subline || "";
@@ -869,7 +894,7 @@ function boot() {
     const k = TESTING ? null : kept(); if (k && k.code !== undefined && k.index !== undefined) replay(k);
   }).catch(() => showState("Couldn't load the wheel.", "Check your connection and try again."));
 }
-addEventListener("resize", () => { if (!spent) size(); });
+addEventListener("resize", () => { if (!spent) size(); fitCode($("rCodeTxt")); fitCode($("rdCode")); fitLine($("rdPrize"), 62, 26); fitLine($("rFor"), 15, 10); });
 boot();
 })();
 </script>
