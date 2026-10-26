@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.116 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.117 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -4169,6 +4169,24 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
 .prpg .t{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .prpgb{height:4px;border-radius:2px;background:#eceef1;overflow:hidden;}
 .prpgb i{display:block;height:100%;background:var(--acc);}
+/* V118.117 — the figures are compared down a column, so they are
+   right-aligned and share one numeral width */
+.prhd .prnmh,.prrow .prnum{text-align:right;}
+/* the heading's figures sit over the row's, so they line up by their last digit */
+.prgrp .prgr.qal,.prgrp .prgr.cnv,.prgrp .prgr.cst,.prgrp .prgr.bud,.prgrp .prgr.spd{text-align:right;}
+/* the folded budget is ONE line under the spend. Without this the
+   basis word inside it takes a block of its own and the heading band
+   grows a third line for two words. */
+.prgrp .prgr.spd .bs{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.prgrp .prgr.spd .bs .bs{display:inline;}
+.prrow .prnum{white-space:normal;line-height:1.25;}
+.prrow .prnum small{display:block;font-size:11px;font-weight:400;color:var(--muted);
+  letter-spacing:0;margin-top:1px;}
+.prrow .prnum .pr-asofl{text-align:right;}
+.prrow .prof{color:var(--muted);}
+.prst2{min-width:0;}
+.prst2 .prdt2{display:block;font-size:11px;color:var(--muted);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
 .prcv{color:var(--subtle);font-size:13px;text-align:right;}
 .prtbs{color:var(--muted);}
 
@@ -14424,7 +14442,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.116 Tbilisi";
+const TOOL_VERSION="V118.117 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -29413,17 +29431,34 @@ function prProgress(p){
     return {label:prMonthName(prThisMonth()),
             target:r&&prNumOr(r.target_value)!==null?prNumOr(r.target_value):prNumOr(p.target_value),
             value:r?prNumOr(r.result_value):null,
+            qual:r?prNumOr(r.qualified):null, conv:r?prNumOr(r.converted):null,   /* V118.117 */
             spend:r?prNumOr(r.spend):null,
             at:r?(r.updated_at||r.entered_at):null,
             resAt:r?prResAt(r):null, spdAt:r?prSpdAt(r):null, by:r?r.entered_by:null};   /* V118.89 — each figure knows its own day */
   }
-  let v=null,s=null,at=null,resAt=null,spdAt=null,by=null;
+  let v=null,s=null,at=null,resAt=null,spdAt=null,by=null,q=null,cv=null;
   (PR.months[p.id]||[]).forEach(m=>{
+    const qq=prNumOr(m.qualified); if(qq!==null) q=(q===null?0:q)+qq;          /* V118.117 */
+    const cc=prNumOr(m.converted); if(cc!==null) cv=(cv===null?0:cv)+cc;
     const x=prNumOr(m.result_value); if(x!==null){ v=(v===null?0:v)+x; const ra=prResAt(m); if(ra&&(!resAt||String(ra)>String(resAt))) resAt=ra; }
     const y=prNumOr(m.spend); if(y!==null){ s=(s===null?0:s)+y; const sa=prSpdAt(m); if(sa&&(!spdAt||String(sa)>String(spdAt))) spdAt=sa; }
     const u=m.updated_at||m.entered_at; if(u&&(!at||String(u)>String(at))){ at=u; by=m.entered_by; }
   });
-  return {label:"", target:prNumOr(p.target_value), value:v, spend:s, at, resAt, spdAt, by};
+  return {label:"", target:prNumOr(p.target_value), value:v, qual:q, conv:cv, spend:s, at, resAt, spdAt, by};
+}
+/* ══ V118.117 · WHAT ONE LEAD COST ═════════════════════════════════
+   Chirag, 26 October: 871 corporate enquiries and 136 franchise ones
+   read the same on the row, so corporate looked six times better. It
+   cost ₹236 a lead against franchise's ₹118. NOTHING IS STORED — this
+   is the spend and the result already on the row, divided. It follows
+   the same basis they do: this month for a monthly target, the whole
+   run otherwise. Under ₹10 it keeps two decimals, because a store
+   visit at ₹0.43 and one at ₹1.55 are not the same thing. */
+function prCostEach(g,cur){
+  const v=prNumOr(g.value), s=prNumOr(g.spend);
+  if(v===null||s===null||v<=0) return null;
+  const c=s/v;
+  return prSym(cur)+c.toLocaleString("en-IN",{minimumFractionDigits:c<10?2:0,maximumFractionDigits:c<10?2:0});
 }
 /* V118.89 — WHEN WAS THIS FIGURE ENTERED. Chirag, 22 Oct: the leads and
    the spend on one row are often entered on different days, and a number
@@ -29699,20 +29734,36 @@ const PR_COLS=[
      ceiling, and the pixels it gives up go where text was being cut:
      Target group holds a long chip, Budget holds "a month" after the
      figure, Spent holds a six-figure sum. */
+  /* ══ V118.117 · THE ROW READS THE FUNNEL ════════════════════════
+     Chirag, 26 October: "restructure the columns to show all the
+     findings right there in one view." Three figures had nowhere to
+     go — how many of the leads were worth calling, how many closed,
+     and what one cost. Rather than bolt three columns onto a row that
+     already clips, two pairs that belong together were folded:
+
+       Runs   → the dates sit under Status
+       Budget → the figure sits under Spent, as "of ₹26,000"
+
+     NEITHER IS DELETED. Both keep their place in the Columns picker,
+     and switching one back on takes the folded line off the cell it
+     was folded into, so nothing is ever said twice. */
   {k:"name",   label:null,            w:"minmax(92px,0.9fr)", lock:true},
   {k:"obj",    label:"Objective",     w:"minmax(78px,104px)"},
-  {k:"seg",    label:"Target group",  w:"minmax(86px,176px)"},
+  {k:"seg",    label:"Target group",  w:"minmax(80px,150px)"},
   {k:"runs",   label:"Runs",          w:"minmax(134px,146px)"},
-  {k:"status", label:"Status",        w:"minmax(76px,84px)"},
-  {k:"prog",   label:"Progress",      w:"minmax(148px,1fr)"},
-  {k:"budget", label:"Budget",        w:"minmax(100px,124px)"},
-  {k:"spent",  label:"Spent",         w:"minmax(82px,104px)"},
+  {k:"status", label:"Status",        w:"minmax(104px,124px)"},
+  {k:"prog",   label:"Result",        w:"minmax(138px,1fr)"},
+  {k:"qual",   label:"Qualified",     w:"minmax(74px,86px)",  num:true},
+  {k:"conv",   label:"Closed",        w:"minmax(62px,74px)",  num:true},
+  {k:"cost",   label:"Cost each",     w:"minmax(72px,88px)",  num:true},
+  {k:"budget", label:"Budget",        w:"minmax(100px,124px)",num:true},
+  {k:"spent",  label:"Spent",         w:"minmax(96px,122px)", num:true},
   {k:"plats",  label:"Platforms",     w:"minmax(96px,124px)"},
   {k:"crs",    label:"Creatives",     w:"minmax(72px,80px)"},
   {k:"by",     label:"Hit it by",     w:"minmax(92px,104px)"},
   {k:"touched",label:"Last touched",  w:"minmax(96px,108px)"}
 ];
-const PR_COLS_DEF=["obj","seg","runs","status","prog","budget","spent"];
+const PR_COLS_DEF=["obj","seg","status","prog","qual","conv","cost","spent"];
 function prShown(){ return PR.cols ? PR.cols : (PR.cols=PR_COLS_DEF.slice()); }
 function prVisibleCols(){ const on=prShown(); return PR_COLS.filter(c=>c.lock||on.indexOf(c.k)>-1); }
 function prGridTpl(){ return prVisibleCols().map(c=>c.w).join(" ")+" 18px"; }
@@ -30235,7 +30286,7 @@ function prListHtml(){
   return bar+`<div class="nswrap" style="padding-top:0"><div class="prlist">
     ${prTotalsHtml(rows)}
     <div class="prhd" style="grid-template-columns:${tpl}">
-      ${cols.map(c=>`<div>${c.lock?"Promotion":escHtml(c.label)}</div>`).join("")}<div></div>
+      ${cols.map(c=>`<div${c.num?' class="prnmh"':""}>${c.lock?"Promotion":escHtml(c.label)}</div>`).join("")}<div></div>
     </div>${body}</div></div>`;
 }
 
@@ -30308,13 +30359,41 @@ function prSpendRollHtml(rows){
   if(!ks.length) return '<span class="nsdim">Nothing spent yet</span>';
   return ks.map(c=>prMoney(by[c],c)).join('<span class="prtsep">·</span>');
 }
+/* ══ V118.117 · THE FUNNEL IN THE STRIP ════════════════════════════
+   Two cells that APPEAR ONLY WHEN SOMETHING IS MARKED, so a brand
+   nobody qualifies sees the strip exactly as it was. The leads figure
+   beside Qualified counts only the promotions that carry a qualified
+   figure — adding a store visit to a lead would be the same mistake
+   the budget roll already refuses to make. */
+function prFunnelRoll(rows){
+  let q=null,c=null,base=0;
+  rows.forEach(p=>{
+    /* EVERY MONTH, not just this one. prSpendAll and prResultAll both
+       roll a promotion's whole life, so a funnel beside them has to do
+       the same or the strip compares a month against a lifetime. */
+    let pq=null,pc=null;
+    (PR.months[p.id]||[]).forEach(m=>{
+      const a=prNumOr(m.qualified); if(a!==null) pq=(pq===null?0:pq)+a;
+      const b=prNumOr(m.converted); if(b!==null) pc=(pc===null?0:pc)+b; });
+    if(pq===null&&pc===null) return;
+    if(pq!==null) q=(q===null?0:q)+pq;
+    if(pc!==null) c=(c===null?0:c)+pc;
+    const r=prResultAll(p); if(r!==null) base+=r; });
+  return {q,c,base};
+}
 function prTotalsHtml(rows){
   const objs={}; rows.forEach(p=>{ if(p.objective_key) objs[p.objective_key]=1; });
+  const f=prFunnelRoll(rows);
+  const funnel=(f.q===null&&f.c===null)?"":`
+    <div><div class="prtk">Qualified</div><div class="prtv">${f.q===null?'<span class="nsdim">—</span>':prFmt(f.q)}${
+      (f.q!==null&&f.base>0)?` <small>of ${prFmt(f.base)}</small>`:""}</div></div>
+    <div><div class="prtk">Closed</div><div class="prtv">${f.c===null?'<span class="nsdim">—</span>':prFmt(f.c)}</div></div>`;
   return `<div class="prtot">
     <div><div class="prtk">Showing</div><div class="prtv">${rows.length}
       <small>${rows.length===1?"promotion":"promotions"}</small></div></div>
     <div><div class="prtk">Objectives</div><div class="prtv">${Object.keys(objs).length}
       <small>of ${(PR.objs||[]).length}</small></div></div>
+    ${funnel}
     <div><div class="prtk">Budget</div><div class="prtv sm">${prBudgetRollHtml(rows)}</div></div>
     <div><div class="prtk">Spent so far</div><div class="prtv sm">${prSpendRollHtml(rows)}</div></div>
   </div>`;
@@ -30342,14 +30421,28 @@ function prGroupHeadHtml(g,tpl,cols){
   let res=null, oldest=null; g.rows.forEach(p=>{ const v=prResultAll(p); if(v!==null){ res=(res===null?0:res)+v; const a=prProgress(p).resAt; if(a&&(!oldest||String(a)<String(oldest))) oldest=a; } });   /* V118.89 — a total is only as fresh as its oldest figure */
   const unit=g.key?(prObjUnit(g.key)||"results"):"results";
   const label=g.key?prObjLabel(g.key):"No objective";
-  const mark={prog:"res",budget:"bud",spent:"spd"};
+  const mark={prog:"res",qual:"qal",conv:"cnv",cost:"cst",budget:"bud",spent:"spd"};
+  /* ══ V118.117 · THE HEADING FOLDS THE SAME WAY THE ROW DOES ══════
+     A piece whose column is switched off used to be crammed into the
+     name cell, where it overflowed the moment Budget left the default
+     set. The heading now mirrors the row: the group's budget sits
+     under its spend, and the group carries its own funnel. */
+  const on=prShown(), budOn=on.indexOf("budget")>-1;
+  const f=prFunnelRoll(g.rows);
+  const spd=prSpendTotal(g.rows), bud=prBudgetRollHtml(g.rows,true);
   const piece={
     prog:  res===null?'<span class="nsdim">nothing recorded</span>'
             :`<b>${prFmt(res)}</b> ${escHtml(unit)} so far ${prAsOf(oldest)}`,
-    budget:prBudgetRollHtml(g.rows,true),
-    spent: prSpendTotal(g.rows)===null?'<span class="nsdim">—</span>'
-            :prSpendRollHtml(g.rows)
+    qual:  f.q===null?'<span class="nsdim">—</span>':`<b>${prFmt(f.q)}</b>`,
+    conv:  f.c===null?'<span class="nsdim">—</span>':`<b>${prFmt(f.c)}</b>`,
+    cost:  (res===null||res<=0||spd===null)?'<span class="nsdim">—</span>'
+            :prCostEach({value:res,spend:spd},prCur(g.rows[0])),
+    spent: spd===null?'<span class="nsdim">—</span>'
+            :prSpendRollHtml(g.rows)+(budOn?"":` <span class="bs">of ${bud}</span>`)
   };
+  /* only offer a budget piece when the column is there to take it;
+     otherwise it has nowhere to land and spills into the name cell */
+  if(budOn) piece.budget=bud;
   const spare=[];
   /* the heading's name and count run on one line and lean into the
      column beside them WHEN that column is empty in a heading — the
@@ -30377,12 +30470,17 @@ function prGroupHeadHtml(g,tpl,cols){
 function prCellHtml(p,k){
   const g=prProgress(p), unit=prUnit(p), cur=prCur(p);
   const tgt=prNumOr(g.target), val=g.value, seg=prSegOf(p);
+  /* V118.117 — a folded line only appears while the column it was
+     folded out of is switched off, so nothing is ever said twice */
+  const on=prShown(), runsOn=on.indexOf("runs")>-1, budOn=on.indexOf("budget")>-1;
+  /* a share is only honest against a result that exists and is bigger */
+  const share=n=>(val!==null&&val>0&&n!==null)?` <small>${Math.round(n/val*100)}%</small>`:"";
   switch(k){
     case "name":   return `<div class="prnm">${escHtml(p.name)}</div>`;
     case "obj":    return `<div><span class="probj ${prObjClass(p.objective_key)}">${escHtml(prObjLabel(p.objective_key))}</span></div>`;
     case "seg":    return `<div>${seg?`<span class="prsg">${escHtml(prSegLabel(seg))}</span>`:'<span class="nsdim">—</span>'}</div>`;
     case "runs":   return `<div class="prdt">${prRunsRow(p)}</div>`;
-    case "status": return `<div>${prStatusHtml(p)}</div>`;
+    case "status": return `<div class="prst2">${prStatusHtml(p)}${runsOn?"":` <small class="prdt2">${prRunsRow(p)}</small>`}</div>`;
     case "prog": {
       const pc=(tgt&&val!==null)?Math.max(2,Math.min(100,Math.round(val/tgt*100))):0;
       return `<div class="prpg">
@@ -30395,8 +30493,17 @@ function prCellHtml(p,k){
               prBasis(p)==="per_month"?' <span class="nsdim">this month</span>':""}`}</div>
         <div class="prpgb"><i style="width:${pc}%"></i></div>${val!==null&&g.resAt?`<small class="pr-asofl">${prAsOf(g.resAt,g.by,false)}</small>`:""}</div>`;
     }
-    case "budget": return `<div class="prmn prbd">${prBudgetCell(p)}</div>`;
-    case "spent":  return `<div class="prmn">${g.spend!==null&&g.spend!==undefined?prMoney(g.spend,cur)+(g.spdAt?`<small class="pr-asofl">${prAsOf(g.spdAt,g.by,false)}</small>`:""):'<span class="nsdim">—</span>'}</div>`;
+    case "budget": return `<div class="prmn prbd prnum">${prBudgetCell(p)}</div>`;
+    case "spent":  return `<div class="prmn prnum">${g.spend!==null&&g.spend!==undefined?prMoney(g.spend,cur)+(budOn?"":prBudgetOpen(p)?` <small class="prof">Team to set</small>`
+        :prNumOr(p.planned_spend)===null?"":` <small class="prof">of ${prBudgetCell(p)}</small>`)+(g.spdAt?`<small class="pr-asofl">${prAsOf(g.spdAt,g.by,false)}</small>`:""):'<span class="nsdim">—</span>'}</div>`;
+    /* ── V118.117 · the funnel ──────────────────────────────────────
+       A DASH IS NOT A NOUGHT. Blank means nobody has marked that month
+       — which is itself worth seeing: no franchise lead has ever been
+       qualified. Drawing a 0 would hide that. */
+    case "qual":   return `<div class="prmn prnum">${g.qual!==null?prFmt(g.qual)+share(g.qual):'<span class="nsdim">—</span>'}</div>`;
+    case "conv":   return `<div class="prmn prnum">${g.conv!==null?prFmt(g.conv)+share(g.conv):'<span class="nsdim">—</span>'}</div>`;
+    case "cost": { const c=prCostEach(g,cur);
+      return `<div class="prmn prnum">${c||'<span class="nsdim">—</span>'}</div>`; }
     case "plats": {
       const st=prStreams(p.id);
       return `<div class="prdt">${st.length?st.map(x=>escHtml((PR_PLAT[x.platform]||PR_PLAT.other).label)).join(", "):'<span class="nsdim">—</span>'}</div>`;
@@ -31083,6 +31190,16 @@ function prProgDraw(){
         <div class="field"><label class="fl">Spent (${escHtml(prSym(cur).trim())})</label>
           <input class="fi prin" id="pg-spend" inputmode="numeric" value="${row?v(row.spend):""}"></div>
       </div>
+      ${/* V118.117 — of that result, how many were worth pursuing and how
+            many closed. BOTH MAY BE LEFT EMPTY: empty means nobody has
+            marked this month, which the row then shows as a dash rather
+            than as a nought. */""}
+      <div class="prgrid2">
+        <div class="field"><label class="fl">Qualified</label>
+          <input class="fi prin" id="pg-qual" inputmode="numeric" placeholder="not marked" value="${row?v(row.qualified):""}"></div>
+        <div class="field"><label class="fl">Closed</label>
+          <input class="fi prin" id="pg-conv" inputmode="numeric" placeholder="not marked" value="${row?v(row.converted):""}"></div>
+      </div>
       <div class="field"><label class="fl">Note</label>
         <textarea class="fi" id="pg-note" rows="2" style="height:auto;padding:10px 12px;">${escHtml(row&&row.note||"")}</textarea></div>
     </div>
@@ -31098,7 +31215,15 @@ async function prProgSave(){
   const bad=[...document.querySelectorAll("#promo-body .prin")].find(i=>{ const x=num(i); return x!==null&&(isNaN(x)||x<0); });
   if(bad){ toast("Figures must be numbers, zero or more","err"); bad.focus(); return; }
   const vals={target_value:num(g("pg-target")), result_value:num(g("pg-result")),
+              qualified:num(g("pg-qual")), converted:num(g("pg-conv")),   /* V118.117 */
               spend:num(g("pg-spend")), note:g("pg-note").value.trim()};
+  /* neither can be more than the result it is a part of */
+  if(vals.result_value!==null){
+    const over=[["Qualified",vals.qualified],["Closed",vals.converted]].find(x=>x[1]!==null&&x[1]>vals.result_value);
+    if(over){ toast(over[0]+" cannot be more than the "+prUnit(p),"err"); return; }
+  }
+  if(vals.qualified!==null&&vals.converted!==null&&vals.converted>vals.qualified){
+    toast("Closed cannot be more than Qualified","err"); return; }
   const btn=g("pg-save"); btn.disabled=true;
   try{
     const cur=prMonthRow(p.id,ms), now=new Date().toISOString();
