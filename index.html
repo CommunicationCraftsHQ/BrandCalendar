@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.115 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.116 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14424,7 +14424,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.115 Tbilisi";
+const TOOL_VERSION="V118.116 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -32336,7 +32336,7 @@ async function momSave(){
   const now=new Date().toISOString();
   const row={brand_id:activeBrand,held_on:d.held_on,topic,location_kind:d.location_kind||null,
     location_name:String(d.location_name||"").trim(),cc_people:d.cc_people,client_contact_ids:d.client_contact_ids,
-    client_names:d.client_names,file_url:String(d.file_url||"").trim(),notes:d.notes||"",updated_at:now};
+    client_names:d.client_names,file_url:String(d.file_url||"").trim(),notes:d.notes||"",...momV116Extra(d),updated_at:now};
   /* ══ V113.12 — THE ID IS TAKEN NOW, NOT WHEN THE QUEUE GETS TO IT ═══
      This closure runs a tick later. On the brand page a card can hand
      the writing to another card in that tick (mlLive flushes a pending
@@ -37197,7 +37197,7 @@ function mpMeetsHtml(m,canE){
   return `<div class="mp-sub-lbl"><span class="mp-sub-door" onclick="mlOpen()"
       title="Every meeting with this brand, on one page">Meetings<i class="ti ti-chevron-right"></i></span>${
     ms.length?`<span class="mom-count">${ms.length}</span>`:""
-    }${canE?`<span class="mp-sub-add" onclick="plMeetOpen(null,${m})">+ LOG A MEETING</span>`:""}</div>
+    }${canE?`<span class="mp-sub-add" onclick="plMeetOpen(null,${m})">+ ADD A MEETING</span>`:""}</div>
     <div class="mp-ms">${cards}${add}</div>${more}`;
 }
 monthPlanCardHtml=function(m,opt){
@@ -48638,7 +48638,7 @@ function xpSheet(k,i,again){
     h=xpScopeHtml(eng);
   } else if(k==="more"){
     h=`<div class="hd">${mn}</div>
-      <button class="li" onclick="xpSheetClose();plMeetOpen(null,${m})"><i class="ti ti-notes"></i>Log a meeting</button>
+      <button class="li" onclick="xpSheetClose();plMeetOpen(null,${m})"><i class="ti ti-notes"></i>Add a meeting</button>
       <button class="li" onclick="xpSheetClose();mlOpen()"><i class="ti ti-list-details"></i>Every meeting</button>
       <button class="li" onclick="xpSheetClose();mpAddCampaign(${m})"><i class="ti ti-speakerphone"></i>Add a campaign</button>
       <button class="li" onclick="xpSheetClose();mpvAdd('goal',${m})"><i class="ti ti-target-arrow"></i>Add a goal</button>
@@ -52109,6 +52109,233 @@ try{
     if(q.get("p")==="mood"&&q.get("mb")&&!q.get("b")&&view!=="mood"){ if(q.get("item")) MDB.pendingItem=q.get("item"); mbgOpen(q.get("mb")); }
   }
 }catch(e){}
+</script>
+
+<style id="v118116-css">
+/* ══ V118.116 TBILISI · UPCOMING MEETINGS, NAMES, THE GREY WELL ══════════
+   Chirag, 26 Oct (mockup 02): the meeting cards sit on a grey well; one
+   row by date, past first and upcoming last, told apart by colour; CC
+   people by name, not face; an upcoming meeting carries a time and an
+   agenda, and shows on the calendar. */
+.pt-momw .pt-well{background:#F6F4EF;border-radius:12px;padding:12px;margin:12px 18px 16px;}
+.pt-momw .pt-row{display:flex;gap:10px;align-items:stretch;}
+.pt-momw .pt-row > .mp-mc{flex:1 1 0;min-width:0;margin:0;background:#fff;border:1px solid #E9E6DE;box-shadow:0 1px 2px rgba(13,13,13,.05);border-radius:11px;padding:10px 12px;}
+.pt-momw .pt-row > .mp-mc:hover{border-color:#DAD5C8;box-shadow:0 6px 18px rgba(13,13,13,.10);}
+.pt-momw .pt-row > .mp-mc.up{border-left:3px solid #B8860B;}
+.pt-momw .pt-row > .mp-mc.due{border-left:3px solid var(--acc);}
+.pt-momw .mp-mc.up .dt{color:#B8860B;}
+.pt-momw .mp-mc .dt{white-space:nowrap;overflow:hidden;}
+.pt-momw .mp-mc .tp{white-space:normal;}
+.pt-momw .mp-mc .tg{display:inline-block;white-space:nowrap;font-size:10px;font-weight:800;border-radius:999px;padding:1px 7px;margin-left:5px;vertical-align:1px;}
+.pt-momw .mp-mc .tg.soon{background:#FBF1D6;color:#8A6508;}
+.pt-momw .mp-mc .tg.due{background:#FDECEC;color:var(--acc);}
+.pt-momw .mp-mc .ag{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--subtle);margin-top:2px;}
+.pt-momw .mp-mc .agl{font-size:11.5px;line-height:1.45;color:var(--muted);position:relative;padding-left:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pt-momw .mp-mc .agl:before{content:"•";position:absolute;left:0;color:var(--subtle);}
+.pt-momw .mp-mc .wh2{margin-top:8px;padding-top:7px;border-top:1px dashed #EDEAE2;font-size:11.5px;line-height:1.55;color:var(--muted);}
+.pt-momw .mp-mc .wh2 span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pt-momw .mp-mc .wh2 em{font-style:normal;font-weight:800;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--subtle);display:inline-block;width:52px;}
+.pt-momw .pt-now{flex:0 0 14px;position:relative;display:flex;justify-content:center;}
+.pt-momw .pt-now:before{content:"";position:absolute;top:0;bottom:0;left:50%;border-left:2px dashed #C9BFA2;}
+.pt-momw .pt-now span{position:relative;writing-mode:vertical-rl;transform:rotate(180deg);background:#F6F4EF;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#8A6508;padding:6px 0;align-self:center;}
+.pt-momw .pt-momnone{padding:10px 18px 16px;}
+/* the meeting card itself: time on the When line, the agenda above the minutes */
+.ml-agenda{margin:4px 0 6px;}
+.ml2-pane .ml-agenda{margin:2px 20px 12px 80px;}
+.ml-agenda{padding:10px 14px;background:#FFFBF0;border:1px solid #EFE6CC;border-radius:10px;}
+.ml-agenda .k{font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#8A6508;display:flex;align-items:center;gap:8px;}
+.ml-agenda .k .ed{margin-left:auto;font-size:12px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--acc);cursor:pointer;}
+.ml-agenda .l{font-size:13px;line-height:1.55;color:var(--text);position:relative;padding-left:12px;margin-top:3px;}
+.ml-agenda .l:before{content:"•";position:absolute;left:0;color:#B8860B;}
+.ml-agenda .none{font-size:13px;color:var(--subtle);margin-top:3px;cursor:pointer;}
+.ml-agenda .lock{font-size:12px;color:var(--subtle);margin-top:8px;}
+.ml-card.ml-fut .mom-newp,.ml-card.ml-fut .ml2-send{display:none!important;}
+.ml2-f .mom-fc.v116t{margin-left:6px;}
+.ml2-row.v116up .xmt-dt{color:#8A6508;background:#FBF1D6;}
+.ml2-row.v116up .xmt-dt b{color:#8A6508;}
+textarea.mom-in.v116a{width:100%;min-height:86px;resize:vertical;font:inherit;line-height:1.5;}
+/* the calendar: an upcoming meeting's mark is filled, its day outlined */
+.mc-day.pl-up{outline:2px dashed #B8860B;outline-offset:-3px;border-radius:8px;}
+.mc-day.pl-up .pl-meet{background:#B8860B;color:#fff;border-radius:3px;width:13px;height:13px;padding:1px;top:1px;left:2px;}
+.mc-day.pl-up .pl-meet svg{width:11px;height:11px;}
+.dp-msub{font-size:12px;color:var(--muted);margin:-2px 0 8px 30px;}
+.dp-msub .agl{display:block;position:relative;padding-left:10px;}
+.dp-msub .agl:before{content:"•";position:absolute;left:0;color:#B8860B;}
+.dp-msub b{color:#8A6508;font-weight:800;}
+</style>
+<script>
+/* ══ V118.116 TBILISI · UPCOMING MEETINGS ════════════════════════════════
+   Chirag, 26 Oct: "on the meeting cards, how can we separate the cards
+   from the background? … instead of showing icon of the people … show
+   their names … add upcoming meetings along with their agenda … how will
+   they show on the calendar?" Mockup 02 approved: grey well; "no two
+   separate sections for upcoming and past meetings … aggregated by the
+   colour and placement. The upcoming will be obviously last."
+
+   brand_meetings gains meet_time and agenda (01 - Meetings - agenda and
+   time.sql). Until that has run, MEET_V116 stays false and the time and
+   agenda are neither shown nor written, so nothing breaks. */
+let MEET_V116=null;
+function meetV116Probe(){
+  if(MEET_V116!==null||typeof sb==="undefined"||!sb) return;
+  MEET_V116=false;
+  try{ sb.from("brand_meetings").select("id,agenda,meet_time").limit(1).then(r=>{
+    MEET_V116=!(r&&r.error);
+    if(MEET_V116){ try{ if(view==="mplan") renderMonthPlanView(); else if(view==="meets") renderMeetsPage(); }catch(e){} }
+  }); }catch(e){ MEET_V116=false; }
+}
+function momV116Extra(d){
+  if(MEET_V116!==true||!d) return {};
+  return {meet_time:String(d.meet_time||""),agenda:String(d.agenda||"")};
+}
+function meetTodayIso(){ const t=new Date(); return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0"); }
+function meetIsUp(x){ const h=String((x&&x.held_on)||"").slice(0,10); return /^\d{4}-\d{2}-\d{2}$/.test(h)&&h>=meetTodayIso(); }
+function meetAgenda(x){ return String((x&&x.agenda)||"").split(/\n+/).map(s=>s.replace(/^\s*[-•*·]\s*/,"").trim()).filter(Boolean); }
+function meetHasMinutes(x){ return mpMeetPass(x).length>0||!!String((x&&x.notes)||"").replace(/<[^>]*>/g,"").trim(); }
+function meetDaysTo(x){
+  const a=new Date(meetTodayIso()+"T12:00:00"), b=new Date(String(x.held_on).slice(0,10)+"T12:00:00");
+  return Math.round((b-a)/864e5);
+}
+function meetSoonLabel(x){ const n=meetDaysTo(x); return n<=0?"Today":n===1?"Tomorrow":`In ${n} days`; }
+function meetDayLong(s){ const t=String(s||"").slice(0,10); if(!/^\d{4}-\d{2}-\d{2}$/.test(t)) return ""; return Number(t.slice(8,10))+" "+(MN[Number(t.slice(5,7))]||"").slice(0,3); }
+
+(function(){
+  /* a new meeting starts with an empty time and agenda */
+  const baseDraft=momDraft;
+  momDraft=function(){ return Object.assign(baseDraft.apply(this,arguments),{meet_time:"",agenda:""}); };
+
+  /* ── the card on the Plan page ───────────────────────────────────── */
+  plMomCardHtml=function(){
+    if(!ptOn()||typeof PLD==="undefined"||!PLD||!PLD.ok||!PLD.ok.meet) return "";
+    meetV116Probe();
+    const canE=canEdit();
+    const all=(PLD.meet||[]).filter(x=>/^\d{4}-\d{2}-\d{2}/.test(String(x.held_on||""))).slice()
+      .sort((a,b)=>String(a.held_on).localeCompare(String(b.held_on)));
+    const up=all.filter(meetIsUp), past=all.filter(x=>!meetIsUp(x));
+    const nUp=Math.min(up.length, past.length?2:4);
+    const showUp=up.slice(0,nUp), showPast=past.slice(Math.max(0,past.length-(4-nUp)));
+    const m=(typeof plMonthOpen==="function"&&plMonthOpen())||curMonth||1;
+    const who=x=>{ const cc=momFactParts(x).ccNames, cl=plClientNames(x);
+      return (cc.length||cl.length)?`<div class="wh2">${cc.length?`<span title="${escAttr(cc.join(", "))}"><em>CC</em>${escHtml(cc.join(", "))}</span>`:""}${cl.length?`<span title="${escAttr(cl.join(", "))}"><em>Client</em>${escHtml(cl.join(", "))}</span>`:""}</div>`:""; };
+    const agHtml=x=>{ const a=meetAgenda(x); return a.length?`<div class="ag">Agenda</div>${a.slice(0,2).map(l=>`<div class="agl" title="${escAttr(l)}">${escHtml(l)}</div>`).join("")}`:""; };
+    const tile=x=>{
+      const isUp=meetIsUp(x), due=!isUp&&!meetHasMinutes(x);
+      const where=[PL_LOC[x.location_kind]||"",x.location_name||""].filter(Boolean).join(" · ");
+      const head=[meetDayLong(x.held_on),(MEET_V116&&x.meet_time)?x.meet_time:"",where].filter(Boolean).join(" · ");
+      const np=mpMeetPass(x).length, nw=meetUnread(x);
+      return `<div class="mp-mc${isUp?" up":due?" due":""}" data-meet="${escAttr(x.id)}" onclick="event.stopPropagation();plMeetOpen('${escAttr(x.id)}')" title="${escAttr((canE?"Open":"Read")+" this meeting")}">
+        <div class="dt">${nw?`<span class="nw"></span>`:""}${escHtml(head.toUpperCase())}
+          ${np?`<span class="np">${np}</span>`:""}
+          <span class="pen lk" onclick="momCopyLink('${escAttr(x.id)}',event)" title="Copy a link that opens this meeting"><i class="ti ti-link"></i></span>
+          <span class="pen"><i class="ti ti-chevron-right"></i></span></div>
+        <div class="tp">${escHtml(x.topic||"Meeting")}${isUp?`<span class="tg soon">${escHtml(meetSoonLabel(x))}</span>`:due?`<span class="tg due">Minutes due</span>`:""}</div>
+        ${isUp||due?agHtml(x):mpMeetDecHtml(x)}
+        ${who(x)}</div>`;
+    };
+    const row=showPast.map(tile).join("")+((showPast.length&&showUp.length)?`<div class="pt-now"><span>Today</span></div>`:"")+showUp.map(tile).join("");
+    const chip2=up.length?`<span class="bd-chip">Next on ${escHtml(meetDayLong(up[0].held_on))}</span>`
+      :past.length?`<span class="bd-chip">Last on ${escHtml(meetDayLong(past[past.length-1].held_on))}</span>`:"";
+    return `<div class="mpv-eng pl-eng pt-momw"><div class="bd-card pt-mom" id="pt-mom" onclick="mlOpen()" title="Every meeting with this brand, on one page">
+      <div class="pt-momh"><span class="bd-lbl" style="margin:0;">Minutes of meeting</span>
+        <span class="bd-chip">${all.length} meeting${all.length===1?"":"s"} in ${YEAR}</span>${chip2}
+        ${canE?`<span class="pt-log" onclick="event.stopPropagation();plMeetOpen(null,${m})">+ Add a meeting</span>`:""}
+        <span class="pt-all">All meetings <i class="ti ti-chevron-right"></i></span></div>
+      ${all.length?`<div class="pt-well"><div class="pt-row">${row}</div></div>`:`<div class="pt-momnone">No meeting added for this brand in ${YEAR} yet.</div>`}
+    </div></div>`;
+  };
+
+  /* ── the meeting's own card: time and agenda ─────────────────────── */
+  const baseEd=momFactEditorHtml;
+  momFactEditorHtml=function(d){
+    const k=MOM.fc;
+    if(k==="time"&&MEET_V116) return `<div class="mom-fed ml-fed" onclick="event.stopPropagation()"><label>Time</label>
+      <input class="mom-in" type="time" id="mom-fci" value="${escAttr(d.meet_time||"")}" onchange="momSet('meet_time',this.value)" oninput="momSet('meet_time',this.value)">
+      <span class="mom-fc" onclick="momFc('')">Done</span></div>`;
+    if(k==="agenda"&&MEET_V116) return `<div class="mom-fed ml-fed" onclick="event.stopPropagation()"><label>Agenda</label>
+      <textarea class="mom-in wide v116a" id="mom-fci" placeholder="One point a line" oninput="momSet('agenda',this.value)">${escHtml(d.agenda||"")}</textarea>
+      <span class="mom-fc" onclick="momFc('')">Done</span></div>`;
+    return baseEd.apply(this,arguments);
+  };
+  const baseCard=mlCardHtml;
+  mlCardHtml=function(x,o){
+    let h=baseCard.apply(this,arguments);
+    try{
+      meetV116Probe();
+      if(!MEET_V116) return h;
+      o=o||{};
+      const fresh=!!o.fresh, open=fresh||!!ML.open[x.id];
+      if(!open) return h;
+      const live=fresh||(MOM.id===x.id&&!!MOM.draft);
+      const d=live?MOM.draft:x;
+      const fut=meetIsUp(d);
+      const a=meetAgenda(d);
+      if(!a.length&&!fut) return h;
+      const block=`<div class="ml-agenda" onclick="event.stopPropagation()"><div class="k">Agenda${live?`<span class="ed" onclick="momFc('agenda')">${a.length?"Edit":"+ Add"}</span>`:""}</div>
+        ${a.length?a.map(l=>`<div class="l">${escHtml(l)}</div>`).join(""):live?`<div class="none" onclick="momFc('agenda')">What will you discuss?</div>`:`<div class="none">No agenda yet</div>`}
+        ${fut?`<div class="lock">Minutes open on ${escHtml(meetDayLong(d.held_on))}</div>`:""}</div>`;
+      h=h.replace('<div class="ml-body">',block+'<div class="ml-body">');
+      if(fut) h=h.replace('class="mom-sheet ml-card','class="mom-sheet ml-card ml-fut');
+    }catch(e){ console.warn("v118.116 card",e); }
+    return h;
+  };
+  /* the time sits on the When line */
+  const baseMeets=renderMeetsPage;
+  renderMeetsPage=function(){
+    const out=baseMeets.apply(this,arguments);
+    try{
+      document.querySelectorAll("#main .mlpage .ml2-row[data-meet]").forEach(r=>{ const x=momRow(r.getAttribute("data-meet")); if(x&&meetIsUp(x)) r.classList.add("v116up"); });
+      if(!MEET_V116) return out;
+      document.querySelectorAll("#main .mlpage .ml-card.open").forEach(card=>{
+        const f=card.querySelector(".ml2-facts > .ml2-f"); if(!f||f.querySelector(".v116t")) return;
+        const live=card.classList.contains("live");
+        const d=live&&MOM.draft?MOM.draft:(momRow(card.getAttribute("data-meet"))||{});
+        if(!d.meet_time&&!live) return;
+        const s=document.createElement("span");
+        s.className="mom-fc v116t"+(live?"":" ro")+(d.meet_time?"":" empty");
+        s.textContent=d.meet_time||"+ Time";
+        if(live) s.addEventListener("click",e=>{ e.stopPropagation(); momFc("time"); });
+        f.appendChild(s);
+      });
+    }catch(e){ console.warn("v118.116 time",e); }
+    return out;
+  };
+
+  /* ── the calendar: an upcoming meeting's day ─────────────────────── */
+  const baseMini=buildMini;
+  buildMini=function(m){
+    const card=baseMini.apply(this,arguments);
+    try{
+      const today=meetTodayIso();
+      card.querySelectorAll(".mc-grid .mc-day").forEach((cell,i)=>{
+        if(!cell.querySelector(".pl-meet")) return;
+        const iso=YEAR+"-"+String(m).padStart(2,"0")+"-"+String(i+1).padStart(2,"0");
+        if(iso<today) return;
+        cell.classList.add("pl-up");
+        const tip=cell.getAttribute("data-tip");
+        if(tip) cell.setAttribute("data-tip",tip.split("\n").map(l=>l.startsWith("M|")&&l.indexOf("M|Upcoming · ")!==0?"M|Upcoming · "+l.slice(2):l).join("\n"));
+      });
+    }catch(e){ console.warn("v118.116 mini",e); }
+    return card;
+  };
+  const baseDay=openDay;
+  openDay=function(m,day){
+    const out=baseDay.apply(this,arguments);
+    try{
+      if(typeof plMerged!=="function"||!plMerged()||!PLD.ok.meet) return out;
+      const ms=plMeetingsIn(m).filter(x=>Number(String(x.held_on).slice(8,10))===Number(day));
+      const rows=document.querySelectorAll("#dp-body .dp-meet .dp-mrow");
+      rows.forEach((r,i)=>{ const x=ms[i]; if(!x||!meetIsUp(x)||r.nextElementSibling&&r.nextElementSibling.classList.contains("dp-msub")) return;
+        const where=[PL_LOC[x.location_kind]||"",x.location_name||""].filter(Boolean).join(" · ");
+        const bits=["<b>Upcoming</b>",MEET_V116&&x.meet_time?escHtml(x.meet_time):"",escHtml(where)].filter(Boolean).join(" · ");
+        const cc=momFactParts(x).ccNames, cl=plClientNames(x);
+        const names=[cc.join(", "),cl.join(", ")].filter(Boolean).join(" · ");
+        r.insertAdjacentHTML("afterend",`<div class="dp-msub">${bits}${names?" · "+escHtml(names):""}${
+          meetAgenda(x).map(l=>`<span class="agl">${escHtml(l)}</span>`).join("")}</div>`);
+      });
+    }catch(e){ console.warn("v118.116 day",e); }
+    return out;
+  };
+})();
 </script>
 
 </body>
