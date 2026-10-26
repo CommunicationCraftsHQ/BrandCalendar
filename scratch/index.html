@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="cc-tool-version" content="V1.0 New Jersey">
+<title>Scratch and win</title>
+<meta name="theme-color" content="#EFA43A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;1,6..96,400&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ═══ ScratchDeal · the play page · V1.0 New Jersey (27 Oct 2026) ═══
+   Three looks from "03 - Scratch card templates - mockup.html", chosen by
+   the campaign's config.look: saffron (Saffron Tear), noir (Maison Noir),
+   bloom (Soft Bloom). One page, so one QR address: scratch/?g=<slug>. */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{overflow:hidden;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;opacity:0;transition:opacity .4s}
+body.ready{opacity:1}
+#app{position:relative;margin:0 auto;max-width:480px;height:100%;height:100dvh;display:flex;flex-direction:column;align-items:center;overflow:hidden;isolation:isolate;
+  --cw:clamp(140px,min(46vw,30dvh),196px);--ch:calc(var(--cw)*1.39);--cw0:var(--cw)}
+.scr{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;padding:calc(env(safe-area-inset-top) + clamp(26px,6dvh,54px)) 22px calc(env(safe-area-inset-bottom) + clamp(18px,3.5dvh,30px))}
+.scr.on{display:flex}
+#fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:30}
+#testTag{position:absolute;top:calc(env(safe-area-inset-top) + 10px);left:50%;transform:translateX(-50%);z-index:40;padding:4px 12px;border-radius:999px;background:#1d4ed8;color:#fff;font:600 10px Inter;letter-spacing:.14em;text-transform:uppercase}
+.brand{min-height:16px;display:flex;justify-content:center}
+.brand img{max-height:clamp(28px,5dvh,42px);max-width:60vw;object-fit:contain}
+.top{text-align:center;transition:opacity .6s;width:100%}
+.kick{margin-top:10px}
+h1{margin-top:8px}
+.sub{margin-top:8px}
+.stage{position:relative;width:100%;flex:1;min-height:calc(var(--ch)*1.3);perspective:1100px}
+.c{position:absolute;left:50%;top:50%;width:var(--cw);height:var(--ch);margin:calc(var(--ch)/-2) 0 0 calc(var(--cw)/-2);transform-style:preserve-3d;cursor:pointer;
+   transition:transform var(--d,.8s) cubic-bezier(.77,0,.18,1),opacity var(--d,.8s) ease}
+.face{position:absolute;inset:0;border-radius:calc(var(--cw)*.078);overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.back{transform:rotateY(180deg)}
+.chosen .front{pointer-events:none}
+.prize{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 10px}
+.prize .big{white-space:pre-line}
+.won .prize .big{animation:settle 1.2s .2s cubic-bezier(.2,.8,.2,1)}
+@keyframes settle{0%{transform:scale(1)}40%{transform:scale(1.04)}100%{transform:scale(1)}}
+.prize::after{content:"";position:absolute;top:-30%;bottom:-30%;width:45%;left:-70%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.7),transparent);transform:skewX(-16deg);opacity:0;pointer-events:none}
+.won .prize::after{animation:sweep 1.6s .5s cubic-bezier(.4,0,.2,1) forwards}
+@keyframes sweep{0%{left:-70%;opacity:1}100%{left:140%;opacity:1}}
+.code{position:relative}
+.code .tt{display:none;position:absolute;top:-8px;right:-8px;padding:1px 5px;border-radius:4px;background:#1d4ed8;color:#fff;font:600 7px Inter;letter-spacing:.1em}
+.test .code .tt{display:block}
+.foil{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab;transition:opacity .9s ease;z-index:2}
+.foil.gone{opacity:0;pointer-events:none}
+.btn{margin-top:auto;min-width:min(260px,80%);padding:15px 26px;border:0;cursor:pointer;transition:opacity .5s,transform .5s cubic-bezier(.2,.8,.2,1)}
+.btn.hide{opacity:0;transform:translateY(10px);pointer-events:none}
+.btn:disabled{opacity:.5}
+.ghost{background:none;border:0;cursor:pointer;margin-top:10px;padding:8px;font:500 13px Inter;text-decoration:underline;text-underline-offset:3px}
+.hint{min-height:18px;margin:8px 0 10px;text-align:center;font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:0;transition:opacity .5s}
+.hint.on{opacity:.8}
+.state{margin-top:auto;margin-bottom:auto;text-align:center}
+.fan{position:relative;flex:1;width:100%;min-height:calc(var(--ch)*1.1)}
+.fan .face{width:var(--cw);height:var(--ch);left:50%;top:50%;right:auto;bottom:auto;margin:calc(var(--ch)*-.5) 0 0 calc(var(--cw)*-.5);transform-origin:50% 120%;animation:fanin 1s cubic-bezier(.2,.8,.2,1) both}
+.fan .face:nth-child(1){transform:rotate(-12deg) translateX(-18%);animation-delay:.1s}
+.fan .face:nth-child(2){transform:rotate(12deg) translateX(18%);animation-delay:.2s}
+.fan .face:nth-child(3){transform:translateY(-4%);animation-delay:.3s}
+@keyframes fanin{from{opacity:0;margin-top:calc(var(--ch)*-.33)}}
+/* details */
+form{width:100%;max-width:340px;margin:auto 0;display:flex;flex-direction:column;gap:14px}
+.fld{display:flex;align-items:center;border-radius:12px;padding:0 14px;height:52px}
+.fld span{margin-right:8px;font:500 15px Inter;opacity:.7}
+.fld input{flex:1;min-width:0;background:none;border:0;outline:0;font:500 16px Inter;color:inherit;height:100%}
+.consent{display:flex;gap:10px;align-items:flex-start;font-size:12px;line-height:1.45;opacity:.85;cursor:pointer}
+.consent input{margin-top:2px;width:16px;height:16px;flex:none}
+.ferr{min-height:16px;font-size:12px;color:#ffd6d6;text-align:center}
+/* redeem */
+.rd{margin:auto 0;width:100%;max-width:340px;text-align:center;display:flex;flex-direction:column;align-items:center}
+.rd .rk{font-size:11px;letter-spacing:.24em;text-transform:uppercase;opacity:.8}
+.rd .rp{margin-top:10px;white-space:pre-line}
+.tkt{margin-top:18px;width:100%;display:flex;border-radius:12px;overflow:hidden}
+.tkt .stub{width:22%;display:flex;align-items:center;justify-content:center;font:600 9px Inter;letter-spacing:.14em;writing-mode:vertical-rl;transform:rotate(180deg);border-right:2px dashed rgba(0,0,0,.18)}
+.tkt .main{flex:1;padding:14px 12px;text-align:left}
+.tkt .main span{display:block;font-size:11px;opacity:.75}
+.tkt .main b{display:block;margin-top:4px;font:600 24px ui-monospace,Menlo,monospace;letter-spacing:.12em;white-space:nowrap}
+.rd .how{margin-top:16px;font-size:13px;line-height:1.55;opacity:.9}
+.rd .fine{margin-top:8px;font-size:11px;opacity:.65}
+.acts{width:100%;display:flex;flex-direction:column;align-items:center}
+
+/* ═══ 01 SAFFRON TEAR ═══ */
+body.l-saffron{background:#EFA43A}
+.l-saffron #app{color:#fff;background:#EFA43A}
+.l-saffron #app::after{content:"";position:absolute;inset:0;z-index:-1;background-image:radial-gradient(rgba(150,80,0,.16) .8px,transparent 1px);background-size:4px 4px}
+.l-saffron .bl{font:700 11px Montserrat;letter-spacing:.3em;text-transform:uppercase}
+.l-saffron .kick{font:700 10px Montserrat;letter-spacing:.26em;text-transform:uppercase}
+.l-saffron h1{font:700 clamp(30px,9vw,40px)/.95 Oswald;text-transform:uppercase}
+.l-saffron h1 em{font-style:normal}
+.l-saffron .sub{font:600 11px Montserrat;letter-spacing:.14em;color:#fff7e8;text-transform:uppercase}
+.l-saffron .front{box-shadow:0 16px 30px -14px rgba(120,60,0,.55)}
+.l-saffron .back{box-shadow:0 18px 34px -14px rgba(120,60,0,.6)}
+.l-saffron .f{position:absolute;inset:0;display:flex;flex-direction:column;padding:14px}
+.l-saffron .f .k{font:700 9px Montserrat;letter-spacing:.24em}
+.l-saffron .f .q{position:absolute;right:-6px;bottom:calc(var(--ch)*-.14);font:700 calc(var(--ch)*.84)/1 Oswald;opacity:.18}
+.l-saffron .tear{position:absolute;left:-6px;right:-6px;top:34%;padding:12% 14px;background:#fff;color:#1d1d1d;text-align:center;
+  clip-path:polygon(0 8%,6% 0,14% 6%,22% 1%,31% 7%,40% 2%,49% 8%,58% 1%,67% 6%,75% 0,84% 7%,92% 2%,100% 9%,100% 92%,93% 100%,85% 94%,76% 99%,67% 93%,58% 100%,49% 94%,40% 99%,31% 93%,22% 100%,13% 94%,6% 99%,0 91%)}
+.l-saffron .tear small{display:block;font:700 9px Montserrat;letter-spacing:.22em}
+.l-saffron .tear b{display:block;margin-top:4px;font:700 calc(var(--cw)*.12)/1 Oswald;color:#E8862A;text-transform:uppercase}
+.l-saffron .v0{background:#F7B955;color:#fff}.l-saffron .v1{background:#1F1B16;color:#F7B955}.l-saffron .v2{background:#C8553D;color:#fff}
+.l-saffron .v3{background:#F4E3C3;color:#C8553D}.l-saffron .v4{background:#E07B39;color:#fff}.l-saffron .v5{background:#7D8450;color:#F4E3C3}
+.l-saffron .back .prize{background:#fff;color:#1d1d1d}
+.l-saffron .prize small{font:700 9px Montserrat;letter-spacing:.24em}
+.l-saffron .prize .big{margin-top:6px;font:700 calc(var(--cw)*.28)/.92 Oswald;color:#E8862A;text-transform:uppercase}
+.l-saffron .prize em{margin-top:6px;font:600 9px Montserrat;font-style:normal;letter-spacing:.1em;color:#555;text-transform:uppercase}
+.l-saffron .prize .code{margin-top:12px;padding:5px 10px;border:1.5px dashed #E8862A;font:700 10px Montserrat;letter-spacing:.2em}
+.l-saffron .btn{background:#fff;color:#1d1d1d;border-radius:4px;font:700 12px Montserrat;letter-spacing:.22em;text-transform:uppercase;box-shadow:0 10px 24px -10px rgba(120,60,0,.6)}
+.l-saffron .hint{font-family:Montserrat;font-weight:700}
+.l-saffron .fld{background:rgba(255,255,255,.95);color:#1d1d1d}
+.l-saffron .ghost{color:#fff}
+.l-saffron .rd .rp{font:700 clamp(40px,13vw,60px)/.92 Oswald;text-transform:uppercase}
+.l-saffron .tkt{background:#fff;color:#1d1d1d}.l-saffron .tkt .stub{background:#1F1B16;color:#F7B955;font-family:Montserrat}
+
+/* ═══ 02 MAISON NOIR ═══ */
+body.l-noir{background:#0E0D0C}
+.l-noir #app{color:#EDE6DA;background:#0E0D0C}
+.l-noir .bl{font:400 italic 20px "Bodoni Moda"}
+.l-noir .kick{font:500 9px Inter;letter-spacing:.42em;color:#B9A27A;text-transform:uppercase}
+.l-noir h1{font:italic 400 clamp(30px,9vw,38px)/1.02 "Bodoni Moda"}
+.l-noir h1 em{font-style:italic}
+.l-noir .sub{font:400 11px Inter;letter-spacing:.06em;color:#A39C90}
+.l-noir .front{box-shadow:0 18px 40px -16px rgba(0,0,0,.9)}
+.l-noir .f{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.l-noir .f::before{content:"";position:absolute;inset:9px;border:1px solid currentColor;opacity:.35;border-radius:8px}
+.l-noir .f .k{position:absolute;top:20px;font:500 8px Inter;letter-spacing:.34em}
+.l-noir .f .mono{width:calc(var(--cw)*.42);height:calc(var(--cw)*.42);border-radius:50%;border:1px solid currentColor;display:grid;place-items:center;font:400 calc(var(--cw)*.22)/1 "Bodoni Moda"}
+.l-noir .f .nm{position:absolute;bottom:20px;font:500 8px Inter;letter-spacing:.5em;text-transform:uppercase;max-width:80%;overflow:hidden;white-space:nowrap}
+.l-noir .v0{background:#1A1816;color:#C9B28A}.l-noir .v1{background:#EDE6DA;color:#1A1816}.l-noir .v2{background:#A88762;color:#F5EFE4}
+.l-noir .v3{background:#3E4234;color:#D9CFBF}.l-noir .v4{background:#4E1A1F;color:#E7CFA8}.l-noir .v5{background:#C9C1B3;color:#2B2724}
+.l-noir .back .prize{background:#F3EDE2;color:#141210}
+.l-noir .prize small{font:500 8px Inter;letter-spacing:.38em;color:#7B6A50}
+.l-noir .prize .big{margin-top:8px;font:400 calc(var(--cw)*.34)/.95 "Bodoni Moda"}
+.l-noir .prize em{margin-top:4px;font:italic 400 calc(var(--cw)*.08) "Bodoni Moda";color:#3A332B}
+.l-noir .prize .code{margin-top:14px;padding:6px 12px;border-top:1px solid #141210;border-bottom:1px solid #141210;font:500 9px Inter;letter-spacing:.3em}
+.l-noir .btn{background:transparent;color:#EDE6DA;border:1px solid #B9A27A;border-radius:0;font:500 10px Inter;letter-spacing:.38em;text-transform:uppercase}
+.l-noir .hint{color:#B9A27A}
+.l-noir .fld{background:transparent;border:1px solid rgba(237,230,218,.35);border-radius:0}
+.l-noir .ghost{color:#C9B28A}
+.l-noir .rd .rp{font:400 clamp(44px,14vw,64px)/.95 "Bodoni Moda"}
+.l-noir .rd .rk{color:#B9A27A}
+.l-noir .tkt{background:#F3EDE2;color:#141210;border-radius:0}.l-noir .tkt .stub{background:#1A1816;color:#C9B28A}
+
+/* ═══ 03 SOFT BLOOM ═══ */
+body.l-bloom{background:#F6F0EA}
+.l-bloom #app{color:#2A2622;background:#F6F0EA}
+.l-bloom .bl{font:400 italic 22px "Instrument Serif"}
+.l-bloom .kick{font:500 10px Inter;letter-spacing:.28em;color:#9C8C80;text-transform:uppercase}
+.l-bloom h1{font:400 clamp(32px,10vw,40px)/1 "Instrument Serif"}
+.l-bloom h1 em{font-style:italic}
+.l-bloom .sub{font:400 12px Inter;color:#7C716A}
+.l-bloom .front{box-shadow:0 20px 40px -18px rgba(120,80,90,.45)}
+.l-bloom .back{box-shadow:0 20px 40px -18px rgba(120,80,90,.35)}
+.l-bloom .f{position:absolute;inset:0;overflow:hidden}
+.l-bloom .bb{position:absolute;border-radius:50%;filter:blur(18px);opacity:.9}
+.l-bloom .bb.a{width:83%;height:60%;left:-17%;top:-8%;animation:drift 7s ease-in-out infinite alternate}
+.l-bloom .bb.b{width:72%;height:52%;right:-22%;bottom:-4%;animation:drift 8s ease-in-out -3s infinite alternate-reverse}
+@keyframes drift{0%{transform:translate(0,0) scale(1)}100%{transform:translate(14%,14%) scale(1.15)}}
+.l-bloom .f .t{position:absolute;left:16px;right:12px;bottom:14px;font:italic 400 calc(var(--cw)*.17)/1 "Instrument Serif";color:#2A2622}
+.l-bloom .f .k{position:absolute;right:16px;top:14px;font:500 9px Inter;letter-spacing:.2em;color:#2A2622;opacity:.6}
+.l-bloom .v0{background:#F8D9D6}.l-bloom .v0 .a{background:#F2A7B4}.l-bloom .v0 .b{background:#FBE3B8}
+.l-bloom .v1{background:#E3DDF5}.l-bloom .v1 .a{background:#B9A8F0}.l-bloom .v1 .b{background:#F6C6DE}
+.l-bloom .v2{background:#DDEBDD}.l-bloom .v2 .a{background:#A9D3B4}.l-bloom .v2 .b{background:#F4EBB0}
+.l-bloom .v3{background:#FBEBCF}.l-bloom .v3 .a{background:#F7C788}.l-bloom .v3 .b{background:#F2B0A6}
+.l-bloom .v4{background:#D9E8F2}.l-bloom .v4 .a{background:#9FC6E6}.l-bloom .v4 .b{background:#D6C7F2}
+.l-bloom .v5{background:#F3DCE6}.l-bloom .v5 .a{background:#E59DBA}.l-bloom .v5 .b{background:#BFE0D0}
+.l-bloom .back .prize{background:#FFFCF8;color:#2A2622}
+.l-bloom .prize small{font:500 9px Inter;letter-spacing:.26em;color:#9C8C80}
+.l-bloom .prize .big{margin-top:10px;font:italic 400 calc(var(--cw)*.2)/1 "Instrument Serif";color:#C2657A}
+.l-bloom .prize em{margin-top:8px;font:400 10px Inter;font-style:normal;color:#7C716A}
+.l-bloom .prize .code{margin-top:14px;padding:6px 12px;border-radius:999px;background:#F6E4E4;font:600 9px Inter;letter-spacing:.16em;color:#8E4458}
+.l-bloom .btn{background:#2A2622;color:#FFFCF8;border-radius:999px;font:500 14px Inter}
+.l-bloom .hint{color:#7C716A}
+.l-bloom .fld{background:#fff;border:1px solid #EADFD6}
+.l-bloom .ghost{color:#7C716A}
+.l-bloom .ferr{color:#b4233c}
+.l-bloom .rd .rp{font:italic 400 clamp(40px,12vw,56px)/1 "Instrument Serif";color:#C2657A}
+.l-bloom .rd .rk{color:#9C8C80}
+.l-bloom .tkt{background:#fff;border:1px solid #EADFD6}.l-bloom .tkt .stub{background:#F6E4E4;color:#8E4458}
+</style>
+</head>
+<body class="l-saffron">
+<div id="app">
+  <div id="testTag" hidden>Test mode</div>
+
+  <!-- 1 · welcome: a fan of three cards under the headline -->
+  <section class="scr on" id="welcome">
+    <div class="top"><div class="brand"></div><div class="kick" data-w="kick"></div><h1 data-w="head"></h1><div class="sub" data-w="sub"></div></div>
+    <div class="fan" id="fan"></div>
+    <div class="state" id="state" hidden><div class="sub" id="stateSub"></div></div>
+    <button class="btn" id="begin">Begin</button>
+  </section>
+
+  <!-- 2 · details -->
+  <section class="scr" id="form">
+    <div class="top"><div class="brand"></div><div class="kick" data-w="kick"></div><h1 data-w="fhead"></h1></div>
+    <form id="f" novalidate>
+      <label class="fld"><input id="name" placeholder="Your name" autocomplete="name" maxlength="80"></label>
+      <label class="fld"><span>+91</span><input id="phone" placeholder="Mobile number" inputmode="numeric" maxlength="11" autocomplete="tel-national"></label>
+      <label class="consent"><input type="checkbox" id="ok" checked><span id="consentTxt"></span></label>
+      <div class="ferr" id="ferr"></div>
+      <button class="btn" id="go" disabled style="margin:4px auto 0">Continue</button>
+    </form>
+  </section>
+
+  <!-- 3 · the deck: stop, pick, scratch -->
+  <section class="scr" id="deck">
+    <div class="top" id="dTop"><div class="brand"></div><div class="kick" data-w="kick"></div><h1 data-w="head"></h1><div class="sub" data-w="sub"></div></div>
+    <div class="stage" id="stage"></div>
+    <div class="hint" id="hint"></div>
+    <button class="btn" id="cta">Stop</button>
+  </section>
+
+  <!-- 4 · how to redeem -->
+  <section class="scr" id="redeem">
+    <div class="brand"></div>
+    <div class="rd">
+      <div class="rk">How to redeem</div>
+      <div class="rp" id="rdPrize"></div>
+      <div class="tkt" id="rdTkt"><div class="stub" id="rdStub">Your code</div><div class="main"><span id="rdNote"></span><b id="rdCode"></b></div></div>
+      <p class="how" id="rdHow"></p>
+      <p class="fine" id="rdFine"></p>
+    </div>
+    <div class="acts">
+      <button class="btn" id="rdCta" hidden></button>
+      <button class="ghost" id="rdBack">Back to my card</button>
+      <button class="ghost" id="rdAgain" hidden>Play again (test)</button>
+    </div>
+  </section>
+  <canvas id="fx"></canvas>
+</div>
+
+<script>
+"use strict";
+(function () {
+/* ═══ ScratchDeal play page · V1.0 New Jersey ═════════════════════════
+   ?g=<slug>    welcome → name and mobile → the deck glides; Stop, pick a
+                card; the database fixes the prize for that card (scratch_play)
+                and it is printed under the scratch layer before scratching
+                starts. One real play per mobile.
+   ?preview=1   MarTech's setup preview: no database; it draws what MarTech
+                posts and picks a prize by the odds.
+   &test=1      a test play (marked test, uses no stock, works in any status). */
+const $ = (id) => document.getElementById(id);
+const esc = (x) => String(x == null ? "" : x).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const SB_URL = "https://qsxldzqdjdplffxqdokd.supabase.co", SB_KEY = "sb_publishable_6ng_3jnvQbJUZifYTxmRrw_0yhCZuY9";
+const qs = new URLSearchParams(location.search), SLUG = (qs.get("g") || "").toLowerCase().replace(/[^a-z0-9-]/g, ""), PREVIEW = qs.get("preview") === "1";
+const TESTLINK = qs.get("test") === "1";
+const KEEP = "scratchdeal:" + SLUG;
+const keep = (v) => { try { localStorage.setItem(KEEP, JSON.stringify(v)); } catch (e) {} };
+const kept = () => { try { return JSON.parse(localStorage.getItem(KEEP) || "null"); } catch (e) { return null; } };
+function rpc(fn, args) {
+  return fetch(`${SB_URL}/rest/v1/rpc/${fn}`, { method: "POST",
+    headers: { apikey: SB_KEY, Authorization: "Bearer " + SB_KEY, "content-type": "application/json" }, body: JSON.stringify(args) })
+    .then(async (r) => { const j = await r.json().catch(() => null); if (!r.ok) throw new Error((j && (j.message || j.hint)) || ("HTTP " + r.status)); return j; });
+}
+
+/* ── what each look starts with (MarTech fills the same words) ── */
+const START = {
+  saffron: { kick: "This weekend only", headline: "Pick a mystery card", headline_em: "", sub: "₹500, ₹1,000 or ₹5,000 off", card_word: "Scratch-off card",
+             theme: "#EFA43A", bell: 880, motes: ["#ffffff", "#FFE2B0"], brush: "torn", labels: { stop: "Stop", pick: "Pick this card", redeem: "Redeem", begin: "Begin", go: "Continue" } },
+  noir:    { kick: "Private sale", headline: "Choose your", headline_em: "card", sub: "One of them holds up to 30% off", card_word: "M",
+             theme: "#0E0D0C", bell: 660, motes: ["#D8BC86", "#F3E3BF", "#B9A27A"], brush: "soft", labels: { stop: "Stop", pick: "Choose this card", redeem: "Redeem", begin: "Begin", go: "Continue" } },
+  bloom:   { kick: "A little something", headline: "Made", headline_em: "for you", sub: "Stop the cards, pick one, scratch gently", card_word: "for you",
+             theme: "#F6F0EA", bell: 1046, motes: ["#F2A7B4", "#B9A8F0", "#F7C788", "#ffffff"], brush: "soft", labels: { stop: "Stop", pick: "Pick this one", redeem: "Redeem", begin: "Begin", go: "Continue" } },
+};
+const SPEED = { calm: [2.0, 1.0], normal: [1.5, .8], brisk: [1.0, .6] };   /* [seconds a card rests, seconds a slide takes] */
+let cfg = {}, LOOK = "saffron", L = START.saffron, P = [], N = 6, status = "live";
+
+/* ── sound: soft, and only if the campaign has it on ── */
+let AC = null, lastScr = 0;
+const soundOn = () => cfg.sound !== false;
+function audio() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } if (AC && AC.state === "suspended") AC.resume(); return AC; }
+function tick() { if (!soundOn()) return; const a = audio(); if (!a) return; const o = a.createOscillator(), g = a.createGain(), t = a.currentTime; o.type = "sine"; o.frequency.value = 1900; g.gain.setValueAtTime(.025, t); g.gain.exponentialRampToValueAtTime(.0001, t + .05); o.connect(g).connect(a.destination); o.start(t); o.stop(t + .06); }
+function whoosh() { if (!soundOn()) return; const a = audio(); if (!a) return; const len = .5, buf = a.createBuffer(1, Math.floor(a.sampleRate * len), a.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) { const x = i / d.length; d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * x) * .6; }
+  const s = a.createBufferSource(); s.buffer = buf; const f = a.createBiquadFilter(); f.type = "bandpass"; f.Q.value = .7; f.frequency.setValueAtTime(400, a.currentTime); f.frequency.linearRampToValueAtTime(1800, a.currentTime + len);
+  const g = a.createGain(); g.gain.value = .06; s.connect(f).connect(g).connect(a.destination); s.start(); }
+function scratchSound() { if (!soundOn()) return; const a = audio(); if (!a) return; const now = a.currentTime; if (now - lastScr < .05) return; lastScr = now;
+  const len = .08, buf = a.createBuffer(1, Math.floor(a.sampleRate * len), a.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 1.5);
+  const s = a.createBufferSource(); s.buffer = buf; const f = a.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 1200 + Math.random() * 600;
+  const l = a.createBiquadFilter(); l.type = "lowpass"; l.frequency.value = 5200; const g = a.createGain(); g.gain.value = .05;
+  s.connect(f).connect(l).connect(g).connect(a.destination); s.start(); }
+function bell(base) { if (!soundOn()) return; const a = audio(); if (!a) return; const t = a.currentTime;
+  [[1, .07], [2.76, .025], [5.4, .012]].forEach(([m, v], i) => { const o = a.createOscillator(), g = a.createGain(); o.type = "sine"; o.frequency.value = base * m;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .008); g.gain.exponentialRampToValueAtTime(.0001, t + 2.2 - i * .4); o.connect(g).connect(a.destination); o.start(t); o.stop(t + 2.3); });
+  setTimeout(() => { const o = a.createOscillator(), g = a.createGain(), t2 = a.currentTime; o.type = "sine"; o.frequency.value = base * 1.5;
+    g.gain.setValueAtTime(0, t2); g.gain.linearRampToValueAtTime(.045, t2 + .01); g.gain.exponentialRampToValueAtTime(.0001, t2 + 1.8); o.connect(g).connect(a.destination); o.start(t2); o.stop(t2 + 1.9); }, 180); }
+
+/* ── the scratch layers ── */
+function label(ctx, w, h, txt, font, fill, y, ls) { ctx.save(); ctx.font = font; ctx.textAlign = "center"; ctx.textBaseline = "middle"; if ("letterSpacing" in ctx) ctx.letterSpacing = (ls || 0) + "px"; ctx.fillStyle = fill; ctx.fillText(txt, w / 2, y); ctx.restore(); }
+const PAINT = {
+  saffron(ctx, w, h) {
+    ctx.fillStyle = "#E68F2C"; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = "rgba(150,80,0,.18)"; for (let y = 1; y < h; y += 4) for (let x = 1; x < w; x += 4) ctx.fillRect(x, y, .9, .9);
+    label(ctx, w, h, "?", "700 " + Math.round(h * .76) + "px Oswald", "rgba(255,255,255,.08)", h / 2 + h * .16);
+    const fs = Math.round(w * .145);
+    label(ctx, w, h, "SCRATCH", "700 " + fs + "px Oswald", "#fff", h / 2 - fs * .55, 3);
+    label(ctx, w, h, "HERE", "700 " + fs + "px Oswald", "#fff", h / 2 + fs * .62, 3);
+    const tiers = P.map((p) => String(p.big || "").replace(/\s*off\s*$/i, "").replace(/\s+/g, " ").trim()).filter(Boolean);
+    const line = tiers.join(" · ");
+    if (line && line.length <= 30) label(ctx, w, h, line.toUpperCase(), "700 8px Montserrat", "#fff", h / 2 + fs * 1.6, 2);
+    ctx.strokeStyle = "rgba(255,255,255,.55)"; ctx.lineWidth = 1; ctx.strokeRect(8.5, 8.5, w - 17, h - 17);
+  },
+  noir(ctx, w, h) {
+    const g = ctx.createLinearGradient(0, 0, w, h); g.addColorStop(0, "#1B1917"); g.addColorStop(.5, "#2A2724"); g.addColorStop(1, "#141210");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    const m = mono();
+    ctx.save(); ctx.globalAlpha = .07; ctx.fillStyle = "#EDE6DA"; ctx.font = '400 22px "Bodoni Moda"'; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    for (let y = 10; y < h; y += 34) for (let x = (y / 34 % 2 ? 28 : 6); x < w + 20; x += 44) ctx.fillText(m, x, y); ctx.restore();
+    ctx.strokeStyle = "rgba(201,178,138,.6)"; ctx.lineWidth = 1; ctx.strokeRect(9.5, 9.5, w - 19, h - 19);
+    label(ctx, w, h, "Scratch", 'italic 400 ' + Math.round(w * .13) + 'px "Bodoni Moda"', "#C9B28A", h / 2 - 8);
+    label(ctx, w, h, "TO REVEAL YOUR PRIZE", "500 7px Inter", "#C9B28A", h / 2 + 20, 2.5);
+  },
+  bloom(ctx, w, h) {
+    const g = ctx.createLinearGradient(0, 0, w, h); g.addColorStop(0, "#E9E3F4"); g.addColorStop(.35, "#F7E6EC"); g.addColorStop(.7, "#E4F1EC"); g.addColorStop(1, "#F4EEDD");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    const s = ctx.createLinearGradient(0, h, w, 0); s.addColorStop(.3, "rgba(255,255,255,0)"); s.addColorStop(.5, "rgba(255,255,255,.75)"); s.addColorStop(.7, "rgba(255,255,255,0)");
+    ctx.fillStyle = s; ctx.fillRect(0, 0, w, h);
+    for (let i = 0; i < 500; i++) { ctx.fillStyle = `rgba(255,255,255,${Math.random() * .6})`; ctx.fillRect(Math.random() * w, Math.random() * h, 1, 1); }
+    label(ctx, w, h, "scratch gently", 'italic 400 ' + Math.round(w * .15) + 'px "Instrument Serif"', "#6E6178", h / 2);
+  },
+};
+const mono = () => (String(cfg.card_word || L.card_word || cfg.brand_line || "M").trim().charAt(0) || "M").toUpperCase();
+
+function makeFoil(canvas, opts) {
+  let ctx, w, h, dpr, down = false, last = null, done = false, moves = 0;
+  function setup() { dpr = Math.min(2, window.devicePixelRatio || 1); w = canvas.offsetWidth; h = canvas.offsetHeight;
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); ctx = canvas.getContext("2d", { willReadFrequently: true }); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.globalCompositeOperation = "source-over"; ctx.clearRect(0, 0, w, h); PAINT[LOOK](ctx, w, h); canvas.classList.remove("gone"); done = false; moves = 0; }
+  const pos = (e) => { const r = canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) * w / r.width, y: (e.clientY - r.top) * h / r.height }; };
+  function dab(x, y, r) { ctx.beginPath(); const n = 14; for (let i = 0; i <= n; i++) { const a = i / n * Math.PI * 2, rr = r * (0.72 + Math.random() * 0.38); const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr * .9; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.fill(); }
+  function stroke(a, b) { ctx.globalCompositeOperation = "destination-out"; const R = Math.max(13, w * .09);
+    if (L.brush === "torn") { const dx = b.x - a.x, dy = b.y - a.y, dist = Math.hypot(dx, dy), steps = Math.max(1, Math.ceil(dist / 3)); for (let i = 0; i <= steps; i++) dab(a.x + dx * i / steps, a.y + dy * i / steps, R); }
+    else { ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.lineWidth = R * 2; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.lineWidth = R * 2.6; ctx.globalAlpha = .25; ctx.stroke(); ctx.globalAlpha = 1; } }
+  function pct() { const d = ctx.getImageData(0, 0, canvas.width, canvas.height).data; let c = 0, t = 0; for (let i = 3; i < d.length; i += 4 * 7) { t++; if (d[i] < 60) c++; } return c / t; }
+  canvas.addEventListener("pointerdown", (e) => { if (done || !opts.live()) return; audio(); down = true; try { canvas.setPointerCapture(e.pointerId); } catch (_) {} last = pos(e); stroke(last, { x: last.x + .1, y: last.y }); opts.onStart(); });
+  canvas.addEventListener("pointermove", (e) => { if (!down || done) return; const p = pos(e); stroke(last, p); last = p; scratchSound(); if (++moves % 6 === 0 && pct() > .55) finish(); });
+  const up = () => { if (down && !done && pct() > .55) finish(); down = false; };
+  canvas.addEventListener("pointerup", up); canvas.addEventListener("pointercancel", up);
+  function finish(quiet) { if (done) return; done = true; down = false; canvas.classList.add("gone"); opts.onDone(quiet); }
+  return { reset: setup, finish };
+}
+
+/* ── the quiet celebration: drifting motes ── */
+const fx = $("fx"); let stopMotes = null;
+function motes(cx, cy, cols) {
+  const ctx = fx.getContext("2d"), d = Math.min(2, devicePixelRatio || 1), W = fx.clientWidth, H = fx.clientHeight; fx.width = W * d; fx.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0);
+  const ps = []; for (let i = 0; i < 46; i++) { const a = Math.random() * Math.PI * 2, r = 40 + Math.random() * 120;
+    ps.push({ x: cx + Math.cos(a) * r * .9, y: cy + Math.sin(a) * r * 1.2, vx: (Math.random() - .5) * .25, vy: -(.15 + Math.random() * .45), s: .8 + Math.random() * 2.2, c: cols[i % cols.length], t: -Math.random() * 50, life: 150 + Math.random() * 120, tw: Math.random() * 6 }); }
+  let raf; (function loop() { ctx.clearRect(0, 0, W, H); let alive = 0;
+    for (const p of ps) { p.t++; if (p.t < 0) { alive++; continue; } if (p.t > p.life) continue; alive++; p.x += p.vx; p.y += p.vy;
+      const k = p.t / p.life, a = Math.sin(Math.PI * k) * (.55 + .45 * Math.sin(p.t * .12 + p.tw));
+      ctx.globalAlpha = Math.max(0, a); ctx.fillStyle = p.c; ctx.shadowColor = p.c; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, 7); ctx.fill(); }
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0; if (alive) raf = requestAnimationFrame(loop); })();
+  return () => { cancelAnimationFrame(raf); ctx.clearRect(0, 0, W, H); };
+}
+
+/* ── words onto the page ── */
+function wordsIn() {
+  const w = (k) => (cfg[k] != null && cfg[k] !== "" ? cfg[k] : L[k] || "");
+  document.querySelectorAll('[data-w="kick"]').forEach((e) => { e.textContent = w("kick"); e.hidden = !w("kick"); });
+  const head = esc(w("headline")) + (w("headline_em") ? " <em>" + esc(w("headline_em")) + "</em>" : "");
+  document.querySelectorAll('[data-w="head"]').forEach((e) => (e.innerHTML = head));
+  document.querySelectorAll('[data-w="fhead"]').forEach((e) => (e.textContent = cfg.form_head || "Your details"));
+  document.querySelectorAll('[data-w="sub"]').forEach((e) => { e.textContent = w("sub"); e.hidden = !w("sub"); });
+  const bl = cfg.logo_url ? '<img src="' + esc(cfg.logo_url) + '" alt="">' : cfg.brand_line ? '<span class="bl">' + esc(cfg.brand_line) + "</span>" : "";
+  document.querySelectorAll(".brand").forEach((e) => (e.innerHTML = bl));
+  $("consentTxt").textContent = cfg.consent || "I agree to be contacted about my prize.";
+  $("begin").textContent = L.labels.begin; $("go").textContent = L.labels.go;
+  document.title = (cfg.brand_line ? cfg.brand_line + " · " : "") + (w("headline") + " " + w("headline_em")).trim();
+}
+function fanIn() { $("fan").innerHTML = [1, 2, 0].map((i) => `<div class="face front v${i}" style="--cw:calc(var(--cw0)*.86);--ch:calc(var(--cw0)*.86*1.39)">${cardFront(i)}</div>`).join(""); }
+function applyGame(g) {
+  cfg = g.config || {};
+  LOOK = START[cfg.look] ? cfg.look : "saffron"; L = START[LOOK];
+  document.body.className = document.body.className.replace(/\bl-\w+/g, "").trim() + " l-" + LOOK;
+  document.querySelector('meta[name="theme-color"]').content = L.theme;
+  P = (g.prizes || []).map((p) => ({ ...p }));
+  N = Math.max(4, Math.min(8, +cfg.cards || 6));
+  status = g.status || "live";
+  wordsIn(); fanIn();
+  document.body.classList.add("ready");
+}
+
+/* ── the deck ── */
+const stage = $("stage"), cta = $("cta"), hint = $("hint"), dTop = $("dTop");
+let cards = [], idx = 0, state = "idle", timer = null, foil = null, chosen = null, result = null, gap = 196;
+const offOf = (i) => { let o = ((i - idx) % N + N) % N; if (o > N / 2) o -= N; return o; };
+function cardFront(i) {
+  const n = "N° 0" + (i + 1);
+  if (LOOK === "noir") return `<div class="f"><span class="k">${n}</span><div class="mono">${esc(mono())}</div><span class="nm">${esc(cfg.brand_line || "")}</span></div>`;
+  if (LOOK === "bloom") return `<div class="f"><i class="bb a"></i><i class="bb b"></i><span class="k">0${i + 1}</span><span class="t">${esc(cfg.card_word || L.card_word)}</span></div>`;
+  return `<div class="f"><span class="k">${n}</span><span class="q">?</span><div class="tear"><small>A MYSTERY</small><b>${esc(cfg.card_word || L.card_word)}</b></div></div>`;
+}
+function build() {
+  stage.innerHTML = "";
+  cards = [...Array(N)].map((_, i) => { const el = document.createElement("div"); el.className = "c";
+    el.innerHTML = `<div class="face front v${i % 6}">${cardFront(i)}</div><div class="face back"><div class="prize"></div><canvas class="foil"></canvas></div>`;
+    el.addEventListener("click", () => onCard(i)); stage.appendChild(el); return el; });
+  gap = cards[0].offsetWidth * 1.09;
+}
+function layout(d) {
+  cards.forEach((el, i) => { const o = offOf(i), a = Math.abs(o);
+    el.style.setProperty("--d", d + "s");
+    el.style.transform = `translateX(${o * gap}px) translateZ(${a ? -60 : 0}px) rotateY(${o * -4}deg)`;
+    el.style.opacity = a > 1 ? 0 : 1; el.style.zIndex = 10 - a; el.style.pointerEvents = a > 1 ? "none" : "auto"; });
+}
+function step(dir, d) { idx = (idx + dir + N) % N; layout(d); tick(); }
+const sp = () => SPEED[cfg.speed] || SPEED.normal;
+function loop() { if (state !== "spin" && state !== "idle") return; step(1, sp()[1]); timer = setTimeout(loop, sp()[0] * 1000); }
+function startDeck(asIdle) { clearTimeout(timer); state = asIdle ? "idle" : "spin"; timer = setTimeout(loop, 900); }
+function stop() {
+  if (state !== "spin") return; state = "slowing"; clearTimeout(timer); cta.classList.add("hide");
+  const ds = [sp()[1] * 1.25, sp()[1] * 1.7]; let k = 0;
+  (function slow() { step(1, ds[k]); const wait = ds[k] * 1000 + 120; k++;
+    if (k < ds.length) timer = setTimeout(slow, wait);
+    else timer = setTimeout(() => { state = "stopped"; cta.textContent = L.labels.pick; cta.classList.remove("hide"); say("Tap the side cards to switch"); }, wait); })();
+}
+function say(t) { hint.textContent = t || ""; hint.classList.toggle("on", !!t); }
+function prizeHtml(r) {
+  return `<small>${esc(r.kick || "")}</small><div class="big">${esc(r.big || r.label || "")}</div><em>${esc(r.line || "")}</em><div class="code">${esc(r.code || "")}<i class="tt">TEST</i></div>`;
+}
+function fitPrize(el) {
+  const big = el.querySelector(".big"); if (!big) return; big.style.fontSize = "";
+  let fs = parseFloat(getComputedStyle(big).fontSize); const room = el.clientWidth - 16;
+  const kids = el.children, tall = () => kids[kids.length - 1].offsetTop + kids[kids.length - 1].offsetHeight - kids[0].offsetTop;
+  for (let n = 0; n < 60 && (big.scrollWidth > room || tall() > el.clientHeight - 20) && fs > 12; n++) { fs -= 1; big.style.fontSize = fs + "px"; }
+}
+/* the card is picked: the database fixes the prize, it is printed under the scratch layer, then the card turns */
+async function choose(i) {
+  if (state !== "stopped") return; state = "choosing"; chosen = cards[i]; say(""); cta.classList.add("hide");
+  let r;
+  try {
+    r = PREVIEW ? previewPrize() : await rpc("scratch_play", { p_slug: SLUG, p_name: nameI.value.trim(), p_mobile: digits(), p_card: i + 1, p_test: TESTLINK });
+  } catch (err) {
+    const k = Object.keys(ERR).find((x) => String(err.message).includes(x));
+    state = "stopped"; cta.classList.remove("hide"); say(k ? ERR[k] : "Something went wrong. Check your connection and try again.");
+    if (k === "scratch_closed" || k === "no_prizes_left") showState(ERR[k]);
+    return;
+  }
+  result = { ...r, name: nameI.value.trim(), at: Date.now() };
+  if (!PREVIEW && !r.test && !r.duplicate) keep(result);
+  turn(r.duplicate ? Math.max(0, Math.min(N - 1, (r.card || 1) - 1)) : i, r, !!r.duplicate);
+}
+function turn(i, r, revealed) {
+  idx = i; chosen = cards[i]; whoosh();
+  dTop.style.opacity = .35;
+  layout(.6);
+  cards.forEach((el) => { if (el === chosen) return; el.style.setProperty("--d", ".7s"); el.style.opacity = 0; el.style.transform += " translateY(40px) scale(.85)"; el.style.pointerEvents = "none"; });
+  const pz = chosen.querySelector(".prize"); pz.innerHTML = prizeHtml(r);
+  chosen.classList.toggle("test", !!r.test);
+  requestAnimationFrame(() => fitPrize(pz));
+  chosen.classList.add("chosen"); chosen.style.setProperty("--d", "1.1s"); chosen.style.transform = "translateX(0) translateY(-6px) scale(1.2) rotateY(180deg)";
+  foil = makeFoil(chosen.querySelector(".foil"), { live: () => state === "scratch", onStart: () => say(""), onDone: won });
+  foil.reset();
+  setTimeout(() => {
+    state = "scratch";
+    if (revealed) { foil.finish(true); say(""); }
+    else say(cfg.scratch_hint || "Scratch to reveal");
+  }, 1100);
+}
+function won(quiet) {
+  state = "won"; $("app").classList.add("won"); chosen.classList.add("won"); dTop.style.opacity = 1;
+  if (!quiet) { bell(L.bell); const r = chosen.getBoundingClientRect(), a = $("app").getBoundingClientRect(); if (stopMotes) stopMotes(); stopMotes = motes(r.left - a.left + r.width / 2, r.top - a.top + r.height / 2, L.motes); }
+  setTimeout(() => { cta.textContent = cfg.redeem_label || L.labels.redeem; cta.classList.remove("hide"); }, quiet ? 200 : 900);
+  stepMsg("win");
+}
+function onCard(i) { audio();
+  if (state === "stopped") { const o = offOf(i); if (o === 0) choose(i); else step(o, .6); }
+  else if (state === "spin") stop(); }
+cta.addEventListener("click", () => { audio();
+  if (state === "spin") stop(); else if (state === "stopped") choose(idx); else if (state === "won") openRedeem(); });
+
+/* ── screens ── */
+let screen = "welcome";
+function show(id) { screen = id; document.querySelectorAll(".scr").forEach((s) => s.classList.toggle("on", s.id === id)); if (id === "deck" && !cards.length) { build(); layout(0); } stepMsg(id); }
+function stepMsg(id) { if (PREVIEW) try { parent.postMessage({ type: "sd-step", step: id }, "*"); } catch (e) {} }
+function showState(head, sub) {
+  clearTimeout(timer); document.body.classList.add("ready"); show("welcome");
+  document.querySelectorAll('#welcome [data-w="head"]').forEach((e) => (e.textContent = head));
+  document.querySelectorAll('#welcome [data-w="sub"], #welcome [data-w="kick"]').forEach((e) => (e.hidden = true));
+  $("stateSub").textContent = sub || ""; $("state").hidden = !sub; $("begin").hidden = true; $("fan").hidden = true;
+}
+function resetDeck() {
+  clearTimeout(timer); if (stopMotes) { stopMotes(); stopMotes = null; }
+  $("app").classList.remove("won"); dTop.style.opacity = 1; say(""); chosen = null; result = null; idx = 0;
+  build(); layout(0); cta.textContent = L.labels.stop; cta.classList.remove("hide");
+}
+
+/* ── details ── */
+const nameI = $("name"), phoneI = $("phone"), goB = $("go");
+const digits = () => phoneI.value.replace(/\D/g, "").slice(0, 10);
+const okName = () => nameI.value.trim().length >= 2, okPhone = () => /^[6-9]\d{9}$/.test(digits());
+phoneI.addEventListener("input", () => { const d = digits(); phoneI.value = d.length > 5 ? d.slice(0, 5) + " " + d.slice(5) : d; check(); });
+nameI.addEventListener("input", check);
+function check() { goB.disabled = !(okName() && okPhone()); $("ferr").textContent = ""; }
+const ERR = { bad_name: "Please enter your name.", bad_mobile: "Please enter a 10-digit mobile number.",
+  scratch_closed: "This campaign has closed.", no_prizes_left: "All the prizes have been given. Thank you for joining in." };
+$("begin").addEventListener("click", () => { audio(); show(PREVIEW ? "deck" : "form"); if (PREVIEW) { resetDeck(); startDeck(); } });
+$("f").addEventListener("submit", (e) => {
+  e.preventDefault(); if (goB.disabled) return;
+  if (!$("ok").checked) { $("ferr").textContent = "Please tick the box to continue."; return; }
+  audio(); show("deck"); resetDeck(); startDeck();
+});
+
+/* ── how to redeem ── */
+function openRedeem() {
+  if (!result) return;
+  $("rdPrize").textContent = result.big || result.label || "";
+  $("rdCode").textContent = result.code || "";
+  $("rdNote").textContent = cfg.fine || "Show this at the counter";
+  $("rdStub").textContent = result.test ? "Test code" : "Your code";
+  $("rdHow").textContent = String(cfg.redeem_steps || "Show this code at billing" + (cfg.brand_line ? " at any " + cfg.brand_line + " store." : ".")).split(/\n+/).map((x) => x.trim()).filter(Boolean).join(" ");
+  $("rdFine").textContent = cfg.redeem_fine || result.line || ""; $("rdFine").hidden = !$("rdFine").textContent;
+  const lbl = (cfg.cta_label || "").trim(), url = (cfg.cta_url || "").trim();
+  $("rdCta").textContent = lbl || (url ? "Visit " + url.replace(/^https?:\/\//, "").replace(/\/$/, "") : ""); $("rdCta").hidden = !url;
+  $("rdCta").dataset.href = url ? (/^https?:/.test(url) ? url : "https://" + url) : "";
+  $("rdAgain").hidden = !(PREVIEW || TESTING);
+  show("redeem");
+  requestAnimationFrame(() => { const b = $("rdCode"); b.style.fontSize = ""; let fs = 24; while (b.scrollWidth > b.parentNode.clientWidth - 4 && fs > 14) { fs--; b.style.fontSize = fs + "px"; } });
+}
+$("rdBack").addEventListener("click", () => show("deck"));
+$("rdAgain").addEventListener("click", () => { if (PREVIEW) { show("deck"); resetDeck(); startDeck(); return; } show("form"); });
+$("rdCta").addEventListener("click", () => { if ($("rdCta").dataset.href) window.open($("rdCta").dataset.href, "_blank", "noopener"); });
+
+/* ── the MarTech preview ── */
+function previewPrize() {
+  const live = P.filter((p) => +p.weight > 0), tot = live.reduce((s, p) => s + +p.weight, 0);
+  let x = Math.random() * tot, p = live[0] || P[0] || { big: "₹500 OFF", kick: "YOU GOT", line: "" };
+  for (const q of live) { x -= +q.weight; if (x < 0) { p = q; break; } }
+  return { ...p, code: (cfg.code_prefix || "WIN") + "-7Q4K", test: false, card: idx + 1 };
+}
+function goto(s) {
+  clearTimeout(timer); if (s === "welcome" || s === "form") { show(s); if (s === "welcome") { if (!cards.length) build(); } return; }
+  show("deck"); resetDeck();
+  if (s === "deck") { startDeck(); return; }
+  state = "stopped"; const r = previewPrize(); result = r; turn(0, r, s !== "scratch");
+  if (s === "redeem") setTimeout(openRedeem, 1400);
+}
+
+/* ── start ── */
+let TESTING = false;
+function boot() {
+  if (PREVIEW) {
+    window.addEventListener("message", (e) => {
+      if (e.data && e.data.type === "sd-preview") {
+        const before = JSON.stringify({ look: cfg.look, cards: cfg.cards, word: cfg.card_word, bl: cfg.brand_line });
+        applyGame(e.data.game);
+        const after = JSON.stringify({ look: cfg.look, cards: cfg.cards, word: cfg.card_word, bl: cfg.brand_line });
+        if (before !== after) goto(screen === "redeem" ? "redeem" : screen === "deck" ? (state === "won" ? "win" : state === "scratch" ? "scratch" : "deck") : screen);
+      }
+      if (e.data && e.data.type === "sd-goto") goto(e.data.step);
+    });
+    /* opened on its own (a template's Try button): that look, with its starting prizes */
+    const lk = START[qs.get("look")] ? qs.get("look") : "saffron";
+    const DEMO = { saffron: [["YOU GOT", "₹500 OFF", "On any order above ₹2,499", 60], ["YOU GOT", "₹1,000 OFF", "On any order above ₹4,999", 32], ["JACKPOT", "₹5,000 OFF", "On any order above ₹14,999", 8]],
+      noir: [["YOUR PRIVILEGE", "15%", "off accessories", 50], ["YOUR PRIVILEGE", "20%", "off the new collection", 35], ["YOUR PRIVILEGE", "30%", "off your next look", 15]],
+      bloom: [["FOR YOU", "Free gift wrap", "plus a handwritten note", 50], ["FOR YOU", "15% off", "everything in store", 35], ["FOR YOU", "A free silk scarf", "with your next order", 15]] };
+    applyGame({ config: { look: lk, brand_line: "Your brand", code_prefix: "DEMO" }, prizes: DEMO[lk].map(([kick, big, line, weight], i) => ({ key: "p" + i, kick, big, line, weight })) });
+    try { parent.postMessage({ type: "sd-ready" }, "*"); } catch (e) {}
+    return;
+  }
+  if (!SLUG) { applyGame({ config: {} }); return showState("This link is missing its campaign.", "Scan the QR code again."); }
+  rpc("scratch_open", { p_slug: SLUG }).then((g) => {
+    if (!g) { applyGame({ config: {} }); return showState("This campaign isn't available."); }
+    applyGame(g);
+    if (!TESTLINK) {
+      if (g.status === "draft") return showState("This campaign opens soon.");
+      if (g.status === "closed" || g.status === "archived") return showState("This campaign has closed.", "Thank you for joining in.");
+    }
+    TESTING = g.status === "testing" || TESTLINK; $("testTag").hidden = !TESTING;
+    if (TESTLINK) { try { localStorage.removeItem(KEEP); } catch (e) {} }
+    /* someone who has already played sees their card again */
+    const k = TESTING ? null : kept();
+    if (k && k.code) { nameI.value = k.name || ""; show("deck"); resetDeck(); state = "stopped"; result = k; turn(Math.max(0, Math.min(N - 1, (k.card || 1) - 1)), k, true); }
+  }).catch(() => { applyGame({ config: {} }); showState("Couldn't load the campaign.", "Check your connection and try again."); });
+}
+addEventListener("resize", () => { if (cards.length && !chosen) { gap = cards[0].offsetWidth * 1.09; layout(0); } });
+(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(boot);
+})();
+</script>
+</body>
+</html>
