@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="cc-tool-version" content="V1.0 New Jersey">
+<title>Register</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap">
+<style>
+/* ═══ Registration · World Cities · MarTech V4.1 New Jersey (27 Oct 2026)
+   One question per screen. A line-art skyline beside the logo draws itself
+   as the seven answers come in; a red kite rises when it is complete. Each
+   screen has its own world city in the footer. The last screen is a poster
+   entry pass with two WhatsApp buttons. Every word comes from the campaign's
+   setup in MarTech (reg_events.config); the design is fixed.
+     ?g=<slug>     the campaign
+     &test=1       a test registration (marked test, works in any status)
+     ?preview=1    MarTech's setup preview: no database; draws what MarTech
+                   sends (rg-preview), reports its screen (rg-step) and can
+                   be moved to a screen (rg-goto). */
+:root{--paper:#ffffff;--navy:#1f2d5c;--red:#ac1f25;--pink:#d89dc6;--ink:#141833;--muted:#6b7191;--line:#e4e5ee;--soft:#f6f6f9;
+  --stroke:#8f95b5;--t-pink:#f7e1ee;--t-red:#f6d4d6;--t-blue:#e3ecf8;--t-yellow:#fbeec4;--t-green:#dff0e2;--t-sand:#f6ead6;
+  --font:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:light}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--font);font-size:16px;-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+.page{min-height:100%;display:flex;flex-direction:column}
+.wrap{flex:1;display:flex;flex-direction:column;width:100%;max-width:600px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));padding-top:calc(24px + env(safe-area-inset-top,0px))}
+header{display:flex;align-items:flex-end;gap:20px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;color:var(--navy);flex:none;min-height:34px}
+.brand img{height:34px;width:auto;display:block}
+.brand b{font-weight:800;font-size:17px;letter-spacing:.02em}
+.cityline{flex:1;min-width:0;height:auto;max-height:64px;display:block;overflow:visible}
+.cityline path{fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.cityline .ghost path{stroke:#d7d9e5}
+.cityline .ink path{stroke:var(--navy)}
+.cityline .rv{transition:width .9s cubic-bezier(.3,.7,.2,1)}
+.cityline .kite path{stroke:var(--red);fill:none}
+.cityline .kite path:first-child{fill:var(--red);fill-opacity:.15}
+.cityline .kite{opacity:0;transform:translateY(12px);transition:opacity .6s .6s,transform .9s .6s cubic-bezier(.3,1.4,.5,1)}
+.cityline.complete .kite{opacity:1;transform:none}
+main{flex:1;display:flex;align-items:center;padding-block:36px}
+form{width:100%}
+.step{display:none;animation:in .4s cubic-bezier(.2,.8,.2,1)}
+.step.active{display:block}
+@keyframes in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.pay{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.5;color:var(--muted);margin:36px 0 0;padding-top:18px;border-top:1px solid var(--line);max-width:46ch}
+.pay:empty{display:none}
+.pay svg{flex:none;width:16px;height:16px;margin-top:2px;color:var(--red)}
+.pay b{color:var(--navy);font-weight:700}
+.q{font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--red);margin-bottom:12px}
+h1{font-weight:800;color:var(--navy);font-size:clamp(40px,9vw,60px);line-height:1;letter-spacing:-.025em;margin:0 0 16px}
+h1 span{font-weight:300;display:block}
+h1 span.a{font-weight:800}
+h2{font-weight:700;color:var(--navy);font-size:clamp(28px,6vw,38px);line-height:1.12;letter-spacing:-.015em;margin:0 0 28px;text-wrap:balance}
+.sub{color:var(--muted);font-size:15px;line-height:1.5;margin:-18px 0 22px}
+.lead{color:var(--muted);font-size:17px;line-height:1.55;margin:0 0 28px;max-width:44ch}
+.meta{list-style:none;margin:0 0 36px;padding:0;display:grid;gap:10px}
+.meta li{display:flex;gap:12px;font-size:16px;color:var(--ink)}
+.meta li span{width:56px;flex:none;color:var(--muted);font-size:14px;padding-top:1px}
+input[type=text],input[type=email],input[type=tel]{width:100%;background:var(--paper);border:0;border-bottom:2px solid var(--line);border-radius:0;color:var(--navy);font:600 clamp(24px,5vw,30px)/1.3 var(--font);padding:8px 0 12px;outline:none;transition:border-color .2s}
+input:focus{border-bottom-color:var(--navy)}
+input::placeholder{color:#c3c6d6;font-weight:400}
+.tel{display:flex;align-items:flex-end;gap:12px}
+.tel em{font:400 clamp(24px,5vw,30px)/1.3 var(--font);font-style:normal;color:var(--muted);padding:8px 0 12px;border-bottom:2px solid var(--line)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+.chip{appearance:none;border:1px solid var(--line);background:var(--paper);color:var(--navy);font:600 15px var(--font);padding:10px 14px;border-radius:6px;cursor:pointer;transition:border-color .15s,background .15s}
+.chip:hover{border-color:var(--navy)}
+.chip.sel{background:var(--navy);border-color:var(--navy);color:#fff}
+.check{display:flex;gap:10px;align-items:flex-start;margin-top:24px;cursor:pointer;font-size:15px;color:var(--ink);line-height:1.45}
+.check input{width:18px;height:18px;accent-color:var(--red);margin:2px 0 0;flex:none}
+.row{display:flex;align-items:center;gap:16px;margin-top:32px;flex-wrap:wrap}
+.btn{appearance:none;border:0;background:var(--red);color:#fff;font:600 16px var(--font);padding:14px 26px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:10px;transition:background .2s}
+.btn:hover{background:#951a1f}
+.btn[disabled]{opacity:.6;cursor:default}
+.btn svg{width:16px;height:16px}
+.ghost{appearance:none;background:none;border:0;color:var(--muted);font:600 15px var(--font);cursor:pointer;padding:6px 2px}
+.ghost:hover{color:var(--navy)}
+.err{color:var(--red);font-size:14px;min-height:20px;margin-top:10px}
+:focus-visible{outline:2px solid var(--navy);outline-offset:3px}
+.opt{display:grid;gap:8px;margin-bottom:22px}
+.opt .chip{text-align:left;padding:14px 16px 14px 44px;position:relative}
+.opt .chip::before{content:"";position:absolute;left:16px;top:50%;width:16px;height:16px;margin-top:-8px;border:1.5px solid currentColor;border-radius:4px}
+.opt .chip.sel::before{background:#fff;box-shadow:inset 0 0 0 3px var(--navy)}
+/* guests */
+.guests{display:grid;gap:10px;margin-bottom:6px}
+.guest{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:end;padding:12px 0;border-bottom:1px solid var(--line)}
+.guest input{font-size:18px!important;padding:6px 0 8px!important}
+.guest .x{appearance:none;border:0;background:none;color:var(--muted);cursor:pointer;font-size:20px;padding:6px}
+.add{appearance:none;border:1px dashed var(--muted);background:none;color:var(--navy);font:600 15px var(--font);padding:12px 16px;border-radius:6px;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
+.add:hover{border-color:var(--navy)}
+/* the pass */
+#passbox{margin:4px 0 22px}
+.epass{position:relative;overflow:hidden;animation:passin .8s cubic-bezier(.2,.9,.25,1.05) both}
+@keyframes passin{from{opacity:0;transform:translateY(24px) rotate(-2deg) scale(.96)}to{opacity:1;transform:none}}
+.epass::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent);transform:skewX(-18deg);animation:shine 2.6s .9s ease-in-out 1 both;pointer-events:none}
+@keyframes shine{to{left:130%}}
+.epass .k{font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:600}
+.pass-poster{background:var(--red);color:#fff;border-radius:14px;aspect-ratio:4/5;max-width:340px;width:100%;display:flex;flex-direction:column;padding:22px;box-shadow:0 18px 40px rgba(172,31,37,.3);margin:0 auto}
+.pass-poster .flags{position:absolute;top:0;right:0;width:58%;height:auto}
+.pass-poster .crest{background:#fff;border-radius:6px;padding:3px;height:26px;width:auto;align-self:flex-start;position:relative;display:block}
+.pass-poster .bl{align-self:flex-start;position:relative;font-weight:800;letter-spacing:.04em;font-size:15px}
+.pass-poster .t{font-size:38px;line-height:.95;font-weight:800;letter-spacing:-.02em;margin-top:auto;position:relative;word-break:break-word}
+.pass-poster .t span{font-weight:300;display:block}
+.pass-poster .ev{font-size:13px;margin:10px 0 16px;opacity:.9;position:relative}
+.pass-poster .card{background:#fff;color:var(--navy);padding:14px 16px;border-radius:8px;position:relative}
+.pass-poster .card .k{color:var(--muted)}
+.pass-poster .card .nm{font-size:24px;margin:2px 0 4px;font-weight:800;line-height:1.05;word-break:break-word;padding-right:76px}
+.pass-poster .card .role{font-size:13px;color:var(--ink);word-break:break-word}
+.pass-poster .card .no{position:absolute;right:14px;top:14px;font-size:12px;font-weight:800;color:var(--red);letter-spacing:.08em}
+.pass-poster .test{position:absolute;top:14px;right:14px;z-index:2;background:#fff;color:var(--red);font-size:10px;font-weight:800;letter-spacing:.12em;padding:4px 8px;border-radius:4px}
+.gl{max-width:440px;margin:0 0 22px;border-top:1px solid var(--line)}
+.gl .g{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.gl .g div{flex:1;min-width:0}
+.gl .g b{display:block;color:var(--navy);font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gl .g small{color:var(--muted);font-size:13px;letter-spacing:.04em}
+.gl .g a{flex:none;display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--navy);font-weight:600;font-size:14px;border:1px solid var(--line);border-radius:6px;padding:8px 12px}
+.gl .g a svg{width:16px;height:16px;color:#25a244}
+.glh{font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 4px}
+.finbtns{display:grid;gap:10px;max-width:440px}
+.finbtns a{display:flex;align-items:center;justify-content:center;gap:10px;text-decoration:none;font-weight:600;font-size:16px;padding:15px 18px;border-radius:6px}
+.finbtns .wa-invite{background:var(--red);color:#fff;box-shadow:0 8px 20px rgba(172,31,37,.25)}
+.finbtns .wa-invite:hover{background:#951a1f}
+.finbtns .wa-save{border:1px solid var(--line);color:var(--navy)}
+.finbtns .wa-save:hover{border-color:var(--navy)}
+.finbtns .wa-save svg{color:#25a244}
+.finbtns svg{width:20px;height:20px}
+/* the footer: one world city per screen */
+.foot{position:relative;height:clamp(110px,24vw,160px);margin-top:8px}
+.foot svg{position:absolute;inset:0;width:100%;height:100%;opacity:0;transform:translateY(10px);transition:opacity .7s,transform .9s cubic-bezier(.2,.8,.2,1)}
+.foot svg.on{opacity:1;transform:none}
+.art path{fill:none;stroke:var(--stroke);stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.art .t-pink{fill:var(--t-pink);stroke:none}.art .t-red{fill:var(--t-red);stroke:none}.art .t-blue{fill:var(--t-blue);stroke:none}
+.art .paper{fill:var(--paper);stroke:none}
+.art .t-yellow{fill:var(--t-yellow);stroke:none}.art .t-green{fill:var(--t-green);stroke:none}.art .t-sand{fill:var(--t-sand);stroke:none}
+.note{color:var(--muted);font-size:16px;line-height:1.55}
+body.loading main,body.loading .foot{visibility:hidden}
+.testbar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:#4F7FD6;color:#fff;text-align:center;font:700 11px/1 var(--font);letter-spacing:.14em;padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px))}
+@media (max-width:420px){header{gap:14px}.brand b{font-size:15px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body class="loading">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="arrow" viewBox="0 0 16 16"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="tick" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M4.8 8.2l2.1 2.1 4.3-4.6" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+  <symbol id="wa" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2s.8 2.3.9 2.5c.1.2 1.6 2.5 4 3.5 1.5.6 2.1.7 2.8.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.2-.2-.5-.3z"/></symbol>
+</defs></svg>
+
+<div class="page">
+<div class="wrap">
+  <header>
+    <div class="brand" id="brand"></div>
+    <svg id="sky" aria-hidden="true"></svg>
+  </header>
+  <main>
+    <form id="form" novalidate autocomplete="on">
+      <section class="step active" data-step="intro">
+        <div class="q" data-t="kicker"></div>
+        <h1><span class="a" data-t="title_a"></span><span data-t="title_b"></span></h1>
+        <p class="lead" data-t="lead"></p>
+        <ul class="meta"><li><span>When</span><b data-t="when_line" style="font-weight:400"></b></li><li><span>Where</span><b data-t="where_line" style="font-weight:400"></b></li></ul>
+        <button type="button" class="btn" data-next><span data-t="start_label"></span> <svg><use href="#arrow"/></svg></button>
+      </section>
+      <section class="step" data-step="name">
+        <h2 data-t="q_name"></h2>
+        <input type="text" id="f-name" placeholder="Your name" autocomplete="name" maxlength="80">
+        <div class="err" data-err></div>
+        <div class="row"><button type="button" class="btn" data-next>Next <svg><use href="#arrow"/></svg></button><span class="ghost" style="cursor:default;font-weight:400;font-size:13px">or press Enter</span></div>
+        <div class="pay" data-pay></div>
+      </section>
+      <section class="step" data-step="phone">
+        <h2 data-t="q_phone"></h2>
+        <div class="tel"><em>+91</em><input type="tel" id="f-phone" inputmode="numeric" maxlength="11" placeholder="98765 43210" autocomplete="tel-national"></div>
+        <div class="err" data-err></div>
+        <div class="row"><button type="button" class="btn" data-next>Next <svg><use href="#arrow"/></svg></button><button type="button" class="ghost" data-back>Back</button></div>
+        <div class="pay" data-pay></div>
+      </section>
+      <section class="step" data-step="email">
+        <h2 data-t="q_email"></h2>
+        <input type="email" id="f-email" placeholder="name@example.com" autocomplete="email" maxlength="120">
+        <div class="err" data-err></div>
+        <div class="row"><button type="button" class="btn" data-next>Next <svg><use href="#arrow"/></svg></button><button type="button" class="ghost" data-back>Back</button></div>
+        <div class="pay" data-pay></div>
+      </section>
+      <section class="step" data-step="profession">
+        <h2 data-t="q_prof"></h2>
+        <div class="chips" data-chips="f-prof" id="profChips"></div>
+        <input type="text" id="f-prof" placeholder="Or type your profession" maxlength="120">
+        <div class="err" data-err></div>
+        <div class="row"><button type="button" class="btn" data-next>Next <svg><use href="#arrow"/></svg></button><button type="button" class="ghost" data-back>Back</button></div>
+        <div class="pay" data-pay></div>
+      </section>
+      <section class="step" data-step="org">
+        <h2 id="orgQ"></h2>
+        <input type="text" id="f-org" placeholder="Organisation / University" autocomplete="organization" maxlength="120">
+        <div class="err" data-err></div>
+        <div class="row"><button type="button" class="btn" data-next>Next <svg><use href="#arrow"/></svg></button><button type="button" class="ghost" data-back>Back</button></div>
+        <div class="pay" data-pay></div>
+      </section>
+      <section class="step" data-step="city">
+        <h2 data-t="q_city"></h2>
+        <div class="chips" data-chips="f-city" id="cityChips"></div>
+        <input type="text" id="f-city" placeholder="Or type your city" autocomplete="address-level2" maxlength="120">
+        <div class="err" data-err></div>
+        <div class="row"><button type="button" class="btn" data-next>Next <svg><use href="#arrow"/></svg></button><button type="button" class="ghost" data-back>Back</button></div>
+        <div class="pay" data-pay></div>
+      </section>
+      <section class="step" data-step="state">
+        <h2 data-t="q_state"></h2>
+        <input type="text" id="f-state" placeholder="State" list="states" autocomplete="address-level1" maxlength="120">
+        <datalist id="states"><option value="Gujarat"><option value="Maharashtra"><option value="Rajasthan"><option value="Madhya Pradesh"><option value="Delhi"><option value="Karnataka"><option value="Tamil Nadu"><option value="Telangana"><option value="Uttar Pradesh"><option value="West Bengal"></datalist>
+        <label class="check" for="f-optin" id="optinRow"><input type="checkbox" id="f-optin"><span data-t="optin_label"></span></label>
+        <div class="err" data-err></div>
+        <div class="row"><button type="button" class="btn" data-next>Next <svg><use href="#arrow"/></svg></button><button type="button" class="ghost" data-back>Back</button></div>
+        <div class="pay" data-pay></div>
+      </section>
+      <section class="step" data-step="guests">
+        <h2 data-t="q_guests"></h2>
+        <p class="sub" data-t="guests_sub"></p>
+        <div class="guests" id="guests"></div>
+        <button type="button" class="add" id="addGuest">+ Add a guest</button>
+        <div class="err" data-err></div>
+        <div class="row"><button type="button" class="btn" data-next id="guestNext">Next <svg><use href="#arrow"/></svg></button><button type="button" class="ghost" data-back>Back</button></div>
+        <div class="pay" data-pay></div>
+      </section>
+      <section class="step" data-step="topics">
+        <div class="q">Optional</div>
+        <h2 data-t="q_topics"></h2>
+        <p class="sub">Pick as many as you like</p>
+        <div class="opt" id="topics"></div>
+        <div class="err" data-err></div>
+        <div class="row" style="margin-top:8px"><button type="button" class="btn" data-next id="submitBtn">Get my pass <svg><use href="#arrow"/></svg></button><button type="button" class="ghost" data-skip>Skip</button></div>
+        <div class="pay" data-pay></div>
+      </section>
+      <section class="step" data-step="done">
+        <div class="q" data-t="done_kicker"></div>
+        <h2 id="doneTitle" style="margin-bottom:24px"></h2>
+        <div id="passbox"></div>
+        <div id="guestPasses"></div>
+        <div class="finbtns">
+          <a class="wa-save" id="wa-save" target="_blank" rel="noopener"><svg><use href="#wa"/></svg><span data-t="save_label"></span></a>
+          <a class="wa-invite" id="wa-invite" target="_blank" rel="noopener"><svg><use href="#wa"/></svg><span data-t="invite_label"></span></a>
+        </div>
+        <div class="row"><button type="button" class="ghost" data-restart>Register someone else</button></div>
+      </section>
+      <section class="step" data-step="closed">
+        <div class="q" data-t="kicker"></div>
+        <h1><span class="a" data-t="title_a"></span><span data-t="title_b"></span></h1>
+        <p class="note" data-t="closed_text"></p>
+        <ul class="meta"><li><span>When</span><b data-t="when_line" style="font-weight:400"></b></li><li><span>Where</span><b data-t="where_line" style="font-weight:400"></b></li></ul>
+      </section>
+      <section class="step" data-step="missing">
+        <h2>This page is not available.</h2>
+        <p class="note">Check the link you were sent, or scan the QR code again.</p>
+      </section>
+    </form>
+  </main>
+</div>
+<div class="foot art" id="foot" aria-hidden="true"></div>
+</div>
+<div class="testbar" id="testbar" hidden>TEST · THIS REGISTRATION IS NOT COUNTED</div>
+
+<script>
+/* Line-art skyline progress with landmark sets. CityLine.make(svg, set) -> {set(fraction)} */
+window.CityLine=(function(){
+const B=82;
+const E={
+ tree:x=>({w:22,d:`M${x+11} 82V58M${x+11} 66l-6-6M${x+11} 70l6-6M${x+6} 74a11 11 0 0 1-3-18a10 10 0 0 1 16-6a10 10 0 0 1 3 20`}),
+ smalltrees:x=>({w:26,d:`M${x+6} 82V66M${x+18} 82V62M${x+1} 72a6 6 0 0 1 0-10a6 6 0 0 1 10 0a6 6 0 0 1 0 10M${x+12} 68a7 7 0 0 1 1-11a7 7 0 0 1 11 2a6 6 0 0 1-1 10`}),
+ block:x=>({w:32,d:`M${x} 82V50H${x+32}V82M${x+6} 57h6M${x+20} 57h6M${x+6} 64h6M${x+20} 64h6M${x+6} 71h6M${x+20} 71h6M${x+13} 82v-6h6v6`}),
+ tower:x=>({w:26,d:`M${x} 82V24H${x+26}V82M${x+13} 24V10M${x+8} 24v-6h10v6M${x+5} 31h16M${x+5} 37h16M${x+5} 43h16M${x+5} 49h16M${x+5} 55h16M${x+5} 61h16M${x+5} 67h16M${x+5} 73h16`}),
+ mosque:x=>({w:56,d:`M${x} 82V52H${x+56}V82M${x+12} 52a16 16 0 0 1 32 0M${x+28} 36v-5M${x+21} 82V70a7 7 0 0 1 14 0V82M${x+2} 52V22M${x+8} 52V22M${x+2} 22l3-8l3 8M${x+1} 34h8M${x+1} 44h8M${x+48} 52V22M${x+54} 52V22M${x+48} 22l3-8l3 8M${x+47} 34h8M${x+47} 44h8`}),
+ stepped:x=>({w:36,d:`M${x} 82V40H${x+36}V82M${x+8} 40v-8h20v8M${x+8} 48v28M${x+18} 48v28M${x+28} 48v28`}),
+ bridge:x=>({w:88,d:`M${x} 70H${x+88}M${x+4} 70Q${x+44} 30 ${x+84} 70M${x+16} 70V55M${x+30} 70V45M${x+44} 70V41M${x+58} 70V45M${x+72} 70V55M${x+4} 76h10M${x+22} 76h14M${x+46} 78h10M${x+62} 76h14`}),
+ houses:x=>({w:48,d:`M${x} 82V64l8-8l8 8V82M${x+16} 82V64l8-8l8 8V82M${x+32} 82V64l8-8l8 8V82M${x+5} 70h6v6h-6zM${x+21} 70h6v6h-6zM${x+37} 70h6v6h-6z`}),
+ glass:x=>({w:22,d:`M${x} 82V30l22-10V82M${x} 40l22-10M${x} 52l22-10M${x} 64l22-10M${x+11} 82V26`}),
+ /* Ahmedabad heritage */
+ teenDarwaza:x=>{let c='';for(let k=0;k<6;k++)c+=`M${x+9+k*8} 44v-3h4v3`;return{w:64,d:`M${x} 82V44H${x+64}V82M${x} 50H${x+64}M${x+6} 82V67a7 7 0 0 1 14 0V82M${x+25} 82V63a7 7 0 0 1 14 0V82M${x+44} 82V67a7 7 0 0 1 14 0V82M${x+1} 44V35h5v9M${x+58} 44V35h5v9M${x+1} 35a2.5 2.5 0 0 1 5 0M${x+58} 35a2.5 2.5 0 0 1 5 0`+c}},
+ jhultaMinar:x=>({w:46,d:`M${x+8} 82V58H${x+38}V82M${x+17} 82V70a6 6 0 0 1 12 0V82M${x+3} 82V22M${x+8} 82V22M${x+3} 22l2.5-7l2.5 7M${x+1} 32h9M${x+1} 44h9M${x+1} 56h9M${x+38} 82V22M${x+43} 82V22M${x+38} 22l2.5-7l2.5 7M${x+36} 32h9M${x+36} 44h9M${x+36} 56h9`}),
+ sidiJaali:x=>({w:40,d:`M${x} 82V50a20 20 0 0 1 40 0V82M${x+20} 82V50M${x+20} 72q-8-1-13-8M${x+20} 72q8-1 13-8M${x+20} 64q-7-2-11-9M${x+20} 64q7-2 11-9M${x+20} 57q-5-3-7-10M${x+20} 57q5-3 7-10M${x+20} 50q-2-4-1-9M${x+20} 50q2-4 1-9`}),
+ shikhara:x=>({w:40,d:`M${x} 82V62H${x+40}V82M${x+6} 82V68M${x+14} 82V68M${x+26} 82V68M${x+34} 82V68M${x} 68H${x+40}M${x+10} 62Q${x+12} 38 ${x+20} 28Q${x+28} 38 ${x+30} 62M${x+14} 46h12M${x+20} 28V18l6 2l-6 2M${x+1} 62Q${x+3} 52 ${x+6} 48Q${x+9} 52 ${x+10} 62M${x+30} 62Q${x+31} 52 ${x+34} 48Q${x+37} 52 ${x+39} 62`}),
+ ashram:x=>({w:62,d:`M${x+4} 82V64H${x+44}V82M${x} 64L${x+9} 55H${x+39}L${x+48} 64M${x+20} 82V71h8v11M${x+8} 70h6v5h-6zM${x+34} 70h6v5h-6zM${x+56} 76m-6 0a6 6 0 1 0 12 0a6 6 0 1 0-12 0M${x+56} 70v12M${x+50} 76h12M${x+52} 82l4-6l4 6`}),
+ pols:x=>({w:54,d:`M${x} 82V48l13-8l13 8V82M${x+28} 82V44H${x+54}V82M${x+26} 44H${x+56}M${x-2} 62H${x+28}M${x+26} 62H${x+56}M${x+2} 62l2 4M${x+24} 62l-2 4M${x+30} 62l2 4M${x+52} 62l-2 4M${x+8} 58V52a5 5 0 0 1 10 0V58M${x+36} 58V52a5 5 0 0 1 10 0V58M${x+10} 82V72h6v10M${x+37} 82V72h8v10`}),
+ /* Ahmedabad new */
+ atalBridge:x=>({w:92,d:`M${x} 72H${x+92}M${x} 72C${x+15} 50 ${x+31} 50 ${x+46} 62C${x+61} 50 ${x+77} 50 ${x+92} 72M${x+12} 72L${x+20} 58M${x+24} 72L${x+30} 56M${x+36} 72L${x+40} 59M${x+56} 72L${x+52} 59M${x+68} 72L${x+62} 56M${x+80} 72L${x+72} 58M${x+2} 78h12M${x+24} 80h14M${x+50} 78h12M${x+72} 80h14`}),
+ gift:x=>({w:50,d:`M${x} 82V20l20-6V82M${x+26} 82V26l20-5V82M${x} 32l20-6M${x} 46l20-6M${x} 60l20-6M${x} 74l20-6M${x+26} 38l20-5M${x+26} 52l20-5M${x+26} 66l20-5M${x+10} 17V8`}),
+ metro:x=>({w:72,d:`M${x} 62H${x+72}M${x+10} 62V82M${x+38} 62V82M${x+64} 62V82M${x+5} 82h10M${x+33} 82h10M${x+59} 82h10M${x+6} 58V48a3 3 0 0 1 3-3H${x+62}a6 6 0 0 1 6 6V58ZM${x+12} 49h8v5h-8zM${x+25} 49h8v5h-8zM${x+38} 49h8v5h-8zM${x+51} 49h8v5h-8z`}),
+ stadium:x=>({w:66,d:`M${x} 82V64Q${x+33} 50 ${x+66} 64V82M${x} 64Q${x+33} 74 ${x+66} 64M${x+8} 82V69M${x+20} 82V71M${x+33} 82V72M${x+46} 82V71M${x+58} 82V69M${x+4} 60V40M${x+62} 60V40M${x+1} 40h6M${x+59} 40h6`}),
+ patang:x=>({w:30,d:`M${x+10} 82V32M${x+20} 82V32M${x+10} 70h10M${x+10} 58h10M${x+10} 46h10M${x+2} 32H${x+28}V18H${x+2}ZM${x+2} 25H${x+28}M${x+8} 18V32M${x+15} 18V32M${x+22} 18V32M${x+6} 18V14H${x+24}V18M${x+15} 14V6M${x+6} 82h18`}),
+ /* India */
+ indiaGate:x=>({w:40,d:`M${x+4} 82V42H${x+36}V82M${x+14} 82V62a6 6 0 0 1 12 0V82M${x} 42H${x+40}M${x+8} 42V34H${x+32}V42M${x+14} 34v-4h12v4M${x+17} 30a3 3 0 0 1 6 0`}),
+ qutub:x=>({w:18,d:`M${x+2} 82L${x+5} 14H${x+13}L${x+16} 82M${x+1} 66H${x+17}M${x+2} 48H${x+16}M${x+3} 30H${x+15}M${x+7} 14V9h4v5M${x+9} 9V6`}),
+ taj:x=>({w:72,d:`M${x} 82V75H${x+72}V82M${x+16} 75V50H${x+56}V75M${x+30} 75V61a6 6 0 0 1 12 0V75M${x+24} 50C${x+20} 39 ${x+30} 31 ${x+36} 25C${x+42} 31 ${x+52} 39 ${x+48} 50M${x+36} 25V18M${x+19} 50a4 4 0 0 1 8 0M${x+45} 50a4 4 0 0 1 8 0M${x+3} 75V36M${x+7} 75V36M${x+3} 36l2-4l2 4M${x+65} 75V36M${x+69} 75V36M${x+65} 36l2-4l2 4`}),
+ gateway:x=>({w:52,d:`M${x} 82V44H${x+52}V82M${x+18} 82V58a8 8 0 0 1 16 0V82M${x+4} 82V60a4 4 0 0 1 8 0V82M${x+40} 82V60a4 4 0 0 1 8 0V82M${x+2} 44V34h6v10M${x+16} 44V32h6v12M${x+30} 44V32h6v12M${x+44} 44V34h6v10M${x+2} 34a3 3 0 0 1 6 0M${x+16} 32a3 3 0 0 1 6 0M${x+30} 32a3 3 0 0 1 6 0M${x+44} 32a3 3 0 0 1 6 0`}),
+ charminar:x=>({w:50,d:`M${x+6} 82V46H${x+44}V82M${x+16} 82V64a9 9 0 0 1 18 0V82M${x+6} 54H${x+44}M${x+2} 82V24M${x+7} 82V24M${x+43} 82V24M${x+48} 82V24M${x+2} 24a2.5 3 0 0 1 5 0M${x+43} 24a2.5 3 0 0 1 5 0M${x+1} 36h7M${x+42} 36h7M${x+20} 46a5 5 0 0 1 10 0`}),
+ howrah:x=>({w:96,d:`M${x} 66H${x+96}M${x+20} 66V24M${x+76} 66V24M${x+20} 24L${x} 60M${x+20} 24L${x+48} 50L${x+76} 24M${x+76} 24L${x+96} 60M${x+20} 40L${x+8} 60M${x+76} 40L${x+88} 60M${x+34} 37L${x+34} 66M${x+62} 37L${x+62} 66M${x+48} 50V66M${x+4} 74h14M${x+30} 76h14M${x+56} 74h14M${x+78} 76h14`}),
+ unity:x=>({w:24,d:`M${x} 82V70H${x+24}V82M${x+3} 70V64H${x+21}V70M${x+7} 64L${x+8} 34Q${x+12} 28 ${x+16} 34L${x+17} 64M${x+12} 30m-4 0a4 4 0 1 0 8 0a4 4 0 1 0-8 0M${x+8} 40L${x+15} 52M${x+12} 48V64`}),
+ lotus:x=>({w:60,d:`M${x} 82H${x+60}M${x+4} 82Q${x+10} 64 ${x+22} 60M${x+56} 82Q${x+50} 64 ${x+38} 60M${x+14} 82Q${x+16} 58 ${x+30} 46Q${x+44} 58 ${x+46} 82M${x+22} 82Q${x+24} 56 ${x+30} 40Q${x+36} 56 ${x+38} 82`})
+};
+const SETS={
+  generic:['tree','block','tower','mosque','stepped','smalltrees','bridge','houses','glass','tree'],
+  final:['tree','block','tower','indiaGate','stepped','metro','smalltrees','bridge','patang','houses','glass','tree'],
+  heritage:['tree','pols','teenDarwaza','sidiJaali','jhultaMinar','smalltrees','shikhara','ashram'],
+  modern:['tree','stadium','metro','atalBridge','gift','smalltrees','glass','tower'],
+  mix:['pols','teenDarwaza','jhultaMinar','shikhara','atalBridge','gift','metro','tree'],
+  india:['indiaGate','qutub','taj','gateway','charminar','howrah','unity','lotus']
+};
+function build(name){let x=4,d='';(SETS[name]||SETS.generic).forEach(k=>{const r=E[k](x);d+=r.d;x+=r.w+8});return{d,W:x}}
+function make(svg,name){
+  const {d,W}=build(name);const id='cl'+Math.random().toString(36).slice(2,7);
+  const art=`<path d="M0 82H${W}"/><path d="${d}"/>`;
+  const sky=`<path class="cl" d="M${W*.06} 12h4a5 5 0 0 1 9-3a4 4 0 0 1 7 3h4M${W*.47} 8h3a5 5 0 0 1 9-3a4 4 0 0 1 7 3h3M${W*.88} 10h3a5 5 0 0 1 9-3a4 4 0 0 1 7 3h3M${W*.3} 8l3 3m0-3l-3 3"/>`;
+  const kx=W*.72;
+  svg.setAttribute('viewBox',`0 0 ${W} 86`);svg.setAttribute('preserveAspectRatio','xMinYMax meet');svg.classList.add('cityline');
+  svg.innerHTML=`<defs><clipPath id="${id}"><rect class="rv" x="0" y="-10" width="0" height="100"/></clipPath></defs>
+    <g class="ghost">${art}${sky}</g><g class="ink" clip-path="url(#${id})">${art}</g>
+    <g class="kite"><path d="M${kx} 2l8 6l-8 9l-8-9zM${kx-8} 8h16"/><path d="M${kx} 17q-3 5 1 8t-1 9"/></g>`;
+  const r=svg.querySelector('.rv');
+  return {set(f){r.setAttribute('width',W*f);svg.classList.toggle('complete',f>=1)}};
+}
+return {make,sets:Object.keys(SETS)};
+})();
+
+/* One city scene per form screen. 600 x 112 box, ground at y=100. Line art with light tints. */
+window.WorldScenes=(function(){
+const P=(d,c)=>`<path${c?` class="${c}"`:''} d="${d}"/>`;
+/* helpers */
+const cloud=(x,y)=>P(`M${x} ${y}h4a5 5 0 0 1 9-3a4 4 0 0 1 7 3h4`);
+const birds=(x,y)=>P(`M${x} ${y}l3 2l3-2M${x+9} ${y-4}l2.5 1.5l2.5-1.5`);
+const tree=(x,s=1)=>P(`M${x} 100V${100-18*s}M${x} ${100-10*s}l-${4*s}-${4*s}M${x} ${100-6*s}l${4*s}-${4*s}M${x-6*s} ${100-8*s}a${8*s} ${8*s} 0 0 1-${1*s}-${13*s}a${8*s} ${8*s} 0 0 1 ${13*s}-${5*s}a${8*s} ${8*s} 0 0 1 ${2*s} ${16*s}`);
+const cypress=(x,h=34)=>P(`M${x} 100V96M${x} 96Q${x-6} ${96-h*.5} ${x} ${96-h}Q${x+6} ${96-h*.5} ${x} 96Z`,'t-green')+P(`M${x} 100V96M${x} 96Q${x-6} ${96-h*.5} ${x} ${96-h}Q${x+6} ${96-h*.5} ${x} 96Z`);
+const palm=(x,h=30)=>P(`M${x} 100Q${x+2} ${100-h/2} ${x} ${100-h}M${x} ${100-h}q-8-2-12 4M${x} ${100-h}q8-2 12 4M${x} ${100-h}q-5-6-11-5M${x} ${100-h}q5-6 11-5M${x} ${100-h}q0-6 2-9`);
+const block=(x,w,h,cols=2,tint)=>{let d=`M${x} 100V${100-h}H${x+w}V100`;const cw=(w-6)/cols;for(let r=100-h+6;r<94;r+=9)for(let c=0;c<cols;c++)d+=`M${x+4+c*cw} ${r}h${Math.max(3,cw-4)}v4h-${Math.max(3,cw-4)}z`;return (tint?P(`M${x} 100V${100-h}H${x+w}V100Z`,tint):'')+P(d)};
+const stripes=(x,w,h)=>{let d=`M${x} 100V${100-h}H${x+w}V100`;for(let r=100-h+5;r<98;r+=5)d+=`M${x+3} ${r}H${x+w-3}`;return P(d)};
+const water=(x1,x2)=>P(`M${x1} 100H${x2}V106H${x1}Z`,'t-blue')+P(`M${x1+6} 109h12M${x1+40} 109h18M${x1+90} 109h10M${x2-40} 109h14`);
+const boat=(x,t='t-red')=>P(`M${x} 98h26l-4 5h-18z`,t)+P(`M${x} 98h26l-4 5h-18zM${x+8} 98V86l8 12M${x+8} 86l-6 12`);
+const car=(x,t='t-yellow')=>P(`M${x} 98v-5l4-5h12l4 5h4v5z`,t)+P(`M${x} 98v-5l4-5h12l4 5h4v5zM${x+6} 99m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0M${x+20} 99m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0`);
+const lamp=x=>P(`M${x} 100V80M${x-3} 80h6M${x} 80q4 0 4 4`);
+const ground=P('M0 100H600');
+
+const S={
+Paris:()=>ground+cloud(40,18)+cloud(420,12)+birds(330,22)+birds(110,30)+
+ /* haussmann left */ P('M20 62L26 52H76L82 62Z','t-pink')+block(22,58,38,4)+P('M20 62L26 52H76L82 62M30 52v-5h6v5M60 52v-5h6v5')+
+ tree(96,1.1)+lamp(110)+
+ /* arc */ P('M120 100V60H170V100M120 66H170M120 60V56H170V60M135 100V82a10 10 0 0 1 20 0V100M124 72h8M158 72h8')+
+ /* eiffel */ P('M210 100Q224 70 232 38L238 6L244 38Q252 70 266 100M238 6V-2M218 80H258M226 58H250M232 38H244M222 100Q238 82 254 100M224 80L234 58M252 80L242 58M230 58L238 38M246 58L238 38M218 80L226 58M258 80L250 58')+
+ tree(282)+tree(298,.8)+
+ P('M318 62L324 52H384L390 62Z','t-pink')+block(320,68,38,5)+P('M318 62L324 52H384L390 62M334 52v-5h6v5M366 52v-5h6v5')+
+ lamp(400)+block(410,40,30,3)+P('M408 70l4-6h36l4 6','')+tree(470)+car(488,'t-red')+
+ water(0,600)+boat(150,'t-pink')+boat(420,'t-yellow')+block(530,46,44,3,'t-sand')+P('M528 56l3-4h42l3 4'),
+London:()=>ground+cloud(70,14)+cloud(380,10)+birds(200,24)+birds(520,18)+
+ /* tower bridge */ P('M10 100V40H26V100M60 100V40H76V100M8 40L18 28L28 40M58 40L68 28L78 40M26 52H60M26 58H60M26 78H60M18 28v-6M68 28v-6M14 48h8v8h-8zM64 48h8v8h-8zM26 78Q43 70 60 78')+
+ /* big ben */ P('M98 42m-5 0a5 5 0 1 0 10 0a5 5 0 1 0-10 0','t-yellow')+P('M90 100V32H106V100M88 32L98 14L108 32M98 14V5M98 42m-5 0a5 5 0 1 0 10 0a5 5 0 1 0-10 0M98 42l2-3M94 54V94M98 54V94M102 54V94M88 32H108')+
+ /* parliament */ P('M106 100V66H170V100M106 66l4-6h56l4 6M114 72v20M124 72v20M134 72v20M144 72v20M154 72v20M162 66V52l3-4l3 4V66')+
+ /* eye */ P('M215 58m-34 0a34 34 0 1 0 68 0a34 34 0 1 0-68 0M215 58L201 100M215 58L229 100M215 24V92M181 58H249M191 34L239 82M239 34L191 82M215 58m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0M215 24m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0M249 58m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0M181 58m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0')+
+ /* bus */ P('M266 72h32a4 4 0 0 1 4 4V98H262V76a4 4 0 0 1 4-4Z','t-red')+P('M266 72h32a4 4 0 0 1 4 4V98H262V76a4 4 0 0 1 4-4ZM262 85H302M266 76h6v5h-6zM276 76h6v5h-6zM286 76h6v5h-6zM266 89h6v5h-6zM276 89h6v5h-6zM294 88v10M270 98m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0M294 98m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0')+
+ tree(318)+
+ /* shard */ P('M336 100L360 8L384 100M360 8V2M352 40h16M348 56h24M344 72h32M340 88h40M360 8L364 100')+
+ /* gherkin */ P('M398 100Q392 60 412 34Q432 60 426 100M402 50L422 70M398 70L424 92M422 50L400 74M426 74L404 96','')+P('M398 100Q392 60 412 34Q432 60 426 100Z','t-blue')+
+ block(440,30,48,2)+stripes(476,24,64)+tree(516)+
+ /* phone box */ P('M532 100V78h12v22Z','t-red')+P('M532 100V78h12v22M531 78h14M535 82h6v8h-6z')+lamp(556)+block(566,30,40,2)+
+ water(0,170)+boat(110,'t-yellow'),
+'New York':()=>ground+cloud(60,16)+cloud(300,8)+cloud(520,16)+birds(160,20)+birds(440,30)+
+ /* liberty */ P('M27 30h6l-1.5 4h-3z','t-yellow')+P('M10 100V88H38V100M14 88V80H34V88M18 80L20 54Q24 48 28 54L30 80M24 46m-3.5 0a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0-7 0M21 42l-2-4M24 42v-5M27 42l2-4M27 56L31 34M27 30h6l-1.5 4h-3zM20 62l6 4')+
+ /* brooklyn bridge */ P('M50 100V52h12v48M110 100V52h12v48M50 52l6-6l6 6M110 52l6-6l6 6M53 60h6v10h-6zM113 60h6v10h-6zM40 80H140M56 52Q86 82 116 52M56 52L40 80M116 52L140 80M70 80V66M86 80V72M102 80V66')+
+ block(146,26,40,2)+
+ /* empire */ P('M180 100V52H184V40H188V30H190V20L192 8L194 20V30H196V40H200V52H204V100M192 8V2M186 58v36M192 58v36M198 58v36')+
+ /* chrysler */ P('M214 100V44H238V100M216 44Q226 20 236 44M219 44Q226 28 233 44M222 44Q226 34 230 44M226 22V10M218 52h16M218 60h16M220 68v26M226 68v26M232 68v26')+
+ block(244,22,52,2)+
+ /* one wtc */ P('M276 100V24L288 14L300 24V100M288 14V-2M276 24L300 100M300 24L276 100M276 24H300')+
+ stripes(308,26,46)+tree(346)+P('M354 100V70H372V100M354 70l9-8l9 8M358 76h4v6h-4zM366 76h4v6h-4z')+
+ car(380)+car(410)+block(444,30,58,3)+block(478,22,36,2)+tree(512)+P('M524 100V78h30V100M522 78h34M528 84h6M542 84h6M528 90h6M542 90h6M524 72h30')+lamp(566)+tree(584,.8)+
+ water(0,140),
+Sydney:()=>ground+cloud(130,12)+cloud(470,16)+birds(260,20)+birds(540,26)+
+ /* sydney tower */ P('M40 28h16v8H40z','t-yellow')+P('M46 100V36M50 100V36M40 28h16v8H40zM42 28l2-6h8l2 6M48 22V6M44 60h8M44 80h8')+
+ block(60,30,58,2)+block(94,28,40,2)+
+ /* opera */ P('M134 90Q138 70 154 64Q150 78 152 90ZM150 90Q156 66 174 60Q168 76 170 90ZM168 90Q174 72 188 68Q184 80 186 90Z','t-pink')+P('M126 90H196V96H126ZM134 90Q138 70 154 64Q150 78 152 90M150 90Q156 66 174 60Q168 76 170 90M168 90Q174 72 188 68Q184 80 186 90M144 90L146 76M160 90L164 72M178 90L180 76')+
+ /* harbour bridge */ P('M220 84Q290 30 360 84M226 84Q290 42 354 84M212 84H368M210 74h12v22h-12zM358 74h12v22h-12zM240 84V68M256 84V56M272 84V49M290 84V46M308 84V49M324 84V56M340 84V68')+
+ block(380,26,50,2)+block(410,34,34,3)+tree(452)+palm(468)+block(480,30,62,2)+P('M478 38h34l-6-6h-22z')+block(516,40,40,3)+tree(566)+tree(584,.8)+
+ water(0,600)+boat(80,'t-yellow')+P('M270 98h36l-4 6h-28zM276 98v-6h20v6M280 92v-4h10v4','')+P('M270 98h36l-4 6h-28z','t-red')+boat(430,'t-pink'),
+Moscow:()=>ground+cloud(60,10)+cloud(500,14)+birds(380,18)+
+ /* kremlin wall */ (()=>{let d='M0 100V80H200V100';for(let x=4;x<196;x+=10)d+=`M${x} 80v-4h5v4`;return P(d)})()+
+ /* spasskaya */ P('M60 100V52H84V100M58 52L72 30L86 52M72 30V20M68 22l4-4l4 4M66 60h12v12H66zM66 100V84a6 6 0 0 1 12 0V100')+P('M68 22l4-4l4 4l-4 4z','t-red')+
+ tree(120)+tree(140,.8)+
+ /* st basil */ P('M222 52Q222 38 233 30Q244 38 244 52Z','t-pink')+P('M254 40Q254 22 266 12Q278 22 278 40Z','t-red')+P('M288 52Q288 38 299 30Q310 38 310 52Z','t-green')+P('M196 66Q196 56 204 50Q212 56 212 66ZM320 66Q320 56 328 50Q336 56 336 66Z','t-yellow')+
+ P('M224 100V52H242V100M222 52Q222 38 233 30Q244 38 244 52ZM233 30V22M230 25h6M226 52Q233 40 233 30M240 52Q233 40 233 30')+
+ P('M256 100V40H276V100M254 40Q254 22 266 12Q278 22 278 40ZM266 12V2M263 6h6M258 40Q266 24 266 12M274 40Q266 24 266 12M260 100V86a6 6 0 0 1 12 0V100M258 52h16M258 60h16')+
+ P('M290 100V52H308V100M288 52Q288 38 299 30Q310 38 310 52ZM299 30V22M296 25h6M292 52Q299 40 299 30M306 52Q299 40 299 30')+
+ P('M198 100V66H210V100M196 66Q196 56 204 50Q212 56 212 66ZM204 50V44M322 100V66H334V100M320 66Q320 56 328 50Q336 56 336 66ZM328 50V44M210 76H224M242 76H256M276 76H290M308 76H322M214 82h6M246 82h6M280 82h6M312 82h6')+
+ tree(356)+block(372,40,46,3)+P('M370 54h44l-4-6h-36z')+block(420,34,36,3)+tree(468)+block(484,44,52,3,'t-sand')+P('M482 48h48')+lamp(540)+tree(560)+car(570,'t-red'),
+Dubai:()=>ground+P('M70 22m-8 0a8 8 0 1 0 16 0a8 8 0 1 0-16 0','t-yellow')+P('M70 22m-8 0a8 8 0 1 0 16 0a8 8 0 1 0-16 0')+cloud(420,10)+birds(160,26)+
+ palm(20)+palm(40,24)+
+ /* frame */ P('M60 100V40H100V100H90V50H70V100Z','t-yellow')+P('M60 100V40H100V100M70 100V50H90V100M60 46H100')+
+ block(110,26,44,2)+
+ /* burj khalifa */ P('M150 100V70H154V50H157V32H159V16L161 -2L163 16V32H165V50H168V70H172V100M157 60v34M161 40v54M165 60v34')+
+ stripes(178,22,60)+block(204,26,50,2)+
+ /* twisting tower */ P('M234 100V36H254V100M234 46L254 40M234 58L254 52M234 70L254 64M234 82L254 76M234 94L254 88')+
+ palm(270)+P('M284 100Q300 70 318 100','t-sand')+P('M280 100Q300 66 322 100M300 70V60')+
+ /* burj al arab */ P('M360 100V36Q392 50 402 100Z','t-sand')+P('M360 100V36Q392 50 402 100M360 36V26M364 52Q378 58 384 68M364 70Q380 74 388 84M360 90H398')+
+ palm(420)+block(436,30,40,2)+block(470,24,56,2)+palm(504,26)+
+ /* dhow */ P('M520 96h40l-6 6h-28z','t-sand')+P('M520 96h40l-6 6h-28zM538 96V74l14 22M538 74l-12 22')+
+ water(330,600)+palm(580),
+Rome:()=>ground+cloud(80,14)+cloud(440,12)+birds(260,18)+birds(520,24)+
+ cypress(14)+cypress(28,28)+
+ /* st peters */ P('M60 100V66H140V100M60 66l40-12l40 12M70 66v34M80 66v34M90 66v34M110 66v34M120 66v34M130 66v34M86 54Q86 30 100 26Q114 30 114 54M100 26V16M97 19h6','')+P('M86 54Q86 30 100 26Q114 30 114 54Z','t-blue')+
+ cypress(152)+
+ /* column */ P('M172 100V96h12v4M174 96V30h8v66M172 30h12v-4h-12zM178 26v-6M174 42l8 6M174 58l8 6M174 74l8 6')+
+ /* colosseum */ P('M196 100V66Q196 58 206 56H302Q312 58 312 66V100Z','t-sand')+
+ (()=>{let d='M196 100V66Q196 58 206 56H302Q312 58 312 66V100M196 72H312M196 86H312';for(let x=204;x<304;x+=12)d+=`M${x} 72V67a3 3 0 0 1 6 0V72M${x} 86V81a3 3 0 0 1 6 0V86`;for(let x=204;x<304;x+=24)d+=`M${x} 100V93a3 3 0 0 1 6 0V100`;return P(d)})()+
+ cypress(326)+cypress(340,26)+
+ /* arch of constantine */ P('M356 100V60H420V100M356 66H420M356 56H420V60H356M380 100V80a8 8 0 0 1 16 0V100M362 100V88a4 4 0 0 1 8 0V100M406 100V88a4 4 0 0 1 8 0V100M362 70v10M370 70v10M406 70v10M414 70v10')+
+ /* ruins */ P('M440 100V70h6v30M452 100V76h6v24M464 100V64h6v36M438 70h34','')+
+ P('M484 64L490 56H544L550 64Z','t-red')+block(486,62,36,4)+tree(566)+
+ /* vespa */ P('M574 96q2-8 10-8h6l2 8z','t-yellow')+P('M574 96q2-8 10-8h6l2 8M576 98m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0M592 98m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0M590 88l-2-6h4'),
+Singapore:()=>ground+cloud(120,10)+cloud(520,14)+birds(300,16)+
+ /* flyer */ P('M60 56m-34 0a34 34 0 1 0 68 0a34 34 0 1 0-68 0M60 56L44 100M60 56L76 100M60 22V90M26 56H94M36 32L84 80M84 32L36 80')+
+ /* lotus museum */ P('M110 92Q112 74 124 70Q120 82 122 92ZM122 92Q126 70 140 66Q136 80 138 92ZM138 92Q142 74 154 72Q150 82 152 92Z','t-pink')+P('M106 92H158V96H106ZM110 92Q112 74 124 70Q120 82 122 92M122 92Q126 70 140 66Q136 80 138 92M138 92Q142 74 154 72Q150 82 152 92')+
+ /* mbs */ P('M168 40H252L249 34H171Z','t-green')+P('M174 100V40H190V100M202 100V40H218V100M230 100V40H246V100M168 40H252L249 34H171ZM178 50v44M184 50v44M206 50v44M212 50v44M234 50v44M240 50v44')+
+ /* supertrees */ (()=>{let s='';[[280,48],[304,36],[326,54]].forEach(([x,t])=>{s+=P(`M${x-10} ${t}Q${x} ${t+12} ${x+10} ${t}Z`,'t-green')+P(`M${x} 100V${t+12}M${x-10} ${t}Q${x} ${t+12} ${x+10} ${t}M${x} ${t+12}L${x-8} ${t+3}M${x} ${t+12}L${x+8} ${t+3}M${x-1} ${t+30}h2`)});return s})()+
+ block(348,30,62,2)+stripes(382,24,48)+block(410,36,70,3)+P('M408 30h40l-4-6h-32z')+block(450,26,40,2)+tree(490)+
+ /* shophouses */ P('M502 100V70H580V100','t-yellow')+P('M502 100V70H580V100M500 70h82M528 70v30M554 70v30M508 76h12v8h-12zM534 76h12v8h-12zM560 76h12v8h-12zM512 100v-10h6v10M538 100v-10h6v10M564 100v-10h6v10')+
+ water(0,170)+boat(130,'t-yellow'),
+Kyoto:()=>ground+
+ /* fuji */ P('M200 100L290 30L380 100','')+P('M270 46L290 30L310 46L302 44L296 50L290 44L284 50L278 44Z','t-blue')+cloud(90,14)+cloud(470,18)+birds(400,26)+P('M224 98V36H266V98ZM296 98V72H344V98ZM348 98V75H388V98Z','paper')+
+ /* tokyo tower */ P('M30 100Q38 70 44 36L48 8L52 36Q58 70 66 100M48 8V0M36 80H60M42 56H54M44 36H52','')+P('M38 76h20l-2-6H40zM43 52h10l-1-5h-8z','t-red')+P('M38 76h20M42 52h12')+
+ block(78,30,40,2)+
+ /* cherry */ P('M118 74a10 10 0 0 1 2-16a10 10 0 0 1 16-2a10 10 0 0 1 8 14a8 8 0 0 1-8 10H124a8 8 0 0 1-6-6Z','t-pink')+P('M130 100V78M130 86l-6-6M130 82l6-5M118 74a10 10 0 0 1 2-16a10 10 0 0 1 16-2a10 10 0 0 1 8 14a8 8 0 0 1-8 10H124a8 8 0 0 1-6-6')+
+ /* torii */ P('M154 46q30 6 60 0l-2 6h-56z','t-red')+P('M154 46q30 6 60 0M156 52h56M162 52V100M206 52V100M158 62h52M184 52v10')+
+ /* pagoda */ P('M224 92Q245 86 266 92L262 86H228ZM228 74Q245 69 262 74L259 68H231ZM232 56Q245 52 258 56L256 51H234ZM236 40Q245 37 254 40L252 36H238Z','t-red')+
+ P('M230 100V92H260V100M224 92Q245 86 266 92L262 86H228ZM232 86V74H258V86M228 74Q245 69 262 74L259 68H231ZM235 68V56H255V68M232 56Q245 52 258 56L256 51H234ZM238 51V40H252V51M236 40Q245 37 254 40L252 36H238ZM245 36V22M242 26h6M242 30h6M241 100V94h8v6')+
+ /* houses */ P('M300 100V80H340V100M296 80l6-8h36l6 8M306 86h8v6h-8zM326 86h8v6h-8z')+
+ P('M352 100V82H384V100M348 82l6-7h28l6 7M362 100V90h8v10')+P('M352 82h32','')+
+ /* cherry 2 */ P('M398 76a9 9 0 0 1 2-14a9 9 0 0 1 14-2a9 9 0 0 1 7 13a7 7 0 0 1-7 9H404a7 7 0 0 1-6-6Z','t-pink')+P('M410 100V82M410 90l-5-5M398 76a9 9 0 0 1 2-14a9 9 0 0 1 14-2a9 9 0 0 1 7 13a7 7 0 0 1-7 9H404a7 7 0 0 1-6-6')+
+ block(430,28,58,2)+stripes(462,22,44)+block(488,34,66,3)+P('M486 34h38')+
+ /* lantern */ P('M534 100V96h6v4M532 96h10M533 82h8v14h-8zM530 82h14l-7-6z')+P('M533 82h8v14h-8z','t-yellow')+
+ /* train */ P('M548 92q0-8 8-8h40v14h-48z','t-blue')+P('M548 92q0-8 8-8h40v14h-48zM558 88h8v4h-8zM572 88h8v4h-8zM586 88h8v4h-8zM548 92h4')
+};
+const order=['Paris','London','New York','Sydney','Moscow','Dubai','Rome','Singapore','Kyoto'];
+return {order,svg:k=>S[k]()};
+})();
+
+</script>
+<script>
+(function(){
+const SB_URL = "https://qsxldzqdjdplffxqdokd.supabase.co", SB_KEY = "sb_publishable_6ng_3jnvQbJUZifYTxmRrw_0yhCZuY9";
+const qs = new URLSearchParams(location.search);
+const SLUG = (qs.get("g") || "").toLowerCase().replace(/[^a-z0-9-]/g, ""), PREVIEW = qs.get("preview") === "1", TESTLINK = qs.get("test") === "1";
+const SELF = location.origin + location.pathname + "?g=" + SLUG;
+/* the words the World Cities template starts with — MarTech keeps the same list (Registration.jsx) */
+const DEFAULTS = {"brand_line": "GREMI", "logo_url": "", "kicker": "World Cities Day symposium", "title_a": "Rethinking", "title_b": "Our Cities.", "lead": "Urban regeneration, adequate housing and better use of the city we already have.", "when_line": "Fri, 30 Oct 2026 · 11 AM to 1 PM", "where_line": "Million Minds Hi-Tech City, Ahmedabad", "start_label": "Register", "q_name": "What's your full name?", "q_phone": "Your mobile number", "q_email": "Your email address", "q_prof": "What do you do?", "prof_options": "Student | You will be in the room with developers and planners who hire.\nArchitect | You will hear how developers weigh reuse against rebuild.\nUrban planner | You can test regeneration ideas with the people who fund and build them.\nDeveloper | You will talk housing and redevelopment with planners, architects and civic voices.\nBuilder | You will hear what regeneration projects will need from builders.\nGovernment | You will hear what developers, architects and students want from the city.\nFaculty | You can compare notes with practitioners on what cities need next.\nConsultant | You will hear where demand moves as old neighbourhoods get a second life.", "role_other": "Every side of how a city gets built, in one room.", "q_org": "Your organisation", "q_org_student": "Your university or college", "q_city": "Which city are you from?", "city_options": "Ahmedabad | Gujarat\nGandhinagar | Gujarat\nVadodara | Gujarat\nSurat | Gujarat\nRajkot | Gujarat", "q_state": "And your state", "optin_label": "Also send me details of GREMI's PGCM in Real Estate", "optin_default": true, "q_guests": "Bringing anyone along?", "guests_sub": "Add their name and mobile. Each gets their own entry pass.", "q_topics": "Which topics bring you in?", "topic_options": "Urban regeneration\nAdequate housing\nBetter use of existing urban assets", "pay_phone": "**Thanks, {first}.** Two hours on three questions every growing city faces.", "pay_email": "**Who you'll meet:** developers, architects, planners, civic leaders, faculty and students.", "pay_profession": "**Where:** GREMI, India's real estate business school, at Million Minds Hi-Tech City.", "pay_org": "**For you:** {role}", "pay_city": "**Part of World Cities Day,** 31 October. Better city, better life.", "pay_state": "**Bring one thing you'd change about {city}.** That's what the room is for.", "pay_guests": "**Your seat is saved** once you finish. Bring a colleague along.", "pay_topics": "**Last one, and it's optional.** It tells the panel where the room's interest is.", "done_kicker": "You're registered", "done_title": "See you on 30 October, {first}.", "pass_when": "Fri, 30 Oct · 11 AM", "pass_where": "Million Minds Hi-Tech City", "pass_prefix": "WCD", "wa_number": "", "save_label": "Save my entry pass on WhatsApp", "save_text": "Hi {brand}, please save my entry pass for {title}.", "invite_label": "Invite a friend on WhatsApp", "invite_text": "I'm going to Rethinking Our Cities, GREMI's World Cities Day symposium. Fri 30 Oct, 11 AM, Million Minds Hi-Tech City, Ahmedabad. Register here: {link}", "guest_text": "Hi {guest}, {first} has registered you for {title}. Your entry pass number is {pass}. Fri 30 Oct, 11 AM, Million Minds Hi-Tech City, Ahmedabad.", "closed_text": "Registrations for this event are closed."};
+let C = Object.assign({}, DEFAULTS), TITLE = "", STATUS = "live";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const lines = (s) => String(s || "").split(/\n/).map((x) => x.trim()).filter(Boolean);
+const pairs = (s) => lines(s).map((l) => { const i = l.indexOf("|"); return i < 0 ? [l, ""] : [l.slice(0, i).trim(), l.slice(i + 1).trim()]; }).filter((p) => p[0]);
+const first = () => (data.name || "").trim().split(/\s+/)[0] || "";
+const fill = (t) => String(t || "").replace(/\{first\}/g, first()).replace(/\{city\}/g, data.city || "your city").replace(/\{role\}/g, roleLine())
+  .replace(/\{title\}/g, TITLE || (C.title_a + " " + C.title_b).trim()).replace(/\{link\}/g, SELF).replace(/\{brand\}/g, C.brand_line || "");
+const rich = (t) => esc(fill(t)).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+function rpc(fn, args) {
+  return fetch(`${SB_URL}/rest/v1/rpc/${fn}`, { method: "POST", headers: { apikey: SB_KEY, Authorization: "Bearer " + SB_KEY, "content-type": "application/json" }, body: JSON.stringify(args) })
+    .then(async (r) => { const j = await r.json().catch(() => null); if (!r.ok) throw new Error((j && (j.message || j.hint)) || "Something went wrong"); return j; });
+}
+
+const steps = [...document.querySelectorAll(".step")], order = steps.map((s) => s.dataset.step);
+const FLOW = ["intro", "name", "phone", "email", "profession", "org", "city", "state", "guests", "topics", "done"];
+const required = ["name", "phone", "email", "profession", "org", "city", "state"];
+let cur = 0, guess = "", result = null, sending = false; const data = { topics: [] };
+const sky = CityLine.make($("#sky"), "final");
+const foot = $("#foot");
+foot.innerHTML = WorldScenes.order.map((c) => `<svg viewBox="0 -6 600 118" preserveAspectRatio="xMidYMax meet">${WorldScenes.svg(c)}</svg>`).join("");
+const scenes = [...foot.children];
+
+function roleLine() { const p = pairs(C.prof_options).find((x) => x[0] === data.profession); return p && p[1] ? p[1] : C.role_other || ""; }
+function paint() {
+  document.title = TITLE || "Register";
+  $("#brand").innerHTML = (C.logo_url ? `<img alt="" src="${esc(C.logo_url)}">` : "") + (C.brand_line ? `<b>${esc(C.brand_line)}</b>` : "");
+  document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = fill(C[el.dataset.t] || ""); });
+  $("#optinRow").hidden = !String(C.optin_label || "").trim();
+  if (!paint.done) { $("#f-optin").checked = C.optin_default !== false; paint.done = true; }
+  $("#profChips").innerHTML = pairs(C.prof_options).map((p) => `<button type="button" class="chip">${esc(p[0])}</button>`).join("");
+  $("#cityChips").innerHTML = pairs(C.city_options).map((p) => `<button type="button" class="chip" data-state="${esc(p[1])}">${esc(p[0])}</button>`).join("");
+  $("#topics").innerHTML = lines(C.topic_options).map((t) => `<button type="button" class="chip${data.topics.includes(t) ? " sel" : ""}">${esc(t)}</button>`).join("");
+  $("#topics").closest(".step").dataset.off = lines(C.topic_options).length ? "" : "1";
+  chipSync();
+  orgQ();
+  steps.forEach((s) => { const p = s.querySelector("[data-pay]"); const k = "pay_" + s.dataset.step; if (p) p.innerHTML = C[k] ? `<svg><use href="#tick"/></svg><span>${rich(C[k])}</span>` : ""; });
+  if (order[cur] === "done") showPass();
+}
+const orgQ = () => { $("#orgQ").textContent = /student/i.test(data.profession || "") && C.q_org_student ? C.q_org_student : C.q_org; };
+function progress() { const n = required.filter((k) => data[k]).length; sky.set(order[cur] === "done" ? 1 : n / 7); }
+function show(i) {
+  const was = order[cur];
+  steps[cur].classList.remove("active"); cur = i; const s = steps[cur], key = order[cur]; s.classList.add("active");
+  if (key === "org") orgQ();
+  if (key === "state" && !$("#f-state").value) $("#f-state").value = data.state || guess;
+  const fi = FLOW.indexOf(key);
+  foot.hidden = key === "done";
+  scenes.forEach((g, j) => g.classList.toggle("on", fi >= 0 && j === fi % scenes.length || (fi < 0 && j === 0)));
+  const inp = s.querySelector("input[type=text],input[type=tel],input[type=email]"); if (inp && matchMedia("(hover:hover)").matches && !PREVIEW) setTimeout(() => inp.focus(), 60);
+  if (key === "done") showPass();
+  progress(); paint();
+  if (PREVIEW) try { parent.postMessage({ type: "rg-step", step: key }, "*"); } catch (e) {}
+  if (was !== key) window.scrollTo(0, 0);
+}
+const go = (k) => show(order.indexOf(k));
+const nextOf = (k) => { let i = FLOW.indexOf(k) + 1; while (FLOW[i] === "topics" && steps[order.indexOf("topics")].dataset.off) i++; return FLOW[i]; };
+const prevOf = (k) => { let i = FLOW.indexOf(k) - 1; while (FLOW[i] === "topics" && steps[order.indexOf("topics")].dataset.off) i--; return FLOW[Math.max(0, i)]; };
+
+const checks = {
+  name: (v) => v.trim().length >= 2 || "Please enter your full name.",
+  phone: (v) => /^[6-9]\d{9}$/.test(v.replace(/\D/g, "").slice(-10)) || "Enter a 10-digit mobile number.",
+  email: (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()) || "Please check your email address.",
+  profession: (v) => v.trim().length >= 2 || "Pick one or type your profession.",
+  org: (v) => v.trim().length >= 2 || "Please enter your organisation or university.",
+  city: (v) => v.trim().length >= 2 || "Pick one or type your city.",
+  state: (v) => v.trim().length >= 2 || "Please enter your state.",
+};
+const field = { name: "#f-name", phone: "#f-phone", email: "#f-email", profession: "#f-prof", org: "#f-org", city: "#f-city", state: "#f-state" };
+const errOn = (k, msg) => { const s = steps[order.indexOf(k)]; const e = s && s.querySelector("[data-err]"); if (e) e.textContent = msg || ""; };
+
+function guestRows() { return [...document.querySelectorAll(".guest")].map((g) => ({ name: g.querySelector(".gn").value.trim(), mobile: g.querySelector(".gm").value.replace(/\D/g, "").slice(-10) })); }
+function addGuest(v) {
+  const d = document.createElement("div"); d.className = "guest";
+  d.innerHTML = `<input type="text" class="gn" placeholder="Guest's name" maxlength="80"><input type="tel" class="gm" inputmode="numeric" maxlength="11" placeholder="Mobile"><button type="button" class="x" aria-label="Remove guest">×</button>`;
+  d.addEventListener("input", () => errOn("guests", ""));
+  d.querySelector(".x").onclick = () => { d.remove(); guestLabel(); };
+  d.querySelector(".gm").oninput = (e) => { let x = e.target.value.replace(/\D/g, "").slice(0, 10); e.target.value = x.length > 5 ? x.slice(0, 5) + " " + x.slice(5) : x; };
+  if (v) { d.querySelector(".gn").value = v.name; d.querySelector(".gm").value = v.mobile; }
+  $("#guests").appendChild(d); guestLabel();
+  if (!v && !PREVIEW) d.querySelector(".gn").focus();
+}
+function guestLabel() { const n = document.querySelectorAll(".guest").length; $("#addGuest").textContent = n ? "+ Add another guest" : "+ Add a guest"; $("#guestNext").firstChild.textContent = n ? "Next " : "No guests, next "; }
+$("#addGuest").onclick = () => { if (document.querySelectorAll(".guest").length < 25) addGuest(); };
+
+async function submit() {
+  if (sending) return; sending = true; $("#submitBtn").disabled = true; errOn("topics", "");
+  const entry = { name: data.name, mobile: data.phone, email: data.email, profession: data.profession, org: data.org, city: data.city, state: data.state, opt_in: !!data.opt_in, topics: data.topics };
+  try {
+    result = PREVIEW ? previewResult() : await rpc("reg_submit", { p_slug: SLUG, p_entry: entry, p_guests: data.guests || [], p_test: TESTLINK });
+    go("done");
+  } catch (x) {
+    const m = String(x.message || "");
+    if (/reg_closed/.test(m)) { go("closed"); }
+    else errOn("topics", /bad_mobile/.test(m) ? "Your mobile number does not look right." : /bad_email/.test(m) ? "Your email address does not look right."
+      : /bad_guest/.test(m) ? "One of your guests needs a name and a 10-digit mobile." : /reg_busy/.test(m) ? "Please press the button once more."
+      : "Could not register just now. Check your connection and try again.");
+  }
+  sending = false; $("#submitBtn").disabled = false;
+}
+function next() {
+  const key = order[cur];
+  if (checks[key]) {
+    const el = $(field[key]), v = el.value, ok = checks[key](v);
+    if (ok !== true) { errOn(key, ok); if (!PREVIEW) el.focus(); return; }
+    errOn(key, "");
+    if (key === "city" && data.city !== v.trim()) { const c = [...document.querySelectorAll("#cityChips .chip")].find((x) => x.textContent === v.trim()); guess = c ? c.dataset.state : ""; delete data.state; $("#f-state").value = ""; }
+    data[key] = key === "phone" ? v.replace(/\D/g, "").slice(-10) : v.trim();
+    if (key === "state") data.opt_in = $("#f-optin").checked && !$("#optinRow").hidden;
+  }
+  if (key === "guests") {
+    const gs = guestRows().filter((g) => g.name || g.mobile);
+    const bad = gs.find((g) => g.name.length < 2 || !/^[6-9]\d{9}$/.test(g.mobile));
+    if (bad) { errOn("guests", "Each guest needs a name and a 10-digit mobile."); return; }
+    errOn("guests", ""); data.guests = gs;
+  }
+  const n = nextOf(key);
+  if (key === "topics" || (n === "done")) return submit();
+  go(n);
+}
+document.querySelectorAll("[data-next]").forEach((b) => b.addEventListener("click", next));
+document.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", () => go(prevOf(order[cur]))));
+$("[data-skip]").addEventListener("click", () => { data.topics = []; paint(); submit(); });
+$("#form").addEventListener("submit", (e) => e.preventDefault());
+document.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing && e.target.type !== "checkbox" && e.target.tagName !== "A" && e.target.tagName !== "BUTTON") { e.preventDefault(); if (!["done", "closed", "missing"].includes(order[cur])) next(); } });
+$("#f-phone").addEventListener("input", (e) => { let d = e.target.value.replace(/\D/g, "").slice(0, 10); e.target.value = d.length > 5 ? d.slice(0, 5) + " " + d.slice(5) : d; });
+function chipSync() { document.querySelectorAll("[data-chips]").forEach((box) => { const v = document.getElementById(box.dataset.chips).value.trim(); box.querySelectorAll(".chip").forEach((x) => x.classList.toggle("sel", x.textContent === v)); }); }
+document.querySelectorAll("[data-chips]").forEach((box) => {
+  const inp = document.getElementById(box.dataset.chips);
+  box.addEventListener("click", (e) => { const c = e.target.closest(".chip"); if (!c) return; inp.value = c.textContent; chipSync(); setTimeout(next, 250); });
+  inp.addEventListener("input", chipSync);
+});
+$("#topics").addEventListener("click", (e) => { const c = e.target.closest(".chip"); if (!c) return; c.classList.toggle("sel"); data.topics = [...$("#topics").querySelectorAll(".chip.sel")].map((x) => x.textContent); });
+
+function flags() { const f = '<path d="M18 0H60V20H18L0 42V22Z"/>'; let s = ""; [[0, 0], [60, 0], [120, 0], [60, 46], [120, 46], [120, 92]].forEach(([x, y]) => s += `<g transform="translate(${x} ${y})">${f}</g>`); return `<svg class="flags" viewBox="0 0 180 134" fill="rgba(216,157,198,.75)" aria-hidden="true">${s}</svg>`; }
+function poster(name, sub, pass, test) {
+  const top = C.logo_url ? `<img class="crest" alt="" src="${esc(C.logo_url)}">` : `<span class="bl">${esc(C.brand_line || "")}</span>`;
+  return `<div class="epass pass-poster">${flags()}${top}${test ? '<span class="test">TEST</span>' : ""}<div class="t">${esc(C.title_a)} <span>${esc(C.title_b)}</span></div>
+    <div class="ev">${esc([C.pass_when, C.pass_where].filter(Boolean).join(" · "))}</div>
+    <div class="card"><span class="no">${esc(pass)}</span><div class="k">Entry pass</div><div class="nm">${esc(name)}</div><div class="role">${esc(sub)}</div></div></div>`;
+}
+const waNo = () => String(C.wa_number || "").replace(/\D/g, "");
+const wa = (to, text) => "https://wa.me/" + (to || "") + "?text=" + encodeURIComponent(text);
+function showPass() {
+  if (!result) return;
+  $("#doneTitle").textContent = fill(C.done_title);
+  $("#passbox").innerHTML = poster(data.name, [data.profession, data.org].filter(Boolean).join(" · "), result.pass, result.test);
+  const gs = result.guests || [];
+  $("#guestPasses").innerHTML = gs.length ? `<div class="glh">Your guests</div><div class="gl">${gs.map((g) =>
+    `<div class="g"><div><b>${esc(g.name)}</b><small>${esc(g.pass)}</small></div><a target="_blank" rel="noopener" href="${esc(wa(String(g.mobile).replace(/\D/g, ""),
+      fill(C.guest_text).replace(/\{guest\}/g, g.name.split(/\s+/)[0]).replace(/\{pass\}/g, g.pass)))}"><svg><use href="#wa"/></svg>Send pass</a></div>`).join("")}</div>` : "";
+  const ev = [TITLE, C.pass_when, C.pass_where].filter(Boolean).join(" · ");
+  const save = fill(C.save_text) + "\n\nName: " + data.name + "\nPass no: " + result.pass + (data.profession ? "\nRole: " + data.profession : "") + (data.org ? "\nOrganisation: " + data.org : "")
+    + (data.city ? "\nCity: " + data.city : "") + (gs.length ? "\nGuests: " + gs.map((g) => g.name + " (" + g.pass + ")").join(", ") : "") + "\n\n" + ev;
+  $("#wa-save").href = wa(waNo(), save);
+  $("#wa-invite").href = wa("", fill(C.invite_text));
+}
+$("[data-restart]").addEventListener("click", () => { for (const k of Object.keys(data)) delete data[k]; data.topics = []; guess = ""; result = null; $("#form").reset(); $("#guests").innerHTML = ""; guestLabel(); paint.done = false; paint(); go("name"); });
+
+/* ── MarTech's preview ── */
+function previewResult() { return { pass: (String(C.pass_prefix || "PASS").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "PASS") + "-7Q4K", test: false, guests: (data.guests || []).map((g, i) => ({ ...g, pass: "PASS-" + "ABCDEFG"[i] + "2M8" })) }; }
+function sample() {
+  Object.assign(data, { name: "Riya Shah", phone: "9876543210", email: "riya@example.com", profession: (pairs(C.prof_options)[1] || pairs(C.prof_options)[0] || ["Architect"])[0], org: "Studio Lotus", city: (pairs(C.city_options)[0] || ["Ahmedabad"])[0], state: (pairs(C.city_options)[0] || ["", "Gujarat"])[1] || "Gujarat", opt_in: true, guests: [{ name: "Aman Mehta", mobile: "9123456780" }] });
+  $("#f-name").value = data.name; $("#f-phone").value = "98765 43210"; $("#f-email").value = data.email; $("#f-prof").value = data.profession; $("#f-org").value = data.org; $("#f-city").value = data.city; $("#f-state").value = data.state;
+  addGuest({ name: "Aman Mehta", mobile: "91234 56780" }); result = previewResult();
+}
+function gotoStep(k) { if (order.includes(k)) { if (k === "done") result = previewResult(); go(k); } }
+
+guestLabel();
+if (TESTLINK) $("#testbar").hidden = false;
+if (PREVIEW) {
+  document.body.classList.remove("loading");
+  sample(); paint(); show(0);
+  window.addEventListener("message", (e) => {
+    if (e.data && e.data.type === "rg-preview") { C = Object.assign({}, DEFAULTS, e.data.config || {}); TITLE = e.data.title || ""; paint.done = false; paint(); progress(); }
+    if (e.data && e.data.type === "rg-goto") gotoStep(e.data.step);
+  });
+  try { parent.postMessage({ type: "rg-ready" }, "*"); } catch (e) {}
+} else if (!SLUG) { paint(); go("missing"); document.body.classList.remove("loading"); }
+else {
+  paint(); show(0);
+  rpc("reg_open", { p_slug: SLUG }).then((g) => {
+    if (!g) { go("missing"); return; }
+    C = Object.assign({}, DEFAULTS, g.config || {}); TITLE = g.title || ""; STATUS = g.status; paint.done = false; paint();
+    if (!["live", "testing"].includes(STATUS) && !TESTLINK) go("closed");
+    if (STATUS === "testing") $("#testbar").hidden = false;
+    document.body.classList.remove("loading");
+  }).catch(() => { go("missing"); }).finally(() => document.body.classList.remove("loading"));
+}
+})();
+</script>
+</body>
+</html>
