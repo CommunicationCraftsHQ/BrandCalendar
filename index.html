@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.122 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.123 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -11457,8 +11457,9 @@ function dvFinalsHtml(ds){
     if(!fs.length) return known
       ? `<div class="dvf none" title="Open the task, then ⋯ on the file box › Change file"><span class="th"></span><span class="fn"><span class="n">No file on v${v.version}</span><span class="s">${escHtml(d.name)} · ⋯ › Change file</span></span><span class="vchip">v${v.version}</span></div>`
       : `<div class="dvf wait"><span class="th"></span><span class="fn"><span class="n">…</span><span class="s">${escHtml(d.name)}</span></span><span class="vchip">v${v.version}</span></div>`;
-    const a=fs[0], img=a.kind==="image"||/\.(png|jpe?g|gif|webp)$/i.test(a.filename||"");
-    const pic=img?(a.thumb_path||a.view_path||""):(a.thumb_path||(isPdf(a)?a.view_path:"")||"");
+    const a=fs[0], pic=dlvPic(a);
+    if(fs.length>1) return `<div class="dvf multi" title="${escAttr(fs.map(x=>x.filename||"").join("\n"))}" onclick="event.stopPropagation();dlvOpenFile('${escAttr(a.id)}')">
+      ${dlvThumbs(fs,4,"ths")}<span class="fn"><span class="n">${fs.length} files</span><span class="s">${escHtml(d.name)}</span></span><span class="vchip">v${v.version}</span></div>`;   /* V118.123 */
     return `<div class="dvf" title="${escAttr((a.filename||"")+(fs.length>1?` and ${fs.length-1} more`:""))}" onclick="event.stopPropagation();dlvOpenFile('${escAttr(a.id)}')">
       <span class="th"${pic?` data-sign="${escAttr(pic)}"`:""}>${pic?"":bfIcon(a.filename||"")}</span>
       <span class="fn"><span class="n">${escHtml(a.filename||"file")}${fs.length>1?` +${fs.length-1}`:""}</span><span class="s">${escHtml(d.name)}</span></span><span class="vchip">v${v.version}</span></div>`;
@@ -14520,7 +14521,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.122 Tbilisi";
+const TOOL_VERSION="V118.123 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -46423,7 +46424,21 @@ function dlvRailHtml(t){
 let DLV_ALLV=new Set(), DLV_VM=null, DLV_VMV=null, DLV_DRAG=null, DLV_DRAGGING=null, DLV_FP=null;
 function dlvVerName(v){ const fs=dlvAttached(v); if(!fs.length) return "No file on this message"; return (fs[0].filename||"file")+(fs.length>1?` +${fs.length-1}`:""); }
 function dlvIsFinal(d,v){ return v.status==="approved"; }
+/* V118.123 — a version can carry several files (Metro Design v1: five JPGs on one
+   message). The box and the Final files card show each one, and Download sends
+   them one after another, because a browser drops a burst of downloads silently. */
+function dlvPic(a){ const img=a.kind==="image"||/\.(png|jpe?g|gif|webp)$/i.test(a.filename||""); return img?(a.thumb_path||a.view_path||""):(a.thumb_path||(isPdf(a)?a.view_path:"")||""); }
+function dlvThumbs(fs,max,cls){
+  const shown=fs.slice(0,max), more=fs.length-shown.length;
+  return `<div class="${cls}">${shown.map(a=>{ const pic=dlvPic(a), ext=(tfExt(a)||"file").toUpperCase().slice(0,4);
+      return `<span class="tb" title="${escAttr(a.filename||"")}" onclick="event.stopPropagation();dlvOpenFile('${escAttr(a.id)}')"${pic?` data-sign="${escAttr(pic)}"`:""}>${pic?"":`<span class="tf-ty ${tfTy(a)}">${escHtml(ext)}</span>`}</span>`; }).join("")}${more>0?`<span class="tb more">+${more}</span>`:""}</div>`;
+}
 function dlvBoxHtml(d,v,done,t,mayE){
+  const fsAll=dlvAttached(v);
+  if(fsAll.length>1) return `<div class="dlv-fb multi${done?" fin":""}" onclick="event.stopPropagation();${v.message_id?`dlvJump('${escAttr(v.message_id)}')`:""}" title="Go to the message">
+    ${dlvThumbs(fsAll,5,"pvs")}
+    <div class="tx"><div class="nm"><span class="vchip">v${v.version}</span><span class="fnm">${fsAll.length} files</span></div></div>
+    ${t?`<span class="dlv-vm" onclick="event.stopPropagation()"><button class="go" onclick="dlvVerMenu(event,'${escAttr(v.id)}')" title="More"><i class="ti ti-dots"></i></button>${DLV_VM===v.id?dlvVerMenuHtml(d,t,v,mayE):""}</span>`:""}</div>`;
   const a=dlvAttached(v)[0]||null;
   const pic=a?(a.thumb_path||(isPdf(a)?a.view_path:"")||(a.kind==="image"?(a.view_path||""):"")||""):"";
   const ext=a?(tfExt(a)||"file").toUpperCase().slice(0,4):"";
@@ -47160,7 +47175,8 @@ async function dlvBackup(vid){
 function dlvDownload(vid){
   const v=DLV.vers.find(x=>x.id===vid); DLV_VM=null; render();
   const fs=v?dlvAttached(v):[]; if(!fs.length){ toast("No file on this message","err"); return; }
-  fs.forEach(a=>assetDownload(a.id));
+  if(fs.length>1&&v.message_id){ commentDownloadAll(v.message_id); return; }   /* V118.123 — one after another, like Download all */
+  assetDownload(fs[0].id);
 }
 
 /* ── loading, and the dressing pass ───────────────────────────────── */
@@ -47328,6 +47344,19 @@ function v38Dress(){
 .mdb-trow.brgrp.on i.ti{color:#fff;}
 .dlv-c .d-act .ab{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 6px;font-size:12px;gap:4px;}
 @media(max-width:768px){ .brl-pjc,.brl-hd .h-pj{display:none!important;} }
+</style>
+<style id="v123-css">
+/* V118.123 TBILISI · a version with several files shows them all */
+.dlv-c .dlv-fb.multi{flex-wrap:wrap;row-gap:8px;}
+.dlv-fb .pvs{display:flex;gap:5px;width:100%;flex-wrap:wrap;}
+.dlv-fb .pvs .tb,.dvf .ths .tb{position:relative;flex:none;border-radius:5px;background:#fff;border:1px solid var(--div);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:zoom-in;}
+.dlv-fb .pvs .tb{width:40px;height:32px;}
+.dlv-fb .pvs .tb>img,.dvf .ths .tb>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top;}
+.dlv-fb .pvs .tb .tf-ty,.dvf .ths .tb .tf-ty{font-size:7px;padding:1px 3px;}
+.dlv-fb .pvs .tb.more,.dvf .ths .tb.more{font-size:11px;font-weight:700;color:var(--muted);cursor:default;background:#F7F6F2;}
+.dlv-c .dlv-fb.multi .tx{flex:1;min-width:0;}
+.dvf .ths{display:flex;gap:3px;flex:none;}
+.dvf .ths .tb{width:26px;height:26px;}
 </style>
 <style id="hd-css">
 /* ══ V118.41 TBILISI · HELP DESK LIVES IN THE CALENDAR ══════════════════
