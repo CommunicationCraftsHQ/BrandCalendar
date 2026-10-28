@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.120 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.121 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14518,7 +14518,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.120 Tbilisi";
+const TOOL_VERSION="V118.121 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -31327,21 +31327,42 @@ async function plsRead(){
   prBox(`<div class="modal-top"><div><div class="modal-title">Reading the sheet</div>
       <div class="modal-sub">${escHtml((brands[activeBrand]&&brands[activeBrand].name)||"")}</div></div></div>
     <div class="modal-body"><div class="pr-fixed">Counting every lead by its own id, tab by tab. A big sheet takes a few seconds.</div></div>`);
-  let out=null, status=0;
+  /* THE TOKEN IS FETCHED, NEVER ASSUMED. V118.120 read a `session`
+     variable this page does not have, so every request went out as a
+     bare "Bearer " and Supabase's gateway refused it before the
+     reader ran. Every other call on this page asks for the session
+     first; so does this one now. */
+  const {data:{session:ses}}=await sb.auth.getSession();
+  if(!ses||!ses.access_token){ PLS.busy=false; closeM("promo");
+    return toast("Your sign-in has expired. Reload the page.","err"); }
+  let out=null, status=0, raw="";
   try{
     const r=await fetch(PLS_FN,{method:"POST",
-      headers:{authorization:"Bearer "+((typeof session!=="undefined"&&session&&session.access_token)||""),
+      headers:{authorization:"Bearer "+ses.access_token,
+               apikey:(typeof SB_KEY!=="undefined"?SB_KEY:""),
                "content-type":"application/json"},
       body:JSON.stringify({brand_id:activeBrand})});
-    status=r.status;
-    out=await r.json().catch(()=>null);
+    status=r.status; raw=await r.text();
+    try{ out=JSON.parse(raw); }catch(e){ out=null; }
   }catch(e){
     PLS.busy=false; closeM("promo");
     return toast("Could not reach the reader — "+((e&&e.message)||e),"err");
   }
   PLS.busy=false;
-  if(!out){ closeM("promo"); return toast("The reader answered with nothing ("+status+")","err"); }
-  if(!out.ok) return plsProblem(out.problem||out.error||"The reading did not work.");
+  /* A REPLY THIS PAGE DOES NOT UNDERSTAND SAYS WHAT CAME BACK. The
+     first live attempt failed with a bland "The reading did not
+     work." because the refusal came from Supabase's gateway, not the
+     reader, and carried none of the words this page looks for. A
+     message that hides the cause costs a round trip every time. */
+  const said=out&&(out.problem||out.error||out.message||out.msg);
+  if(!out||(!out.ok&&!said))
+    return plsProblem("The reader answered "+status+" and this page does not recognise the reply. "
+      +(String(raw||"").slice(0,200)||"It sent nothing back."));
+  /* `problem` is the reader's own word for it. Anything else came
+     from in front of the reader — the gateway, a proxy — and is
+     shown WITH the status, because that is what names the cause. */
+  if(!out.ok) return plsProblem(out.problem?String(out.problem)
+    :"The reader answered "+status+" — "+String(said));
   await plsOpen(out.read_id);
 }
 
