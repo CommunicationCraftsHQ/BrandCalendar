@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.123 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.124 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14521,7 +14521,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.123 Tbilisi";
+const TOOL_VERSION="V118.124 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -38264,6 +38264,7 @@ window.addEventListener("popstate",()=>{
 });
 async function urlApply(q,viaHistory){
   const p=q.get("p")||"", b=q.get("b")||"", y=parseInt(q.get("y")||"",10), m=parseInt(q.get("m")||"",10)||0;
+  if(p==="files"&&q.get("file")&&typeof BF!=="undefined") BF.pend=q.get("file");   /* V118.124 — a file link */
   URL_HOLD=true;
   try{
     if(viaHistory){
@@ -41066,7 +41067,7 @@ function xmDress(){
 .bf-seg button{flex:1;height:28px;border:0;border-radius:7px;background:transparent;font:inherit;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;}
 .bf-seg button.on{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.08);}
 /* a file, one line — the Hot leads Documents row, widened */
-.bf-row{display:grid;grid-template-columns:30px minmax(0,1fr) 150px 128px 112px 130px 40px 22px 18px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid #F0EFEC;}
+.bf-row{display:grid;grid-template-columns:30px minmax(0,1fr) 150px 128px 112px 130px 84px 22px 18px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid #F0EFEC;}
 .bf-row:last-child{border-bottom:0;}
 .bf-row .dn{min-width:0;}
 .bf-row .dn b{font-weight:650;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13.5px;}
@@ -41089,6 +41090,12 @@ function xmDress(){
 .bf-tk.ro{cursor:default;}
 .bf-tk.ro:hover,.bf-tk.ro:hover b{color:var(--muted);}
 .bf-open{font-weight:650;text-align:right;cursor:pointer;color:var(--text);font-size:13px;}
+/* V118.124 — Link · Open */
+.bf-acts{display:flex;align-items:center;justify-content:flex-end;gap:10px;}
+.bf-lk{display:inline-flex;align-items:center;justify-content:center;width:28px;height:26px;border:1px solid #E7E5E0;border-radius:7px;color:var(--muted);cursor:pointer;font-size:14px;background:#fff;flex:none;}
+.bf-lk:hover{color:var(--text);border-color:#CFCBC3;}
+.bf-lk.ok{color:#1E6B2E;border-color:#BFDCC4;background:#EEF7EE;}
+.bf-row.bf-hi{background:#FFF7DD;box-shadow:inset 3px 0 0 #E0B100;transition:background .4s;}
 .bf-open:hover{color:var(--acc);}
 .bf-dots{width:22px;height:22px;border-radius:6px;border:0;background:transparent;color:var(--subtle);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:15px;}
 .bf-dots:hover{background:var(--surface2);color:var(--text);}
@@ -41200,13 +41207,15 @@ function xmDress(){
 const BF_FN=SB_URL+"/functions/v1/brand-file";
 const BF_CHUNK=10*1024*1024;
 const BF={bid:null,ok:false,loading:false,err:"",links:[],folders:[],files:[],ties:[],
-  fold:"all",q:"",f:[],sort:"newest",ren:null,fren:null,fnew:false,fmenu:null,up:[],synced:{}};
+  fold:"all",q:"",f:[],sort:"newest",ren:null,fren:null,fnew:false,fmenu:null,up:[],synced:{},finals:{},pend:null};
 PAGE_NAME.files="Files";
 const BF_KINDS=[["website","Website","world"],["instagram","Instagram","brand-instagram"],["facebook","Facebook","brand-facebook"],
   ["linkedin","LinkedIn","brand-linkedin"],["youtube","YouTube","brand-youtube"],["google","Google Business","map-pin"],
   ["x","X","brand-x"],["whatsapp","WhatsApp","brand-whatsapp"],["pinterest","Pinterest","brand-pinterest"],["other","Other link","link"]];
 const bfKind=k=>BF_KINDS.find(x=>x[0]===k)||BF_KINDS[BF_KINDS.length-1];
-const BF_SRC={client:"From the client",us:"From us",lead:"From the lead"};
+const BF_SRC={client:"From the client",us:"Final deliveries",lead:"From the lead"};   /* V118.124 — "From us" is now Final deliveries */
+const BF_FINAL="Final deliveries";
+function bfIsFinalFolder(f){ const n=String(f&&f.name||"").toLowerCase(); return n==="final deliveries"||n==="from us"; }
 const BF_TYPES={pdf:"PDF",doc:"Document",xls:"Spreadsheet",ppt:"Presentation",img:"Image",vid:"Video",zip:"Zip",other:"Other"};
 function bfExt(n){ const m=/\.([A-Za-z0-9]{1,8})$/.exec(String(n||"")); return m?m[1].toLowerCase():""; }
 function bfType(n){
@@ -41242,6 +41251,8 @@ async function bfLoad(bid){
     if(BF.bid!==bid) return;
     BF.links=(l.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at);
     BF.folders=(fo.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at).sort((a,b)=>(a.sort||0)-(b.sort||0)||String(a.name).localeCompare(String(b.name)));
+    /* V118.124 — a brand not opened since the rename still has "From us": shown under its new name */
+    for(const f of BF.folders) if(String(f.name).toLowerCase()==="from us"){ f._was=f.name; f.name=BF_FINAL; }
     BF.files=(fi.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at);
     BF.ties=(ti.data||[]).filter(x=>x.brand_id===bid&&!x.deleted_at);
     BF.ok=true;
@@ -41249,6 +41260,79 @@ async function bfLoad(bid){
   BF.loading=false;
   bfRepaint();
   if(BF.ok&&!BF.synced[bid]&&bfMay()) bfSyncLead(bid);
+  if(BF.ok&&!BF.finals[bid]&&dlvMayFile()) bfFinalsSync(bid);
+  if(BF.ok&&BF.pend) setTimeout(bfPendShow,0);
+}
+/* ══ V118.124 TBILISI — FINAL DELIVERIES ═══════════════════════════════
+   Chirag, 28 Oct: "'From us' should become 'Final deliveries', and all
+   files marked as final deliveries should automatically populate here."
+   The approval files them (dlvApprove); this pass, once per brand per
+   visit, does three things the approval could not have done:
+     · renames the old "From us" folder, in SharePoint too
+     · files every approved version that is not filed yet (approvals
+       made before this version, or by the client in the portal)
+     · takes off the brand a filed copy whose approval was undone       */
+function dlvMayFile(){ return !!ME&&ME.role!=="client"&&(ME.role==="admin"||["admin","account_manager","super_admin"].includes(ME.toolRole)); }
+function bfStale(bid){ if(typeof BF!=="undefined"&&BF.bid===bid){ BF.bid=null; BF.ok=false; if(activeBrand===bid) bfEnsure(); } }
+async function bfFinalsSync(bid){
+  BF.finals[bid]=true;
+  let changed=0;
+  try{
+    const old=BF.folders.find(f=>f._was);
+    if(old&&!BF.folders.some(f=>f!==old&&String(f.name).toLowerCase()==="final deliveries")){
+      try{ const r=await bfCall("folder_rename",{folder_id:old.id,name:BF_FINAL}); if(r&&r.folder){ delete old._was; Object.assign(old,r.folder); } }
+      catch(e){ console.warn("[v118.124] folder not renamed",e); }
+    }
+    const [ok,gone]=await Promise.all([
+      sb.from("deliverable_versions").select("id,deliverable_id,task_id,brand_id,version,message_id,status,filed_at,deleted_at").eq("brand_id",bid).eq("status","approved").is("filed_at",null).is("deleted_at",null).not("message_id","is",null),
+      sb.from("deliverable_versions").select("id,brand_id,status,filed_at,deleted_at").eq("brand_id",bid).neq("status","approved").not("filed_at","is",null).is("deleted_at",null)]);
+    for(const v of (gone.data||[]).filter(v=>v.brand_id===bid&&!v.deleted_at&&v.status!=="approved"&&v.filed_at)){
+      try{ await dlvCall("unfile",{version_id:v.id}); changed++; const lv=(typeof DLV!=="undefined")&&DLV.vers.find(x=>x.id===v.id); if(lv){ lv.filed_at=null; lv.filed_file_id=null; } }catch(e){}
+    }
+    let vs=(ok.data||[]).filter(v=>v.brand_id===bid&&!v.deleted_at&&v.status==="approved"&&!v.filed_at&&v.message_id);
+    if(vs.length){
+      const [ds,ts,as]=await Promise.all([
+        sb.from("task_deliverables").select("id,deleted_at").in("id",[...new Set(vs.map(v=>v.deliverable_id))]).is("deleted_at",null),
+        sb.from("branding_tasks").select("id,deleted_at").in("id",[...new Set(vs.map(v=>v.task_id))]).is("deleted_at",null),
+        sb.from("assets").select("owner_id,owner_kind,kind,deleted_at").eq("owner_kind","message").in("owner_id",[...new Set(vs.map(v=>v.message_id))]).is("deleted_at",null)]);
+      const D=new Set((ds.data||[]).filter(x=>!x.deleted_at).map(x=>x.id)), T=new Set((ts.data||[]).filter(x=>!x.deleted_at).map(x=>x.id)),
+        M=new Set((as.data||[]).filter(a=>a.owner_kind==="message"&&!a.deleted_at&&a.kind!=="video").map(a=>a.owner_id));
+      vs=vs.filter(v=>D.has(v.deliverable_id)&&T.has(v.task_id)&&M.has(v.message_id));
+    }
+    let filed=0;
+    for(const v of vs){   /* one after another — each one copies files inside SharePoint */
+      try{ const r=await dlvCall("file_final",{version_id:v.id}); filed++; changed++;
+        const lv=(typeof DLV!=="undefined")&&DLV.vers.find(x=>x.id===v.id); if(lv){ lv.filed_at=r.filed_at; lv.filed_file_id=(r.filed[0]||{}).id||null; } }
+      catch(e){ console.warn("[v118.124] not filed",v.id,e); }
+    }
+    if(filed) toast(`${filed} approved deliver${filed===1?"y":"ies"} added to Final deliveries`);
+  }catch(e){ console.warn("[v118.124] final deliveries",e); }
+  if(changed&&BF.bid===bid) await bfLoad(bid);
+}
+/* a link to a file: ?b=<brand>&p=files&file=<id> — opens the brand's Files and shows it.
+   It never runs out, unlike a SharePoint download link; whoever opens it signs in as themselves. */
+function bfLinkOf(id){ const f=bfFile(id); return location.origin+location.pathname+"?b="+encodeURIComponent((f&&f.brand_id)||activeBrand||"")+"&p=files&file="+encodeURIComponent(id); }
+async function bfCopyLink(id,ev){
+  if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  bfPopClose();
+  const u=bfLinkOf(id), f=bfFile(id), btn=ev&&ev.currentTarget&&ev.currentTarget.classList&&ev.currentTarget.classList.contains("bf-lk")?ev.currentTarget:null;
+  let ok=false;
+  try{ await navigator.clipboard.writeText(u); ok=true; }catch(e){
+    try{ const ta=document.createElement("textarea"); ta.value=u; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); ok=document.execCommand("copy"); ta.remove(); }catch(e2){}
+  }
+  if(!ok){ toast("Could not copy — "+u,"err"); return; }
+  if(btn){ btn.classList.add("ok"); btn.innerHTML='<i class="ti ti-check"></i>'; setTimeout(()=>{ btn.classList.remove("ok"); btn.innerHTML='<i class="ti ti-link"></i>'; },1400); }
+  toast(`Link to “${escHtml((f&&f.file_name)||"the file")}” copied — paste it in any conversation`);
+}
+/* the file a link (or "In final deliveries · open") asked for */
+function bfPendShow(){
+  const id=BF.pend; if(!id||!BF.ok||BF.bid!==activeBrand||view!=="files") return;
+  BF.pend=null;
+  if(!bfFile(id)){ toast("That file is not on this brand any more","err"); return; }
+  BF.fold="all"; BF.q=""; BF.f=[]; bfRefresh();
+  const row=document.querySelector(`.bf-row[data-file="${CSS.escape(id)}"]`);
+  if(row){ row.classList.add("bf-hi"); if(row.scrollIntoView) row.scrollIntoView({block:"center"}); setTimeout(()=>row.classList.remove("bf-hi"),2600); }
+  bfOpen(id);
 }
 function bfEnsure(){
   if(!activeBrand||!brands[activeBrand]) return;
@@ -41382,7 +41466,7 @@ function bfRowHtml(f,showFold){
     :`<span class="bf-tk${n?"":" none"}${may?"":" ro"}" ${may?`onclick="bfTaskPick(event,'${f.id}')"`:""}>${n?`Linked to <b>${n} task${n>1?"s":""}</b>`:(may?"Link to a task":"")}</span>`}
     <span class="bf-src${f.src==="lead"?" lead":""}">${((BF.folders||[]).find(x=>x.id===f.folder_id&&x.name.toLowerCase()==="brand assets")?"Brand assets":"")||BF_SRC[f.src]||""}</span>
     <span class="who">${escHtml([who,when].filter(Boolean).join(" · "))}</span>
-    <span class="bf-open" onclick="bfOpen('${f.id}')">Open</span>
+    <span class="bf-acts"><span class="bf-lk" title="Copy a link to this file — paste it in any conversation" onclick="bfCopyLink('${f.id}',event)"><i class="ti ti-link"></i></span><span class="bf-open" onclick="bfOpen('${f.id}')">Open</span></span>
     ${may?`<button class="bf-dots" title="More" onclick="bfRowMenu(event,'${f.id}')"><i class="ti ti-dots"></i></button>`:"<span></span>"}
     ${may?`<span class="bf-x" title="Take it off this brand" onclick="bfDetach('${f.id}')">✕</span>`:"<span></span>"}
   </div>`;
@@ -41398,6 +41482,7 @@ function bfRowMenu(ev,id){
   const f=bfFile(id); if(!f) return;
   const others=BF.folders.filter(x=>x.id!==f.folder_id);
   bfPop(ev,`<div class="bf-menu">
+    <div class="bf-mi" onclick="bfCopyLink('${id}',event)"><i class="ti ti-link"></i>Copy link</div>
     <div class="bf-mi" onclick="bfPopClose();bfStartRename('${id}')"><i class="ti ti-pencil"></i>Rename</div>
     <div class="bf-msep"></div>
     <div class="bf-mi red" onclick="bfPopClose();bfDetach('${id}')"><i class="ti ti-x"></i>Take it off this brand</div></div>`,true);
@@ -41499,7 +41584,7 @@ function bfAddMenu(ev){
      and from the client. There are no subfolders required." The folder a
      file goes into says who it came from, so the menu is the two folders. */
   if(!BF.ok){ toast("The files are still loading","err"); return; }
-  const fo=k=>BF.folders.find(f=>f.name.toLowerCase()===(k==="client"?"from the client":"from us"));
+  const fo=k=>BF.folders.find(f=>k==="client"?f.name.toLowerCase()==="from the client":bfIsFinalFolder(f));
   const row=k=>{ const f=fo(k); return f?`<div class="bf-mi" onclick="BF._src='${k}';bfPickFiles('${f.id}')"><i class="ti ti-folder"></i>${escHtml(f.name)}</div>`:""; };
   bfPop(ev,`<div class="bf-menu" style="min-width:220px">${row("us")}${row("client")}${(()=>{ const f=BF.folders.find(x=>x.name.toLowerCase()==="brand assets"); return f?`<div class="bf-mi" onclick="BF._src='us';bfPickFiles('${f.id}')"><i class="ti ti-folder"></i>${escHtml(f.name)}</div>`:""; })()}</div>`,true);
 }
@@ -41616,7 +41701,7 @@ function bfValsOf(f,k){
 }
 function bfOptionsFor(k){
   const rows=bfInFolder();
-  if(k==="src") return fltCounts(rows,k,bfValsOf,[["client","From the client"],["us","From us"],["lead","From the lead"]]);
+  if(k==="src") return fltCounts(rows,k,bfValsOf,[["client","From the client"],["us","Final deliveries"],["lead","From the lead"]]);
   if(k==="type") return fltCounts(rows,k,bfValsOf,Object.entries(BF_TYPES).map(([v,l])=>[v,l]));
   if(k==="tied") return fltCounts(rows,k,bfValsOf,[["yes","Linked to a task"],["no","Not linked"]]);
   return fltCounts(rows,k,bfValsOf,[],v=>bfWho(v)||"Someone");
@@ -41663,6 +41748,7 @@ function bfList(){
   g.innerHTML=ups.map(bfUpRowHtml).join("")+(r.map(f=>bfRowHtml(f,BF.fold==="all")).join("")
     ||(ups.length?"":`<div class="bf-empty">${bfInFolder().length?"No files match these filters.":"No files here yet. Use Add a file in the bar above."}</div>`));
   bfCnt();
+  if(BF.pend) setTimeout(bfPendShow,0);
 }
 function bfRefresh(){ if(view==="brief"){ bfPaintStrategy(); return; } if(view!=="files") return; buildFilesSidebar(); bfBar(); bfList(); }
 function buildFilesSidebar(){
@@ -46473,8 +46559,9 @@ function dlvVerMenuHtml(d,t,v,mayE){
   const ans=!mayA?"":v.status==="approved"?`<div class="mi" onclick="dlvUndo('${q}')"><i class="ti ti-arrow-back"></i>Undo the approval</div>`
     :v.status==="changes"?`<div class="mi" onclick="dlvApprove('${q}')"><i class="ti ti-check"></i>Client approved</div><div class="mi" onclick="dlvUndo('${q}')"><i class="ti ti-arrow-back"></i>Undo the change request</div>`
     :`<div class="mi" onclick="dlvApprove('${q}')"><i class="ti ti-check"></i>Client approved</div><div class="mi" onclick="DLV_VM=null;dlvChangesOpen('${q}')"><i class="ti ti-arrow-back-up"></i>Change request</div>`;
-  const bk=!can?"":v.filed_at?`<div class="mi" onclick="DLV_VM=null;dlvOpenFiled('${q}')"><i class="ti ti-folder-check"></i>In backup<small>open</small></div>`
-    :`<div class="mi${files?"":" off"}" onclick="dlvBackup('${q}')"><i class="ti ti-folder-up"></i>Add to backup</div>`;
+  /* V118.124 — approval files it; the menu only says where it is (or retries) */
+  const bk=!can||v.status!=="approved"?"":v.filed_at?`<div class="mi" onclick="DLV_VM=null;dlvOpenFiled('${q}')"><i class="ti ti-folder-check"></i>In final deliveries<small>open</small></div>`
+    :`<div class="mi${files?"":" off"}" onclick="dlvBackup('${q}')"><i class="ti ti-folder-up"></i>Add to final deliveries</div>`;
   const L=[];
   if(ans) L.push(`<div class="mh">The client's answer</div>${ans}`);
   const mid=[can?`<div class="mi" onclick="DLV_VM=null;dlvMailOpen('${q}')"><i class="ti ti-mail"></i>Email to the client</div>`:"", bk,
@@ -46591,7 +46678,7 @@ async function dlvFilePickSave(){
   x.v.message_id=F.mid;
   if(x.v.filed_at&&dlvAttached(x.v).length){   /* V118.104 — it was in the backup: the backup follows */
     try{ const rf=await dlvCall("file_final",{version_id:x.v.id}); x.v.filed_at=rf.filed_at; x.v.filed_file_id=(rf.filed[0]||{}).id||null; if(typeof BF!=="undefined"&&BF.bid===activeBrand) BF.ok=false; }
-    catch(e){ toast("Changed, but From us not updated — "+(e.message||e),"err"); }
+    catch(e){ toast("Changed, but Final deliveries not updated — "+(e.message||e),"err"); }
   }
   await logTask(x.t.id,`changed the file of v${x.v.version} of "${x.d.name}" to ${dlvVerName(x.v)}`);
   DLV_FP=null; dlvBoxClose();
@@ -46688,6 +46775,7 @@ async function dlvRemove(did){
 async function dlvAnswer(vid,status){
   const v=DLV.vers.find(x=>x.id===vid); if(!v) return;
   const t=BR.tasks.find(x=>x.id===v.task_id); if(!dlvMayAnswer(t)) return;
+  const wasA=v.status==="approved";
   const now=new Date().toISOString();
   const patch=status==="sent"?{status,answered_by:null,answered_at:null}:{status,answered_by:ME.id||null,answered_at:now};
   const r=await sb.from("deliverable_versions").update(patch).eq("id",vid);
@@ -46697,10 +46785,31 @@ async function dlvAnswer(vid,status){
   if(status==="approved") for(const o of DLV.vers.filter(x=>x.deliverable_id===v.deliverable_id&&x.id!==v.id&&x.status==="approved")){
     const p2={status:"sent",answered_by:null,answered_at:null};
     const r2=await sb.from("deliverable_versions").update(p2).eq("id",o.id);
-    if(!r2.error) Object.assign(o,p2);
+    if(!r2.error){ Object.assign(o,p2); await dlvUnfile(o); }
   }
+  if(wasA&&status!=="approved") await dlvUnfile(v);
   await dlvSettle(t);
   render();
+  if(status==="approved"&&!wasA) dlvFileFinal(v,DLV.list.find(x=>x.id===v.deliverable_id)).then(ok=>{ if(ok) render(); });   /* V118.124 — not waited on: the copy takes a few seconds */
+}
+/* V118.124 — an approval that no longer stands: its copy leaves Final deliveries */
+async function dlvUnfile(v){
+  if(!v||!v.filed_at||!dlvMayFile()) return;
+  try{ await dlvCall("unfile",{version_id:v.id}); v.filed_at=null; v.filed_file_id=null; bfStale(v.brand_id); }
+  catch(e){ console.warn("[v118.124] not unfiled",e); }
+}
+/* V118.124 — an approval files the version's files in Final deliveries */
+async function dlvFileFinal(v,d){
+  if(!v||v.status!=="approved"||!v.message_id||!dlvMayFile()) return false;
+  try{
+    const r=await dlvCall("file_final",{version_id:v.id});
+    v.filed_at=r.filed_at; v.filed_file_id=(r.filed[0]||{}).id||null; bfStale(v.brand_id);
+    toast(`${d?escHtml(d.name)+" ":""}v${v.version} · in Final deliveries`);
+    return true;
+  }catch(e){
+    if(!/no file/i.test(String(e.message||e))) toast("Approved, but not added to Final deliveries — "+(e.message||e)+". Use ⋯ › Add to final deliveries.","err");
+    return false;
+  }
 }
 /* the task follows its deliveries: all approved → Delivered; one undone → In progress */
 async function dlvSettle(t){
@@ -46729,7 +46838,7 @@ async function dlvAddVersion(did,mid){
   for(const o of DLV.vers.filter(x=>x.deliverable_id===did&&x.id!==row.id&&x.status==="approved")){
     const p2={status:"sent",answered_by:null,answered_at:null};
     const r2=await sb.from("deliverable_versions").update(p2).eq("id",o.id);
-    if(!r2.error) Object.assign(o,p2);
+    if(!r2.error){ Object.assign(o,p2); await dlvUnfile(o); }
   }
   { const tt=BR.tasks.find(x=>x.id===d.task_id); if(tt) await dlvSettle(tt); }
   toast(`${d.name} · v${row.version} delivered`);
@@ -46962,13 +47071,14 @@ function dlvExtraHtml(v){
   if(!v) return "";
   const dr=dlvDraftsOf(v.id)[0];
   const a=dr?`<div class="dlv-ln mail"><i class="ti ti-mail"></i><span>Drafted for ${escHtml(dlvMailNames(dr))} · ${escHtml(v38Day(dr.created_at))}${dr.web_link?` · <a href="${escAttr(dr.web_link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Outlook ↗</a>`:""}</span></div>`:"";
-  const b=v.filed_at?`<div class="dlv-ln filed"><i class="ti ti-folder-check"></i><span>Filed in From us · <span class="go" onclick="event.stopPropagation();dlvOpenFiled('${escAttr(v.id)}')">open ↗</span></span></div>`:"";
+  const b=v.filed_at?`<div class="dlv-ln filed"><i class="ti ti-folder-check"></i><span>In final deliveries · <span class="go" onclick="event.stopPropagation();dlvOpenFiled('${escAttr(v.id)}')">open ↗</span></span></div>`:"";
   return a+b;
 }
 function dlvOpenFiled(vid){
   const v=DLV.vers.find(x=>x.id===vid); if(!v) return;
-  if(typeof BF!=="undefined"){ BF.fold="all"; BF.q=""; }
+  if(typeof BF!=="undefined"){ BF.fold="all"; BF.q=""; BF.f=[]; BF.pend=v.filed_file_id||null; }
   if(typeof bfGo==="function") bfGo(); else setView("files");
+  if(typeof BF!=="undefined"&&BF.pend) setTimeout(bfPendShow,0);
 }
 /* ── the box both moments open in ───────────────────────────────────── */
 function dlvBox(html){
@@ -47158,18 +47268,19 @@ async function dlvUndo(vid){
   if(x.v.status!=="sent") return;
   await logTask(x.t.id,`undid the ${was==="approved"?"approval":"change request"} on v${x.v.version} of "${x.d.name}"`);
 }
-/* V118.104 — "Add to backup" (was: filed in From us on approval) */
+/* V118.104 — "Add to backup"; V118.124 — "Add to final deliveries", the retry when the approval could not file it */
 async function dlvBackup(vid){
   const x=dlvVerOf(vid); if(!x||!dlvMayEdit(x.t)||brIsClient()) return;
   DLV_VM=null; render();
-  if(!dlvAttached(x.v).length){ toast("No file on this message to back up","err"); return; }
-  toast(`Adding v${x.v.version} to the backup…`);
+  if(!dlvAttached(x.v).length){ toast("No file on this message — use ⋯ › Change file","err"); return; }
+  if(x.v.status!=="approved"){ toast("Only the approved version goes into Final deliveries","err"); return; }
+  toast(`Adding v${x.v.version} to Final deliveries…`);
   try{
     const r=await dlvCall("file_final",{version_id:vid});
     x.v.filed_at=r.filed_at; x.v.filed_file_id=(r.filed[0]||{}).id||null;
-    if(typeof BF!=="undefined"&&BF.bid===activeBrand) BF.ok=false;
-    toast(`${x.d.name} v${x.v.version} added to the backup`);
-  }catch(e){ toast("Not added to the backup — "+(e.message||e),"err"); }
+    bfStale(x.v.brand_id);
+    toast(`${x.d.name} v${x.v.version} added to Final deliveries`);
+  }catch(e){ toast("Not added to Final deliveries — "+(e.message||e),"err"); }
   render();
 }
 function dlvDownload(vid){
