@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.119 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.120 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13810,6 +13810,11 @@ function buildExportPanel(){
       <div class="brow act" onclick="closeAllPops();priTemplate(false)"><i class="ti ti-file-spreadsheet"></i><span class="bnm">Blank template</span></div>
       <div class="brow act" onclick="closeAllPops();priHistory()"><i class="ti ti-history"></i><span class="bnm">Past imports</span></div>
       <div class="brk-iosep"></div>
+      <div class="brk-ioh"><i class="ti ti-table-import"></i>Lead sheet</div>
+      <div class="brow act" onclick="closeAllPops();plsRead()"><i class="ti ti-refresh"></i><span class="bnm">Read it again</span></div>
+      <div class="brow act" onclick="closeAllPops();plsSetup()"><i class="ti ti-link"></i><span class="bnm">Where the sheet is</span></div>
+      <div class="brow act" onclick="closeAllPops();plsHistory()"><i class="ti ti-history"></i><span class="bnm">Past readings</span></div>
+      <div class="brk-iosep"></div>
       <div class="brk-ioh"><i class="ti ti-download"></i>Export</div>
       <div class="brow act" onclick="closeAllPops();priTemplate(true)"><i class="ti ti-table"></i><span class="bnm">This list${n?" · "+n:""}</span></div>`;
     return;
@@ -14513,7 +14518,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.119 Tbilisi";
+const TOOL_VERSION="V118.120 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -31235,6 +31240,343 @@ async function prCampDel(id,label){
   if(r.error||!r.data||!r.data.length){ toast("Could not unlink it — "+(r.error?r.error.message:"not allowed"),"err"); return; }
   toast("Unlinked"); prReload();
 }
+
+/* ═══ THE LEAD SHEET FEEDS THE PAGE ═══════════════════════════════════
+   V118.120 Tbilisi · 28 October 2026 · Push 3 of the lead-sheet work
+
+   THE SHEET NEVER WRITES BY ITSELF. `lead-sheet` on Supabase reads the
+   brand's sheet, counts the leads per campaign per month and PARKS the
+   answer. This screen shows a person what it found; a person presses
+   Post; and Post can be undone.
+
+   FOUR THINGS A ROW CAN BE
+     ready      post it — the month is empty or says something else
+     same       already matches, nothing to do
+     typed      somebody changed this month by hand since the last
+                post, so the reading is HELD BACK rather than written
+                over their work
+     unmatched  the sheet has a campaign no promotion claims. Named,
+                never created, never dropped in silence.
+   And one the page works out for itself: NOWHERE TO SHOW. A month
+   outside the promotion's dates, or any month of a one-off, would be
+   saved and then never appear — Atul Franchise's August and September
+   are exactly that. Held back, and said why.
+   ═════════════════════════════════════════════════════════════════════ */
+const PLS_FN=SB_URL+"/functions/v1/lead-sheet";
+let PLS={sheet:null,read:null,rows:[],busy:false,hist:[]};
+
+async function plsLoadSheet(){
+  try{
+    const s=await sb.from("brand_lead_sheets").select("*").eq("brand_id",activeBrand)
+      .is("deleted_at",null).order("created_at",{ascending:false}).limit(1);
+    PLS.sheet=((s&&s.data)||[])[0]||null;
+  }catch(e){ PLS.sheet=null; }
+  return PLS.sheet;
+}
+
+/* ── where the sheet is, and WHICH TABS ──────────────────────────────
+   The tabs are asked for, not guessed. Atul's sheet has five and only
+   two carry raw leads; CRM Lead Tracker repeats all 871 corporate
+   leads with follow-up notes, so reading it would double them. */
+async function plsSetup(firstTime){
+  if(!canCap("edit_promotions")) return capDenied("Setting the lead sheet");
+  if(!activeBrand) return toast("Pick a brand first","err");
+  if(PLS.sheet===null) await plsLoadSheet();
+  const s=PLS.sheet||{};
+  prBox(`<div class="modal-top"><div><div class="modal-title">Where the lead sheet is</div>
+      <div class="modal-sub">${escHtml((brands[activeBrand]&&brands[activeBrand].name)||"")}</div></div>
+      <span style="flex:1"></span><button class="modal-x" onclick="closeM('promo')">✕</button></div>
+    <div class="modal-body">
+      ${firstTime?`<div class="pr-fixed" style="margin-bottom:12px;">This brand has no lead sheet on record yet.</div>`:""}
+      <div class="field"><label class="fl">Link to the sheet</label>
+        <input class="fi" id="pls-url" placeholder="https://docs.google.com/spreadsheets/d/…" value="${escAttr(s.url||"")}"></div>
+      <div class="field"><label class="fl">Tabs that carry raw leads — one per line</label>
+        <textarea class="fi" id="pls-tabs" rows="4" placeholder="Corporate Gift Lead&#10;Ahmedabad &amp; Gandhinagar">${escHtml((s.tabs||[]).join("\n"))}</textarea></div>
+      <div class="pr-fixed">Name only the tabs Meta fills. A working copy of the same leads — a CRM tracker, a copy of a tab — would count every lead twice.
+        The sheet must be shared so that anyone with the link can view it.</div>
+    </div>
+    <div class="modal-foot"><span style="flex:1"></span>
+      <button class="btn btn-s" onclick="closeM('promo')">Cancel</button>
+      <button class="btn btn-p" id="pls-save" onclick="plsSetupSave()">Save</button></div>`);
+  setTimeout(()=>{ const el=document.getElementById("pls-url"); if(el) el.focus(); },50);
+}
+async function plsSetupSave(){
+  const g=id=>document.getElementById(id);
+  const url=(g("pls-url").value||"").trim();
+  const tabs=(g("pls-tabs").value||"").split("\n").map(t=>t.trim()).filter(Boolean);
+  if(!/\/spreadsheets\/d\/[a-zA-Z0-9-_]+/.test(url)){ toast("That is not a Google Sheets link","err"); g("pls-url").focus(); return; }
+  if(!tabs.length){ toast("Name at least one tab","err"); g("pls-tabs").focus(); return; }
+  const btn=g("pls-save"); btn.disabled=true;
+  const r=PLS.sheet
+    ? await sb.from("brand_lead_sheets").update({url:url,tabs:tabs}).eq("id",PLS.sheet.id).select("id")
+    : await sb.from("brand_lead_sheets").insert([{brand_id:activeBrand,url:url,tabs:tabs,added_by:ME.id||null}]).select("id");
+  if(r.error||!r.data||!r.data.length){ toast("Could not save it — "+(r.error?r.error.message:"not allowed"),"err"); btn.disabled=false; return; }
+  await plsLoadSheet();
+  closeM("promo"); toast("Saved");
+}
+
+/* ── read it again ───────────────────────────────────────────────────
+   The only way a reading starts, for now. A button a person presses
+   is easier to trust than a job nobody can see. */
+async function plsRead(){
+  if(!canCap("edit_promotions")) return capDenied("Reading the lead sheet");
+  if(!activeBrand) return toast("Pick a brand first","err");
+  if(PLS.busy) return;
+  if(!await plsLoadSheet()) return plsSetup(true);
+  PLS.busy=true;
+  prBox(`<div class="modal-top"><div><div class="modal-title">Reading the sheet</div>
+      <div class="modal-sub">${escHtml((brands[activeBrand]&&brands[activeBrand].name)||"")}</div></div></div>
+    <div class="modal-body"><div class="pr-fixed">Counting every lead by its own id, tab by tab. A big sheet takes a few seconds.</div></div>`);
+  let out=null, status=0;
+  try{
+    const r=await fetch(PLS_FN,{method:"POST",
+      headers:{authorization:"Bearer "+((typeof session!=="undefined"&&session&&session.access_token)||""),
+               "content-type":"application/json"},
+      body:JSON.stringify({brand_id:activeBrand})});
+    status=r.status;
+    out=await r.json().catch(()=>null);
+  }catch(e){
+    PLS.busy=false; closeM("promo");
+    return toast("Could not reach the reader — "+((e&&e.message)||e),"err");
+  }
+  PLS.busy=false;
+  if(!out){ closeM("promo"); return toast("The reader answered with nothing ("+status+")","err"); }
+  if(!out.ok) return plsProblem(out.problem||out.error||"The reading did not work.");
+  await plsOpen(out.read_id);
+}
+
+/* A FAILURE SAYS WHAT WENT WRONG, in the sheet's own terms. Never a
+   quiet zero: "no leads" and "could not read it" look identical on a
+   row and are nothing alike. */
+function plsProblem(msg){
+  prBox(`<div class="modal-top"><div><div class="modal-title">The sheet could not be read</div></div>
+      <span style="flex:1"></span><button class="modal-x" onclick="closeM('promo')">✕</button></div>
+    <div class="modal-body"><div style="font-size:13px;line-height:1.65;">${escHtml(msg)}</div></div>
+    <div class="modal-foot"><span style="flex:1"></span>
+      <button class="btn btn-s" onclick="plsSetup()">Where the sheet is</button>
+      <button class="btn btn-p" onclick="closeM('promo');plsRead()">Try again</button></div>`);
+}
+
+async function plsOpen(readId){
+  let head=null, rows=[];
+  try{
+    const h=await sb.from("promotion_sheet_reads").select("*").eq("id",readId).limit(1);
+    head=((h&&h.data)||[])[0]||null;
+    const r=await sb.from("promotion_sheet_rows").select("*").eq("read_id",readId);
+    rows=(r&&r.data)||[];
+  }catch(e){}
+  if(!head){ closeM("promo"); return toast("That reading is not there any more","err"); }
+  PLS.read=head; PLS.rows=rows;
+  plsReview();
+}
+
+/* ── nowhere to show ────────────────────────────────────────────────
+   A figure saved where the page never looks is worse than no figure:
+   it reads as done. */
+function plsNowhere(p,ms){
+  if(!p) return "";
+  if(p.kind==="one_off") return "a one-off promotion shows one total, not months";
+  const d=prDate(ms); if(!d) return "";
+  const last=prIso(new Date(d.getFullYear(),d.getMonth()+1,0));
+  if(p.starts_on&&last<p.starts_on) return "before this promotion starts ("+prShort(p.starts_on)+")";
+  if(p.ends_on&&ms>p.ends_on) return "after this promotion ends ("+prShort(p.ends_on)+")";
+  return "";
+}
+
+function plsBuckets(){
+  const post=[], held=[], same=[], typed=[], un=[];
+  (PLS.rows||[]).forEach(r=>{
+    if(r.kind==="unmatched"){ un.push(r); return; }
+    const p=(PR.list||[]).find(x=>x.id===r.promotion_id)||null;
+    r._p=p; r._nowhere=plsNowhere(p,String(r.month_start).slice(0,10));
+    if(!p){ r._nowhere="that promotion is no longer here"; held.push(r); return; }
+    if(r.state==="same"){ same.push(r); return; }
+    if(r.state==="typed"){ typed.push(r); return; }
+    if(r._nowhere){ held.push(r); return; }
+    post.push(r);
+  });
+  const key=r=>String((r._p&&r._p.name)||"")+String(r.month_start);
+  [post,held,same,typed].forEach(a=>a.sort((x,y)=>key(x).localeCompare(key(y))));
+  un.sort((x,y)=>String(x.external_name||"").localeCompare(String(y.external_name||"")));
+  return {post,held,same,typed,un};
+}
+
+function plsReview(){
+  const b=plsBuckets(), done=!!(PLS.read&&PLS.read.posted_at);
+  const head=t=>`<div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--subtle);text-transform:uppercase;margin:14px 0 6px;">${escHtml(t)}</div>`;
+  const card=(inner,tint,cls)=>`<div class="plsc${cls?" "+cls:""}" style="border:1px solid var(--div);border-radius:9px;padding:9px 11px;margin-bottom:7px;${tint||""}">${inner}</div>`;
+  const num=v=>(v===null||v===undefined||v==="")?"—":Number(v).toLocaleString("en-IN");
+  /* before → after, one line per figure, and only where it moves */
+  const moves=r=>{
+    const w=r.was||{}, unit=r._p?prUnit(r._p):"leads";
+    const three=[[unit.charAt(0).toUpperCase()+unit.slice(1),w.result_value,r.leads],
+                 ["Qualified",w.qualified,r.qualified],["Closed",w.converted,r.converted]];
+    return three.filter(x=>num(x[1])!==num(x[2])).map(x=>
+      `<div style="display:flex;gap:7px;align-items:baseline;margin-top:3px;">
+         <span style="font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--subtle);text-transform:uppercase;min-width:74px;">${escHtml(x[0])}</span>
+         <span style="font-size:12px;color:var(--muted);text-decoration:line-through;">${num(x[1])}</span>
+         <span style="font-size:12px;color:var(--muted);">→</span>
+         <span style="font-size:13px;font-weight:600;">${num(x[2])}</span></div>`).join("")
+      ||`<div style="font-size:12px;color:var(--muted);margin-top:3px;">Nothing moves.</div>`;
+  };
+  const title=r=>`<div style="font-weight:600;font-size:13px;">${escHtml((r._p&&r._p.name)||"A promotion that is gone")}
+      <span style="font-weight:400;color:var(--muted);"> · ${escHtml(prMonthName(String(r.month_start).slice(0,10)))}</span></div>`;
+
+  let body="";
+  if(b.post.length){
+    body+=head(b.post.length+(b.post.length===1?" month to post":" months to post"));
+    body+=b.post.map(r=>card(title(r)+moves(r))).join("");
+  }
+  if(b.typed.length){
+    body+=head(b.typed.length+" held back — changed here by hand");
+    body+=b.typed.map(r=>card(title(r)
+      +`<div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.6;">Somebody has edited this month since the last post, so the sheet is not written over it. The sheet says ${num(r.leads)}${r.qualified!==null?", "+num(r.qualified)+" qualified":""}${r.converted!==null?", "+num(r.converted)+" closed":""}.</div>`,
+      "background:#FFF9EC;border-color:#F0DFB8;")).join("");
+  }
+  if(b.held.length){
+    body+=head(b.held.length+" held back — nowhere to show");
+    body+=b.held.map(r=>card(title(r)
+      +`<div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.6;">The sheet says ${num(r.leads)} for this month, but ${escHtml(r._nowhere)}. Saving it would hide it. Change the promotion's dates${r._p&&r._p.kind==="one_off"?" and make it ongoing":""} and read the sheet again.</div>`,
+      "background:#FFF9EC;border-color:#F0DFB8;")).join("");
+  }
+  if(b.un.length){
+    const tot=b.un.reduce((n,r)=>n+(Number(r.leads)||0),0);
+    body+=head(b.un.length+" campaign"+(b.un.length===1?"":"s")+" no promotion claims · "+num(tot)+" leads not counted");
+    body+=b.un.map(r=>card(
+      `<div style="font-weight:600;font-size:13px;">${escHtml(r.external_name||"Unnamed campaign")}
+         <span style="font-weight:400;color:var(--muted);"> · ${escHtml(prMonthName(String(r.month_start).slice(0,10)))}</span></div>
+       <div style="font-size:12px;color:var(--muted);margin-top:2px;">${num(r.leads)} leads · <code>${escHtml(r.external_id||"")}</code></div>
+       <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.6;">Open the promotion these belong to and link this campaign to it, then read the sheet again. Nothing is created for you — a campaign with the wrong home counts its leads twice over.</div>`,
+      "background:#FFF4F4;border-color:#F0CFCF;","un")).join("");
+  }
+  const notes=[];
+  if(b.same.length) notes.push(b.same.length+" month"+(b.same.length===1?"":"s")+" already match");
+  if(PLS.read&&PLS.read.problem) notes.push(PLS.read.problem);
+  if(PLS.read) notes.push(num(PLS.read.leads_seen)+" leads counted in the sheet");
+  if(notes.length) body+=`<div style="font-size:12px;color:var(--muted);margin-top:14px;padding-top:10px;border-top:1px solid var(--div);line-height:1.7;">${escHtml(notes.join(" · "))}</div>`;
+
+  const n=b.post.length;
+  prBox(`<div class="modal-top"><div><div class="modal-title">What the lead sheet says</div>
+      <div class="modal-sub">${escHtml((brands[activeBrand]&&brands[activeBrand].name)||"")}${PLS.read?" · read "+escHtml(plsWhen(PLS.read.read_at)):""}</div></div>
+      <span style="flex:1"></span><button class="modal-x" onclick="closeM('promo')">✕</button></div>
+    <div class="modal-body" style="padding:4px 20px 16px;max-height:60vh;overflow:auto;">
+      ${body||'<div style="font-size:13px;color:var(--muted);padding:14px 0;">Nothing in the sheet changes anything here.</div>'}
+    </div>
+    <div class="modal-foot"><span style="flex:1"></span>
+      <button class="btn btn-g" onclick="closeM('promo')">Close</button>
+      ${done
+        ? `<button class="btn btn-s" onclick="plsUndo('${escAttr(PLS.read.id)}')">Undo this post</button>`
+        : `<button class="btn btn-p" id="pls-post" ${n?"":"disabled style=opacity:.5"} onclick="plsPost()">Post ${n} month${n===1?"":"s"}</button>`}
+    </div>`,true);
+}
+function plsWhen(at){ const d=at?new Date(at):null; if(!d||isNaN(d)) return ""; return prShort(String(at).slice(0,10))+", "+d.toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit"}); }
+
+/* ── POST ────────────────────────────────────────────────────────────
+   Writes the three figures and nothing else. Target, spend and the
+   note are somebody's own work and are left exactly where they are. */
+async function plsPost(){
+  if(!canCap("edit_promotions")) return capDenied("Posting a reading");
+  if(!ME.id){ toast("Cannot record who posted this — sign in again","err"); return; }
+  const b=plsBuckets(); if(!b.post.length) return;
+  const btn=document.getElementById("pls-post"); if(btn){ btn.disabled=true; btn.style.opacity=".5"; }
+  const now=new Date().toISOString();
+  let wrote=0; const failed=[];
+  for(const r of b.post){
+    const ms=String(r.month_start).slice(0,10);
+    const cur=prMonthRow(r.promotion_id,ms);
+    const vals={result_value:r.leads,qualified:r.qualified,converted:r.converted,
+                entered_by:ME.id,updated_at:now};
+    /* the result keeps its own day, the same way a typed figure does */
+    if(!cur||prNumOr(cur.result_value)!==r.leads) vals.result_at=now;
+    const w=cur
+      ? await sb.from("promotion_months").update(vals).eq("id",cur.id).select("id")
+      : await sb.from("promotion_months").insert([{promotion_id:r.promotion_id,month_start:ms,...vals}]).select("id");
+    if(w.error||!w.data||!w.data.length){ failed.push(((r._p&&r._p.name)||"")+" "+prMonthName(ms)); continue; }
+    await sb.from("promotion_sheet_rows").update({posted:true}).eq("id",r.id);
+    wrote++;
+  }
+  if(wrote) await sb.from("promotion_sheet_reads").update({posted_at:now,posted_by:ME.id}).eq("id",PLS.read.id);
+  closeM("promo");
+  await prReloadNow(); render();
+  if(failed.length) toast(wrote+" posted · "+failed.length+" refused ("+failed[0]+")","err");
+  else toast(wrote+" month"+(wrote===1?"":"s")+" posted");
+}
+
+/* ── UNDO ────────────────────────────────────────────────────────────
+   Puts back exactly what each month held before the post, blank
+   included. A month somebody has edited since is LEFT ALONE and
+   counted — an undo that takes someone's work with it is worse than
+   no undo. */
+async function plsUndo(readId){
+  if(!canCap("edit_promotions")) return capDenied("Undoing a post");
+  let head=null, rows=[];
+  try{
+    const h=await sb.from("promotion_sheet_reads").select("*").eq("id",readId).limit(1);
+    head=((h&&h.data)||[])[0]||null;
+    const r=await sb.from("promotion_sheet_rows").select("*").eq("read_id",readId).eq("posted",true);
+    rows=(r&&r.data)||[];
+  }catch(e){}
+  if(!head||!rows.length) return toast("Nothing was posted from that reading","err");
+  if(!confirm("Put back what these "+rows.length+" month"+(rows.length===1?"":"s")+" said before the post?")) return;
+  const now=new Date().toISOString();
+  let back=0; const kept=[];
+  for(const r of rows){
+    const ms=String(r.month_start).slice(0,10);
+    const cur=prMonthRow(r.promotion_id,ms);
+    const p=(PR.list||[]).find(x=>x.id===r.promotion_id);
+    if(!cur){ continue; }
+    /* changed since the post? then it is not this post's to take back */
+    if(prNumOr(cur.result_value)!==prNumOr(r.leads)
+      ||prNumOr(cur.qualified)!==prNumOr(r.qualified)
+      ||prNumOr(cur.converted)!==prNumOr(r.converted)){ kept.push(((p&&p.name)||"")+" "+prMonthName(ms)); continue; }
+    const w=r.was||{};
+    const u=await sb.from("promotion_months").update({
+      result_value:w.result_value===undefined?null:w.result_value,
+      qualified:w.qualified===undefined?null:w.qualified,
+      converted:w.converted===undefined?null:w.converted,
+      result_at:(w.result_value===null||w.result_value===undefined)?null:now,
+      entered_by:ME.id||null,updated_at:now}).eq("id",cur.id).select("id");
+    if(u.error||!u.data||!u.data.length){ kept.push(((p&&p.name)||"")+" "+prMonthName(ms)); continue; }
+    await sb.from("promotion_sheet_rows").update({posted:false}).eq("id",r.id);
+    back++;
+  }
+  await sb.from("promotion_sheet_reads").update({posted_at:null,posted_by:null}).eq("id",readId);
+  closeM("promo");
+  await prReloadNow(); render();
+  toast(kept.length?back+" put back · "+kept.length+" left alone, edited since ("+kept[0]+")":back+" month"+(back===1?"":"s")+" put back");
+}
+
+/* ── past readings ───────────────────────────────────────────────── */
+async function plsHistory(){
+  if(!activeBrand) return toast("Pick a brand first","err");
+  let rows=[];
+  try{
+    const r=await sb.from("promotion_sheet_reads").select("*").eq("brand_id",activeBrand)
+      .order("read_at",{ascending:false}).limit(25);
+    rows=(r&&r.data)||[];
+  }catch(e){}
+  prBox(`<div class="modal-top"><div><div class="modal-title">Past readings</div>
+      <div class="modal-sub">${escHtml((brands[activeBrand]&&brands[activeBrand].name)||"")}</div></div>
+      <span style="flex:1"></span><button class="modal-x" onclick="closeM('promo')">✕</button></div>
+    <div class="modal-body" style="padding:4px 20px 16px;max-height:60vh;overflow:auto;">
+      ${rows.length?rows.map(r=>`<div style="border:1px solid var(--div);border-radius:9px;padding:9px 11px;margin-bottom:7px;${r.ok?"":"background:#FFF4F4;border-color:#F0CFCF;"}">
+        <div style="display:flex;align-items:baseline;gap:8px;">
+          <div style="font-size:13px;font-weight:600;flex:1;">${r.ok?Number(r.leads_seen||0).toLocaleString("en-IN")+" leads counted":"Could not be read"}</div>
+          <div style="font-size:11.5px;color:var(--muted);">${escHtml(plsWhen(r.read_at))}${r.read_by?" · "+escHtml(brPersonName(r.read_by)||""):" · overnight"}</div></div>
+        ${r.problem?`<div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.6;">${escHtml(r.problem)}</div>`:""}
+        <div style="display:flex;gap:7px;margin-top:7px;align-items:center;">
+          ${r.posted_at?`<span style="font-size:11.5px;color:var(--muted);">Posted ${escHtml(plsWhen(r.posted_at))}</span>`:""}
+          <span style="flex:1"></span>
+          ${r.ok?`<button class="btn btn-s btn-sm" onclick="closeM('promo');plsOpen('${escAttr(r.id)}')">Open</button>`:""}
+          ${r.posted_at&&canCap("edit_promotions")?`<button class="btn btn-s btn-sm" onclick="plsUndo('${escAttr(r.id)}')">Undo</button>`:""}
+        </div></div>`).join("")
+      :`<div style="font-size:13px;color:var(--muted);padding:14px 0;">This brand's sheet has never been read.</div>`}
+    </div>
+    <div class="modal-foot"><span style="flex:1"></span>
+      <button class="btn btn-g" onclick="closeM('promo')">Close</button>
+      <button class="btn btn-p" onclick="closeM('promo');plsRead()">Read it again</button></div>`,true);
+}
+
 function prAudLine(a,edit){
   const src=(a.kind==="lookalike")
     ? `<input class="audd" style="max-width:190px" placeholder="Modelled on"
