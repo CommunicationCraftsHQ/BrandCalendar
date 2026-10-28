@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.121 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.122 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -2861,7 +2861,7 @@ body.brcv .brl-lens span.cv.on{background:#378ADD;color:#fff;}
    the owner's initials and the Owner column carries the owner's name, so
    every row said who owned it twice — and on a task with no owner the
    circle fell back to "··", two dots beside the menu's three. */
-.brl-hd,.brl-tr{grid-template-columns:3px 20px minmax(0,1fr) 140px 150px 150px 104px 112px 44px 30px;}
+.brl-hd,.brl-tr{grid-template-columns:3px 20px minmax(0,1fr) 150px 140px 150px 150px 104px 112px 44px 30px;}
 .brl-stw{position:relative;}
 /* V108.6 — WITHOUT THIS THE MENU WENT TO THE TOP OF THE PAGE. An
    absolutely positioned child is placed against the nearest POSITIONED
@@ -3336,7 +3336,7 @@ body.brcv .brl-lens span.cv.on{background:#378ADD;color:#fff;}
 .brow.brk-lock:hover{background:transparent;}
 .brk-reset{font-size:12px;font-weight:600;color:var(--muted);padding:8px 10px 4px;border-top:1px solid var(--div);margin-top:4px;cursor:pointer;}
 .brk-reset:hover{color:var(--text);}
-.brl.h-st .h-st,.brl.h-st .brl-stw,.brl.h-ms .h-ms,.brl.h-ms .brl-sg,
+.brl.h-pj .h-pj,.brl.h-pj .brl-pjc,.brl.h-st .h-st,.brl.h-st .brl-stw,.brl.h-ms .h-ms,.brl.h-ms .brl-sg,
 .brl.h-own .c-own,.brl.h-due .c-due,.brl.h-dlv .h-dlv,.brl.h-dlv .brl-dw,.brl.h-lnk .c-lnk{display:none;}
 /* V117.2 — the owner cell is a control; the link cell is one icon. */
 .brl-tr .c-own{position:relative;overflow:visible;}
@@ -3393,7 +3393,7 @@ body.brcv .brl-lens span.cv.on{background:#378ADD;color:#fff;}
 }
 @media(max-width:1100px){
   .brl.cx>.brl-hd,.brl.cx>.brl-tr{grid-template-columns:var(--brg2);}
-  .brl-hd,.brl-tr{grid-template-columns:3px 20px minmax(0,1fr) 130px 120px 120px 92px 100px 40px 30px;}
+  .brl-hd,.brl-tr{grid-template-columns:3px 20px minmax(0,1fr) 120px 130px 120px 120px 92px 100px 40px 30px;}
 }
 
 /* LYON — the sort control sits in the same 34px row as the two lens
@@ -11086,7 +11086,7 @@ const BR_PILL=Object.fromEntries(CC_STATUS.task.order.map(k=>[k,ccStatusTone("ta
 const BR_COLS=['Owner','Next due','Link'];   /* V118.95 — the Delivery date column gave its place to Deliveries, after Milestones */
 /* V116.8 — THE COLUMNS BUTTON. Task is locked; the five beside it can be
    switched off, per person, in this browser. 6/6 counts Task. */
-const BRK_COLS=[['st','Status'],['ms','Milestones'],['dlv','Deliveries'],['own','Owner'],['due','Next due'],['lnk','Link']];
+const BRK_COLS=[['pj','Project'],['st','Status'],['ms','Milestones'],['dlv','Deliveries'],['own','Owner'],['due','Next due'],['lnk','Link']];
 let BRK_HIDE=(()=>{ try{ return new Set(JSON.parse(localStorage.getItem("cc-br-cols")||"[]")); }catch(e){ return new Set(); } })();
 /* ONE TASK OPEN AT A TIME, and that is Chirag's rule from 22 Sep: "you
    could only have one task open at a time, so the length remains
@@ -11097,6 +11097,9 @@ let BR_OWMENU=null;   /* V117.2 — the row's owner menu, like the status menu *
 let brGroup=false;   /* flat, by default */
 let brDlvView=false;   /* V118.94 — the third view: Deliveries */
 function brSetGroup(v){ v=Number(v); brDlvView=(v===2); brGroup=(v===1); closeAllPops(); render(); }
+/* V118.122 — Grouped is a switch in the Projects panel; All | Deliveries is the switch on the bar */
+function brToggleGrouped(){ const on=!brGroup; brDlvView=false; brGroup=on; if(on&&brSort==="manual"){ brSort="due"; try{ localStorage.setItem(BR_SORT_LS,brSort); }catch(e){} } closeAllPops(); render(); }
+function brSetView(dv){ brDlvView=!!dv; if(dv) brGroup=false; closeAllPops(); render(); }
 /* NAPLES - ONE ORDER CANNOT ALSO BE SEVEN. Group by project draws the
    list as one section per project, and a single stored order has nothing
    to say about where a row sits inside a section it was not dragged in.
@@ -11328,14 +11331,17 @@ function fmtShort(iso){
   const d=new Date(String(iso).slice(0,10));
   return isNaN(d)?'—':`${String(d.getDate()).padStart(2,'0')} ${MN[d.getMonth()+1].slice(0,3)}`;
 }
+function brHideNow(){ const h=new Set(BRK_HIDE); if(brGroup) h.add("pj"); return h; }   /* V118.122 — grouped lists hide the Project column */
 function brColsClass(){
-  return "brl"+(BRK_HIDE.size?" cx":"")+[...BRK_HIDE].map(k=>" h-"+k).join("");
+  const H=brHideNow();
+  return "brl"+(H.size?" cx":"")+[...H].map(k=>" h-"+k).join("");
 }
 function brColsGrid(){
-  if(!BRK_HIDE.size) return "";
-  const W1={st:"140px",ms:"150px",dlv:"150px",own:"104px",due:"112px",lnk:"44px"};
-  const W2={st:"130px",ms:"120px",dlv:"120px",own:"92px",due:"100px",lnk:"40px"};
-  const g=(W)=>["3px","20px","minmax(0,1fr)"].concat(BRK_COLS.map(([k])=>k).filter(k=>W[k]&&!BRK_HIDE.has(k)).map(k=>W[k])).concat(["30px"]).join(" ");
+  const H=brHideNow();
+  if(!H.size) return "";
+  const W1={pj:"150px",st:"140px",ms:"150px",dlv:"150px",own:"104px",due:"112px",lnk:"44px"};
+  const W2={pj:"120px",st:"130px",ms:"120px",dlv:"120px",own:"92px",due:"100px",lnk:"40px"};
+  const g=(W)=>["3px","20px","minmax(0,1fr)"].concat(BRK_COLS.map(([k])=>k).filter(k=>W[k]&&!H.has(k)).map(k=>W[k])).concat(["30px"]).join(" ");
   return `--brg1:${g(W1)};--brg2:${g(W2)};`;
 }
 function brColsFill(){
@@ -11475,14 +11481,16 @@ function brDlvRowHtml(t){
   return `<div class="brl-tr${done?' dim':''}${open?' opened':''}" ${open?`style="--brpj:${escAttr((pj&&pj.colour)||'#0D0D0D')}"`:''} onclick="brToggleOpen(event,'${t.id}')">
     <div class="brl-sp" style="${pj?`background:${escAttr(pj.colour||'#7C3AED')}`:''}"></div>
     <span class="brl-car">${open?'⌄':'›'}</span>
-    <div class="brl-nm">${done?'<i class="ti ti-circle-check-filled dv-tk" title="Every delivery is delivered"></i>':''}<span class="nmt" title="${escAttr(t.title)}">${escHtml(t.title)}</span>
-      ${pj?`<span class="brl-pj" style="color:${escAttr(pj.colour||'#7C3AED')}">◧ ${escHtml(pj.name)}</span>`:''}</div>
+    <div class="brl-nm">${done?'<i class="ti ti-circle-check-filled dv-tk" title="Every delivery is delivered"></i>':''}<span class="nmt" title="${escAttr(t.title)}">${escHtml(t.title)}</span></div>
+    ${brPjCell(pj)}
     <div class="dv-chips">${chips}</div>
     <div class="dv-files">${ff}</div>
     ${brOwnerCell(t)}
     <span class="c c-dvd">${when}</span>
     ${brRowMenu(t)}</div>`;
 }
+/* V118.122 — the project has its own column (Chirag, 28 Oct, mockup 02) */
+function brPjCell(pj){ return `<div class="brl-pjc">${pj?`<span class="dot" style="background:${escAttr(pj.colour||"#7C3AED")}"></span><span class="nm" title="${escAttr(pj.name)}">${escHtml(pj.name)}</span>`:`<span class="nsdim">—</span>`}</div>`; }
 function brRowHtml(t,showTag){
   const pj=brProject(t.project_id), pr=brProgress(t), ms=brMsFor(t.id);
   const st=brStatusOf(t);
@@ -11521,11 +11529,11 @@ function brRowHtml(t,showTag){
     ${grip?'<span class="brl-grip" title="Drag to reorder"><i class="ti ti-grip-vertical"></i></span>':''}
     <span class="brl-car">${open?'⌄':'›'}</span>
     <div class="brl-nm"><span class="nmt" title="${escAttr(t.title)}">${escHtml(t.title)}</span>
-      ${showTag&&pj?`<span class="brl-pj" style="color:${escAttr(pj.colour||'#7C3AED')}">◧ ${escHtml(pj.name)}</span>`:''}
       ${t.client_hidden&&!brCV()?'<i class="ti ti-eye-off brl-cvh" title="Hidden from client"></i>':''}
       ${unread&&!brCV()?`<span class="brl-un" title="${unread} new message${unread===1?'':'s'}">${unread}</span>`:''}
       ${brNeedsClosing(t)&&!brCV()?`<span class="brl-flag" title="Every step is approved and the task is not Done">approved · close it</span>`:''}
       ${!ms.length&&!brMayRow(t)&&!brCV()?'<small>no steps</small>':''}</div>
+    ${brPjCell(pj)}
     ${brStatusCell(t)}
     ${brStepCell(t,segs,tip)}
     ${brDlvCell(t)}
@@ -12227,7 +12235,7 @@ function buildBrandingSidebar(){
   const projects=(BR.projects||[]).slice().sort((a,b)=>(pc.get(b.id)||0)-(pc.get(a.id)||0)||a.name.localeCompare(b.name));
   const tags=(BR.tags||[]).slice().sort((a,b)=>(tc.get(b.id)||0)-(tc.get(a.id)||0)||a.name.localeCompare(b.name));
   sm.innerHTML=head("project","Projects")+addRow("project")+
-    `<div class="mdb-trow${clear?" on":""}" onclick="btsClear()"><span class="nm">All tasks</span><span class="ct">${base.length}</span></div>`+
+    `<div class="mdb-trow brgrp${brGroup?" on":""}" data-grouped onclick="brToggleGrouped()"><i class="ti ti-layout-rows"></i><span class="nm">Grouped</span><span class="sw${brGroup?" on":""}"></span></div>`+   /* V118.122 — "All tasks" retired: clearing the filters shows everything */
     projects.map(p=>row("project",p,pc.get(p.id)||0,pSel.includes(p.id))).join("")+
     (none?`<div class="mdb-trow${pNone?" on":""}" onclick="btsPickNone()"><span class="nm">No project</span><span class="ct">${none}</span></div>`:"")+
     bfavHtml()+   /* V118.115 — favourites sit between Projects and Tags */
@@ -12313,8 +12321,8 @@ document.addEventListener("click",e=>{
 function bfavSaveHtml(){
   const n=bfavNorm(bfavNow());
   if(!n.f.length&&!n.q) return "";
-  if(bfavOnId()) return "";
-  return `<span class="bfav-w" onclick="event.stopPropagation()"><button class="bfav-save" data-fav-save onclick="bfavSaveOpen(event)">☆ Save as favourite</button>${BFAV.save?`
+  const on=bfavOnId(); if(on){ const x=bfavAll().find(y=>y.id===on); return `<span class="bfav-w"><button class="bfav-star on" title="Saved as favourite: ${escAttr(x?x.name:"")}" onclick="event.stopPropagation()">★</button></span>`; }
+  return `<span class="bfav-w" onclick="event.stopPropagation()"><button class="bfav-star" data-fav-save title="Save as favourite" onclick="bfavSaveOpen(event)">☆</button>${BFAV.save?`
     <div class="bfav-pop"><div class="h">Save as favourite</div>
       <input id="bfav-name" maxlength="60" placeholder="Name it" onkeydown="if(event.key==='Enter'){event.preventDefault();bfavSave();}if(event.key==='Escape'){BFAV.save=false;render();}">
       <div class="what">${escHtml(bfavWords(bfavNow()))}</div>
@@ -12378,7 +12386,7 @@ const BR_MENU_FIELDS=["status","archived"];
     if(id!=="tasks") return base.apply(this,arguments);
     const h=fltHost(id), all=h.fields;
     h.fields=all.filter(fd=>BR_MENU_FIELDS.includes(fd.k));
-    try{ return base.apply(this,arguments); } finally { h.fields=all; }
+    try{ return (brCV()?"":bfavSaveHtml())+base.apply(this,arguments); } finally { h.fields=all; }   /* V118.122 — the ☆ sits on the end of the filter chips */
   };
 })();
 /* ── the page opens on Open tasks; favourites load once ─────────── */
@@ -13667,14 +13675,15 @@ function renderBranding(){
         :(filtered?"Clear them in the panel on the left.":(canE?"Add the first one with the button above.":""))}</div></div>`;
   } else {
     const BRKC=["c-own","c-due","c-lnk"];
-    const head=`<div class="brl-hd"><span></span><span></span><span>Task</span><span class="h-st">Status</span>
+    const hdCt=`<span class="hd-ct" data-gate="br-count">(${filtered&&rows.length!==total?rows.length+" of "+total:rows.length})</span>`;   /* V118.122 — the one count */
+    const head=`<div class="brl-hd"><span></span><span></span><span>Task ${hdCt}</span><span class="h-pj">Project</span><span class="h-st">Status</span>
       <span class="h-ms">Milestones</span><span class="h-dlv">Deliveries</span>${BR_COLS.map((x,i)=>`<span class="c ${BRKC[i]}">${x}</span>`).join("")}<span></span></div>`;
     let rowsHtml="";
     if(brDlvView){
       /* V118.94 — DELIVERIES (mockup 08, B): the same task rows, other columns —
          a chip per delivery coloured by its state, the final files, the Ac
          manager, the day the task was delivered. */
-      const headD=`<div class="brl-hd"><span></span><span></span><span>Task</span><span class="h-dv">Deliveries</span>
+      const headD=`<div class="brl-hd"><span></span><span></span><span>Task ${hdCt}</span><span class="h-pj">Project</span><span class="h-dv">Deliveries</span>
         <span class="h-ff">Final files</span><span class="c c-own">Ac manager</span><span class="c c-dvd">Delivered on</span><span></span></div>`;
       rows.forEach(t=>{ rowsHtml+=brDlvRowHtml(t); if(BR_OPEN===t.id) rowsHtml+=brOpenPanelHtml(t); });
       body=`<div class="brl brl-dv">${headD}${rowsHtml}</div>`;
@@ -13722,23 +13731,16 @@ function renderBranding(){
    <div class="fb">
      <input class="fi fb-q" placeholder="Search tasks…" value="${escAttr(brFilter.q||"")}"
         oninput="brSetQ(this.value)" onclick="event.stopPropagation()">
-     ${BR.ok?fltChipsHtml("tasks"):""}${BR.ok&&!brCV()?bfavSaveHtml():""}
+     ${BR.ok?fltChipsHtml("tasks"):""}
      <span class="fb-end">
-       ${BR.ok?`<span data-gate="br-count">${fltCountHtml(rows.length,filtered&&rows.length!==total?total:rows.length,
-          brArchivedOnly()?"Archived task":"Branding task")}${brDlvView?`<span class="dv-cnt">· ${rows.filter(t=>dlvTaskDone(t.id)).length} fully delivered</span>`:""}</span>`:""}
        ${BR.ok&&!brIsClient()&&brHasClient()?`<span class="brl-lens">
      <span class="${BR_CV?"":"on"}" onclick="brSetCV(0)">Team</span>
      <span class="cv${BR_CV?" on":""}" onclick="brSetCV(1)"><i class="ti ti-eye"></i>Client view <span class="beta">beta</span></span></span>`:""}
-       ${BR.ok?`<span class="brl-lens">
-     <span class="${!brGroup&&!brDlvView?"on":""}" onclick="brSetGroup(0)">Flat</span>
-     <span class="${brGroup?"on":""}" onclick="brSetGroup(1)">By project</span>
-     <span class="${brDlvView?"on":""}" onclick="brSetGroup(2)">Deliveries</span></span>`:""}
-       ${BR.ok?`<span class="fb-w fb-view"><button class="fb-chip${fltIsOpen("tasks","view")?" open":""}" onclick="fltOpen(event,'tasks','view')" data-gate="br-view"><i class="ti ti-eye"></i>View
-     <span class="fb-val">${brIsClient()||!brHasClient()?"":(BR_CV?"Client view":"Team")+" · "}${brDlvView?"Deliveries":brGroup?"By project":"Flat"}</span><i class="ti ti-chevron-down"></i></button>${
+       ${BR.ok?`<span class="br-seg" data-gate="br-seg"><span class="${!brDlvView?"on":""}" onclick="brSetView(0)">All</span><span class="${brDlvView?"on":""}" onclick="brSetView(1)">Deliveries</span></span>`:""}
+       ${BR.ok&&!brIsClient()&&brHasClient()?`<span class="fb-w fb-view"><button class="fb-chip${fltIsOpen("tasks","view")?" open":""}" onclick="fltOpen(event,'tasks','view')" data-gate="br-view"><i class="ti ti-eye"></i>View
+     <span class="fb-val">${BR_CV?"Client view":"Team"}</span><i class="ti ti-chevron-down"></i></button>${
      fltIsOpen("tasks","view")?`<div class="fb-pop open" onclick="event.stopPropagation()">${brIsClient()||!brHasClient()?"":[["0","Team"],["1","Client view"]].map(([k,l])=>
-       `<div class="fb-opt one${(BR_CV?"1":"0")===k?" on":""}" onclick="event.stopPropagation();FLT_UI={id:null,open:null,term:''};brSetCV(${k})"><span class="nm">${l}</span>${(BR_CV?"1":"0")===k?`<i class="ti ti-check tick"></i>`:""}</div>`).join("")+'<div class="brk-iosep"></div>'}${
-       [["0","Flat"],["1","By project"],["2","Deliveries"]].map(([k,l])=>
-       `<div class="fb-opt one${(brDlvView?"2":brGroup?"1":"0")===k?" on":""}" onclick="event.stopPropagation();FLT_UI={id:null,open:null,term:''};brSetGroup(${k})"><span class="nm">${l}</span>${(brDlvView?"2":brGroup?"1":"0")===k?`<i class="ti ti-check tick"></i>`:""}</div>`).join("")}</div>`:""}</span>`:""}
+       `<div class="fb-opt one${(BR_CV?"1":"0")===k?" on":""}" onclick="event.stopPropagation();FLT_UI={id:null,open:null,term:''};brSetCV(${k})"><span class="nm">${l}</span>${(BR_CV?"1":"0")===k?`<i class="ti ti-check tick"></i>`:""}</div>`).join("")}</div>`:""}</span>`:""}
        ${BR.ok?fltSortHtml("tasks",Object.entries(BR_SORT),brSort,"due","brPickSort"):""}
        ${canE&&BR.ok?`<button class="btn btn-p fb-mnew" style="white-space:nowrap;" onclick="brNewTask()"><i class="ti ti-plus"></i> New task</button>`:""}
      </span>
@@ -14518,7 +14520,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.121 Tbilisi";
+const TOOL_VERSION="V118.122 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -46485,8 +46487,8 @@ function dlvCardHtml(d,t,mayE,mayA){
   const boxed=done?dlvApprovedVer(d):last;
   const box=open&&boxed?dlvBoxHtml(d,boxed,done,t,mayE):"";
   const act=open&&last&&!done&&last.status==="sent"&&mayA?`<div class="d-act" onclick="event.stopPropagation()">
-      <button class="ab ok" onclick="dlvApprove('${last.id}')" title="Record that the client approved v${last.version}"><i class="ti ti-check"></i>Client approved</button>
-      <button class="ab ch" onclick="dlvChangesOpen('${last.id}')" title="Record the client's change request on v${last.version}"><i class="ti ti-arrow-back-up"></i>Change request</button></div>`:"";
+      <button class="ab ok" onclick="dlvApprove('${last.id}')" title="Client approved v${last.version}"><i class="ti ti-check"></i>Approved</button>
+      <button class="ab ch" onclick="dlvChangesOpen('${last.id}')" title="Change request on v${last.version}"><i class="ti ti-arrow-back-up"></i>Changes</button></div>`:"";
   const ver=open&&vs.length?dlvVerRowsHtml(d,t,vs,mayE,boxed):"";
   const dnd=drag?` draggable="true" ondragstart="dlvDragStart(event,'${d.id}')" ondragover="dlvDragOver(event,'${d.id}')" ondragleave="this.classList.remove('over')" ondrop="dlvDrop(event,'${d.id}')" ondragend="dlvDragEnd()"`:"";
   return `<div class="dlv-c v104${vs.length?"":" todo"}${open?" open":""}${done?" done":""}" data-did="${d.id}"${dnd} onclick="dlvCardToggle('${d.id}')">
@@ -47305,6 +47307,27 @@ function v38Dress(){
 .dvf .fn .s{font-size:10.5px;color:#1E6B2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .dvf.none,.dvf.wait{background:#fff;border:1px dashed var(--div,#e3e0da);cursor:default;}
 .dvf.none .fn .n,.dvf.none .fn .s,.dvf.wait .fn .s{color:var(--muted,#77736B);}
+</style>
+<style id="v122-css">
+/* V118.122 TBILISI · project column, one count, star on the filter, Grouped, All | Deliveries */
+.brl-pjc{display:flex;align-items:center;gap:7px;min-width:0;font-size:12.5px;color:var(--text);}
+.brl-pjc .dot{width:8px;height:8px;border-radius:50%;flex:none;}
+.brl-pjc .nm{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.brl-hd .hd-ct{letter-spacing:0;text-transform:none;font-weight:700;color:var(--muted);margin-left:4px;}
+.brl-dv .brl-hd,.brl-dv .brl-tr{grid-template-columns:3px 20px minmax(0,1fr) 140px minmax(0,1.45fr) minmax(0,1.15fr) 104px 110px 30px !important;}
+.br-seg{display:inline-flex!important;align-items:center;background:#E9E6DF;border-radius:9px;padding:3px;gap:2px;height:34px;box-sizing:border-box;flex:none;}
+.br-seg span{height:28px;padding:0 12px;border-radius:7px;display:flex;align-items:center;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;}
+.br-seg span.on{background:#fff;color:var(--text);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.1);}
+.bfav-star{display:inline-flex;align-items:center;justify-content:center;width:30px;height:34px;border:1px solid var(--div);border-radius:9px;background:#fff;color:#B8962A;font-size:16px;cursor:pointer;margin-left:-4px;}
+.bfav-star:hover{border-color:#D9BF6E;background:#FFFBEF;}
+.bfav-star.on{color:#C9A227;cursor:default;}
+.mdb-trow.brgrp i.ti{font-size:15px;color:var(--muted);flex:none;}
+.mdb-trow.brgrp .sw{width:26px;height:15px;border-radius:999px;background:#D6D3CC;position:relative;flex:none;transition:background .15s;}
+.mdb-trow.brgrp .sw::after{content:"";position:absolute;left:2px;top:2px;width:11px;height:11px;border-radius:50%;background:#fff;transition:left .15s;}
+.mdb-trow.brgrp .sw.on{background:#1E6B2E;}.mdb-trow.brgrp .sw.on::after{left:13px;}
+.mdb-trow.brgrp.on i.ti{color:#fff;}
+.dlv-c .d-act .ab{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 6px;font-size:12px;gap:4px;}
+@media(max-width:768px){ .brl-pjc,.brl-hd .h-pj{display:none!important;} }
 </style>
 <style id="hd-css">
 /* ══ V118.41 TBILISI · HELP DESK LIVES IN THE CALENDAR ══════════════════
