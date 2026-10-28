@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.124 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.125 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -644,6 +644,9 @@ a.bd-chip.link:hover{border-color:var(--acc);}
 .eng-dot.on{background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.16);}
 /* V109.9 — a term that has run out while the work goes on */
 .eng-dot.due{background:#B8860B;box-shadow:0 0 0 3px rgba(184,134,11,.16);}
+/* V118.125 — signed, not begun. Outlined rather than filled: it is
+   a service that exists and is not doing anything yet. */
+.eng-dot.soon{background:#fff;border:2px solid #16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.10);box-sizing:border-box;}
 .bd-chip.eng-due,.bd-chip.eng-soon{background:#FBF1DC;color:#8A5A12;}
 .eng-body{border-top:1px solid var(--div);padding:0 18px;}
 .eng-svc{display:grid;grid-template-columns:minmax(190px,0.9fr) 2fr;gap:10px 22px;padding:14px 0;border-bottom:1px solid var(--div);align-items:start;}
@@ -14521,7 +14524,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.124 Tbilisi";
+const TOOL_VERSION="V118.125 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -20049,6 +20052,22 @@ async function loadEngagement(brandId){
         title: meta.title||"Service", basis: meta.type||"", category: meta.category||"",
         start, end,
         running: !!start && start<=today && (!end || end>=today),
+        /* ── V118.125 · SIGNED, NOT BEGUN ───────────────────────────
+           Chirag, 28 October, on MSBC: a contract covering Nov 2026 -
+           Apr 2027, its 15 posts / 10 stories / 5 reels entered in the
+           Portfolio, and the Plan page saying "No service is running
+           for this brand right now."
+
+           It was right and useless. Nothing IS running on 28 October.
+           But a contract four days from starting is the scope you are
+           planning against, and a page that hides it until the day it
+           begins makes you plan blind through the month you prepare in.
+
+           THE WORD, NOT THE NUMBERS. Upcoming joins what the page
+           SHOWS; it is deliberately kept out of what the month is
+           MEASURED against (ptPlanChips), because October owes nothing
+           to a contract that starts in November. */
+        upcoming: !!start && start>today && !(x.actual_end_date||con.actual_end_date),
         /* ── V109.9 BOLOGNA · UP FOR RENEWAL ────────────────────────
            Chirag, 28 September: "The lapsed contracts are not required
            to be seen. However, the contracts which are ongoing or are
@@ -20184,7 +20203,12 @@ function engRunning(lines){ return (lines||[]).filter(l=>l.running); }
    still delivering does not disappear on the day its paper runs out —
    that is exactly the day somebody needs to see it. Finished jobs and
    lines closed by hand stay out, as they have since 20 September. */
-function engShown(lines){ return (lines||[]).filter(l=>l.running||l.renewalDue); }
+function engShown(lines){ return (lines||[]).filter(l=>l.running||l.renewalDue||l.upcoming); }
+/* V118.125 — the narrower set: what is actually in force today. The
+   month's targets read THIS one, so a contract that starts next month
+   never asks this month for posts it never promised. */
+function engInForce(lines){ return (lines||[]).filter(l=>l.running||l.renewalDue); }
+function engSoonStart(lines){ return (lines||[]).filter(l=>l.upcoming&&!l.running); }
 function engDue(lines){ return (lines||[]).filter(l=>l.renewalDue&&!l.running); }
 
 /* Whole days between two plain dates, counted in UTC so a clock never
@@ -20225,12 +20249,16 @@ function engBlock(l){
              +(l.paidBy&&PAID_BY_SAYS[l.paidBy]
                ? `<div class="eng-q"><div class="n" style="font-size:12.5px;">${escAttr(PAID_BY_SAYS[l.paidBy])}</div><div class="k">Ad spend paid</div></div>`
                : "");
-  const when=[l.basis,l.start?engDate(l.start)+(l.end?" – "+engDate(l.end):""):"",
+  /* V118.125 — "1 Nov – 30 Apr 2027 · starts 1 Nov" said the same date
+     twice. The word goes IN FRONT of the term instead, so the line
+     reads "starts 1 Nov – 30 Apr 2027" and says it once. */
+  const term=l.start?engDate(l.start)+(l.end?" – "+engDate(l.end):""):"";
+  const when=[l.basis, term?((l.upcoming?"starts ":"")+term):"",
               l.renewalDue?"renewal due":""]
              .filter(Boolean).join(" · ");
   return `<div class="eng-svc">
     <div class="eng-l">
-      <div class="eng-top"><span class="eng-dot${l.running?" on":(l.renewalDue?" due":"")}"></span>
+      <div class="eng-top"><span class="eng-dot${l.running?" on":(l.renewalDue?" due":(l.upcoming?" soon":""))}"></span>
         <span class="eng-nm">${escAttr(l.title)}</span></div>
       <div class="eng-meta">${escAttr(when)}</div>
     </div>
@@ -20342,7 +20370,12 @@ function engHtml(){
     ? `<span class="bd-chip"><span class="eng-dot due"></span> ${n} service${n===1?"":"s"}, renewal due</span>`
       +(dueEnd?`<span class="bd-chip eng-due">Term ended ${escAttr(engDate(dueEnd))}${
           dueAgo==null?"":" · "+escAttr(engAgo(dueAgo))}</span>`:"")
-    : `<span class="bd-chip"><span class="eng-dot on"></span> ${n} service${n===1?"":"s"} running</span>`;
+    /* V118.125 — "1 service running" was printed whatever the service
+       was doing. With nothing in force and a start date ahead, the
+       chip says the date instead of a number that is not true yet. */
+    : (!engInForce(live).length && engSoonStart(live).length
+       ? `<span class="bd-chip"><span class="eng-dot soon"></span> ${n} service${n===1?"":"s"}, starts ${escAttr(engDate(engSoonStart(live).map(x=>x.start).filter(Boolean).sort()[0]))}</span>`
+       : `<span class="bd-chip"><span class="eng-dot on"></span> ${n} service${n===1?"":"s"} running</span>`);
   return `<div class="bd-card eng-sec${ENG_OPEN?" open":""}" id="bd-scope" style="scroll-margin-top:calc(var(--hdrh) + 14px);">
       <div class="eng-strip" onclick="engToggle(event)">
         <span class="bd-lbl" style="margin:0;">Engagement &amp; scope</span>
@@ -49566,7 +49599,9 @@ function xpScopeHtml(eng){
   const soonIn=(!due.length&&renew)?engDaysBetween(today,renew):null;
   const soon=soonIn!=null&&soonIn<=ENG_SOON_DAYS;
   const box1=due.length?`<div class="due"><b>${n}</b><span>service${n===1?"":"s"} · renewal due</span></div>`
-    :`<div class="ok"><b>${n}</b><span>service${n===1?"":"s"} running</span></div>`;
+    :(!engInForce(live).length && engSoonStart(live).length
+      ? `<div class="soon"><b>${n}</b><span>service${n===1?"":"s"} · starts ${escHtml(engDate(engSoonStart(live).map(x=>x.start).filter(Boolean).sort()[0]))}</span></div>`
+      : `<div class="ok"><b>${n}</b><span>service${n===1?"":"s"} running</span></div>`);
   const box2=due.length&&dueEnd?`<div class="due"><b>${escHtml(engDate(dueEnd))}</b><span>term ended</span></div>`
     :renew?`<div class="${soon?"soon":""}"><b>${escHtml(engDate(renew).replace(/\s+\d{4}$/,""))}</b><span>renews ${escHtml((engDate(renew).match(/\d{4}$/)||[""])[0])} · ${escHtml(engIn(soonIn))}</span></div>`
     :`<div><b>Open</b><span>no end date</span></div>`;
@@ -50518,7 +50553,9 @@ function ptPlanChips(m){
   const posts=mpPosts(m);
   const n=(k)=>posts.filter(p=>k==="reel"?(p.format==="reel"||p.format==="video"):k==="story"?p.format==="story":!["reel","video","story"].includes(p.format||"static")).length;
   const want={};
-  try{ engShown(ENG.lines).forEach(l=>{ ["posts","reels","stories"].forEach(k=>{ if(l[k]!=null) want[k]=(want[k]||0)+l[k]; }); }); }catch(e){}
+  /* V118.125 — engInForce, NOT engShown. A service that starts next
+     month is shown on the page and owes this month nothing. */
+  try{ engInForce(ENG.lines).forEach(l=>{ ["posts","reels","stories"].forEach(k=>{ if(l[k]!=null) want[k]=(want[k]||0)+l[k]; }); }); }catch(e){}
   const chip=(label,got,w)=>`<span class="bd-chip ${w==null?"":(got>=w?"ok":"lo")}">${label} <b>${got}</b>${w==null?"":" / "+w}</span>`;
   return `<div class="pt-plan"><span class="pt-pl">Plan for the month</span>${chip("Posts",n("post"),want.posts)}${chip("Reels",n("reel"),want.reels)}${chip("Stories",n("story"),want.stories)}</div>`;
 }
