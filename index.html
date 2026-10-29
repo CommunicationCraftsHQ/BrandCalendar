@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.129 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.130 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14552,7 +14552,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.129 Tbilisi";
+const TOOL_VERSION="V118.130 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -31727,6 +31727,40 @@ function pmCampaignsOf(pid){
     .filter(c=>/^\d{5,}$/.test(c.id));
 }
 
+/* ── ASKING META, SEVERAL MONTHS AT ONCE ─────────────────────────────
+   V118.130. The first live run on Amar Cars failed with "Failed to
+   fetch", and the measurement explains why: twenty campaigns take
+   Meta about ten seconds for ONE month, so twelve months in a row is
+   over two minutes of one long chain. Any single dropped request took
+   the whole reading with it.
+
+   Two changes. Months are asked FOUR AT A TIME, which turns two
+   minutes into about thirty seconds. And a month that fails is tried
+   once more before it is given up on — then the reading carries on
+   with the months that did answer, rather than throwing away eleven
+   good months because the twelfth stumbled. */
+const PM_AT_ONCE=4;
+
+async function pmAskMonth(ses,ids,ms,tries){
+  for(let go=0;go<=tries;go++){
+    try{
+      const r=await fetch(PM_FN,{method:"POST",
+        headers:{authorization:"Bearer "+ses.access_token,
+                 apikey:(typeof SB_KEY!=="undefined"?SB_KEY:""),
+                 "content-type":"application/json"},
+        body:JSON.stringify({ids,since:ms,until:pmMonthEnd(ms)})});
+      const raw=await r.text();
+      let out=null; try{ out=JSON.parse(raw); }catch(e){}
+      if(out&&out.ok) return {ok:true,out};
+      if(go===tries) return {ok:false,why:(out&&(out.problem||out.error))
+        ||("the reader answered "+r.status+" — "+(String(raw||"").slice(0,140)||"nothing"))};
+    }catch(e){
+      if(go===tries) return {ok:false,why:String(e).replace(/^TypeError: /,"").slice(0,140)};
+    }
+    await new Promise(f=>setTimeout(f,700*(go+1)));   /* a breath before trying again */
+  }
+}
+
 async function pmRead(){
   if(PM.busy) return;
   if(!canCap("edit_promotions")) return capDenied("Reading the ad numbers");
@@ -31738,39 +31772,21 @@ async function pmRead(){
   }));
   if(!ids.length) return pmNowhere();
 
-  PM={busy:true,rows:[],trouble:[],ran:"",months:0,campaigns:ids.length};
-  prBox(`<div class="modal-top"><div><div class="modal-title">Reading the ad numbers</div></div><span style="flex:1"></span><button class="modal-x" onclick="closeM('promo')">✕</button></div>
+  PM={busy:true,rows:[],trouble:[],ran:"",months:0,campaigns:ids.length,missed:[]};
+  prBox(`<div class="modal-top"><div><div class="modal-title">Reading the ad numbers</div></div>
+      <span style="flex:1"></span><button class="modal-x" onclick="closeM('promo')">✕</button></div>
     <div class="modal-body"><div id="pm-say" style="font-size:13px;color:var(--muted);padding:6px 0">
-      Asking Meta about ${ids.length} campaign${ids.length===1?"":"s"}…</div></div>`,true);
+      Asking Meta about ${ids.length} campaign${ids.length===1?"":"s"}, ${PM_MONTHS} months…</div></div>`,true);
 
   const {data:{session:ses}}=await sb.auth.getSession();
   if(!ses||!ses.access_token){ PM.busy=false; closeM("promo");
     return toast("Your sign-in has expired. Reload the page.","err"); }
 
-  /* month by month, newest first, so the months people care about land
-     on screen first if a later one fails */
-  const got={};   /* promotion_id → month → totals */
-  for(let back=0;back<PM_MONTHS;back++){
-    const ms=pmMonthStart(back);
-    const say=document.getElementById("pm-say");
-    if(say) say.textContent=`Asking Meta about ${ids.length} campaign${ids.length===1?"":"s"} — ${prMonthName(ms)} (${back+1} of ${PM_MONTHS})…`;
-    let out=null,status=0,raw="";
-    try{
-      const r=await fetch(PM_FN,{method:"POST",
-        headers:{authorization:"Bearer "+ses.access_token,
-                 apikey:(typeof SB_KEY!=="undefined"?SB_KEY:""),
-                 "content-type":"application/json"},
-        body:JSON.stringify({ids,since:ms,until:pmMonthEnd(ms)})});
-      status=r.status; raw=await r.text();
-      try{ out=JSON.parse(raw); }catch(e){ out=null; }
-    }catch(e){ PM.busy=false; return pmProblem("Could not reach the reader — "+String(e).slice(0,140)); }
+  const months=[]; for(let b=0;b<PM_MONTHS;b++) months.push(pmMonthStart(b));
+  const got={};   /* promotion_id|month → totals */
+  let next=0, done=0;
 
-    const said=out&&(out.problem||out.error);
-    if(!out||!out.ok){ PM.busy=false;
-      return pmProblem(said?String(said)
-        :"The reader answered "+status+" and this page does not recognise the reply. "
-         +(String(raw||"").slice(0,200)||"It sent nothing back.")); }
-
+  const absorb=(out,ms)=>{
     (out.rows||[]).forEach(row=>{
       if(row.problem){ const t=row.problem+" ("+((owner[row.id]||{}).name||row.id)+")";
         if(PM.trouble.indexOf(t)<0) PM.trouble.push(t); return; }
@@ -31784,13 +31800,28 @@ async function pmRead(){
       g.spend+=Number(row.spend)||0; g.impressions+=Number(row.impressions)||0;
       g.reach+=Number(row.reach)||0; g.clicks+=Number(row.clicks)||0; g.campaigns++;
     });
-    PM.months=back+1;
-  }
+  };
+
+  const crew=[]; 
+  for(let w=0;w<Math.min(PM_AT_ONCE,months.length);w++) crew.push((async()=>{
+    while(next<months.length){
+      const ms=months[next++];
+      const res=await pmAskMonth(ses,ids,ms,1);
+      done++; PM.months=done;
+      const say=document.getElementById("pm-say");
+      if(say) say.textContent=`Asking Meta about ${ids.length} campaign${ids.length===1?"":"s"} — ${done} of ${months.length} months…`;
+      if(res.ok) absorb(res.out,ms);
+      else PM.missed.push(prMonthName(ms)+" — "+res.why);
+    }
+  })());
+  await Promise.all(crew);
 
   PM.rows=Object.values(got).filter(r=>r.campaigns>0)
     .sort((a,b)=>a.month_start<b.month_start?1:-1);
   PM.ran=new Date().toISOString();
   PM.busy=false;
+  /* nothing at all came back — say why, with Meta's own words */
+  if(!PM.rows.length&&PM.missed.length) return pmProblem(PM.missed[0].replace(/^[^—]*— /,""));
   pmOpen();
 }
 
@@ -31864,6 +31895,9 @@ function pmOpen(){
   }
   if(b.same.length) body+=head(b.same.length+" month"+(b.same.length===1?"":"s")+" already match")
     +`<div style="font-size:12.5px;color:var(--muted)">Meta says the same as the page. Nothing to do.</div>`;
+  if(PM.missed&&PM.missed.length) body+=head(PM.missed.length+" month"+(PM.missed.length===1?"":"s")+" could not be read")
+    +PM.missed.map(t=>`<div style="font-size:12.5px;color:var(--muted);margin-bottom:4px">${escHtml(t)}</div>`).join("")
+    +`<div style="font-size:12px;color:var(--muted);margin-top:2px">Everything else below is still good to post.</div>`;
   if(PM.trouble.length) body+=head("Meta would not answer for")
     +PM.trouble.map(t=>`<div style="font-size:12.5px;color:var(--muted);margin-bottom:4px">${escHtml(t)}</div>`).join("");
   if(!body) body=`<div style="font-size:13px;color:var(--muted)">Meta has no figures for these campaigns in the last ${PM_MONTHS} months.</div>`;
