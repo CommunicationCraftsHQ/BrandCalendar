@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.128 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.129 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13846,6 +13846,9 @@ function buildExportPanel(){
       <div class="brow act" onclick="closeAllPops();plsSetup()"><i class="ti ti-link"></i><span class="bnm">Where the sheet is</span></div>
       <div class="brow act" onclick="closeAllPops();plsHistory()"><i class="ti ti-history"></i><span class="bnm">Past readings</span></div>
       <div class="brk-iosep"></div>
+      <div class="brk-ioh"><i class="ti ti-brand-meta"></i>Ad numbers</div>
+      <div class="brow act" onclick="closeAllPops();pmRead()"><i class="ti ti-refresh"></i><span class="bnm">Read them from Meta</span></div>
+      <div class="brk-iosep"></div>
       <div class="brk-ioh"><i class="ti ti-download"></i>Export</div>
       <div class="brow act" onclick="closeAllPops();priTemplate(true)"><i class="ti ti-table"></i><span class="bnm">This list${n?" · "+n:""}</span></div>`;
     return;
@@ -14549,7 +14552,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.128 Tbilisi";
+const TOOL_VERSION="V118.129 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -31682,6 +31685,226 @@ async function plsHistory(){
     <div class="modal-foot"><span style="flex:1"></span>
       <button class="btn btn-g" onclick="closeM('promo')">Close</button>
       <button class="btn btn-p" onclick="closeM('promo');plsRead()">Read it again</button></div>`,true);
+}
+
+/* ══ V118.129 · WHAT META SAYS IT COST ═══════════════════════════════
+   Chirag's rule, 28 Oct: spend, impressions, reach and clicks come
+   from META; leads, qualified and closed come from the SHEET. Each
+   figure from the source that owns it, so there is never a second
+   number to reconcile against the first.
+
+   This reads Meta a month at a time. The reader function takes a list
+   of campaign ids and ONE date range, so twelve calls cover a year for
+   however many campaigns the brand has — rather than one call per
+   campaign per month, which for Amar Cars would be two hundred and
+   forty and would never finish.
+
+   Nothing is written until the review screen is read and Post is
+   pressed, and a post only ever touches the four Meta columns. The
+   sheet's figures in the same row are left exactly as they are. */
+const PM_FN="https://qsxldzqdjdplffxqdokd.supabase.co/functions/v1/meta-insights";
+const PM_MONTHS=12;
+let PM={busy:false,rows:[],trouble:[],ran:"",months:0,campaigns:0};
+
+/* the first of a month, N months back from this one, as YYYY-MM-DD */
+function pmMonthStart(back){
+  const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-back);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-01";
+}
+function pmMonthEnd(ms){
+  const [y,m]=ms.split("-").map(Number);
+  const d=new Date(y,m,0);   /* day 0 of next month = last day of this one */
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+/* The Calendar stores a linked campaign as "c:1202…". Meta wants the
+   bare number. A row that is not digits after the prefix is skipped
+   rather than sent — Meta answers a malformed id with the same words
+   it uses for "no access", and that confusion cost an evening. */
+function pmCampaignsOf(pid){
+  return ((PR.camps&&PR.camps[pid])||[])
+    .filter(c=>!c.deleted_at&&(c.platform||"meta")==="meta")
+    .map(c=>({raw:c.external_id,id:String(c.external_id||"").replace(/^c:/,""),name:c.external_name||""}))
+    .filter(c=>/^\d{5,}$/.test(c.id));
+}
+
+async function pmRead(){
+  if(PM.busy) return;
+  if(!canCap("edit_promotions")) return capDenied("Reading the ad numbers");
+  /* every Meta campaign this brand has linked, and which promotion owns it */
+  const owner={}; const ids=[];
+  (PR.list||[]).forEach(p=>pmCampaignsOf(p.id).forEach(c=>{
+    if(owner[c.id]) return;        /* one campaign, one promotion; the first wins */
+    owner[c.id]={promotion_id:p.id,name:c.name}; ids.push(c.id);
+  }));
+  if(!ids.length) return pmNowhere();
+
+  PM={busy:true,rows:[],trouble:[],ran:"",months:0,campaigns:ids.length};
+  prBox(`<div class="modal-top"><div><div class="modal-title">Reading the ad numbers</div></div><span style="flex:1"></span><button class="modal-x" onclick="closeM('promo')">✕</button></div>
+    <div class="modal-body"><div id="pm-say" style="font-size:13px;color:var(--muted);padding:6px 0">
+      Asking Meta about ${ids.length} campaign${ids.length===1?"":"s"}…</div></div>`,true);
+
+  const {data:{session:ses}}=await sb.auth.getSession();
+  if(!ses||!ses.access_token){ PM.busy=false; closeM("promo");
+    return toast("Your sign-in has expired. Reload the page.","err"); }
+
+  /* month by month, newest first, so the months people care about land
+     on screen first if a later one fails */
+  const got={};   /* promotion_id → month → totals */
+  for(let back=0;back<PM_MONTHS;back++){
+    const ms=pmMonthStart(back);
+    const say=document.getElementById("pm-say");
+    if(say) say.textContent=`Asking Meta about ${ids.length} campaign${ids.length===1?"":"s"} — ${prMonthName(ms)} (${back+1} of ${PM_MONTHS})…`;
+    let out=null,status=0,raw="";
+    try{
+      const r=await fetch(PM_FN,{method:"POST",
+        headers:{authorization:"Bearer "+ses.access_token,
+                 apikey:(typeof SB_KEY!=="undefined"?SB_KEY:""),
+                 "content-type":"application/json"},
+        body:JSON.stringify({ids,since:ms,until:pmMonthEnd(ms)})});
+      status=r.status; raw=await r.text();
+      try{ out=JSON.parse(raw); }catch(e){ out=null; }
+    }catch(e){ PM.busy=false; return pmProblem("Could not reach the reader — "+String(e).slice(0,140)); }
+
+    const said=out&&(out.problem||out.error);
+    if(!out||!out.ok){ PM.busy=false;
+      return pmProblem(said?String(said)
+        :"The reader answered "+status+" and this page does not recognise the reply. "
+         +(String(raw||"").slice(0,200)||"It sent nothing back.")); }
+
+    (out.rows||[]).forEach(row=>{
+      if(row.problem){ const t=row.problem+" ("+((owner[row.id]||{}).name||row.id)+")";
+        if(PM.trouble.indexOf(t)<0) PM.trouble.push(t); return; }
+      if(row.nothing) return;                 /* that campaign simply did not run */
+      const o=owner[row.id]; if(!o) return;
+      const k=o.promotion_id+"|"+ms;
+      const g=got[k]||(got[k]={promotion_id:o.promotion_id,month_start:ms,
+                               spend:0,impressions:0,reach:0,clicks:0,campaigns:0});
+      /* several campaigns under one promotion ADD UP — that is the
+         whole point of linking them to a promotion in the first place */
+      g.spend+=Number(row.spend)||0; g.impressions+=Number(row.impressions)||0;
+      g.reach+=Number(row.reach)||0; g.clicks+=Number(row.clicks)||0; g.campaigns++;
+    });
+    PM.months=back+1;
+  }
+
+  PM.rows=Object.values(got).filter(r=>r.campaigns>0)
+    .sort((a,b)=>a.month_start<b.month_start?1:-1);
+  PM.ran=new Date().toISOString();
+  PM.busy=false;
+  pmOpen();
+}
+
+/* reach cannot be added across months, and adding it across campaigns
+   overstates it too — the same person seen by two campaigns is counted
+   twice. It is shown, never totalled, and the review says so. */
+function pmBuckets(){
+  const post=[],same=[];
+  PM.rows.forEach(r=>{
+    const p=(PR.list||[]).find(x=>x.id===r.promotion_id);
+    const cur=prMonthRow(r.promotion_id,r.month_start)||null;
+    const was={spend:cur?cur.spend:null,impressions:cur?cur.impressions:null,
+               reach:cur?cur.reach:null,clicks:cur?cur.clicks:null,
+               figures_source:cur?cur.figures_source:null};
+    const n=v=>v===null||v===undefined||v===""?null:Number(v);
+    const moved=n(was.spend)!==Math.round(r.spend*100)/100||n(was.impressions)!==r.impressions
+             ||n(was.reach)!==r.reach||n(was.clicks)!==r.clicks;
+    const row={...r,_p:p,was,cur};
+    (moved?post:same).push(row);
+  });
+  return {post,same};
+}
+
+function pmNowhere(){
+  prBox(`<div class="modal-top"><div><div class="modal-title">No campaigns are linked yet</div></div><span style="flex:1"></span><button class="modal-x" onclick="closeM('promo')">✕</button></div>
+    <div class="modal-body"><div style="font-size:13px;color:var(--muted);line-height:1.55">
+      Meta can only be asked about campaigns a promotion knows it owns.
+      Open a promotion, go to its Brief, and link its Meta campaigns there first.</div></div>
+    <div class="modal-foot"><span style="flex:1"></span>
+      <button class="btn btn-g" onclick="closeM('promo')">Close</button></div>`,true);
+}
+
+function pmProblem(msg){
+  closeM("promo");
+  prBox(`<div class="modal-top"><div><div class="modal-title">The ad numbers could not be read</div></div><span style="flex:1"></span><button class="modal-x" onclick="closeM('promo')">✕</button></div>
+    <div class="modal-body"><div style="font-size:13px;line-height:1.55">${escHtml(String(msg))}</div></div>
+    <div class="modal-foot"><span style="flex:1"></span>
+      <button class="btn btn-g" onclick="closeM('promo')">Close</button>
+      <button class="btn btn-p" onclick="closeM('promo');pmRead()">Try again</button></div>`,true);
+}
+
+function pmOpen(){
+  const b=pmBuckets();
+  const num=v=>(v===null||v===undefined||v==="")?"—":Number(v).toLocaleString("en-IN");
+  const money=v=>(v===null||v===undefined||v==="")?"—":"₹"+Number(v).toLocaleString("en-IN",{maximumFractionDigits:0});
+  const head=t=>`<div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--subtle);text-transform:uppercase;margin:14px 0 6px;">${escHtml(t)}</div>`;
+
+  const moves=r=>{
+    const four=[["Spend",money(r.was.spend),money(r.spend)],
+                ["Impressions",num(r.was.impressions),num(r.impressions)],
+                ["Reach",num(r.was.reach),num(r.reach)],
+                ["Clicks",num(r.was.clicks),num(r.clicks)]];
+    return four.filter(x=>x[1]!==x[2]).map(x=>
+      `<div style="display:flex;gap:7px;align-items:baseline;margin-top:3px;">
+         <span style="font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--subtle);text-transform:uppercase;min-width:82px;">${escHtml(x[0])}</span>
+         <span style="font-size:12px;color:var(--muted);text-decoration:line-through;">${escHtml(x[1])}</span>
+         <span style="font-size:12px;color:var(--muted);">→</span>
+         <span style="font-size:13px;font-weight:600;">${escHtml(x[2])}</span></div>`).join("");
+  };
+  const card=r=>`<div class="pmc" style="border:1px solid var(--div);border-radius:9px;padding:9px 11px;margin-bottom:7px;">
+      <div style="font-weight:600;font-size:13px;">${escHtml((r._p&&r._p.name)||"A promotion that is gone")}
+        <span style="font-weight:400;color:var(--muted);"> · ${escHtml(prMonthName(r.month_start))} · ${r.campaigns} campaign${r.campaigns===1?"":"s"}</span></div>
+      ${r.was.figures_source==null&&r.was.spend!=null
+        ? `<div style="font-size:11.5px;color:var(--muted);margin-top:3px;">The spend here was typed in. Meta's figure replaces it.</div>`:""}
+      ${moves(r)}</div>`;
+
+  let body="";
+  if(b.post.length){
+    body+=head(b.post.length+" month"+(b.post.length===1?"":"s")+" to post");
+    body+=b.post.map(card).join("");
+  }
+  if(b.same.length) body+=head(b.same.length+" month"+(b.same.length===1?"":"s")+" already match")
+    +`<div style="font-size:12.5px;color:var(--muted)">Meta says the same as the page. Nothing to do.</div>`;
+  if(PM.trouble.length) body+=head("Meta would not answer for")
+    +PM.trouble.map(t=>`<div style="font-size:12.5px;color:var(--muted);margin-bottom:4px">${escHtml(t)}</div>`).join("");
+  if(!body) body=`<div style="font-size:13px;color:var(--muted)">Meta has no figures for these campaigns in the last ${PM_MONTHS} months.</div>`;
+
+  prBox(`<div class="modal-top"><div><div class="modal-title">What Meta says</div></div><span style="flex:1"></span><button class="modal-x" onclick="closeM('promo')">✕</button></div>
+    <div class="modal-body">
+      <div style="font-size:12.5px;color:var(--muted);line-height:1.5">
+        ${PM.campaigns} campaign${PM.campaigns===1?"":"s"} · last ${PM_MONTHS} months.
+        Spend, impressions, reach and clicks come from Meta. Leads, qualified and closed stay as the sheet left them.</div>
+      ${body}</div>
+    <div class="modal-foot"><span style="flex:1"></span>
+      <button class="btn btn-g" onclick="closeM('promo')">Close</button>
+      ${b.post.length?`<button class="btn btn-p" id="pm-post" onclick="pmPost()">Post ${b.post.length} month${b.post.length===1?"":"s"}</button>`:""}</div>`,true);
+}
+
+async function pmPost(){
+  if(!canCap("edit_promotions")) return capDenied("Posting the ad numbers");
+  if(!ME.id){ toast("Cannot record who posted this — sign in again","err"); return; }
+  const b=pmBuckets(); if(!b.post.length) return;
+  const btn=document.getElementById("pm-post"); if(btn){ btn.disabled=true; btn.style.opacity=".5"; }
+  const now=new Date().toISOString();
+  let wrote=0; const failed=[];
+  for(const r of b.post){
+    /* ONLY the four Meta columns, plus who and when. result_value,
+       qualified and converted belong to the lead sheet and are not
+       named here, so a post can never quietly undo a sheet reading. */
+    const vals={spend:Math.round(r.spend*100)/100,impressions:r.impressions,
+                reach:r.reach,clicks:r.clicks,
+                figures_source:"meta",figures_at:now,spend_at:now,
+                entered_by:ME.id,updated_at:now};
+    const cur=r.cur;
+    const w=cur
+      ? await sb.from("promotion_months").update(vals).eq("id",cur.id).select("id")
+      : await sb.from("promotion_months").insert([{promotion_id:r.promotion_id,month_start:r.month_start,...vals}]).select("id");
+    if(w.error||!w.data||!w.data.length){ failed.push(((r._p&&r._p.name)||"")+" "+prMonthName(r.month_start)); continue; }
+    wrote++;
+  }
+  closeM("promo");
+  await prReloadNow(); render();
+  if(failed.length) toast(wrote+" posted · "+failed.length+" refused ("+failed[0]+")","err");
+  else toast(wrote+" month"+(wrote===1?"":"s")+" posted from Meta");
 }
 
 function prAudLine(a,edit){
