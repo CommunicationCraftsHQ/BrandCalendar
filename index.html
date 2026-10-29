@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.127 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.128 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -5898,20 +5898,18 @@ select.pr-fv.cc-stsel{height:34px;padding:0 28px 0 10px;background-color:#fff;}
          page's own controls, in the suite's order: Columns · Import /
          Export · New task · bell. brNavSync shows them on Tasks only. -->
     <div class="bsw mf-hide" id="brk-cols" style="display:none;">
-      <button class="nav-btn brk-colsbtn" id="brk-cols-btn" onclick="hbColsOpen(event)" title="Columns" aria-label="Columns">
-        <i class="ti ti-columns-3"></i><span id="brk-cn">7/7</span></button>
+      <button class="nav-btn nb nb-cols brk-colsbtn" id="brk-cols-btn" onclick="hbColsOpen(event)" title="Columns" aria-label="Columns">
+        <i class="ti ti-columns-3"></i><span id="brk-cn" class="nb-cnt"><span class="nb-n">7</span><span class="nb-of">of 7</span><span class="nb-lbl">columns</span></span><i class="ti ti-chevron-down nb-cv"></i></button>
       <div class="bpanel right" id="brk-cols-panel"></div>
     </div>
     <div class="bsw mf-hide">
       <!-- MOTH — the export's own progress, anchored to the export
            button so it is where you last clicked, not floating. -->
       <div class="ep" id="export-prog"></div>
-      <button class="nav-btn" id="export-btn" onclick="toggleExportSw(event)">
-        <i class="ti ti-download"></i> Export <i class="ti ti-chevron-down" style="font-size:11px;opacity:.6;"></i>
-      </button>
+      <button class="nav-btn nb" id="export-btn" onclick="toggleExportSw(event)"><i class="ti ti-download"></i><span class="nb-lbl">Export</span><i class="ti ti-chevron-down nb-cv"></i></button>
       <div class="bpanel right" id="export-panel"></div>
     </div>
-    <button class="nav-btn red mf-hide" id="brk-new" style="display:none;" onclick="hbNew()"><i class="ti ti-plus"></i> <span id="brk-new-lbl">New task</span></button>
+    <button class="nav-btn red nb mf-hide" id="brk-new" style="display:none;" onclick="hbNew()"><i class="ti ti-plus"></i><span id="brk-new-lbl" class="nb-full">New task</span><span class="nb-short">New</span></button>
     <div class="bsw">
       <button class="bell" id="bell-btn" onclick="toggleBell(event)" title="Notifications">
         <i class="ti ti-bell"></i><span class="badge zero" id="bell-badge">0</span>
@@ -11386,20 +11384,47 @@ function hbSpec(){
 }
 function hbColsOpen(e){ const sp=hbSpec(); if(sp&&sp.cols) sp.cols.open(e); }
 function hbNew(){ const sp=hbSpec(); if(sp&&sp.nw) sp.nw.go(); }
+/* V118.128 TBILISI — BUTTONS ACROSS THE SUITE (Chirag, 29 Oct, AGREED).
+   One look per black-bar button: "9 of 9 columns", never "9/9". The kit's
+   cc-suite.css V70.14 draws it; this is the Calendar's copy of the kit's
+   fitBar (cc-suite/ui/cc-ui.jsx): wide when the buttons fit, and ALL of
+   them go narrow together when they don't. A main action's short word is
+   the first word of its label, kept in step here because the label is
+   set from many places. */
+function nbColsHtml(n,of){ return `<span class="nb-n">${n}</span><span class="nb-of">of ${of}</span><span class="nb-lbl">columns</span>`; }
+(function nbFitBar(){
+  const go=()=>{
+    const nav=document.querySelector("nav.nav"); if(!nav) return;
+    let raf=0;
+    const check=()=>{
+      raf=0;
+      nav.querySelectorAll(".nb-full").forEach(f=>{ const s=f.nextElementSibling;
+        if(s&&s.classList.contains("nb-short")){ const w=(f.textContent||"").trim().split(/\s+/)[0]||""; if(s.textContent!==w) s.textContent=w; } });
+      nav.classList.remove("nb-narrow");
+      const r=nav.querySelector(":scope > .nav-right");
+      if(nav.scrollWidth>nav.clientWidth+1||(r&&r.scrollWidth>r.clientWidth+1)) nav.classList.add("nb-narrow");
+    };
+    const later=()=>{ if(!raf) raf=requestAnimationFrame(check); };
+    if(typeof ResizeObserver!=="undefined") new ResizeObserver(later).observe(nav);
+    new MutationObserver(later).observe(nav,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:["style"]});
+    window.addEventListener("resize",later); check();
+  };
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",go,{once:true}); else go();
+})();
 function brNavSync(canE){
   const sp=hbSpec();
   const cols=document.getElementById("brk-cols"), nw=document.getElementById("brk-new"), ex=document.getElementById("export-btn");
   if(cols) cols.style.display=(sp&&sp.cols)?"":"none";
   if(nw) nw.style.display=(sp&&sp.nw)?"":"none";
   const nl=document.getElementById("brk-new-lbl"); if(nl&&sp&&sp.nw) nl.textContent=sp.nw.label;
-  const cn=document.getElementById("brk-cn"); if(cn&&sp&&sp.cols) cn.textContent=`${sp.cols.n}/${sp.cols.of}`;
+  const cn=document.getElementById("brk-cn"); if(cn&&sp&&sp.cols) cn.innerHTML=nbColsHtml(sp.cols.n,sp.cols.of);
   if(ex){
     if(!ex.dataset.orig) ex.dataset.orig=ex.innerHTML;
     const io=!!(sp&&sp.io);
     /* V118.40 — the Strategy page imports and never exports: one upload
        icon for whoever may edit it, and no button at all for anyone else */
     const sio=!io&&((typeof stIoOn==="function"&&stIoOn())||(typeof cplIoOn==="function"&&cplIoOn()));
-    const want=io?'<i class="ti ti-upload"></i><i class="ti ti-download"></i>':(sio?'<i class="ti ti-upload"></i>':ex.dataset.orig);
+    const want=io?'<i class="ti ti-upload"></i><i class="ti ti-download"></i><span class="nb-lbl">Import / Export</span><i class="ti ti-chevron-down nb-cv"></i>':(sio?'<i class="ti ti-upload"></i><span class="nb-lbl">Import</span><i class="ti ti-chevron-down nb-cv"></i>':ex.dataset.orig);
     if(ex.innerHTML!==want) ex.innerHTML=want;
     ex.classList.toggle("brk-io",io||sio);
     ex.title=io?"Import / Export":(sio?"Import":"");
@@ -14524,7 +14549,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.127 Tbilisi";
+const TOOL_VERSION="V118.128 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -40066,7 +40091,7 @@ function mdbVisible(){
     let b=document.getElementById("mdb-new");
     if(!b){
       const nw=document.getElementById("brk-new");
-      if(nw){ nw.insertAdjacentHTML("afterend",`<button class="nav-btn red mf-hide" id="mdb-new" style="display:none;" onclick="mdbAddOpen()"><i class="ti ti-plus"></i> Add</button>`);
+      if(nw){ nw.insertAdjacentHTML("afterend",`<button class="nav-btn red nb mf-hide" id="mdb-new" style="display:none;" onclick="mdbAddOpen()"><i class="ti ti-plus"></i> Add</button>`);
               b=document.getElementById("mdb-new"); }
     }
     if(b) b.style.display=view==="mood"?"":"none";
@@ -41873,7 +41898,7 @@ document.addEventListener("click",e=>{
     let b=document.getElementById("bf-new");
     if(!b){
       const nw=document.getElementById("brk-new");
-      if(nw){ nw.insertAdjacentHTML("afterend",`<button class="nav-btn red mf-hide" id="bf-new" style="display:none;" onclick="bfAddMenu(event)"><i class="ti ti-plus"></i> Add a file</button>`);
+      if(nw){ nw.insertAdjacentHTML("afterend",`<button class="nav-btn red nb mf-hide" id="bf-new" style="display:none;" onclick="bfAddMenu(event)"><i class="ti ti-plus"></i><span class="nb-full">Add a file</span><span class="nb-short">Add</span></button>`);
               b=document.getElementById("bf-new"); }
     }
     if(b) b.style.display=(view==="files"&&bfMay())?"":"none";
@@ -42519,13 +42544,13 @@ function acColsSync(){
   if(!w){
     const ref=document.getElementById("brk-cols");
     if(ref){ ref.insertAdjacentHTML("afterend",`<div class="bsw mf-hide" id="ac-cols" style="display:none;">
-        <button class="nav-btn brk-colsbtn" id="ac-cols-btn" onclick="acColsOpen(event)" title="Columns" aria-label="Columns"><i class="ti ti-columns-3"></i><span id="ac-cn"></span></button>
+        <button class="nav-btn nb nb-cols brk-colsbtn" id="ac-cols-btn" onclick="acColsOpen(event)" title="Columns" aria-label="Columns"><i class="ti ti-columns-3"></i><span id="ac-cn" class="nb-cnt"></span><i class="ti ti-chevron-down nb-cv"></i></button>
         <div class="bpanel right" id="ac-cols-panel"></div></div>`);
       w=document.getElementById("ac-cols"); }
   }
   if(w) w.style.display=on?"":"none";
   const cs=acColsNow(), hid=cs.filter(([k])=>AC_HIDE.has(k)).length;
-  const cn=document.getElementById("ac-cn"); if(cn) cn.textContent=`${1+cs.length-hid}/${1+cs.length}`;
+  const cn=document.getElementById("ac-cn"); if(cn) cn.innerHTML=nbColsHtml(1+cs.length-hid,1+cs.length);
   const ex=document.getElementById("export-btn"); if(ex&&ex.parentElement) ex.parentElement.style.display=on?"none":"";
 }
 function acColsFill(){
@@ -45051,12 +45076,12 @@ function trColsSync(){
   if(!w){
     const ref=document.getElementById("brk-cols");
     if(ref){ ref.insertAdjacentHTML("afterend",`<div class="bsw mf-hide" id="tr-cols" style="display:none;">
-        <button class="nav-btn brk-colsbtn" id="tr-cols-btn" onclick="trColsOpen(event)" title="Columns" aria-label="Columns"><i class="ti ti-columns-3"></i><span id="tr-cn"></span></button>
+        <button class="nav-btn nb nb-cols brk-colsbtn" id="tr-cols-btn" onclick="trColsOpen(event)" title="Columns" aria-label="Columns"><i class="ti ti-columns-3"></i><span id="tr-cn" class="nb-cnt"></span><i class="ti ti-chevron-down nb-cv"></i></button>
         <div class="bpanel right" id="tr-cols-panel"></div></div>`);
       w=document.getElementById("tr-cols"); }
   }
   if(w) w.style.display=on?"":"none";
-  const cn=document.getElementById("tr-cn"); if(cn) cn.textContent=`${1+TR_COLS.length-TR_HIDE.size}/${1+TR_COLS.length}`;
+  const cn=document.getElementById("tr-cn"); if(cn) cn.innerHTML=nbColsHtml(1+TR_COLS.length-TR_HIDE.size,1+TR_COLS.length);
   const ex=document.getElementById("export-btn"); if(ex&&ex.parentElement&&on) ex.parentElement.style.display="none";
 }
 function trColsFill(){
@@ -46418,7 +46443,7 @@ function pgLinkSync(){
   if(!bt){
     const ex=document.getElementById("export-btn"), at=ex&&ex.closest(".bsw");
     if(!at) return;
-    at.insertAdjacentHTML("beforebegin",`<button class="nav-btn mf-hide" id="pg-link" onclick="pageCopyLink()" title="Copy a link that opens this page" aria-label="Copy link"><i class="ti ti-link"></i></button>`);
+    at.insertAdjacentHTML("beforebegin",`<button class="nav-btn nb mf-hide" id="pg-link" onclick="pageCopyLink()" title="Copy a link that opens this page" aria-label="Copy link"><i class="ti ti-link"></i><span class="nb-lbl">Link</span></button>`);
     bt=document.getElementById("pg-link");
   }
   const on=!!(activeBrand&&brands[activeBrand]&&PG_LINK_VIEWS.includes(view));
@@ -48087,7 +48112,7 @@ function hdNavSync(){
   let b=document.getElementById("hd-new");
   if(!b){
     const nw=document.getElementById("brk-new")||document.getElementById("export-btn");
-    if(nw){ (nw.closest(".bsw")||nw).insertAdjacentHTML("afterend",`<button class="nav-btn red" id="hd-new" style="display:none;" onclick="hdNavNew()"><i class="ti ti-plus"></i> <span id="hd-new-l">Ask</span></button>`);
+    if(nw){ (nw.closest(".bsw")||nw).insertAdjacentHTML("afterend",`<button class="nav-btn red nb" id="hd-new" style="display:none;" onclick="hdNavNew()"><i class="ti ti-plus"></i><span id="hd-new-l" class="nb-full">Ask</span><span class="nb-short">Ask</span></button>`);
             b=document.getElementById("hd-new"); }
   }
   if(!b) return;
