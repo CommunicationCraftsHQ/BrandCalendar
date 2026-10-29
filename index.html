@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.126 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.127 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14524,7 +14524,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.126 Tbilisi";
+const TOOL_VERSION="V118.127 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -29949,7 +29949,17 @@ function prTaskOpen(pid){
     loadThread(pid).then(()=>{ if(TASK.id===pid&&view==="promotions") render(); }); }
 }
 function prTab(k){ PR.tab=k; if(k==="talk"){ BR_TAB="talk"; if(PR.open) prTaskOpen(PR.open); } render(); }
-function prCTab(k){ PR.ctab=k; if(k==="talk") BR_TAB="talk"; render(); }
+function prCTab(k){ PR.ctab=k;
+  /* V118.127 — the thread is normally read by prCrOpen, but a creative
+     reached with Sizes showing (a copied link, a re-render) can arrive
+     here with someone else’s thread in TASK. Read it rather than draw
+     the wrong conversation. */
+  if(k==="talk"){ BR_TAB="talk";
+    const cid=PR.creative;
+    if(cid&&TASK.id!==cid){ TASK={id:cid,msgs:[],acts:[],loading:true,err:"",asClient:false,draft:""};
+      loadThread(cid).then(()=>{ if(TASK.id===cid&&view==="promotions") render(); }); }
+  }
+  render(); }
 function prBriefHtml(p){
   const seg=prSegOf(p), st=prStreams(p.id), tgt=prNumOr(p.target_value);
   const facts=[["Objective",prObjLabel(p.objective_key)],["Target",tgt!==null?prFmt(tgt)+" "+escHtml(prUnit(p))+escHtml(prBasisTail(p)):""],
@@ -29998,17 +30008,32 @@ function prSizeRows(c,lead){
 function prSzAsset(z){ return z&&z.asset_id?assetById(z.asset_id):null; }
 function prSzFiles(z){ return z&&!z._sug?(assetsFor("creative_size",z.id)||[]).slice().sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at))):[]; }
 function prCrPanelHtml(p,c){
-  const canE=canCap("edit_ad_creatives"), tab=(PR.ctab==="copy"?"copy":"sizes"), t=PR_CTASK;
+  const canE=canCap("edit_ad_creatives"), tab=(PR.ctab==="copy"?"copy":PR.ctab==="sizes"?"sizes":"talk"), t=PR_CTASK;
   const lead=prIsLeadPromo(p)&&prCrPlatKey(c)==="meta";
   const zs=prSizeRows(c,lead), zin=zs.filter(z=>z.asset_id).length, qs=prQs(c.id);
   const nMsg=TASK.id===c.id?(TASK.msgs||[]).length:((PR.crc[c.id]||[]).length);
-  /* V118.102 — THE CREATIVE HAS TWO TABS. Chirag, 24 October: the
-     promotion’s own conversation already carries anything that needs
-     saying, and the creative’s activity log was a tab nobody opened.
-     Both are gone. The log is still WRITTEN by prLog — only its tab
-     went, so the record survives if it is ever wanted. */
+  /* V118.102 — the creative was cut to two tabs: the conversation and
+     the activity log both went.
+     V118.127 — Chirag, 29 October: THE CONVERSATION COMES BACK. A
+     creative is a thing people discuss on its own — which size is
+     wrong, whose turn it is — and the promotion’s thread buried that.
+     Nothing had to be rebuilt: the write (taskPostInner → creative_id),
+     the read (loadThread picks the column off PR_CTASK), the bell and
+     the unread stamp were all left wired in October, and no message was
+     ever stranded — post_comments held 0 rows with a creative_id.
+     History stays off; prLog keeps writing it, so its tab can return
+     the same cheap way if it is ever wanted. */
   let body;
-  if(tab==="sizes"){
+  if(tab==="talk"){
+    /* The task thread engine, unchanged: tinted sheet, the creative’s own
+       brief pinned on top (brBriefPin reads PR_CTASK, whose _creative
+       flag sends Edit to the creative and not the promotion), hover row,
+       reply, files, the one shared message box. */
+    if(TASK.id!==c.id||TASK.loading) body=`<div class="th-load">Loading the conversation…</div>`;
+    else if(TASK.err) body=`<div class="th-load">Could not load it — ${escHtml(TASK.err)}</div>`;
+    else body=`<div class="th-sheet"><div class="th-strip" onclick="thStripTop(event)"><span class="k">Brief</span><span class="tx">${escHtml(thBriefWords(t))}</span><span class="go"><i class="ti ti-arrow-up"></i> Back to brief</span></div>
+      <div class="br-thread">${brBriefPin(t)}${threadHtml(t,brMsgsFor("team"))}</div>${canComment()?thComposerHtml(t,"team",[]):""}</div>`;
+  } else if(tab==="sizes"){
     const sel=zs.find(z=>z.id===PR.sz)||zs.find(z=>z.asset_id)||zs[0];
     /* V118.102 — THE WHOLE SET AT ONCE. Drop or pick any number of
        files; each is measured in the browser, matched to a size by its
@@ -30069,7 +30094,7 @@ function prCrPanelHtml(p,c){
     <div class="prbox"><div class="prbh">Copy<span class="prbx-t" onclick="prCTab('copy')">›</span></div><div class="prbb pr-cl" onclick="prCTab('copy')">${c.headline||c.primary_text?`${escHtml(c.headline||String(c.primary_text||"").slice(0,60))}<small>${escHtml([c.cta,lead?"":c.link].filter(Boolean).join(" → "))}</small>`:`<span class="nsdim">Nothing written yet</span>`}${lead?`<small class="pr-qn">${qs.length?`${qs.length} question${qs.length===1?"":"s"} · ${escHtml(qs.map(q=>q.question).filter(Boolean).slice(0,2).join(" · "))}`:"No lead questions yet"}</small>`:""}</div></div>
     <div class="prbox"><div class="prbh">Details${canE?`<span class="prbx-t" onclick="prCrEditOpen('${escAttr(c.id)}')">Edit</span>`:""}</div><div class="prbb pr-cl nsdim" style="cursor:default">${escHtml(c.format||"")} · ${escHtml(bfWho(c.created_by)||"")}${c.created_at?" · "+escHtml(fmtShort(c.created_at)):""}</div></div></div>`;
   return `<div class="pr-cpanel" onclick="event.stopPropagation()"><div class="pr-cin">
-    <div class="br-tabs pr-ctabs">${T("sizes","Sizes"+(zs.length?` · ${zin} of ${zs.length}`:""))}${T("copy","Copy"+(lead&&qs.length?` · ${qs.length} question${qs.length===1?"":"s"}`:""))}
+    <div class="br-tabs pr-ctabs">${T("talk","Conversation"+(nMsg?` · ${nMsg}`:""))}${T("sizes","Sizes"+(zs.length?` · ${zin} of ${zs.length}`:""))}${T("copy","Copy"+(lead&&qs.length?` · ${qs.length} question${qs.length===1?"":"s"}`:""))}
       <span class="br-gap"></span><span class="prcst pl"><i class="ti ${(PR_PLAT[prCrPlatKey(c)]||PR_PLAT.other).icon}"></i>${escHtml(prCrPlat(c))}</span>
       <select class="tk-st cc-stsel" onchange="prCrStatus('${escAttr(c.id)}',this.value)" ${canE?"":"disabled"}>${st}</select>
       <button class="br-ico" onclick="prCopyLink('${escAttr(p.id)}','${escAttr(c.id)}')" title="Copy a link that opens this creative" aria-label="Copy link"><i class="ti ti-link"></i></button>
@@ -31879,7 +31904,7 @@ function prCrPlat(c){
 let PR_CTASK=null;
 function prCrOpen(pid,cid){
   if(PR.creative===cid&&PR.open===pid&&PR.tab==="creatives"){ prCrBack(); return; }
-  PR.open=pid; PR.tab="creatives"; PR.creative=cid; PR.ctab="sizes"; PR.sz=null; PR.staged=[]; PR.draft="";
+  PR.open=pid; PR.tab="creatives"; PR.creative=cid; PR.ctab="talk"; PR.sz=null; PR.staged=[]; PR.draft="";
   if(!PR_TASK||PR_TASK.id!==pid){ const p=PR.list.find(x=>x.id===pid); if(p) PR_TASK=prTaskOf(p); }
   const c=PR.cr.find(x=>x.id===cid);
   PR_CTASK=c?{id:c.id,_promo:true,_creative:true,title:c.title||"",brand_id:c.brand_id||activeBrand,owner_id:c.created_by||null,project_id:null,status:"in_progress",brief:c.brief||"",archived_at:null,created_at:c.created_at}:null;
