@@ -15,7 +15,12 @@
     try{
       var m=document.querySelector('meta[name="viewport"]'); if(!m) return;
       var w=screen.width||0, touch=window.matchMedia&&matchMedia("(pointer:coarse)").matches;
-      m.setAttribute("content", touch&&w&&w<=600 ? "width="+Math.round(w/S) : "width=device-width, initial-scale=1.0");
+      var lw=Math.round(w/S), sc=(w/lw).toFixed(4);
+      /* V118.132 — the scale is pinned (initial = minimum). Chirag, 30 Oct:
+         on iPhones the app drew as a small strip in one corner; a phone
+         given only a width zooms OUT to show anything wider than it, and
+         keeps that zoom. Now it cannot zoom out below the designed size. */
+      m.setAttribute("content", touch&&w&&w<=600 ? "width="+lw+", initial-scale="+sc+", minimum-scale="+sc+", viewport-fit=cover" : "width=device-width, initial-scale=1.0");
     }catch(e){}
   }
   fit();
@@ -40,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.131 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.132 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -5852,6 +5857,15 @@ select.pr-fv.cc-stsel{height:34px;padding:0 28px 0 10px;background-color:#fff;}
 .xn-r.seen .t1{font-size:14px;font-weight:600;color:#55554F;}
 .xn-r.seen .t1 em{font-weight:500;}
 .xn-r.seen .tm{font-size:12px;}
+</style>
+<style id="phone-fit-132">
+/* ══ V118.132 TBILISI · NOTHING MAY WIDEN THE PHONE PAGE ═════════════════
+   Beyond #main (V118.106): the page itself clips at the screen edge on a
+   phone, so no wide piece anywhere can push the layout sideways. */
+@media(max-width:768px){
+  html,body{overflow-x:clip;max-width:100%;}
+  .layout,#main{max-width:100%;min-width:0;}
+}
 </style>
 </head>
 <body class="mf-framed">
@@ -14573,7 +14587,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.131 Tbilisi";
+const TOOL_VERSION="V118.132 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -53803,5 +53817,33 @@ function meetDayLong(s){ const t=String(s||"").slice(0,10); if(!/^\d{4}-\d{2}-\d
 })();
 </script>
 
+<script>
+/* ══ V118.132 TBILISI · EACH PHONE SAYS IF ANYTHING IS TOO WIDE ══════════
+   Once a day per phone, a few seconds after the page settles: the screen
+   width, the zoom the phone chose, and the five widest things that stick
+   out past the screen, as app_events type "phone_fit". Read in the
+   database to find what an iPhone draws wider than Chrome does. */
+(function(){
+  function check(){
+    try{
+      if(!(typeof mfNarrow==="function"&&mfNarrow())) return;
+      const day=new Date().toISOString().slice(0,10), k="cc-phone-fit-"+(window.view||"")+"-"+day;
+      try{ if(localStorage.getItem(k)) return; localStorage.setItem(k,"1"); }catch(e){}
+      const W=document.documentElement.clientWidth;
+      const wide=[...document.querySelectorAll("body *")].map(e=>{ const r=e.getBoundingClientRect(); return {e,r}; })
+        .filter(x=>x.r.width>0&&x.r.height>0&&(x.r.right>W+1||x.r.width>W+1)&&getComputedStyle(x.e).position!=="fixed")
+        .sort((a,b)=>b.r.width-a.r.width).slice(0,5)
+        .map(x=>(x.e.tagName.toLowerCase()+(x.e.id?"#"+x.e.id:"")+"."+String(x.e.className||"").split(/\s+/).slice(0,3).join("."))+" w"+Math.round(x.r.width)+" x"+Math.round(x.r.left));
+      const vv=window.visualViewport||{};
+      if(typeof logAppEvent==="function") logAppEvent("phone_fit",{version:TOOL_VERSION,view:window.view||"",screen:screen.width,inner:innerWidth,client:W,
+        scroll:document.documentElement.scrollWidth,scale:vv.scale?Math.round(vv.scale*1000)/1000:null,
+        vp:(document.querySelector('meta[name="viewport"]')||{}).content||"",
+        app:!!(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||!!navigator.standalone,
+        ua:navigator.userAgent.slice(0,160),wide});
+    }catch(e){}
+  }
+  window.addEventListener("load",()=>setTimeout(check,6000));
+})();
+</script>
 </body>
 </html>
