@@ -40,7 +40,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.130 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.131 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -4507,6 +4507,27 @@ select.pr-fv.cc-stsel{height:34px;padding:0 28px 0 10px;background-color:#fff;}
 .prpl.meta{background:#E7F0FD;color:#1B5FBF;} .prpl.google{background:#FDF0E7;color:#B4551A;}
 .prpl.linkedin{background:#E6F0F7;color:#12557C;}
 .prtgt{font-size:12.5px;color:var(--muted);}
+.prwinw{opacity:.72;}   /* V118.131 — the span a figure covers, said quietly beside it */
+.prtot>div.prtwin{margin-left:auto;border-right:0;border-left:1px solid #F0EEEA;}
+.prtwin .prtv{overflow:visible;}
+.prtwr{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.prtwin .fb-chip{margin:0;}
+.prshape .bh-door{height:26px;padding:0 10px;font-size:12px;}
+.prmomtop{display:flex;align-items:center;gap:10px;padding:12px 14px 10px;}
+.prmomtop .sp{flex:1}
+.prmomwin{font-size:12.5px;color:var(--muted);}
+.prmomhd{display:grid;align-items:end;gap:8px;padding:8px 14px;border-bottom:1px solid var(--line);
+  font-size:12px;color:var(--muted);letter-spacing:.02em;}
+.prmomhd .prnmh{text-align:right;}
+.prmomrow{display:grid;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--line);font-size:13.5px;}
+.prmomrow:last-child{border-bottom:0;}
+.prmomrow .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.prmomrow .prnm{text-align:right;font-variant-numeric:tabular-nums;}
+.prmomrow.tot{background:var(--soft,#faf7f4);font-weight:600;}
+.prmm{display:block;font-size:11px;opacity:.85;}
+.prmm.good{color:#2EA05A;} .prmm.bad{color:#C0392B;} .prmm.flat{color:var(--muted);}
+.prmm .ti{font-size:11px;vertical-align:-1px;}
+.prmom{overflow-x:auto;}
 .prtgt b{font-size:15px;color:var(--text);}
 .prbar{height:5px;border-radius:3px;background:#ECEBE7;margin-top:6px;position:relative;width:100%;max-width:170px;}
 .prbar b{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--text);}
@@ -14552,7 +14573,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.130 Tbilisi";
+const TOOL_VERSION="V118.131 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -29432,7 +29453,9 @@ const PR={key:null,loading:false,err:null,list:[],objs:[],bobjs:[],segs:[],bsegs
   f:null,   /* V117.9 — the kit's filters; null until the page is first drawn */
   creative:null,th:{id:null,msgs:[],acts:[],loading:false,err:""},staged:[],draft:"",sizes:{},qs:{},ctab:"sizes",sz:null,
   drop:null, /* V118.102 — files read and matched, waiting to be placed */
-  zip:null}; /* V118.102 — the creative whose set is being zipped */
+  zip:null, /* V118.102 — the creative whose set is being zipped */
+  win:{mode:"this",ms:null},    /* V118.131 — the window of time the whole page reads */
+  mom:{measure:"leads"}};       /* V118.131 — the month-on-month view */
 
 const PR_CST={drafting:["Draft","#EF9F27"],review:["For review","#378ADD"],approved:["Approved","#639922"],
   live:["Live","#2EA05A"],paused:["Paused","#B08A3A"],ended:["Ended","#AAAAAA"]};   /* V118.87 — the suite's journey words */
@@ -29477,6 +29500,101 @@ function prToday(){ const d=new Date(); d.setHours(0,0,0,0); return d; }
 function prMonthStart(d){ return prIso(new Date(d.getFullYear(),d.getMonth(),1)); }
 function prThisMonth(){ return prMonthStart(new Date()); }
 function prMonthName(ms){ const d=prDate(ms); return d?`${MN[d.getMonth()+1]} ${d.getFullYear()}`:""; }
+/* ══ V118.131 · THE PAGE LOOKS AT ONE WINDOW OF TIME ═══════════════
+   Chirag, 30 October: the strip read "Spent so far ₹16,01,535"
+   against "Budget ₹2,70,000" — eighteen months of spend against one
+   month's budget. The two were never comparable and the page said
+   nothing about it, so a client was being shown a number that meant
+   nothing. EVERY figure on this page now comes from the same window
+   of months, and the window says its own name beside them. */
+const PR_WINS=[["this","This month"],["last","Last month"],["m3","Last 3 months"],
+               ["m6","Last 6 months"],["ytd","This year"],["all","All time"]];
+function prMonthAdd(ms,n){ const d=prDate(ms); if(!d) return ms;
+  return prMonthStart(new Date(d.getFullYear(),d.getMonth()+n,1)); }
+function prWin(){
+  const w=(PR.win||{}), t=prThisMonth(), m=w.mode||"this";
+  if(m==="pick"&&w.ms)  return {mode:m,from:w.ms,to:w.ms,single:true,label:prMonthName(w.ms)};
+  if(m==="last"){ const x=prMonthAdd(t,-1);
+                        return {mode:m,from:x,to:x,single:true,label:prMonthName(x)}; }
+  if(m==="m3")   return {mode:m,from:prMonthAdd(t,-2),to:t,single:false,label:"the last 3 months"};
+  if(m==="m6")   return {mode:m,from:prMonthAdd(t,-5),to:t,single:false,label:"the last 6 months"};
+  if(m==="ytd")  return {mode:m,from:prMonthStart(new Date(prDate(t).getFullYear(),0,1)),to:t,
+                         single:false,label:"this year"};
+  if(m==="all")  return {mode:m,from:null,to:null,single:false,label:"so far"};
+  return {mode:"this",from:t,to:t,single:true,label:prMonthName(t)};
+}
+/* "so far" when the window is everything, "in October 2026" when it
+   is not — so no figure on the page is ever read as the wrong span. */
+function prWinIn(){ const w=prWin(); return w.mode==="all"?"so far":("in "+w.label); }
+function prWinName(){ const w=prWin(); return w.mode==="all"?"All time":w.label; }
+/* THE ROW HAS NO ROOM FOR A SENTENCE. "in October 2026" pushed the
+   Result cell 8px past its column at 1180; every short form here is
+   no longer than the "this month" it replaced. */
+function prWinShort(){
+  const w=prWin(), d=w.from?prDate(w.from):null;
+  if(w.mode==="all") return "all time";
+  if(w.mode==="ytd") return "this year";
+  if(w.mode==="m3")  return "3 months";
+  if(w.mode==="m6")  return "6 months";
+  return d?`${(MN[d.getMonth()+1]||"").slice(0,3)} ${d.getFullYear()}`:"";
+}
+/* THE ONE PLACE A FIGURE'S MONTHS COME FROM. Every roll on this page
+   goes through here, so a window that is wrong is wrong once rather
+   than in five different ways. */
+function prWinMonths(pid){
+  const w=prWin(), all=PR.months[pid]||[];
+  if(!w.from) return all;
+  return all.filter(m=>{ const x=String(m.month_start).slice(0,10); return x>=w.from&&x<=w.to; });
+}
+/* Every calendar month the window covers that this promotion was
+   actually running in — a promotion that started in September is not
+   charged a target for August. */
+/* DOES THE WINDOW HOLD THE WHOLE OF THIS PROMOTION'S RUN? A one-off
+   promises 900 over its run, not 900 a month, so "410 of 900" read
+   against October alone is the very mistake this window was built to
+   stop — just pointing the other way. When the window is narrower
+   than the run, the figure stands on its own and the comparison waits
+   until the window covers the run again. */
+function prWinCoversRun(p){
+  const w=prWin(); if(!w.from) return true;
+  const s=p&&p.starts_on?prMonthStart(prDate(p.starts_on)):null;
+  const e=p&&p.ends_on?prMonthStart(prDate(p.ends_on)):null;
+  if(!s&&!e) return false;              /* undated — nothing to cover */
+  if(s&&s<w.from) return false;
+  if(e){ if(e>w.to) return false; } else if(w.to<prThisMonth()) return false;
+  return true;
+}
+function prWinSpan(p){
+  const w=prWin(); if(!w.from) return [];
+  const s=p&&p.starts_on?prMonthStart(prDate(p.starts_on)):null;
+  const e=p&&p.ends_on?prMonthStart(prDate(p.ends_on)):null;
+  const out=[]; let c=w.from;
+  while(c<=w.to){ if((!s||c>=s)&&(!e||c<=e)) out.push(c); c=prMonthAdd(c,1); }
+  return out;
+}
+function prSetWin(mode,ms){ PR.win={mode,ms:ms||null}; render(); }
+/* The chip wears the suite's filter shape, so it sits in the bar
+   beside the others rather than looking like a control of its own.
+   Under the six presets come the months the brand actually has
+   figures for, so picking last March takes one click, not three. */
+function prWinChipHtml(){
+  const open=fltIsOpen("promotions","win"), w=prWin(), dirty=(PR.win&&PR.win.mode&&PR.win.mode!=="this");
+  const seen={}; Object.keys(PR.months||{}).forEach(k=>(PR.months[k]||[])
+    .forEach(m=>{ const x=String(m.month_start).slice(0,10); if(x) seen[x]=1; }));
+  const list=Object.keys(seen).sort().reverse().slice(0,18);
+  const opt=(on,label,call)=>`<div class="fb-opt one${on?" on":""}" onclick="event.stopPropagation();FLT_UI={id:null,open:null,term:''};${call}">
+      <span class="nm">${fltEsc(label)}</span>${on?`<i class="ti ti-check tick"></i>`:""}</div>`;
+  return `<span class="fb-w"><button class="fb-chip${open?" open":""}" onclick="fltOpen(event,'promotions','win')">
+      <i class="ti ti-calendar-month"></i>Months <span class="fb-val">${fltEsc(prWinName())}</span>
+      ${dirty?`<span class="fb-kill" title="Back to this month" onclick="event.stopPropagation();FLT_UI={id:null,open:null,term:''};prSetWin('this')"><i class="ti ti-x"></i></span><span class="fb-dot"></span>`
+             :`<i class="ti ti-chevron-down"></i>`}</button>${
+    open?`<div class="fb-pop open" onclick="event.stopPropagation()">
+      <div class="fb-pop-top"><span class="nm">Months this page reads</span><span class="sp"></span></div>`
+      +PR_WINS.map(([k,l])=>opt((PR.win||{}).mode===k||(!(PR.win||{}).mode&&k==="this"),l,`prSetWin('${k}')`)).join("")
+      +(list.length?`<div class="fb-pop-top"><span class="nm">A month on its own</span><span class="sp"></span></div>`
+        +list.map(ms=>opt((PR.win||{}).mode==="pick"&&(PR.win||{}).ms===ms,prMonthName(ms),`prSetWin('pick','${ms}')`)).join(""):"")
+      +`</div>`:""}</span>`;
+}
 function prIsOngoing(p){ return (p.kind||"one_off")==="ongoing"; }
 function prObj(key){ return PR.objs.find(o=>o.key===key)||null; }
 /* ══ V110.9 · THE BRAND'S OWN WORDS ══════════════════════════════════
@@ -29566,9 +29684,14 @@ function prMonthRow(pid,ms){ return (PR.months[pid]||[]).find(m=>m.month_start==
 /* an ongoing promotion is measured by the month it is in; a one-off by
    everything entered against it so far */
 function prProgress(p){
-  if(prBasis(p)==="per_month"){
-    const r=prMonthRow(p.id,prThisMonth());
-    return {label:prMonthName(prThisMonth()),
+  const W=prWin();
+  /* V118.131 — a monthly promotion read against ONE month is still
+     one month's row; which month is now the window's, not always the
+     one we happen to be standing in. */
+  if(prBasis(p)==="per_month"&&W.single){
+    const ms=W.from||prThisMonth();
+    const r=prMonthRow(p.id,ms);
+    return {label:prMonthName(ms),
             target:r&&prNumOr(r.target_value)!==null?prNumOr(r.target_value):prNumOr(p.target_value),
             value:r?prNumOr(r.result_value):null,
             qual:r?prNumOr(r.qualified):null, conv:r?prNumOr(r.converted):null,   /* V118.117 */
@@ -29577,14 +29700,28 @@ function prProgress(p){
             resAt:r?prResAt(r):null, spdAt:r?prSpdAt(r):null, by:r?r.entered_by:null};   /* V118.89 — each figure knows its own day */
   }
   let v=null,s=null,at=null,resAt=null,spdAt=null,by=null,q=null,cv=null;
-  (PR.months[p.id]||[]).forEach(m=>{
+  prWinMonths(p.id).forEach(m=>{
     const qq=prNumOr(m.qualified); if(qq!==null) q=(q===null?0:q)+qq;          /* V118.117 */
     const cc=prNumOr(m.converted); if(cc!==null) cv=(cv===null?0:cv)+cc;
     const x=prNumOr(m.result_value); if(x!==null){ v=(v===null?0:v)+x; const ra=prResAt(m); if(ra&&(!resAt||String(ra)>String(resAt))) resAt=ra; }
     const y=prNumOr(m.spend); if(y!==null){ s=(s===null?0:s)+y; const sa=prSpdAt(m); if(sa&&(!spdAt||String(sa)>String(spdAt))) spdAt=sa; }
     const u=m.updated_at||m.entered_at; if(u&&(!at||String(u)>String(at))){ at=u; by=m.entered_by; }
   });
-  return {label:"", target:prNumOr(p.target_value), value:v, qual:q, conv:cv, spend:s, at, resAt, spdAt, by};
+  /* A MONTHLY TARGET OVER SEVERAL MONTHS ADDS UP. 1,786 a month across
+     three months is 5,358, counted only for the months the promotion
+     was running. A one-off keeps its single target whatever the
+     window, because it was never a per-month promise. */
+  let tgt=prNumOr(p.target_value);
+  if(prBasis(p)==="per_month"){
+    const span=prWinSpan(p);
+    if(span.length){
+      tgt=null;
+      span.forEach(ms=>{ const r=prMonthRow(p.id,ms);
+        const a=(r&&prNumOr(r.target_value)!==null)?prNumOr(r.target_value):prNumOr(p.target_value);
+        if(a!==null) tgt=(tgt===null?0:tgt)+a; });
+    }
+  }
+  return {label:W.mode==="all"?"":W.label, target:tgt, value:v, qual:q, conv:cv, spend:s, at, resAt, spdAt, by};
 }
 /* ══ V118.117 · WHAT ONE LEAD COST ═════════════════════════════════
    Chirag, 26 October: 871 corporate enquiries and 136 franchise ones
@@ -29621,10 +29758,18 @@ function prTargetLine(p){
   /* A DAILY TARGET IS NOT COMPARED TO A MONTH'S FIGURE. The months
      table holds one row a month, so a bar against a daily number would
      be arithmetic nobody asked for. Both numbers are shown instead. */
-  if(b==="per_day") return `<div class="prtgt">${g.value===null?"":`<b>${prFmt(g.value)}</b> so far · `}${prFmt(g.target)} ${escHtml(u)} a day</div>`;
+  if(b==="per_day") return `<div class="prtgt">${g.value===null?"":`<b>${prFmt(g.value)}</b> ${escHtml(prWinIn())} · `}${prFmt(g.target)} ${escHtml(u)} a day</div>`;
+  /* V118.131 — a run-long target held against part of its run is not
+     a comparison, so the bar and the "of" go and the figure stands
+     alone until the window covers the run again. */
+  const part=(b!=="per_month")&&!prWinCoversRun(p);
+  if(part&&g.value!==null)
+    return `<div class="prtgt"><b>${prFmt(g.value)}</b> ${escHtml(u)} <span class="prwinw">${escHtml(prWinIn())}</span>
+      <span class="nsdim">· ${prFmt(g.target)} over the run</span></div>`;
   const head=g.value===null
     ? `${prFmt(g.target)} ${escHtml(u)}${prBasisTail(p)}`
-    : `<b>${prFmt(g.value)}</b> of ${prFmt(g.target)} ${escHtml(u)}${b==="per_month"?" this month":""}`;
+    : `<b>${prFmt(g.value)}</b> of ${prFmt(g.target)} ${escHtml(u)}${
+        b==="per_month"?` <span class="prwinw">${escHtml(prWinIn())}</span>`:""}`;
   return `<div class="prtgt">${head}</div>${prBar(g)}`;
 }
 
@@ -30399,6 +30544,121 @@ function prSortCmp(a,b){
   }
   return String(b.updated_at||"").localeCompare(String(a.updated_at||""));
 }
+/* ══ V118.131 · MONTH ON MONTH ═════════════════════════════════════
+   Chirag, 30 October: "we need to see and share with the client a
+   month on month progress". The list answers "how is this promotion
+   doing"; it cannot answer "is it getting better". One line per
+   promotion, one column per month, one measure at a time — because
+   five measures in a cell is a spreadsheet, not a thing you send
+   somebody.
+
+   THE MONTHS COME FROM THE WINDOW, so the chip in the bar governs
+   this view too and there is only ever one answer to "which months
+   am I looking at". A window of one month makes a one-column grid,
+   which is useless, so this view opens the window to six months the
+   first time it is reached rather than showing a single stripe. */
+const PR_MOM=[["leads","Result"],["spend","Spent"],["cost","Cost each"],
+              ["qualified","Qualified"],["converted","Closed"]];
+function prMomOn(){ return !!(PR.mom&&PR.mom.on); }
+/* THE WAY IN AND THE WAY BACK ARE THE SAME CONTROL, and it sits on
+   the strip rather than in the filter bar: that bar is already full
+   at 1180 and a third door there put it on two lines. */
+function prShapeHtml(){
+  const on=prMomOn();
+  return `<div class="bh-seg prshape">
+    <button class="bh-door${on?"":" on"}" aria-pressed="${on?"false":"true"}" onclick="prSetShape(false)">A list</button>
+    <button class="bh-door${on?" on":""}" aria-pressed="${on?"true":"false"}" onclick="prSetShape(true)">Month on month</button></div>`;
+}
+/* ONLY THE PERSON DECIDES THE SHAPE. navPromotions is re-entered by
+   urlApply every time the view is synced from the address bar, so a
+   reset living in there wiped the grid the instant it was drawn. */
+function prSetShape(on){ if(on){ navMom(); return; } PR.mom.on=false; navPromotions(); }
+function prMomMeasure(){ const m=(PR.mom||{}).measure; return PR_MOM.some(x=>x[0]===m)?m:"leads"; }
+function prSetMomMeasure(k){ PR.mom.measure=k; render(); }
+/* Every calendar month the window covers, oldest first. All time is
+   bounded by the oldest figure anybody has recorded. */
+function prMomCols(){
+  const w=prWin(); let from=w.from, to=w.to;
+  if(!from){
+    let lo=null,hi=null;
+    Object.keys(PR.months||{}).forEach(k=>(PR.months[k]||[]).forEach(m=>{
+      const x=String(m.month_start).slice(0,10); if(!x) return;
+      if(!lo||x<lo) lo=x; if(!hi||x>hi) hi=x; }));
+    if(!lo) return [prThisMonth()];
+    from=lo; to=hi;
+  }
+  const out=[]; let c=from;
+  while(c<=to&&out.length<36){ out.push(c); c=prMonthAdd(c,1); }
+  return out;
+}
+/* ONE CELL IS ONE MONTH'S OWN FIGURE — never a running total, which
+   is the mistake that made the strip unreadable in the first place. */
+function prMomCell(p,ms,k){
+  const r=prMonthRow(p.id,ms);
+  if(!r) return null;
+  if(k==="cost"){
+    const v=prNumOr(r.result_value), s=prNumOr(r.spend);
+    return (v===null||s===null||v<=0)?null:s/v;
+  }
+  return prNumOr(k==="leads"?r.result_value:r[k]);
+}
+function prMomVal(v,k,cur){
+  if(v===null) return '<span class="nsdim">—</span>';
+  if(k==="spend") return prMoney(v,cur);
+  if(k==="cost")  return prCostEach({value:1,spend:v},cur);
+  return prFmt(v);
+}
+/* The arrow reads against the month before it, which is the whole
+   point of the view. Cheaper is better for cost each and worse for
+   everything else, so the colour follows the measure, not the sign. */
+function prMomMove(now,was,k){
+  if(now===null||was===null||was===0) return "";
+  const pc=Math.round((now-was)/Math.abs(was)*100);
+  if(!pc) return `<span class="prmm flat">0%</span>`;
+  const up=pc>0, good=(k==="cost")?!up:up;
+  return `<span class="prmm ${good?"good":"bad"}"><i class="ti ti-arrow-${up?"up":"down"}-right"></i>${Math.abs(pc)}%</span>`;
+}
+function prMomHtml(rows){
+  const cols=prMomCols(), k=prMomMeasure(), kl=(PR_MOM.find(x=>x[0]===k)||[,""])[1];
+  const pick=`<div class="bh-seg prmomsw">${PR_MOM.map(([v,l])=>
+    `<button class="bh-door${v===k?" on":""}" onclick="prSetMomMeasure('${v}')">${escHtml(l)}</button>`).join("")}</div>`;
+  if(!rows.length) return `<div class="nswrap" style="padding-top:0"><div class="nstile" style="min-height:0;">
+    <span class="val none">Nothing matches these filters</span></div></div>`;
+  const tpl=`minmax(190px,1.4fr) repeat(${cols.length},minmax(96px,1fr))`;
+  const head=`<div class="prmomhd" style="grid-template-columns:${tpl}">
+    <div>${escHtml(kl)}</div>${cols.map(ms=>`<div class="prnmh">${escHtml(prMonthName(ms).replace(" "," "))}</div>`).join("")}</div>`;
+  /* a total line per month, so the brand's own shape is readable
+     without adding the columns up in your head */
+  let foot=`<div class="prmomrow tot" style="grid-template-columns:${tpl}"><div class="nm">All promotions</div>`;
+  cols.forEach(ms=>{
+    let t=null, cur="INR";
+    rows.forEach(p=>{ const v=prMomCell(p,ms,k==="cost"?"leads":k); if(v!==null){ t=(t===null?0:t)+v; cur=prCur(p); } });
+    if(k==="cost"){
+      let sp=null,res=null;
+      rows.forEach(p=>{ const a=prMomCell(p,ms,"spend"), b=prMomCell(p,ms,"leads");
+        if(a!==null) sp=(sp===null?0:sp)+a; if(b!==null) res=(res===null?0:res)+b; cur=prCur(p); });
+      t=(sp===null||res===null||res<=0)?null:sp/res;
+    }
+    foot+=`<div class="prnm">${prMomVal(t,k,cur)}</div>`;
+  });
+  foot+=`</div>`;
+  const body=rows.map(p=>{
+    const cur=prCur(p); let prev=null;
+    const cells=cols.map(ms=>{
+      const v=prMomCell(p,ms,k);
+      const mv=prMomMove(v,prev,k);
+      prev=(v===null?prev:v);
+      return `<div class="prnm">${prMomVal(v,k,cur)}${mv}</div>`;
+    }).join("");
+    return `<div class="prmomrow" style="grid-template-columns:${tpl}">
+      <div class="nm" title="${escAttr(p.name||"")}">${escHtml(p.name||"Untitled")}</div>${cells}</div>`;
+  }).join("");
+  return `<div class="nswrap" style="padding-top:0"><div class="prlist prmom">
+    ${prTotalsHtml(rows)}
+    <div class="prmomtop">${pick}<span class="sp"></span>
+      <span class="prmomwin">${escHtml(prWinName())} · ${cols.length} month${cols.length===1?"":"s"}</span></div>
+    ${head}${foot}${body}</div></div>`;
+}
 function prListHtml(){
   const rows=prVisible(), canEditP=canCap("edit_promotions");
   /* V111.7 — AN OPEN ROW THAT A FILTER HAS TAKEN AWAY IS CLOSED. The
@@ -30448,6 +30708,7 @@ function prListHtml(){
     return bar+`<div class="nswrap" style="padding-top:0"><div class="nstile" style="min-height:0;">
       <span class="val none">Nothing matches these filters</span></div></div>`;
   }
+  if(prMomOn()) return bar+prMomHtml(rows);
 
   /* V111.7 — ONE LINE PER PROMOTION, as the suite's listing rule has
      said all along: one line, one white card, filters rather than
@@ -30485,12 +30746,12 @@ function prListHtml(){
    with another promotion's lifetime. */
 function prSpendAll(p){
   let s=null;
-  (PR.months[p.id]||[]).forEach(m=>{ const y=prNumOr(m.spend); if(y!==null) s=(s===null?0:s)+y; });
+  prWinMonths(p.id).forEach(m=>{ const y=prNumOr(m.spend); if(y!==null) s=(s===null?0:s)+y; });
   return s;
 }
 function prResultAll(p){
   let v=null;
-  (PR.months[p.id]||[]).forEach(m=>{ const x=prNumOr(m.result_value); if(x!==null) v=(v===null?0:v)+x; });
+  prWinMonths(p.id).forEach(m=>{ const x=prNumOr(m.result_value); if(x!==null) v=(v===null?0:v)+x; });
   return v;
 }
 /* {basis: {currency: amount}} plus a count of the ones with no amount */
@@ -30544,11 +30805,12 @@ function prSpendRollHtml(rows){
 function prFunnelRoll(rows){
   let q=null,c=null,base=0;
   rows.forEach(p=>{
-    /* EVERY MONTH, not just this one. prSpendAll and prResultAll both
-       roll a promotion's whole life, so a funnel beside them has to do
-       the same or the strip compares a month against a lifetime. */
+    /* THE WINDOW'S MONTHS. prSpendAll and prResultAll roll the same
+       window, so the funnel beside them covers the same span — the
+       strip never compares a month against a lifetime. (V118.131;
+       before that all three rolled a promotion's whole life.) */
     let pq=null,pc=null;
-    (PR.months[p.id]||[]).forEach(m=>{
+    prWinMonths(p.id).forEach(m=>{
       const a=prNumOr(m.qualified); if(a!==null) pq=(pq===null?0:pq)+a;
       const b=prNumOr(m.converted); if(b!==null) pc=(pc===null?0:pc)+b; });
     if(pq===null&&pc===null) return;
@@ -30571,7 +30833,10 @@ function prTotalsHtml(rows){
       <small>of ${(PR.objs||[]).length}</small></div></div>
     ${funnel}
     <div><div class="prtk">Budget</div><div class="prtv sm">${prBudgetRollHtml(rows)}</div></div>
-    <div><div class="prtk">Spent so far</div><div class="prtv sm">${prSpendRollHtml(rows)}</div></div>
+    <div><div class="prtk">${prWin().mode==="all"?"Spent so far":"Spent"}</div>
+      <div class="prtv sm">${prSpendRollHtml(rows)}</div></div>
+    <div class="prtwin"><div class="prtk">Showing</div>
+      <div class="prtv sm prtwr">${prWinChipHtml()}${prShapeHtml()}</div></div>
   </div>`;
 }
 /* The groups follow the MASTER list's order, so two brands reading the
@@ -30608,7 +30873,7 @@ function prGroupHeadHtml(g,tpl,cols){
   const spd=prSpendTotal(g.rows), bud=prBudgetRollHtml(g.rows,true);
   const piece={
     prog:  res===null?'<span class="nsdim">nothing recorded</span>'
-            :`<b>${prFmt(res)}</b> ${escHtml(unit)} so far ${prAsOf(oldest)}`,
+            :`<b>${prFmt(res)}</b> ${escHtml(unit)} ${escHtml(prWinIn())} ${prAsOf(oldest)}`,
     qual:  f.q===null?'<span class="nsdim">—</span>':`<b>${prFmt(f.q)}</b>`,
     conv:  f.c===null?'<span class="nsdim">—</span>':`<b>${prFmt(f.c)}</b>`,
     cost:  (res===null||res<=0||spd===null)?'<span class="nsdim">—</span>'
@@ -30658,7 +30923,20 @@ function prCellHtml(p,k){
     case "runs":   return `<div class="prdt">${prRunsRow(p)}</div>`;
     case "status": return `<div class="prst2">${prStatusHtml(p)}${runsOn?"":` <small class="prdt2">${prRunsRow(p)}</small>`}</div>`;
     case "prog": {
-      const pc=(tgt&&val!==null)?Math.max(2,Math.min(100,Math.round(val/tgt*100))):0;
+      /* V118.131 — THE ROW READS THE SAME WINDOW THE STRIP DOES, and
+         says which. A run-long target held against part of its run is
+         not a comparison, so there the bar goes and the run's target
+         is named off to the side instead. */
+      const part=(prBasis(p)!=="per_month")&&!prWinCoversRun(p);
+      const pc=(tgt&&val!==null&&!part)?Math.max(2,Math.min(100,Math.round(val/tgt*100))):0;
+      const asOf=val!==null&&g.resAt?`<small class="pr-asofl">${prAsOf(g.resAt,g.by,false)}</small>`:"";
+      /* THE ROW IS A GLANCE. "· 900 over the run" ran past the Result
+         column and came out as "900 over …", which reads as a fault.
+         The run's target lives in the panel, where there is room for
+         the sentence; the row carries the figure and its window and
+         keeps the title for the rest. */
+      if(part&&val!==null) return `<div class="prpg" title="${escAttr(tgt===null?"":prFmt(tgt)+" over the whole run")}">
+        <div class="t"><b>${prFmt(val)}</b> <span class="nsdim">${escHtml(prWinShort())}</span></div>${asOf}</div>`;
       return `<div class="prpg">
         ${/* NO TARGET IS NOT A TARGET OF NOUGHT, and the unit is not
               repeated here — the objective column one across already
@@ -30666,8 +30944,8 @@ function prCellHtml(p,k){
         <div class="t">${tgt===null
           ? '<span class="nsdim">No target</span>'
           : `${val!==null?`<b>${prFmt(val)}</b>`:'<span class="nsdim">—</span>'} of ${prFmt(tgt)}${
-              prBasis(p)==="per_month"?' <span class="nsdim">this month</span>':""}`}</div>
-        <div class="prpgb"><i style="width:${pc}%"></i></div>${val!==null&&g.resAt?`<small class="pr-asofl">${prAsOf(g.resAt,g.by,false)}</small>`:""}</div>`;
+              prBasis(p)==="per_month"?` <span class="nsdim">${escHtml(prWinShort())}</span>`:""}`}</div>
+        <div class="prpgb"><i style="width:${pc}%"></i></div>${asOf}</div>`;
     }
     case "budget": return `<div class="prmn prbd prnum">${prBudgetCell(p)}</div>`;
     case "spent":  return `<div class="prmn prnum">${g.spend!==null&&g.spend!==undefined?prMoney(g.spend,cur)+(budOn?"":prBudgetOpen(p)?` <small class="prof">Team to set</small>`
@@ -32424,6 +32702,18 @@ navPromotions=async function(){
   if(!pv&&!nv){ toast("Promotions are not part of your access.","err"); return; }
   if(!pv){ setView("numbers"); return; }
   PR.open=null; PR.creative=null;
+  setView("promotions");
+};
+/* V118.131 — the same page, read sideways: one line per promotion,
+   one column per month. This is the sheet Chirag sends a client. */
+navMom=async function(){
+  if(!activeBrand){ toast("Pick a brand first — Promotions is per brand"); return; }
+  if(!canCap("view_promotions")){ toast("Promotions are not part of your access.","err"); return; }
+  PR.open=null; PR.creative=null; PR.mom.on=true;
+  /* A GRID ONE COLUMN WIDE IS NOT A TREND. Arriving here from the
+     default window opens it to six months; a window the person chose
+     themselves is left exactly as they set it. */
+  if(!PR.win||!PR.win.mode||PR.win.mode==="this") PR.win={mode:"m6",ms:null};
   setView("promotions");
 };
 function prNumSwitchHtml(cur){
