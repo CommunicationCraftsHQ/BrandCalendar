@@ -13,7 +13,7 @@
      scaffolded from it would have failed the contract check on its
      first build. Found by scaffolding one and running the checks,
      which is the whole point of doing that. -->
-<meta name="cc-tool-version" content="V11.27 Salzburg">
+<meta name="cc-tool-version" content="V11.28 Salzburg">
 <!-- INSTALLABLE, WHICH IS THE OTHER HALF OF FULLSCREEN.
      Chrome on Android gives the Fullscreen API, so Play already takes
      the whole screen. Installed from the home screen this goes further:
@@ -28,7 +28,35 @@
 <link rel="icon" type="image/png" sizes="32x32" href="https://communicationcraftshq.github.io/BrandCalendar/icons/portfolio/favicon-32x32.png?v=champagneF7">
 <link rel="icon" type="image/png" sizes="16x16" href="https://communicationcraftshq.github.io/BrandCalendar/icons/portfolio/favicon-16x16.png?v=champagneF7">
 <link rel="apple-touch-icon" sizes="180x180" href="https://communicationcraftshq.github.io/BrandCalendar/icons/portfolio/apple-touch-icon.png?v=champagneF7">
-<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css" rel="stylesheet">
+<!-- ══ V11.28 · THE ICON FONT NO LONGER HOLDS THE PAGE SHUT ══════════
+     Chirag, 30 October: "The page takes terribly long time to load
+     sometimes over one minute, but once it loads, I can move around
+     the page and tabs easily."
+
+     A <link rel="stylesheet"> BLOCKS THE FIRST PAINT. This one is on
+     cdn.jsdelivr.net — a third party, on the far side of whatever is
+     between Ahmedabad and their nearest edge — and the service worker
+     deliberately ignores cross-origin requests, so it is never cached
+     and every cold load asks them again. When they are slow the screen
+     stays white, and when they answer everything is instantly fine.
+     That is the shape of what he described.
+
+     `media="print"` makes the browser fetch it without waiting for it:
+     print styles cannot affect the screen, so the paint goes ahead.
+     `onload` then promotes it to `all` and the icons appear. The page
+     is usable a beat before its icons are, which is the right way
+     round. `noscript` keeps it blocking where there is no JavaScript.
+
+     preconnect opens the socket while the rest of the head is read, so
+     the fetch starts sooner.
+
+     THIS IS NOT PROVED TO BE THE CAUSE. It is worth doing whichever of
+     the three suspects it turns out to be, and it is the only one that
+     costs nothing to be wrong about. -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"
+      rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css" rel="stylesheet"></noscript>
 <!-- THE SHARED STYLESHEET. Linked, never copied — the whole point of
      the kit. Change it once and every tool has it on next load.
      The drift checker fails a tool that inlines a copy instead. -->
