@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.137 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.138 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14607,7 +14607,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.137 Tbilisi";
+const TOOL_VERSION="V118.138 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -53948,5 +53948,45 @@ function mentionPlace(){
 .ml-card .ml-agstart ~ .ml-body > .mom-rule,.ml-card .ml-agstart ~ .ml-body > .mom-slbl{display:none;}
 .ml-card.ml-fut .mom-newp,.ml-card.ml-fut .ml2-send{display:revert!important;}
 </style>
+<style id="v118138-css">
+/* ══ V118.138 TBILISI · EVERY MEETING ON THE PAGE; ONE COLUMN ══════════
+   Chirag, 2 Nov: "The column size of the message box container should be
+   aligned with the brief container" and "All meeting cards should appear
+   one-by-one and not only the one selected." */
+.ml2-pane .ml-card .ml-agpin.br-pin.bb{max-width:none;}
+.ml2-pane .ml-card .ml-agstart{max-width:none;}
+.ml2-pane .ml-card .ml-agstart ~ .ml-body{margin-left:80px;margin-right:20px;}
+.ml2-pane > .ml-card + .ml-card{margin-top:14px;}
+/* the list stays in view while the cards scroll past it */
+.mlpage.ml2 .ml2-list{position:sticky;top:12px;align-self:flex-start;max-height:calc(100vh - 140px);overflow-y:auto;}
+</style>
+<script>
+/* ══ V118.138 TBILISI ═══════════════════════════════════════════════════ */
+(function(){
+  const wide=()=>typeof mfNarrow==="function"&&!mfNarrow()&&view==="meets";
+  const base=renderMeetsPage;
+  renderMeetsPage=function(){
+    try{ if(wide()&&typeof mlFiltered==="function") mlFiltered().forEach(x=>{ ML.open[x.id]=true; }); }catch(e){}
+    const out=base.apply(this,arguments);
+    try{
+      const pane=document.querySelector("#main .mlpage.ml2 .ml2-pane"); if(!pane) return out;
+      /* the cards in the same order as the list, a new one first */
+      const order=[...document.querySelectorAll("#main .mlpage.ml2 .ml2-list .ml2-row[data-meet]")].map(r=>r.getAttribute("data-meet"));
+      const cards=[...pane.querySelectorAll(":scope > .ml-card")];
+      const pos=c=>{ const id=c.getAttribute("data-meet"); if(!id) return -1; const i=order.indexOf(id); return i<0?999:i; };
+      cards.sort((a,b)=>pos(a)-pos(b)).forEach(c=>pane.appendChild(c));
+    }catch(e){ console.warn("v118.138",e); }
+    return out;
+  };
+  /* picking a meeting in the list brings its card to the top of the screen */
+  const pick=window.ml2Pick;
+  if(typeof pick==="function") window.ml2Pick=function(id){
+    const out=pick.apply(this,arguments);
+    setTimeout(()=>{ const c=document.querySelector(`#main .ml2-pane .ml-card[data-meet="${CSS.escape(id)}"]`);
+      if(c){ const m=document.getElementById("main")||document.scrollingElement; const top=c.getBoundingClientRect().top-m.getBoundingClientRect().top+m.scrollTop-16; m.scrollTo({top:Math.max(0,top),behavior:"auto"}); } },60);
+    return out;
+  };
+})();
+</script>
 </body>
 </html>
