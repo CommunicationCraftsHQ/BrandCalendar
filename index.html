@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.135 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.136 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14607,7 +14607,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.135 Tbilisi";
+const TOOL_VERSION="V118.136 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -53879,5 +53879,31 @@ function meetDayLong(s){ const t=String(s||"").slice(0,10); if(!/^\d{4}-\d{2}-\d
 .bd-chev{font-size:12.5px;font-weight:700;}
 .pl-tc .arw{height:28px;}
 </style>
+<script>
+/* ══ V118.136 TBILISI · THE @ LIST OPENS WHERE YOU CAN SEE IT ═══════════
+   Chirag, 2 Nov: "while trying to tag someone on a mobile, the list of
+   people doesn't open". It did open — below the message box, which on a
+   phone sits at the foot of the screen, so the list was drawn off the
+   screen, under the keyboard. Now the list measures the room that is
+   actually visible (the keyboard included) and opens above the box when
+   there is no room below, kept inside the screen's width. */
+function mentionPlace(){
+  const box=document.getElementById("mention-box"), el=mentionInput&&document.getElementById(mentionInput);
+  if(!box||!el) return;
+  const vv=window.visualViewport, vh=vv?(vv.height+vv.offsetTop):innerHeight, vw=document.documentElement.clientWidth;
+  const r=el.getBoundingClientRect(), h=box.offsetHeight, w=Math.min(Math.max(box.offsetWidth,190),vw-16);
+  box.style.maxWidth=(vw-16)+"px";
+  box.style.left=Math.max(8,Math.min(r.left,vw-w-8))+"px";
+  const below=vh-r.bottom-8, above=r.top-8;
+  if(h+4<=below||below>=above){ box.style.top=(r.bottom+4)+"px"; box.style.bottom="auto"; }
+  else { box.style.top=Math.max(8,r.top-h-4)+"px"; box.style.bottom="auto"; }
+  if(above<h+4&&below<h+4){ box.style.maxHeight=Math.max(above,below)-4+"px"; box.style.overflowY="auto"; }
+}
+(function(){
+  const base=fbMentionKey;
+  fbMentionKey=function(){ const out=base.apply(this,arguments); try{ mentionPlace(); }catch(e){} return out; };
+  if(window.visualViewport) visualViewport.addEventListener("resize",()=>{ try{ mentionPlace(); }catch(e){} });
+})();
+</script>
 </body>
 </html>
