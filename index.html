@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.136 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.137 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -11431,7 +11431,7 @@ function hbSpec(){
     return {cols:null, nw:canE?{label:"Add post",go:addContentPost}:null, io:canE&&can("import_export")};
   /* V118.101 — build 2 of mockup 07: Plan and Strategy */
   if((view==="mplan"||view==="year"||view==="list")&&brands[activeBrand])
-    return {cols:null, nw:(canE&&typeof PLD!=="undefined"&&PLD.ok&&PLD.ok.meet)?{label:"Add MOM",go:()=>plMeetOpen(null)}:null, io:true};
+    return {cols:null, nw:(canE&&typeof PLD!=="undefined"&&PLD.ok&&PLD.ok.meet)?{label:"Add meeting",go:()=>plMeetOpen(null)}:null, io:true};
   if(view==="brief"&&brands[activeBrand]&&typeof stIoOn==="function"&&stIoOn())
     return {cols:null, nw:null, io:true};
   return null;
@@ -14607,7 +14607,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.136 Tbilisi";
+const TOOL_VERSION="V118.137 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -34450,7 +34450,7 @@ function renderMeetsPage(){
       <div class="ml-cnt">${ms.length===all.length?all.length:`${ms.length} of ${all.length}`} meeting${all.length===1?"":"s"}
         <span>${np?`· ${np} passage${np===1?"":"s"} `:""}${last?`· last written ${escHtml(fbTimeLabel(last))}`:""}</span></div>
       <span style="flex:1"></span>
-      ${canEdit()?`<button class="btn btn-w btn-sm" onclick="plMeetOpen(null)"><i class="ti ti-plus"></i> Add MOM</button>`:""}
+      ${canEdit()?`<button class="btn btn-w btn-sm" onclick="plMeetOpen(null)"><i class="ti ti-plus"></i> Add meeting</button>`:""}
     </div>
     <div class="mom-wrap">${body}</div>
   </div>`;
@@ -34482,7 +34482,7 @@ function renderMeetsPage(){
     const strip=document.getElementById("calstrip"); if(!strip) return;
     if(!PLD.ok.meet||!canEdit()) return;
     if(strip.querySelector(".mom-add")) return;
-    const html=`<button class="mom-add" onclick="plMeetOpen(null)"><i class="ti ti-plus"></i> Add MOM</button>`;
+    const html=`<button class="mom-add" onclick="plMeetOpen(null)"><i class="ti ti-plus"></i> Add meeting</button>`;
     const y=document.getElementById("year-step");
     if(y&&y.parentElement===strip) y.insertAdjacentHTML("beforebegin",`<span style="flex:1"></span>`+html);
     else strip.insertAdjacentHTML("beforeend",html);
@@ -51365,7 +51365,7 @@ function plMomCardHtml(){
   /* 2 · Add MOM is the bar's red New button on the Meetings page */
   const baseSpec=hbSpec;
   hbSpec=function(){
-    if(view==="meets"&&activeBrand&&!brIsClient()&&canEdit()) return {cols:null, nw:{label:"Add MOM",go:()=>plMeetOpen(null)}, io:false};
+    if(view==="meets"&&activeBrand&&!brIsClient()&&canEdit()) return {cols:null, nw:{label:"Add meeting",go:()=>plMeetOpen(null)}, io:false};
     return baseSpec.apply(this,arguments);
   };
   const baseMeets=renderMeetsPage;
@@ -51373,7 +51373,7 @@ function plMomCardHtml(){
     const out=baseMeets.apply(this,arguments);
     try{
       const bar=document.querySelector("#main .mlpage .pgbar");
-      if(bar){ bar.querySelectorAll(".btn").forEach(b=>{ if(/Add MOM/i.test(b.textContent)) b.classList.add("ml-add"); }); }
+      if(bar){ bar.querySelectorAll(".btn").forEach(b=>{ if(/Add (MOM|meeting)/i.test(b.textContent)) b.classList.add("ml-add"); }); }
       brNavSync(canEdit());
     }catch(e){}
     return out;
@@ -53675,6 +53675,21 @@ textarea.mom-in.v116a{width:100%;min-height:86px;resize:vertical;font:inherit;li
    time.sql). Until that has run, MEET_V116 stays false and the time and
    agenda are neither shown nor written, so nothing breaks. */
 let MEET_V116=null;
+let MEET_AG_ED=null, MEET_AG_TXT=null, MEET_AG_OPEN=false;
+function meetAgEdit(key){
+  MEET_AG_ED=key; MEET_AG_TXT=null; momRedraw();
+  setTimeout(()=>{ const e=document.getElementById("meet-ag-ed"); if(!e) return; e.focus();
+    try{ const r=document.createRange(); r.selectNodeContents(e); r.collapse(false); const s=getSelection(); s.removeAllRanges(); s.addRange(r); }catch(_){} },60);
+}
+function meetAgCancel(){ MEET_AG_ED=null; MEET_AG_TXT=null; momRedraw(); }
+function meetAgSave(){
+  const e=document.getElementById("meet-ag-ed"); if(!e||!MOM.draft){ meetAgCancel(); return; }
+  const t=String(e.innerText||"").split(/\n+/).map(s=>s.replace(/^\s*[-•*·]\s*/,"").trim()).filter(Boolean).join("\n");
+  MEET_AG_ED=null; MEET_AG_TXT=null;
+  momSet("agenda",t);
+  if(MOM.timer){ clearTimeout(MOM.timer); MOM.timer=null; momSave(); }
+  momRedraw();
+}
 function meetV116Probe(){
   if(MEET_V116!==null||typeof sb==="undefined"||!sb) return;
   MEET_V116=false;
@@ -53755,6 +53770,8 @@ function meetDayLong(s){ const t=String(s||"").slice(0,10); if(!/^\d{4}-\d{2}-\d
       <span class="mom-fc" onclick="momFc('')">Done</span></div>`;
     return baseEd.apply(this,arguments);
   };
+  const baseLive=mlLive;
+  mlLive=function(id){ if(MEET_AG_ED&&MEET_AG_ED!==id){ MEET_AG_ED=null; MEET_AG_TXT=null; } return baseLive.apply(this,arguments); };
   const baseCard=mlCardHtml;
   mlCardHtml=function(x,o){
     let h=baseCard.apply(this,arguments);
@@ -53766,14 +53783,22 @@ function meetDayLong(s){ const t=String(s||"").slice(0,10); if(!/^\d{4}-\d{2}-\d
       if(!open) return h;
       const live=fresh||(MOM.id===x.id&&!!MOM.draft);
       const d=live?MOM.draft:x;
-      const fut=meetIsUp(d);
+      /* V118.137 — Chirag, 2 Nov (mockup 05): the agenda is pinned like a
+         task's Brief, Edit opens the message box inside it, and the box at
+         the foot always writes minutes. Nothing is locked by date. */
       const a=meetAgenda(d);
-      if(!a.length&&!fut) return h;
-      const block=`<div class="ml-agenda" onclick="event.stopPropagation()"><div class="k">Agenda${live?`<span class="ed" onclick="momFc('agenda')">${a.length?"Edit":"+ Add"}</span>`:""}</div>
-        ${a.length?a.map(l=>`<div class="l">${escHtml(l)}</div>`).join(""):live?`<div class="none" onclick="momFc('agenda')">What will you discuss?</div>`:`<div class="none">No agenda yet</div>`}
-        ${fut?`<div class="lock">Minutes open on ${escHtml(meetDayLong(d.held_on))}</div>`:""}</div>`;
+      const key=fresh?"new":x.id;
+      const editing=live&&canEdit()&&MEET_AG_ED===key;
+      const act=editing?`<span class="on">Editing</span>`
+        :`${live&&canEdit()?`<span onclick="event.stopPropagation();meetAgEdit('${escAttr(key)}')">${a.length?"Edit":"+ Add"}</span>`:""}${a.length>3?`<span onclick="event.stopPropagation();MEET_AG_OPEN=!MEET_AG_OPEN;momRedraw()">${MEET_AG_OPEN?"less":"more"}</span>`:""}`;
+      const txt=MEET_AG_TXT!=null?MEET_AG_TXT:a.map(escHtml).join("<br>");
+      const inner=editing
+        ? `<div class="ml-aged">${momFace(actorName(),actorKind())}<div class="mom-min-edit" id="meet-ag-ed" contenteditable="true" data-ph="One point a line…"
+             oninput="MEET_AG_TXT=this.innerHTML;fbMentionKey(event,'meet-ag-ed',activeBrand,true)" onkeydown="if(mentionKeyNav(event))return;">${txt}</div>
+             <span class="btn btn-sm ml-agc" onclick="event.stopPropagation();meetAgCancel()">Cancel</span><span class="btn btn-sm btn-k ml-ags" onclick="event.stopPropagation();meetAgSave()">Save</span></div>`
+        : `<div class="bx">${a.length?a.map(l=>`<div class="p">${escHtml(l)}</div>`).join(""):`<span class="nsdim">No agenda</span>`}</div>`;
+      const block=`<div class="br-pin bb ml-agpin${MEET_AG_OPEN||editing?" open":""}" onclick="event.stopPropagation()"><div class="lbl">Agenda<span class="act">${act}</span></div>${inner}</div><div class="br-start ml-agstart">Minutes</div>`;
       h=h.replace('<div class="ml-body">',block+'<div class="ml-body">');
-      if(fut) h=h.replace('class="mom-sheet ml-card','class="mom-sheet ml-card ml-fut');
     }catch(e){ console.warn("v118.116 card",e); }
     return h;
   };
@@ -53905,5 +53930,23 @@ function mentionPlace(){
   if(window.visualViewport) visualViewport.addEventListener("resize",()=>{ try{ mentionPlace(); }catch(e){} });
 })();
 </script>
+<style id="v118137-css">
+/* ══ V118.137 TBILISI · THE AGENDA IS PINNED LIKE A BRIEF ══════════════ */
+.ml-card .ml-agpin.br-pin.bb{margin:8px 0 2px;}
+.ml2-pane .ml-card .ml-agpin.br-pin.bb{margin:14px 20px 2px 80px;}
+.ml-card .ml-agstart{margin:14px 0 4px;max-width:none;}
+.ml2-pane .ml-card .ml-agstart{margin:14px 20px 4px 80px;}
+.ml-agpin .bx .p{position:relative;padding-left:12px;}
+.ml-agpin .bx .p:before{content:"•";position:absolute;left:0;color:var(--subtle);}
+.ml-agpin.br-pin.bb .lbl .act span.on{color:#fff;cursor:default;}
+.ml-aged{display:flex;gap:10px;align-items:flex-end;padding:10px 14px 12px;background:#F1EFEA;}
+.ml-aged > .nav-av{width:28px;height:28px;margin-bottom:6px;flex:none;}
+.ml-aged .mom-min-edit{flex:1;min-width:0;background:#fff;border:1px solid #0D0D0D;border-radius:12px;padding:9px 12px;min-height:40px;font-size:13.5px;line-height:1.6;outline:0;}
+.ml-aged .mom-min-edit:empty:before{content:attr(data-ph);color:var(--subtle);}
+.ml-aged .btn{flex:none;margin-bottom:4px;cursor:pointer;}
+.ml-aged .btn-k{background:#0D0D0D;color:#fff;border-color:#0D0D0D;}
+.ml-card .ml-agstart ~ .ml-body > .mom-rule,.ml-card .ml-agstart ~ .ml-body > .mom-slbl{display:none;}
+.ml-card.ml-fut .mom-newp,.ml-card.ml-fut .ml2-send{display:revert!important;}
+</style>
 </body>
 </html>
