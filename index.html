@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.138 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.139 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -12315,14 +12315,15 @@ function buildBrandingSidebar(){
   const addRow=kind=>BTS.add===kind?`<div class="mdb-trow menu" onclick="event.stopPropagation()"><input class="mdb-ren" id="bts-add" placeholder="${kind==="project"?"New project…":"New tag…"}"
         onkeydown="if(event.key==='Enter'){event.preventDefault();btsAdd('${kind}',this.value);}if(event.key==='Escape'){BTS.add=null;buildBrandingSidebar();}"
         onblur="if(!this.value.trim()){BTS.add=null;buildBrandingSidebar();}"></div>`:"";
-  const head=(kind,title)=>`<div class="s-lbl sb-head"${kind==="tag"?' style="margin-top:18px"':""}><span>${title}</span>${may?`<button class="mdb-tmb sb-plus" title="New ${kind}" onclick="btsAddOpen(event,'${kind}')"><i class="ti ti-plus"></i></button>`:""}</div>`;
+  const head=(kind,title)=>`<div class="s-lbl sb-head" style="margin-top:18px"><span>${title}</span>${may?`<button class="mdb-tmb sb-plus" title="New ${kind}" onclick="btsAddOpen(event,'${kind}')"><i class="ti ti-plus"></i></button>`:""}</div>`;
   const projects=(BR.projects||[]).slice().sort((a,b)=>(pc.get(b.id)||0)-(pc.get(a.id)||0)||a.name.localeCompare(b.name));
   const tags=(BR.tags||[]).slice().sort((a,b)=>(tc.get(b.id)||0)-(tc.get(a.id)||0)||a.name.localeCompare(b.name));
-  sm.innerHTML=head("project","Projects")+addRow("project")+
+  /* V118.139 — Chirag, 2 Nov: Favourites go on top (the Tasks panel is the standard for every listing page) */
+  sm.innerHTML=bfavHtml()+
+    head("project","Projects")+addRow("project")+
     `<div class="mdb-trow brgrp${brGroup?" on":""}" data-grouped onclick="brToggleGrouped()"><i class="ti ti-layout-rows"></i><span class="nm">Grouped</span><span class="sw${brGroup?" on":""}"></span></div>`+   /* V118.122 — "All tasks" retired: clearing the filters shows everything */
     projects.map(p=>row("project",p,pc.get(p.id)||0,pSel.includes(p.id))).join("")+
     (none?`<div class="mdb-trow${pNone?" on":""}" onclick="btsPickNone()"><span class="nm">No project</span><span class="ct">${none}</span></div>`:"")+
-    bfavHtml()+   /* V118.115 — favourites sit between Projects and Tags */
     head("tag","Tags")+addRow("tag")+
     (tags.length?tags.map(t=>row("tag",t,tc.get(t.id)||0,tSel.includes(t.id))).join("")
                 :`<div class="mdb-trow" style="color:var(--subtle);cursor:default">No tags yet</div>`);
@@ -12393,7 +12394,7 @@ function bfavHtml(){
         <div class="mdb-msep"></div>
         <div class="mdb-mi red" onclick="bfavRemove('${escAttr(x.id)}')"><i class="ti ti-x"></i>Remove</div></div>`:""}</div>`;
   };
-  return `<div class="s-lbl sb-head" style="margin-top:18px"><span>Favourites</span></div>`+bfavAll().map(row).join("");
+  return `<div class="s-lbl sb-head"><span>Favourites</span></div>`+bfavAll().map(row).join("");
 }
 function bfavMenu(e,id){ e.stopPropagation(); BFAV.menu=BFAV.menu===id?null:id; buildBrandingSidebar(); }
 document.addEventListener("click",e=>{
@@ -14607,7 +14608,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.138 Tbilisi";
+const TOOL_VERSION="V118.139 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
