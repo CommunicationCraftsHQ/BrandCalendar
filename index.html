@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.151 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.152 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14759,7 +14759,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.151 Tbilisi";
+const TOOL_VERSION="V118.152 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -55001,6 +55001,156 @@ function xcAdd(id){
     }).join("");
     return `<div class="xs-lb">${escHtml(b.name||"")}</div>${secs}`;
   };
+})();
+</script>
+<style id="v118152-css">
+/* ══ V118.152 TBILISI · EVERY CARD BELOW THE CALENDAR WORKS THE SAME WAY ══
+   Chirag, 3 Nov (mockup 02): Scope of work, Minutes of meeting and every
+   month are one kind of card — white, a 48px header line with ▸/▾ on the
+   left, opened and closed by its header, several open at once, and the
+   page never moves when one opens. Only this month is pink. */
+.v152-cv{display:inline-block;width:12px;flex:none;color:var(--subtle);font-size:11px;font-style:normal;line-height:1;transition:transform .15s;}
+#main .plpage .mpv-eng.pl-eng:not(.pt-momw){padding-bottom:0!important;}
+/* the three cards: one face */
+#main .plpage .eng-sec,#main .plpage .pt-mom,#main .plpage .pl-sheets > .pl-sheet.v152c{
+  background:#fff!important;border:1px solid var(--div)!important;border-radius:12px!important;
+  box-shadow:none!important;-webkit-backdrop-filter:none;backdrop-filter:none;overflow:hidden;}
+#main .plpage .eng-sec,#main .plpage .pt-momw{margin-bottom:8px!important;}
+#main .plpage .pt-momw.mpv-eng{margin-top:0!important;padding-bottom:0!important;}
+#main .plpage .pt-mom{cursor:default;padding:0!important;}
+#main .plpage .pt-mom:hover{box-shadow:none!important;}
+/* one header line */
+#main .plpage .eng-strip,#main .plpage .pt-momh,#main .plpage .pl-sheet.v152c > .pl-mline{
+  min-height:48px;padding:6px 16px!important;box-sizing:border-box;cursor:pointer;}
+#main .plpage .eng-strip .bd-chev{display:none;}
+#main .plpage .pt-momh .pt-all{cursor:pointer;}
+#main .plpage .pt-mom .pt-well{margin:0 16px 14px;}
+#main .plpage .pt-mom.v152o .pt-momh{border-bottom:0;}
+/* a month: the line is the header, the month opens under it */
+#main .plpage .pl-sheets > .pl-sheet.v152c{margin-bottom:8px!important;}
+#main .plpage .pl-sheet.v152c > .pl-mline{border:0!important;border-radius:0!important;background:transparent;box-shadow:none!important;}
+#main .plpage .pl-sheet.v152c > .pl-mline .cvr{display:none;}
+#main .plpage .pl-sheet.v152c > .pl-mline .mvn{align-items:center;}
+#main .plpage .pl-sheet.v152c.pl-open > .pl-mline{border-bottom:1px solid var(--div)!important;}
+#main .plpage .pl-sheet.v152c > .pl-top{background:#fff!important;padding:4px 0 0!important;border:0!important;}
+#main .plpage .pl-sheet.v152c .mp-hero{background:#fff!important;border:0!important;box-shadow:none!important;border-radius:0!important;}
+#main .plpage .pl-sheet.v152c .mp-hero .mp-hr,#main .plpage .pl-sheet.v152c .mp-hero .mp-status,#main .plpage .pl-sheet.v152c .mp-hero .mp-edit{background:#fff!important;}
+/* only this month is pink */
+#main .plpage .pl-sheet.v152c.v152now{border-color:#E9D6E1!important;}
+#main .plpage .pl-sheet.v152c.v152now > .pl-mline{background:linear-gradient(90deg,#FBF1F5,#F7EEF3)!important;}
+@media(max-width:1140px){#main .plpage .pl-sheet.v152c > .pl-mline{grid-template-columns:124px minmax(0,1fr) auto;}}
+#main .plpage .pl-early-line{min-height:48px;box-sizing:border-box;margin-bottom:8px;}
+</style>
+<script>
+/* ══ V118.152 TBILISI ═══════════════════════════════════════════════════ */
+(function(){
+  const CV=o=>`<i class="v152-cv${o?" open":""}">${o?"▾":"▸"}</i>`;
+
+  /* 1 · the pink in the strip marks today's month, wherever you scroll */
+  if(typeof plDrawStrip==="function"){
+    const baseStrip=plDrawStrip;
+    plDrawStrip=function(){
+      const out=baseStrip.apply(this,arguments);
+      try{
+        const el=document.getElementById("pl-strip"); if(!el) return out;
+        const t=new Date(), ty=t.getFullYear(), tm=t.getMonth()+1, sel=plSel();
+        [...el.children].forEach((c,i)=>{
+          const [y,m]=mcAdd(YEAR,sel,i);
+          c.classList.toggle("pl-hero",y===ty&&m===tm);
+        });
+      }catch(e){ console.warn("v118.152 strip",e); }
+      return out;
+    };
+  }
+
+  /* 2 · keep the page still: whatever header was clicked stays where it was */
+  function still(sel,fn){
+    const main=document.getElementById("main");
+    const a=sel&&document.querySelector(sel);
+    const top0=(a&&main)?a.getBoundingClientRect().top:null, st0=main?main.scrollTop:0;
+    if(typeof PLJUMP!=="undefined") try{ PLJUMP=false; }catch(e){}
+    fn();
+    const fix=()=>{ const m2=document.getElementById("main"); if(!m2) return;
+      const b=sel&&document.querySelector(sel);
+      if(b&&top0!=null) m2.scrollTop+=b.getBoundingClientRect().top-top0; else m2.scrollTop=st0; };
+    fix(); requestAnimationFrame(fix);
+  }
+
+  /* 3 · Scope of work */
+  const baseEng=engHtml;
+  engHtml=function(){
+    let h=baseEng.apply(this,arguments);
+    h=h.replace(/Engagement &amp; scope/g,"Scope of work");
+    h=h.replace('<div class="eng-strip" onclick="engToggle(event)">',`<div class="eng-strip" onclick="engToggle(event)">${CV(ENG_OPEN)}`);
+    return h;
+  };
+  const baseEngT=engToggle;
+  engToggle=function(e){ const args=arguments; still("#bd-scope",()=>baseEngT.apply(this,args)); };
+
+  if(typeof xpScopeHtml==="function"){ const bx=xpScopeHtml;
+    xpScopeHtml=function(){ return String(bx.apply(this,arguments)).replace(/Engagement &amp; scope/g,"Scope of work"); }; }
+
+  /* 4 · Minutes of meeting folds like the others */
+  const momKey=()=>"cc.mom.open."+(activeBrand||"");
+  window.v152MomOpen=function(){ try{ return localStorage.getItem(momKey())!=="0"; }catch(e){ return true; } };
+  window.v152MomToggle=function(e){
+    if(e) e.stopPropagation();
+    const o=!v152MomOpen();
+    try{ localStorage.setItem(momKey(),o?"1":"0"); }catch(err){}
+    still("#pt-mom",()=>render());
+  };
+  if(typeof plMomCardHtml==="function"){
+    const baseMom=plMomCardHtml;
+    plMomCardHtml=function(){
+      let h=baseMom.apply(this,arguments); if(!h) return h;
+      const o=v152MomOpen();
+      h=h.replace(' onclick="mlOpen()" title="Every meeting with this brand, on one page"',o?' data-v152="1"':"");
+      h=h.replace('class="bd-card pt-mom','class="bd-card pt-mom'+(o?" v152o":""));
+      h=h.replace('<div class="pt-momh">',`<div class="pt-momh" onclick="v152MomToggle(event)">${CV(o)}`);
+      h=h.replace('<span class="pt-all">','<span class="pt-all" onclick="event.stopPropagation();mlOpen()" title="Every meeting with this brand, on one page">');
+      if(!o) h=h.replace(/<div class="pt-well">[\s\S]*<\/div><\/div>\s*<\/div><\/div>$/,"</div></div>");
+      return h;
+    };
+  }
+
+  /* 5 · months: several open at once, remembered per brand */
+  let OPEN=null;
+  const key=()=>"plOpenMonths:"+(activeBrand||"-");
+  function openSet(){
+    if(OPEN) return OPEN;
+    let raw=null; try{ raw=localStorage.getItem(key()); }catch(e){}
+    if(raw!=null){ try{ OPEN=new Set((JSON.parse(raw)||[]).map(Number).filter(Boolean)); return OPEN; }catch(e){} }
+    /* first visit: this month open, as before */
+    const t=new Date(), months=mpvMonthsWithPlan(), now=t.getMonth()+1;
+    OPEN=new Set((YEAR===t.getFullYear()&&months.indexOf(now)>=0)?[now]:(months.length?[months[0]]:[]));
+    return OPEN;
+  }
+  function save(){ try{ localStorage.setItem(key(),JSON.stringify([...openSet()])); }catch(e){} }
+  window.plIsOpen=m=>openSet().has(m);
+  /* other callers ask "which month is open": this month if it is, else the first open one */
+  plMonthOpen=function(){
+    const s=openSet(), now=(new Date()).getMonth()+1;
+    if(YEAR===(new Date()).getFullYear()&&s.has(now)) return now;
+    return [...s].sort((a,b)=>a-b)[0]||0;
+  };
+  plMonthSet=function(m){ if(m){ openSet().add(m); save(); } };
+  plMonthToggle=function(m){
+    const s=openSet(); s.has(m)?s.delete(m):s.add(m); save();
+    still("#mpv-m"+m,()=>render());
+  };
+  const baseLine=plMonthLineHtml;
+  plMonthLineHtml=function(m){
+    return baseLine.apply(this,arguments).replace('<div class="mvn">',`<div class="mvn">${CV(plIsOpen(m))}`);
+  };
+  plSheetHtml=function(m,canE){
+    const open=plIsOpen(m);
+    return `<div class="mpv-sheet pl-sheet v152c${open?" pl-open":" pl-fold"}${mpIsNowMonth(m)?" v152now":""}" data-month="${m}" id="mpv-m${m}">
+      ${plMonthLineHtml(m)}
+      ${open?`<div class="mpv-top pl-top">${monthPlanCardHtml(m,{wide:true})}<div class="mpchips"></div></div>`:""}
+    </div>`;
+  };
+  const basePick=pickBrand;
+  pickBrand=function(){ OPEN=null; return basePick.apply(this,arguments); };
 })();
 </script>
 </body>
