@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.145 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.146 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -5995,6 +5995,15 @@ select.pr-fv.cc-stsel{height:34px;padding:0 28px 0 10px;background-color:#fff;}
   .xa-chips button small{margin-left:4px;opacity:.6;}
 }
 </style>
+<style>
+/* ══ V118.146 TBILISI · GETTING HOME ON A PHONE ═════════════════════════
+   Chirag, 3 Nov 08:25–08:34, mockup "01 - Getting home on phone", A + 2:
+   on All brands the bottom bar is Home · Mood boards · Ac Mgmt (the desk's
+   three All-brands tabs); inside a brand it stays the brand's pages; the
+   round logo at top-left goes home from anywhere, and the tool switcher
+   it used to open moves into the account menu. */
+@media(min-width:769px){ #acct-tools-row{display:none!important;} }
+</style>
 </head>
 <body class="mf-framed">
 
@@ -6138,6 +6147,7 @@ select.pr-fv.cc-stsel{height:34px;padding:0 28px 0 10px;background-color:#fff;}
              Retired: Carry forward, the Playbooks flyout (Help desk opens the
              same screen), Storage sweep, Back up now (the daily backup is
              automatic and the alarm bar keeps its own button). -->
+        <div class="brow" id="acct-tools-row" onclick="closeAllPops();mfTools(event)"><i class="ti ti-apps"></i><span class="bnm">Switch tool</span></div>
         <div class="brow" data-need="lists" id="acct-lists-row" onclick="closeAllPops();openMasterLists()"><i class="ti ti-list-details"></i><span class="bnm">Master lists</span></div>
         <div class="brow" data-need="iolog" id="acct-io-row" onclick="closeAllPops();openIoLog()"><i class="ti ti-arrows-exchange"></i><span class="bnm">Imports &amp; exports</span></div>
         <div class="brow" data-need="trashhist" id="acct-th-row" onclick="closeAllPops();openTrashHistory()"><i class="ti ti-history"></i><span class="bnm">Trash &amp; history</span></div>
@@ -14717,7 +14727,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.145 Tbilisi";
+const TOOL_VERSION="V118.146 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -54249,7 +54259,7 @@ function xhTiles(){
   const html=`<button class="mft flip" onclick="xhFlip()" aria-label="Calendar or events"><span class="sw"><i class="ti ti-calendar${ev?"":" on"}"></i><i class="ti ti-list${ev?" on":""}"></i></span><span class="lb">${ev?"Events":"Calendar"}</span></button>`+
     (ev?"":`<button class="mft" onclick="xhSheet('layers')"><i class="ti ti-stack-2"></i><span>Layers</span></button>`)+
     `<button class="mft" onclick="xhCats()"><i class="ti ti-filter"></i><span>Categories</span></button>`+
-    (xhMore().length?`<button class="mft" onclick="xhSheet('more')"><i class="ti ti-dots"></i><span>More</span></button>`:"");
+    (xhMore().length&&!(typeof xgOn==="function"&&xgOn())?`<button class="mft" onclick="xhSheet('more')"><i class="ti ti-dots"></i><span>More</span></button>`:"");
   const tl=document.getElementById("xh-tl");
   if(!tl) sub.insertAdjacentHTML("afterbegin",`<div id="xh-tl">${html}</div>`);
   else { if(tl.innerHTML!==html) tl.innerHTML=html; if(sub.firstElementChild!==tl) sub.insertBefore(tl,sub.firstChild); }
@@ -54362,7 +54372,7 @@ function xaTiles(){
   const sub=document.getElementById("mf-sub"); if(!sub) return;
   const so=AC.tab==="people"?AC.sortP:AC.sort, sl=(xaSorts().find(([k])=>k===so)||[,"Sort"])[1];
   const nf=(AC.f||[]).filter(fltActive).length+(AC.q.trim()?1:0)+(AC.tab==="health"?1:0);
-  const html=xtTile("ti-arrow-left","Home","xnSheetClose();goHome()")+xtTile("ti-user-star",xaAMLabel(),"xaSheet('am')")+
+  const html=((typeof xgOn==="function"&&xgOn())?"":xtTile("ti-arrow-left","Home","xnSheetClose();goHome()"))+xtTile("ti-user-star",xaAMLabel(),"xaSheet('am')")+
     xtTile("ti-adjustments-horizontal","Filter","xaSheet('filter')",nf)+xtTile("ti-arrows-sort",escHtml(sl),"xaSheet('sort')");
   const tl=document.getElementById("xa-tl");
   if(!tl) sub.insertAdjacentHTML("afterbegin",`<div id="xa-tl">${html}</div>`);
@@ -54653,6 +54663,49 @@ async function prfavRemove(id){
     if(v==="promotions"&&prfavOn()) return {render:renderPromotions,sidebar:buildPromotionsSidebar,needs:"view_promotions"};
     return base(v);
   };
+})();
+</script>
+<script>
+/* ══ V118.146 TBILISI · GETTING HOME ON A PHONE (see the style above) ══ */
+function xgClient(){ return typeof brIsClient==="function"&&brIsClient(); }
+function xgTabs(){
+  const out=[["home","ti-calendar","Home","xgHome()",["year","list"]]];
+  if(typeof mbgMay==="function"&&mbgMay()) out.push(["mood","ti-layout-board","Mood boards","mbgOpen()",["mood"]]);
+  if(typeof acMay==="function"&&acMay()) out.push(["ac","ti-briefcase","Ac Mgmt","acGo()",["accounts"]]);
+  return out;
+}
+/* All brands has its own bar when there is more than Home to put in it */
+function xgOn(){ return typeof mfNarrow==="function"&&mfNarrow()&&!(activeBrand&&brands[activeBrand])&&!xgClient()&&xgTabs().length>1; }
+function xgHome(){
+  try{ closeAllPops(); }catch(e){}
+  try{ if(typeof xnSheetClose==="function") xnSheetClose(); }catch(e){}
+  if(activeBrand&&brands[activeBrand]) pickBrand("");
+  goHome();
+  const m=document.getElementById("main"); if(m) m.scrollTop=0;
+}
+function xgLogo(e){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  if(xgClient()) return mfTools(e);
+  xgHome();
+}
+(function(){
+  const base=mfTabsFill;
+  mfTabsFill=function(){
+    if(!xgOn()) return base.apply(this,arguments);
+    const el=document.getElementById("mf-tabs"); if(!el) return;
+    const html=xgTabs().map(([k,ic,l,go,on])=>{
+      const lit=on.indexOf(view)>-1&&!(k==="mood"&&!(typeof mbgOn==="function"&&mbgOn()));
+      return `<button class="mf-tab${lit?" on":""}" data-mf="${k}" aria-current="${lit?"page":"false"}" onclick="event.stopPropagation();closeAllPops();${go}"><i class="ti ${ic}"></i><span>${l}</span></button>`;
+    }).join("");
+    if(el.innerHTML!==html) el.innerHTML=html;
+  };
+  /* the round logo goes home */
+  const logo=document.querySelector(".nav.mf .mf-tool");
+  if(logo){ logo.setAttribute("onclick","xgLogo(event)"); logo.setAttribute("aria-label","Home"); }
+  const r=render;
+  render=function(){ const out=r.apply(this,arguments); try{ mfTabsFill(); }catch(e){} return out; };
+  window.addEventListener("resize",()=>{ try{ mfTabsFill(); }catch(e){} });
+  try{ mfTabsFill(); }catch(e){}
 })();
 </script>
 </body>
