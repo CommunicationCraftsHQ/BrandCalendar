@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.148 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.150 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14727,7 +14727,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.148 Tbilisi";
+const TOOL_VERSION="V118.150 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -53908,12 +53908,12 @@ function meetDayLong(s){ const t=String(s||"").slice(0,10); if(!/^\d{4}-\d{2}-\d
     const row=showPast.map(tile).join("")+((showPast.length&&showUp.length)?`<div class="pt-now"><span>Today</span></div>`:"")+showUp.map(tile).join("");
     const chip2=up.length?`<span class="bd-chip">Next on ${escHtml(meetDayLong(up[0].held_on))}</span>`
       :past.length?`<span class="bd-chip">Last on ${escHtml(meetDayLong(past[past.length-1].held_on))}</span>`:"";
-    return `<div class="mpv-eng pl-eng pt-momw"><div class="bd-card pt-mom" id="pt-mom" onclick="mlOpen()" title="Every meeting with this brand, on one page">
+    return `<div class="mpv-eng pl-eng pt-momw"><div class="bd-card pt-mom${all.length?"":" pt-mom0"}" id="pt-mom" onclick="mlOpen()" title="Every meeting with this brand, on one page">
       <div class="pt-momh"><span class="bd-lbl" style="margin:0;">Minutes of meeting</span>
         <span class="bd-chip">${all.length} meeting${all.length===1?"":"s"} in ${YEAR}</span>${chip2}
         ${canE?`<span class="pt-log" onclick="event.stopPropagation();plMeetOpen(null,${m})">+ Add a meeting</span>`:""}
         <span class="pt-all">All meetings <i class="ti ti-chevron-right"></i></span></div>
-      ${all.length?`<div class="pt-well"><div class="pt-row">${row}</div></div>`:`<div class="pt-momnone">No meeting added for this brand in ${YEAR} yet.</div>`}
+      ${all.length?`<div class="pt-well"><div class="pt-row">${row}</div></div>`:""}
     </div></div>`;
   };
 
@@ -54786,6 +54786,123 @@ document.addEventListener("error",e=>{
     try{ (MDB.items||[]).filter(mdbFixDue).forEach(x=>mdbFixQueue(x.id)); }catch(e){}
     return out;
   };
+})();
+</script>
+<style id="v118149-css">
+/* ══ V118.149 TBILISI · THE MONTH LIST IN CALENDAR ORDER ══════════════
+   Chirag, 3 Nov (mockup 01): the months run January to December and
+   never change places; older months fold into one "Earlier" line; an
+   empty meetings card is one thin line. */
+.pt-momw .pt-mom.pt-mom0{padding-bottom:12px;}
+.pl-now-tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.02em;color:#C2185B;background:#FCE4EC;border-radius:999px;padding:2px 8px;margin-right:8px;font-style:normal;vertical-align:1px;}
+.pl-mhd .pl-now-tag{margin:0 0 0 10px;align-self:center;white-space:nowrap;flex:none;}
+.pl-mhd .mpv-mo{white-space:nowrap;}
+.pl-sheets .pl-old{display:none;}
+.pl-sheets.pl-early .pl-old{display:block;}
+.pl-early-line{display:flex;align-items:center;gap:10px;background:#F6F4EF;border:1px dashed #D6D2C8;border-radius:12px;padding:11px 15px;cursor:pointer;font-size:12.5px;color:var(--muted);}
+.pl-early-line:hover{border-color:#C9C3B6;}
+.pl-early-line b{font-size:14px;color:var(--text);}
+.pl-early-line .go{margin-left:auto;color:var(--acc);font-weight:700;}
+.pl-early-line .ti{font-size:14px;color:var(--subtle);}
+</style>
+<script>
+/* ══ V118.149 TBILISI ═══════════════════════════════════════════════════ */
+let PL_EARLY=false;
+function plEarlyToggle(){ PL_EARLY=!PL_EARLY; render(); }
+(function(){
+  /* 1 · the sheets run January → December; picking a month no longer
+         moves it to the top (the picked-first rule of V109.4 is undone
+         here, for the sheets only — every other caller keeps its order) */
+  const baseMonths=mpvMonthsWithPlan;
+  mpvMonthsWithPlan=function(){
+    const out=baseMonths.apply(this,arguments);
+    if(typeof PL_SHEETS!=="undefined"&&PL_SHEETS&&typeof plOn==="function"&&plOn()) return out.slice().sort((a,b)=>a-b);
+    return out;
+  };
+  /* 2 · "This month", and the months more than three back fold into one line */
+  const baseRender=renderMonthPlanView;
+  renderMonthPlanView=function(){
+    const out=baseRender.apply(this,arguments);
+    try{
+      if(typeof plOn!=="function"||!plOn()) return out;
+      const box=document.querySelector("#main .pl-sheets"); if(!box) return out;
+      const sheets=[...box.querySelectorAll(":scope > .mpv-sheet[data-month]")];
+      sheets.forEach(s=>{
+        const m=Number(s.getAttribute("data-month"));
+        if(!mpIsNowMonth(m)||s.querySelector(".pl-now-tag")) return;
+        const tag=`<span class="pl-now-tag">This month</span>`;
+        const mvo=s.querySelector(".pl-mline .mvo"); if(mvo) mvo.insertAdjacentHTML("afterbegin",tag);
+      });
+      const t=new Date(), ty=t.getFullYear();
+      const cut=YEAR<ty?10:YEAR===ty?(t.getMonth()+1)-3:0;   /* months below this fold */
+      const open=plMonthOpen();
+      const old=sheets.filter(s=>{ const m=Number(s.getAttribute("data-month")); return m<cut; });
+      if(old.length>=2){
+        if(old.some(s=>Number(s.getAttribute("data-month"))===open)) PL_EARLY=true;
+        old.forEach(s=>s.classList.add("pl-old"));
+        const ms=old.map(s=>Number(s.getAttribute("data-month")));
+        const span=ms.length>1?`${MN[ms[0]]} – ${MN[ms[ms.length-1]]} ${YEAR}`:`${MN[ms[0]]} ${YEAR}`;
+        const line=document.createElement("div");
+        line.className="pl-early-line"; line.setAttribute("onclick","plEarlyToggle()");
+        line.innerHTML=`<i class="ti ti-chevron-${PL_EARLY?"down":"right"}"></i><b>Earlier</b><span>${span} · ${ms.length} months</span><span class="go">${PL_EARLY?"Hide":"Show"}</span>`;
+        box.insertBefore(line,old[0]);
+        box.classList.toggle("pl-early",PL_EARLY);
+      }
+    }catch(e){ console.warn("v118.149",e); }
+    return out;
+  };
+  /* a new brand starts with the earlier months folded again */
+  const basePick=pickBrand;
+  pickBrand=function(){ PL_EARLY=false; return basePick.apply(this,arguments); };
+})();
+</script>
+<style id="v118150-css">
+/* ══ V118.150 TBILISI · THE STRIP STARTS ON THIS MONTH, ACROSS THE YEAR END ══ */
+#pl-strip > .month-card .mc-yr{font-size:11px;color:var(--subtle);font-weight:700;margin-left:6px;}
+#pl-strip > .month-card.pl-ny{cursor:pointer;}
+</style>
+<script>
+/* ══ V118.150 TBILISI ═══════════════════════════════════════════════════
+   Chirag, 3 Nov (mockup 01, option A): "The current month should always
+   be first by default until you manually slide." The four cards start on
+   the picked month (this month when the page opens) and run on into the
+   next year when December comes before the fourth card — the same
+   year-crossing the All brands calendar already does (mcWith). A card
+   from the next year opens that year when clicked. */
+(function(){
+  plWin=function(){ return plSel(); };
+  plDrawStrip=function(){
+    const el=document.getElementById("pl-strip"); if(!el) return;
+    el.innerHTML="";
+    const sel=plSel(); let spill=0;
+    for(let i=0;i<4;i++){
+      const [y,m]=mcAdd(YEAR,sel,i);
+      let card;
+      if(y===YEAR){ card=buildMini(m); if(m===sel) card.classList.add("pl-hero"); }
+      else{
+        spill=y;
+        card=mcWith(y,()=>buildMini(m));
+        card.dataset.y=y; card.dataset.m=m; card.classList.add("pl-ny");
+        if(m===1){ const nm=card.querySelector(".mc-name"); if(nm&&!nm.querySelector(".mc-yr")) nm.insertAdjacentHTML("beforeend",`<span class="mc-yr">${y}</span>`); }
+      }
+      el.appendChild(card);
+    }
+    /* the next year's posts for this brand, fetched once, then drawn */
+    if(spill&&activeBrand&&typeof socEnsure==="function"){
+      const k=activeBrand+"|"+spill;
+      if(typeof SOC_LOADED!=="undefined"&&SOC_LOADED[k]!=="all"&&!(typeof SOC_BUSY!=="undefined"&&SOC_BUSY[k]))
+        socEnsure(activeBrand,spill).then(()=>{ try{ if(plOn()&&PLMODE!=="events") plDrawStrip(); }catch(e){} });
+    }
+    plRange();
+  };
+  /* a card from next year: go to that year, with that month picked */
+  document.addEventListener("click",e=>{
+    const c=e.target&&e.target.closest&&e.target.closest("#pl-strip > .month-card.pl-ny");
+    if(!c) return;
+    e.stopPropagation(); e.preventDefault();
+    const y=parseInt(c.dataset.y), m=parseInt(c.dataset.m);
+    if(y===YEAR+1&&typeof plCanYear==="function"&&plCanYear(1)) plYearGo(1,m);
+  },true);
 })();
 </script>
 </body>
