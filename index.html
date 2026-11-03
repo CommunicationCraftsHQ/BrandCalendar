@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.158 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.159 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14778,7 +14778,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.158 Tbilisi";
+const TOOL_VERSION="V118.159 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -55698,6 +55698,128 @@ async function mdbReplacePic(id,file){
 .mdb-dw.mdb-ig .mdb-dwimg{background:#fafafa;align-items:flex-start;overflow-y:auto;}
 .mdb-dw.mdb-ig .mdb-dwimg iframe{width:min(540px,100%);height:100%;min-height:720px;margin:0 auto;display:block;background:#fff;}
 </style>
+
+<style id="v118159-css">
+/* ══ V118.159 TBILISI · FIX INSTAGRAM PICTURES ══ */
+.mfx-ov{position:fixed;inset:0;z-index:2000;background:#fff;display:flex;flex-direction:column;align-items:center;}
+.mfx-top{width:100%;display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--div);font-size:13.5px;}
+.mfx-top b{font-size:14px;} .mfx-top .sp{flex:1;}
+.mfx-fr{margin-top:24px;width:400px;height:calc(100vh - 110px);border:0;background:#fff;}
+</style>
+<script id="v118159">
+/* ══ V118.159 TBILISI · FIX INSTAGRAM PICTURES, ONE CLICK PER BOARD ═════
+   Chirag, 4 Nov 05:00: he fixed a cropped Instagram tile by screenshotting
+   the opened post and putting it back with Replace picture — "can you
+   automate this instead of me doing this manually?" Instagram gives no
+   allowed way to fetch the whole picture (link readers get a square cut;
+   Meta's oEmbed stopped returning pictures on 3 Nov 2025), so the board
+   does what he did: with his one "Share this tab" consent, it opens each
+   square Instagram reference as Instagram's own post, takes the picture
+   off the screen, and saves it with Replace picture.
+   THE CROP: the post frame is a white header, the picture, a white footer.
+   The top is the first row past the header that is mostly not white; the
+   height is read the same way, then snapped to the nearest shape
+   Instagram allows (1.91:1, 1:1, 4:5, 3:4, 9:16). A crop that still comes
+   out wrong is fixed by hand with Replace picture. A fixed picture is
+   saved as …/ig-full.jpg and is not offered again. */
+const MFX={run:false,stop:false,stream:null,video:null};
+function mfxTodo(){
+  return (MDB.items||[]).filter(x=>mdbIgEmbed(x)&&!/\/ig-full[^/]*\.jpg$/.test(x.thumb_path||"")
+    &&(!x.thumb_path||!x.width||!x.height||x.width===x.height));
+}
+(function(){
+  const base=mdbBar;
+  mdbBar=function(){
+    const out=base.apply(this,arguments);
+    try{
+      const bar=document.getElementById("mdb-bar");
+      if(bar&&!MDB.sel&&MDB.ok&&!bar.querySelector(".mfx-go")){
+        const n=mfxTodo().length;
+        const end=bar.querySelector(".fb-end");
+        if(n&&end&&navigator.mediaDevices&&navigator.mediaDevices.getDisplayMedia)
+          end.insertAdjacentHTML("afterbegin",`<button class="fb-add mfx-go" onclick="mfxStart()" title="Replace Instagram's square cuts with the whole post"><i class="ti ti-brand-instagram"></i>Fix Instagram pictures (${n})</button>`);
+      }
+    }catch(e){}
+    return out;
+  };
+})();
+async function mfxStart(){
+  if(MFX.run) return;
+  const list=mfxTodo(); if(!list.length) return;
+  let stream;
+  try{
+    stream=await navigator.mediaDevices.getDisplayMedia({video:{displaySurface:"browser",frameRate:5},audio:false,preferCurrentTab:true,selfBrowserSurface:"include"});
+  }catch(e){ toast("Not started — Chrome needs “Share this tab” to take the pictures","err"); return; }
+  MFX.run=true; MFX.stop=false; MFX.stream=stream;
+  const v=document.createElement("video"); v.muted=true; v.playsInline=true; v.srcObject=stream; await v.play().catch(()=>{}); MFX.video=v;
+  stream.getVideoTracks()[0].addEventListener("ended",()=>{ MFX.stop=true; });
+  if(MDB.open) mdbClose(true);
+  document.body.insertAdjacentHTML("beforeend",`<div class="mfx-ov" id="mfx-ov"><div class="mfx-top"><i class="ti ti-brand-instagram"></i><b>Fixing Instagram pictures</b><span id="mfx-n"></span><span class="sp"></span>
+    <button class="btn btn-s btn-sm" onclick="MFX.stop=true">Stop</button></div><iframe class="mfx-fr" id="mfx-fr" scrolling="no"></iframe></div>`);
+  let ok=0, bad=0, i=0;
+  for(const x of list){
+    if(MFX.stop) break; i++;
+    const n=document.getElementById("mfx-n"); if(n) n.textContent=`${i} of ${list.length}`;
+    try{ if(await mfxOne(x)) ok++; else bad++; }catch(e){ bad++; }
+  }
+  try{ stream.getTracks().forEach(t=>t.stop()); }catch(e){}
+  const ov=document.getElementById("mfx-ov"); if(ov) ov.remove();
+  MFX.run=false; MFX.stream=null; MFX.video=null;
+  mdbRefresh();
+  toast(`${ok} picture${ok===1?"":"s"} fixed${bad?` · ${bad} could not be read — use Replace picture on those`:""}`,bad&&!ok?"err":"");
+}
+function mfxWait(ms){ return new Promise(r=>setTimeout(r,ms)); }
+async function mfxOne(x){
+  const fr=document.getElementById("mfx-fr"); if(!fr) return false;
+  await new Promise(res=>{ const t=setTimeout(res,8000); fr.onload=()=>{ clearTimeout(t); res(); }; fr.src=mdbIgEmbed(x); });
+  await mfxWait(2500);
+  const v=MFX.video; if(!v||!v.videoWidth) return false;
+  const r=fr.getBoundingClientRect();
+  const sx=v.videoWidth/window.innerWidth, sy=v.videoHeight/window.innerHeight;
+  const W=Math.round(r.width*sx), H=Math.round(r.height*sy);
+  const c=document.createElement("canvas"); c.width=W; c.height=H;
+  const g=c.getContext("2d",{willReadFrequently:true});
+  g.drawImage(v,Math.round(r.left*sx),Math.round(r.top*sy),W,H,0,0,W,H);
+  const box=mfxFind(g,W,H); if(!box) return false;
+  const o=document.createElement("canvas"); o.width=box.w; o.height=box.h;
+  o.getContext("2d").drawImage(c,box.x,box.y,box.w,box.h,0,0,box.w,box.h);
+  const blob=await new Promise(res=>o.toBlob(res,"image/jpeg",0.9)); if(!blob) return false;
+  return await mfxSave(x,blob,box.w,box.h);
+}
+/* where the picture sits inside the post frame */
+function mfxFind(g,W,H){
+  const d=g.getImageData(0,0,W,H).data;
+  const rowInk=y=>{ let n=0; for(let x=0;x<W;x+=2){ const k=(y*W+x)*4; if(d[k]<236||d[k+1]<236||d[k+2]<236) n++; } return n/Math.ceil(W/2); };
+  const colInk=(x,y0,y1)=>{ let n=0; for(let y=y0;y<y1;y+=2){ const k=(y*W+x)*4; if(d[k]<236||d[k+1]<236||d[k+2]<236) n++; } return n/Math.ceil((y1-y0)/2); };
+  const start=Math.round(H*0.04);
+  let top=-1; for(let y=start;y<H;y++){ if(rowInk(y)>0.6){ top=y; break; } }
+  if(top<0) return null;
+  let bot=top, white=0;
+  for(let y=top;y<H;y++){ if(rowInk(y)>0.45){ bot=y; white=0; } else if(++white>Math.max(8,H*0.012)) break; }
+  /* the picture's left and right edges (the frame has a thin border) */
+  let l=0, rr=W-1; const mid=Math.min(H,top+Math.max(10,(bot-top)>>1));
+  while(l<W/4&&colInk(l,top,mid)<0.5) l++;
+  while(rr>W*3/4&&colInk(rr,top,mid)<0.5) rr--;
+  const w=rr-l+1; if(w<W*0.6) return null;
+  const seen=(bot-top+1)/w;
+  const shapes=[1/1.91,1,1.25,4/3,16/9];
+  let best=shapes[0]; shapes.forEach(s=>{ if(Math.abs(s-seen)<Math.abs(best-seen)) best=s; });
+  const h=Math.round(w*best);
+  if(top+h>H+2) return null;
+  return {x:l,y:top,w,h:Math.min(h,H-top)};
+}
+async function mfxSave(x,blob,w,h){
+  const s=await mdbShrink(new File([blob],"ig.jpg",{type:"image/jpeg"}),1600);
+  const out=s&&s.blob?s:{blob,w,h};
+  const home=x.board_id?("boards/"+x.board_id):(x.brand_id||activeBrand);
+  const p=await putObject(`${home}/mood/${x.id}/ig-full-${Date.now().toString(36)}.jpg`,out.blob,"image/jpeg");
+  if(!p.path) return false;
+  const r=await sb.from("mood_items").update({thumb_path:p.path,width:out.w,height:out.h,updated_at:new Date().toISOString()}).eq("id",x.id).select("id");
+  if(r.error) return false;
+  (MDB.items||[]).forEach(y=>{ if(y.id===x.id){ y.thumb_path=p.path; y.width=out.w; y.height=out.h; } });
+  return true;
+}
+</script>
 
 </body>
 </html>
