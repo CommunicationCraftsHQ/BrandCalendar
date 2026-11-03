@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.144 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.145 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14717,7 +14717,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.144 Tbilisi";
+const TOOL_VERSION="V118.145 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -30838,6 +30838,7 @@ function prListHtml(){
       <input class="fi brfb-q prfb-q" placeholder="Search promotions…" value="${escAttr(PR.q||"")}"
         oninput="prSetQ(this.value)" onclick="event.stopPropagation()">
       ${fltChipsHtml("promotions")}
+      ${typeof prfavStarHtml==="function"?prfavStarHtml():""}
       <span style="flex:1"></span>
       ${fltCountHtml(rows.length,PR.list.length,"promotion")}
       ${nsw}
@@ -54524,6 +54525,134 @@ function xbQ(v){ MDB.q=v; const b=document.querySelector("#mdb-bar .fb-q"); if(b
   });
   window.addEventListener("resize",run);
   run();
+})();
+</script>
+<script>
+/* ══ V118.145 TBILISI · PROMOTIONS FOLLOWS STANDARD A ═══════════════════
+   Chirag, 3 Nov 2026 (Kit › Left panel register: "all 4 of these should
+   follow standard A"). The Promotions panel stops showing the events
+   panel: Favourites on top — Running · Upcoming · Ended · All, then each
+   person's own (☆ on the filter row, kept in saved_views, tool
+   'calendar', page 'promotions') — then Objective as the group.
+   A favourite writes the kit filter the + Filter door writes, so the bar,
+   the count and the panel agree. Super administrator only until Chirag
+   says "release". */
+const PRFAV_BUILTIN=[
+  {id:"__run",name:"Running",builtin:true,spec:{f:[{k:"status",op:"is",vals:["running"]}],q:""}},
+  {id:"__up",name:"Upcoming",builtin:true,spec:{f:[{k:"status",op:"is",vals:["upcoming"]}],q:""}},
+  {id:"__end",name:"Ended",builtin:true,spec:{f:[{k:"status",op:"is",vals:["ended"]}],q:""}},
+  {id:"__all",name:"All",builtin:true,spec:{f:[],q:""}}];
+let PRFAV={mine:[],ok:false,tried:false,menu:null,ren:null,save:false,busy:false};
+function prfavOn(){ return isSuperAdmin(); }
+async function prfavLoad(){
+  if(PRFAV.tried) return; PRFAV.tried=true;
+  try{ const r=await sb.from("saved_views").select("id,name,spec,sort").eq("tool","calendar").eq("page","promotions").is("deleted_at",null).order("sort").order("created_at");
+       if(!r.error){ PRFAV.mine=r.data||[]; PRFAV.ok=true; } }catch(e){}
+  if(view==="promotions") render();
+}
+function prfavAll(){ return PRFAV_BUILTIN.concat(PRFAV.mine.map(x=>({id:x.id,name:x.name,spec:x.spec||{f:[]}}))); }
+function prfavNow(){ return {f:(prFilters()||[]).map(x=>({k:x.k,op:fltOpOf(x),vals:[...(x.vals||[])]})),q:PR.q||""}; }
+function prfavSame(a,b){ return JSON.stringify(bfavNorm(a))===JSON.stringify(bfavNorm(b)); }
+function prfavOnId(){ const now=prfavNow(); const h=prfavAll().find(x=>prfavSame(x.spec,now)); return h?h.id:null; }
+function prfavSet(spec){ PR.f=((spec&&spec.f)||[]).map(x=>({k:x.k,op:x.op||"is",vals:new Set(x.vals||[])})); PR.q=String((spec&&spec.q)||""); }
+function prfavCount(spec){
+  const keep={f:PR.f,q:PR.q}; let n=0;
+  try{ prfavSet(spec); n=prVisible().length; }catch(e){}
+  PR.f=keep.f; PR.q=keep.q; return n;
+}
+function prfavPick(id,spec){
+  const x=spec?{id,spec}:prfavAll().find(y=>y.id===id); if(!x) return;
+  PRFAV.menu=null;
+  const cur=prfavNow(), on=prfavSame(x.spec,cur);
+  if(on && !(x.spec.f||[]).length) return;
+  prfavSet(on?{f:[],q:""}:x.spec); render();
+}
+function prfavGroupPick(key){
+  const spec={f:[{k:"obj",op:"is",vals:[key]}],q:""};
+  prfavPick("__g_"+key,spec);
+}
+function buildPromotionsSidebar(){
+  const st=document.getElementById("sb-stats"); if(st) st.innerHTML="";
+  const sm=document.getElementById("sb-months"); if(!sm) return;
+  prfavLoad();
+  const on=prfavOnId(), now=prfavNow();
+  const row=x=>{
+    if(PRFAV.ren===x.id) return `<div class="mdb-trow menu" onclick="event.stopPropagation()"><input class="mdb-ren" id="prfav-ren" value="${escAttr(x.name)}"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();prfavRename('${x.id}',this.value);}if(event.key==='Escape'){PRFAV.ren=null;buildPromotionsSidebar();}"
+        onblur="prfavRename('${x.id}',this.value)"></div>`;
+    const m=PRFAV.menu===x.id, own=!x.builtin;
+    return `<div class="mdb-trow bfav${on===x.id?" on":""}${m?" menu":""}" data-fav="${escAttr(x.id)}" onclick="prfavPick('${escAttr(x.id)}')">
+      <span class="bfav-st">★</span><span class="nm">${escHtml(x.name)}</span><span class="ct${own?" hasm":""}">${prfavCount(x.spec)}</span>
+      ${own?`<button class="mdb-tmb" title="${escAttr(x.name)} options" onclick="prfavMenu(event,'${escAttr(x.id)}')"><i class="ti ti-dots"></i></button>`:""}
+      ${m?`<div class="mdb-menu" onclick="event.stopPropagation()">
+        <div class="mdb-mi" onclick="PRFAV.menu=null;PRFAV.ren='${escAttr(x.id)}';buildPromotionsSidebar()"><i class="ti ti-pencil"></i>Rename</div>
+        <div class="mdb-mi" onclick="prfavUpdate('${escAttr(x.id)}')"><i class="ti ti-refresh"></i>Update to the current filter</div>
+        <div class="mdb-msep"></div>
+        <div class="mdb-mi red" onclick="prfavRemove('${escAttr(x.id)}')"><i class="ti ti-x"></i>Remove</div></div>`:""}</div>`;
+  };
+  const objs=(PR.objs||[]).filter(o=>(PR.bobjs||[]).indexOf(o.key)>-1)
+    .map(o=>({key:o.key,label:prObjLabel(o.key),n:prfavCount({f:[{k:"obj",op:"is",vals:[o.key]}],q:""})}))
+    .filter(o=>o.n>0).sort((a,b)=>b.n-a.n);
+  const grp=objs.map(o=>{ const g=prfavSame({f:[{k:"obj",op:"is",vals:[o.key]}],q:""},now);
+    return `<div class="mdb-trow${g?" on":""}" data-grp="${escAttr(o.key)}" onclick="prfavGroupPick('${escAttr(o.key)}')"><span class="nm">${escHtml(o.label)}</span><span class="ct">${o.n}</span></div>`; }).join("");
+  sm.innerHTML=`<div class="s-lbl sb-head"><span>Favourites</span></div>`+prfavAll().map(row).join("")+
+    (objs.length?`<div class="s-lbl sb-head" style="margin-top:18px"><span>Objective</span></div>`+grp:"");
+  const r=document.getElementById("prfav-ren"); if(r){ r.focus(); r.select(); }
+}
+function prfavMenu(e,id){ e.stopPropagation(); PRFAV.menu=PRFAV.menu===id?null:id; buildPromotionsSidebar(); }
+document.addEventListener("click",e=>{
+  if(view!=="promotions") return;
+  if(PRFAV.menu&&!(e.target.closest&&e.target.closest(".mdb-menu"))){ PRFAV.menu=null; buildPromotionsSidebar(); }
+  if(PRFAV.save&&!(e.target.closest&&e.target.closest(".bfav-w"))){ PRFAV.save=false; render(); }
+});
+function prfavStarHtml(){
+  if(!prfavOn()) return "";
+  const n=bfavNorm(prfavNow()); if(!n.f.length&&!n.q) return "";
+  const on=prfavOnId(); if(on){ const x=prfavAll().find(y=>y.id===on); return `<span class="bfav-w"><button class="bfav-star on" title="Saved as favourite: ${escAttr(x?x.name:"")}" onclick="event.stopPropagation()">★</button></span>`; }
+  return `<span class="bfav-w" onclick="event.stopPropagation()"><button class="bfav-star" data-fav-save title="Save as favourite" onclick="prfavSaveOpen(event)">☆</button>${PRFAV.save?`
+    <div class="bfav-pop"><div class="h">Save as favourite</div>
+      <input id="prfav-name" maxlength="60" placeholder="Name it" onkeydown="if(event.key==='Enter'){event.preventDefault();prfavSave();}if(event.key==='Escape'){PRFAV.save=false;render();}">
+      <div class="bt"><button class="btn btn-g" onclick="PRFAV.save=false;render()">Cancel</button><button class="btn btn-p" ${PRFAV.busy?"disabled":""} onclick="prfavSave()">Save</button></div></div>`:""}</span>`;
+}
+function prfavSaveOpen(e){ if(e) e.stopPropagation(); PRFAV.save=!PRFAV.save; render(); setTimeout(()=>{ const i=document.getElementById("prfav-name"); if(i) i.focus(); },40); }
+async function prfavSave(){
+  const i=document.getElementById("prfav-name"), name=String(i?i.value:"").trim().slice(0,60);
+  if(!name){ toast("Give the favourite a name","err"); return; }
+  if(prfavAll().some(x=>x.name.toLowerCase()===name.toLowerCase())){ toast(`There is already a favourite called “${escHtml(name)}”`,"err"); return; }
+  PRFAV.busy=true;
+  const r=await sb.from("saved_views").insert({tool:"calendar",page:"promotions",name,spec:prfavNow(),sort:PRFAV.mine.length}).select("id,name,spec,sort").single();
+  PRFAV.busy=false;
+  if(r.error){ toast("Not saved — "+escHtml(r.error.message),"err"); return; }
+  PRFAV.mine.push(r.data); PRFAV.save=false; render();
+  toast(`★ ${escHtml(name)} saved`);
+}
+async function prfavRename(id,v){
+  if(PRFAV.ren!==id) return; PRFAV.ren=null;
+  const x=PRFAV.mine.find(y=>y.id===id), name=String(v||"").trim().slice(0,60);
+  if(!x||!name||name===x.name){ buildPromotionsSidebar(); return; }
+  const r=await sb.from("saved_views").update({name,updated_at:new Date().toISOString()}).eq("id",id);
+  if(r.error){ toast("Not renamed — "+escHtml(r.error.message),"err"); buildPromotionsSidebar(); return; }
+  x.name=name; buildPromotionsSidebar();
+}
+async function prfavUpdate(id){
+  PRFAV.menu=null; const x=PRFAV.mine.find(y=>y.id===id); if(!x) return;
+  const spec=prfavNow();
+  const r=await sb.from("saved_views").update({spec,updated_at:new Date().toISOString()}).eq("id",id);
+  if(r.error){ toast("Not updated — "+escHtml(r.error.message),"err"); return; }
+  x.spec=spec; render(); toast("Updated to the current filter");
+}
+async function prfavRemove(id){
+  PRFAV.menu=null;
+  const r=await sb.from("saved_views").update({deleted_at:new Date().toISOString()}).eq("id",id);
+  if(r.error){ toast("Not removed — "+escHtml(r.error.message),"err"); return; }
+  PRFAV.mine=PRFAV.mine.filter(y=>y.id!==id); render(); toast("Favourite removed");
+}
+(function(){
+  const base=viewRoute;
+  viewRoute=function(v){
+    if(v==="promotions"&&prfavOn()) return {render:renderPromotions,sidebar:buildPromotionsSidebar,needs:"view_promotions"};
+    return base(v);
+  };
 })();
 </script>
 </body>
