@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.147 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.148 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14727,7 +14727,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.147 Tbilisi";
+const TOOL_VERSION="V118.148 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -54706,6 +54706,86 @@ function xgLogo(e){
   render=function(){ const out=r.apply(this,arguments); try{ mfTabsFill(); }catch(e){} return out; };
   window.addEventListener("resize",()=>{ try{ mfTabsFill(); }catch(e){} });
   try{ mfTabsFill(); }catch(e){}
+})();
+</script>
+<script>
+/* ══ V118.148 TBILISI · MOOD BOARD PICTURES THAT OUTLIVE THEIR LINK ══════
+   Chirag, 3 Nov 08:46, phone screenshot of AI Content: empty tiles. 25 of
+   its 34 references were Instagram posts whose picture was never copied
+   (Instagram refused the server that day), so the tile pointed at
+   Instagram's own picture address — and Instagram makes those addresses
+   die after about five days (these on 31 Oct). The desk still showed them
+   from its browser memory; a phone, or anyone else, saw nothing.
+   Now: a reference with only that borrowed address asks mood-link for the
+   post again, and a copy is kept in our own storage (thumb_path) — on a
+   failed picture, and ahead of time once Instagram's date has passed. A
+   picture that still cannot be had shows the quiet "no picture" tile, not
+   a broken image. A kept copy whose one-hour link lapsed is signed again. */
+const MDB_FIX={busy:false,q:[],tried:new Set()};
+function mdbFixable(x){ return !!x&&!x.thumb_path&&!!x.thumb_src&&!!(x.source_url||x.pin_url); }
+function mdbFixDue(x){
+  if(!mdbFixable(x)) return false;
+  try{ const u=new URL(x.thumb_src), oe=u.searchParams.get("oe");
+    if(oe&&/^[0-9a-f]+$/i.test(oe)) return parseInt(oe,16)*1000<Date.now()+6*3600000;
+  }catch(e){}
+  return false;
+}
+function mdbFixQueue(id){
+  const x=(MDB.items||[]).find(i=>i.id===id);
+  if(!mdbFixable(x)||MDB_FIX.tried.has(id)) return;
+  MDB_FIX.tried.add(id); MDB_FIX.q.push(id); mdbFixRun();
+}
+async function mdbFixRun(){
+  if(MDB_FIX.busy) return; MDB_FIX.busy=true;
+  try{
+    while(MDB_FIX.q.length){
+      const id=MDB_FIX.q.shift(), x=(MDB.items||[]).find(i=>i.id===id);
+      if(!mdbFixable(x)) continue;
+      try{
+        const r=await mdbCallFn(Object.assign({url:x.source_url||x.pin_url},x.board_id?{board_id:x.board_id}:{brand_id:x.brand_id||activeBrand}));
+        if(r&&r.thumb_path){
+          x.thumb_path=r.thumb_path; if(r.width&&r.height){ x.width=r.width; x.height=r.height; }
+          sb.from("mood_items").update({thumb_path:x.thumb_path,width:x.width||null,height:x.height||null}).eq("id",x.id).then(()=>{},()=>{});
+          mdbFixTile(x);
+        } else mdbDead(id);
+      }catch(e){ mdbDead(id); }
+    }
+  } finally { MDB_FIX.busy=false; }
+}
+function mdbFixTile(x){
+  document.querySelectorAll('img[data-id="'+CSS.escape(x.id)+'"]').forEach(im=>{
+    const box=im.parentElement; if(!box) return;
+    const t=document.createElement("span"); t.innerHTML=mdbImgTag(x);
+    const n=t.firstElementChild; if(!n) return;
+    im.replaceWith(n); mdbSign(box);
+    if(n.tagName==="IMG") n.addEventListener("load",()=>{ try{ mdbLearn(n); }catch(e){} },{once:true});
+  });
+}
+function mdbDead(id){
+  document.querySelectorAll('img[data-id="'+CSS.escape(id)+'"]').forEach(im=>{
+    if(im.complete&&im.naturalWidth) return;
+    im.outerHTML=`<span class="none"><i class="ti ti-photo-off"></i></span>`;
+  });
+}
+document.addEventListener("error",e=>{
+  const t=e.target;
+  if(!t||t.tagName!=="IMG"||!t.dataset||!t.dataset.id) return;
+  if(t.hasAttribute("data-mdb")){
+    if(t._re) return; t._re=true;
+    const p=t.getAttribute("data-mdb"); delete SIGNED[p];
+    signedUrl(p).then(u=>{ if(u) t.src=u; });
+    return;
+  }
+  const x=(MDB.items||[]).find(i=>i.id===t.dataset.id);
+  if(mdbFixable(x)&&!MDB_FIX.tried.has(x.id)) mdbFixQueue(x.id); else if(x) mdbDead(x.id);
+},true);
+(function(){
+  const base=mdbGrid;
+  mdbGrid=function(){
+    const out=base.apply(this,arguments);
+    try{ (MDB.items||[]).filter(mdbFixDue).forEach(x=>mdbFixQueue(x.id)); }catch(e){}
+    return out;
+  };
 })();
 </script>
 </body>
