@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.157 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.158 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14778,7 +14778,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.157 Tbilisi";
+const TOOL_VERSION="V118.158 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -55612,6 +55612,92 @@ function mdbMulti(){ const A=MDB.add; return !!A&&A.tab===0&&mdbLinksOf(A.url).l
   };
 })();
 </script>
+
+<script id="v118158">
+/* ══ V118.158 TBILISI · INSTAGRAM POSTS SHOWN WHOLE, A PICTURE YOU CAN
+   REPLACE, TITLES WITHOUT CODES ══════════════════════════════════════
+   Chirag, 4 Nov 04:44, a Škoda post: the tile was a square cut of a tall
+   post, and the title read "&#x160;koda India". Instagram hands any link
+   reader a square preview cut from the middle, so the saved copy was
+   cropped before we kept it. He chose A + B:
+   A · an Instagram reference opens as Instagram's own embedded post, whole
+       and in its real shape (the tile stays the saved picture)
+   B · "Replace picture" on any reference: drop a screenshot and the tile
+       shows it at its true shape
+   And a title is decoded once, when it is saved, so "Š" reads as Š. */
+function mdbUnent(s){
+  s=String(s||"");
+  if(s.indexOf("&")<0) return s;
+  const t=document.createElement("textarea"); t.innerHTML=s;
+  return t.value.replace(/&#?x?[0-9a-f]*$/i,"").trim();
+}
+function mdbIgEmbed(x){
+  const u=String((x&&(x.source_url||x.pin_url))||"");
+  const m=/instagram\.com\/(?:[\w.]+\/)?(?:p|reel|reels|tv)\/([\w-]+)/i.exec(u);
+  return m?`https://www.instagram.com/p/${m[1]}/embed/`:"";
+}
+(function(){
+  /* titles: decoded when saved, and on screen for the ones already saved */
+  const baseRow=mdbRowFrom;
+  mdbRowFrom=function(){ const r=baseRow.apply(this,arguments); r.title=mdbUnent(r.title).slice(0,200); return r; };
+  const baseLoad=mdbLoad;
+  mdbLoad=async function(){
+    const out=await baseLoad.apply(this,arguments);
+    try{ (MDB.items||[]).forEach(x=>{ if(x.title&&x.title.indexOf("&")>-1) x.title=mdbUnent(x.title); }); if(view==="mood"&&MDB.ok) mdbGrid(); }catch(e){}
+    return out;
+  };
+  /* A · the opened Instagram reference is the post itself */
+  const baseDw=mdbDrawer;
+  mdbDrawer=function(){
+    const x=(MDB.items||[]).find(i=>i.id===MDB.open);
+    if(x&&!x.embed_url&&!x.media_path){ const e=mdbIgEmbed(x); if(e){ x.embed_url=e; x._igEmb=true; } }
+    const out=baseDw.apply(this,arguments);
+    try{
+      const dw=document.getElementById("mdb-dw");
+      if(dw&&x){
+        dw.classList.toggle("mdb-ig",!!mdbIgEmbed(x));
+        const top=dw.querySelector(".mdb-top");
+        if(top&&!top.querySelector(".mdb-rp")){
+          const tr=top.querySelector('[onclick^="mdbTrashOne"]');
+          const html=`<label class="mdb-ib mdb-rp" title="Replace picture — drop a screenshot"><i class="ti ti-photo-edit"></i><input type="file" accept="image/*" style="display:none" onchange="mdbReplacePic('${x.id}',this.files[0]);this.value=''"></label>`;
+          if(tr) tr.insertAdjacentHTML("beforebegin",html); else top.insertAdjacentHTML("beforeend",html);
+        }
+        const body=dw.querySelector(".mdb-body");
+        if(body&&!body.dataset.rpDrop){
+          body.dataset.rpDrop="1";
+          body.addEventListener("dragover",e=>{ if(e.dataTransfer&&[...e.dataTransfer.types].includes("Files")&&!e.target.closest(".ccm-wrap")) e.preventDefault(); });
+          body.addEventListener("drop",e=>{ if(e.target.closest(".ccm-wrap")) return; const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];
+            if(f&&/^image\//.test(f.type)){ e.preventDefault(); mdbReplacePic(x.id,f); } });
+        }
+      }
+    }catch(e){}
+    return out;
+  };
+})();
+/* B · replace the saved picture with one from this computer */
+async function mdbReplacePic(id,file){
+  const x=(MDB.items||[]).find(i=>i.id===id); if(!x||!file) return;
+  if(!/^image\//.test(file.type)){ toast("That is not a picture","err"); return; }
+  toast("Saving the picture…");
+  const s=await mdbShrink(file,1600);
+  if(!s||!s.blob){ toast("The picture could not be read","err"); return; }
+  const home=x.board_id?("boards/"+x.board_id):(x.brand_id||activeBrand);
+  const p=await putObject(mediaPath(home,"mood",x.id,"picture.jpg"),s.blob,"image/jpeg");
+  if(!p.path){ toast("The picture did not upload — "+escHtml(p.error||""),"err"); return; }
+  const r=await sb.from("mood_items").update({thumb_path:p.path,width:s.w,height:s.h,updated_at:new Date().toISOString()}).eq("id",x.id).select("id");
+  if(r.error){ toast("Not saved — "+escHtml(r.error.message),"err"); return; }
+  x.thumb_path=p.path; x.width=s.w; x.height=s.h;
+  (MDB.items||[]).forEach(y=>{ if(y.id===x.id&&y!==x){ y.thumb_path=x.thumb_path; y.width=x.width; y.height=x.height; } });
+  mdbGrid();
+  if(MDB.open===x.id){ const im=document.querySelector("#mdb-dw .mdb-dwimg"); if(im&&!x._igEmb&&!x.embed_url) im.removeAttribute("data-for"); mdbDrawer(); }
+  toast("Picture replaced");
+}
+</script>
+<style id="v118158-css">
+.mdb-rp{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
+.mdb-dw.mdb-ig .mdb-dwimg{background:#fafafa;align-items:flex-start;overflow-y:auto;}
+.mdb-dw.mdb-ig .mdb-dwimg iframe{width:min(540px,100%);height:100%;min-height:720px;margin:0 auto;display:block;background:#fff;}
+</style>
 
 </body>
 </html>
