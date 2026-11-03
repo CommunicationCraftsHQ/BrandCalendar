@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.139 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.140 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14608,7 +14608,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.139 Tbilisi";
+const TOOL_VERSION="V118.140 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -17515,7 +17515,7 @@ function notifSeenItems(){
   const isMen=r=>!!r.mentions_me||(r.mentions||[]).some(m=>String(m).toLowerCase()===me);
   const out={};
   (NOTIF||[]).forEach(r=>{
-    if(!isMen(r)||brandMuted(r.brand_id)) return;
+    if(!isMen(r)||r._held||brandMuted(r.brand_id)) return;
     const s=seenOf(r); if(!s) return;
     if(new Date(r.created_at)>new Date(s)) return;          // still unread
     if(new Date(s).getTime()<cut) return;
@@ -18465,7 +18465,7 @@ function notifItems(){
     .filter(r=>{
       const seen=r.meeting_id?MEET_SEEN[r.meeting_id]
         :r.creative_id?CR_SEEN[r.creative_id]:r.task_id?TASK_SEEN[r.task_id]:POSTFB.seen[r.post_id];
-      return !seen || new Date(r.created_at)>new Date(seen);
+      return r._held || !seen || new Date(r.created_at)>new Date(seen);
     })
     .map(r=>notifItemOf(r,me))
     /* ══ MOTH — MENTIONS FIRST, THEN NEWEST ═══════════════════════
@@ -53985,6 +53985,56 @@ function mentionPlace(){
     const out=pick.apply(this,arguments);
     setTimeout(()=>{ const c=document.querySelector(`#main .ml2-pane .ml-card[data-meet="${CSS.escape(id)}"]`);
       if(c){ const m=document.getElementById("main")||document.scrollingElement; const top=c.getBoundingClientRect().top-m.getBoundingClientRect().top+m.scrollTop-16; m.scrollTo({top:Math.max(0,top),behavior:"auto"}); } },60);
+    return out;
+  };
+})();
+</script>
+<script>
+/* ══ V118.140 TBILISI · READ ALL KEEPS YOUR @MENTIONS, NOT THEIR CONVERSATIONS ══
+   Chirag, 3 Nov: with "Keep @mentions unread" on, the bell stayed at 99+
+   and the button said "Nothing to mark". Read state is one moment per
+   conversation, so keeping a mention kept its whole conversation — 138
+   messages in 31 conversations for 40 mentions. Now Read all marks every
+   conversation read and keeps only the @mention messages themselves
+   (mention_holds, read through the held_mentions view). Opening that
+   conversation lets them go. Without the SQL, everything is as V118.139. */
+let NOTIF_HELD=[];
+(function(){
+  const baseLoad=loadNotifications;
+  loadNotifications=async function(){
+    const out=await baseLoad.apply(this,arguments);
+    try{
+      const r=await sb.from("held_mentions").select("*").order("created_at",{ascending:false}).limit(500);
+      NOTIF_HELD=(r&&!r.error&&r.data)?r.data.map(x=>({...x,_held:true,mentions_me:true})):[];
+      const have=new Set((NOTIF||[]).map(x=>x.comment_id));
+      NOTIF=(NOTIF||[]).concat(NOTIF_HELD.filter(x=>!have.has(x.comment_id)));
+    }catch(e){ NOTIF_HELD=[]; }
+    return out;
+  };
+  /* opening a conversation lets its kept @mentions go */
+  async function release(test){
+    const ids=(NOTIF||[]).filter(r=>r._held&&test(r)).map(r=>r.comment_id);
+    if(!ids.length) return;
+    NOTIF=(NOTIF||[]).filter(r=>!(r._held&&ids.includes(r.comment_id)));
+    NOTIF_HELD=NOTIF_HELD.filter(r=>!ids.includes(r.comment_id));
+    try{ syncBell(); }catch(e){}
+    try{ const me=(ME.email||""); await sb.from("mention_holds").delete().eq("user_email",me).in("comment_id",ids); }catch(e){}
+  }
+  const wrap=(name,test)=>{ const base=window[name]; if(typeof base!=="function") return;
+    window[name]=async function(){ const a=arguments; const out=await base.apply(this,a); try{ await release(r=>test(r,a)); }catch(e){} return out; }; };
+  wrap("fbMarkSeen",(r,a)=>r.post_id===a[0]&&!r.task_id&&!r.creative_id&&!r.meeting_id);
+  wrap("taskMarkSeen",(r,a)=>r.task_id===a[0]&&!r.creative_id&&!r.meeting_id);
+  wrap("crMarkSeen",(r,a)=>r.creative_id===a[0]&&!r.meeting_id);
+  wrap("meetMarkSeen",(r,a)=>r.meeting_id===a[0]);
+  /* after Read all, the open bell is drawn again from what is left */
+  const baseMark=notifMarkAllBut;
+  notifMarkAllBut=async function(){
+    const out=await baseMark.apply(this,arguments);
+    try{
+      await loadNotifications(); syncBell();
+      const np=document.getElementById("notif-panel");
+      if(np&&np.classList.contains("open")) buildNotifPanel();
+    }catch(e){}
     return out;
   };
 })();
