@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.155 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.157 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -6101,6 +6101,15 @@ select.pr-fv.cc-stsel{height:34px;padding:0 28px 0 10px;background-color:#fff;}
     <!-- V116.8 — THE LISTING STANDARD. On Tasks the black bar carries the
          page's own controls, in the suite's order: Columns · Import /
          Export · New task · bell. brNavSync shows them on Tasks only. -->
+    <!-- V118.156 — PROMOTIONS' OWN SWITCH. The corner's settled order
+         is [dashboard][columns][export][primary]. MEASURED: this bar
+         fits exactly one more control at 1440 — one leaves it at
+         1440 of 1440, two put it 48px over. So the switch Chirag
+         asked for lives here and the window and the shape live in the
+         panel, where every other listing keeps its scoping. -->
+    <button class="nav-btn nb pr-dsw mf-hide" id="prk-dash" style="display:none;" role="switch"
+            onclick="prFlipDash()" title="Show or hide the figures above the list">
+      <i class="ti ti-layout-dashboard"></i><span class="pr-knob" aria-hidden="true"></span><span class="nb-lbl">Dashboard</span></button>
     <div class="bsw mf-hide" id="brk-cols" style="display:none;">
       <button class="nav-btn nb nb-cols brk-colsbtn" id="brk-cols-btn" onclick="hbColsOpen(event)" title="Columns" aria-label="Columns">
         <i class="ti ti-columns-3"></i><span id="brk-cn" class="nb-cnt"><span class="nb-n">7</span><span class="nb-of">of 7</span><span class="nb-lbl">columns</span></span><i class="ti ti-chevron-down nb-cv"></i></button>
@@ -11576,7 +11585,7 @@ function hbSpec(){
     return {cols:{n:1+BRK_COLS.length-BRK_HIDE.size,of:1+BRK_COLS.length,open:brColsOpen}, nw:canE?{label:"New task",go:brNewTask}:null, io:brIoOn()};
   if(view==="promotions"&&PR.key&&!PR.loading&&!PR.err){
     const canP=canCap("edit_promotions"), offer=PR_COLS.filter(c=>c.label);
-    return {cols:{n:prShown().length+1,of:offer.length+1,open:prColsOpen}, nw:canP?{label:"New promotion",go:()=>prEditOpen(null)}:null, io:canP};
+    return {cols:{n:prShown().length+1,of:offer.length+1,open:prColsOpen}, nw:canP?{label:"New promotion",go:()=>prEditOpen(null)}:null, io:canP, pr:true};
   }
   if(view==="content"&&brands[activeBrand])
     return {cols:null, nw:canE?{label:"Add post",go:addContentPost}:null, io:canE&&can("import_export")};
@@ -11620,6 +11629,16 @@ function nbColsHtml(n,of){ return `<span class="nb-n">${n}</span><span class="nb
 function brNavSync(canE){
   const sp=hbSpec();
   const cols=document.getElementById("brk-cols"), nw=document.getElementById("brk-new"), ex=document.getElementById("export-btn");
+  /* V118.156 — Promotions' own two. They ride on the same spec the
+     rest of this corner reads, so a page that does not offer them
+     never draws them. */
+  const prOn=!!(sp&&sp.pr);
+  const pd=document.getElementById("prk-dash");
+  if(pd) pd.style.display=prOn?"":"none";
+  if(prOn){
+    if(pd){ pd.classList.toggle("on",PR_DASH); pd.setAttribute("aria-checked",PR_DASH?"true":"false");
+      pd.title=PR_DASH?"Hide the figures above the list":"Show the figures above the list"; }
+  }
   if(cols) cols.style.display=(sp&&sp.cols)?"":"none";
   if(nw) nw.style.display=(sp&&sp.nw)?"":"none";
   const nl=document.getElementById("brk-new-lbl"); if(nl&&sp&&sp.nw) nl.textContent=sp.nw.label;
@@ -14759,7 +14778,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.155 Tbilisi";
+const TOOL_VERSION="V118.157 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -30267,6 +30286,33 @@ function prColsFill(){
     (on.length!==PR_COLS_DEF.length||PR_COLS_DEF.some(k=>on.indexOf(k)<0)?`<div class="brk-reset" onclick="prColReset(null);prColsFill()">Reset</div>`:"");
 }
 function prColsOpen(e){ prColsFill(); popOpen("brk-cols-panel",e); }
+/* ══ V118.156 · THE WINDOW AND THE SHAPE, IN THE BLACK BAR ════════
+   Both were inside the figures strip, which now goes away with the
+   Dashboard switch — a control that disappears with the thing it
+   controls is no control at all. ONE button, not two: three new
+   buttons put the bar past its own width at 1440. Built like the
+   Columns panel because that is the one this bar already has. */
+/* The window is one row in the panel with a menu under it, built from
+   the same .mdb-trow/.mdb-menu the favourites use. The shape is two
+   states, so it is a switch row exactly like Grouped. */
+let PR_WINMENU=false;
+function prWinMenuToggle(e){ if(e) e.stopPropagation(); PR_WINMENU=!PR_WINMENU; buildPromotionsSidebar(); }
+function prWinPanelSet(mode,ms){ PR_WINMENU=false; prSetWin(mode,ms); }
+function prShapeBarSet(on){ closeAllPops(); prSetShape(on); }
+function prWinRowHtml(){
+  const w=PR.win||{}, now=w.mode||"this", pick=w.ms||"";
+  const seen={}; Object.keys(PR.months||{}).forEach(k=>(PR.months[k]||[])
+    .forEach(m=>{ const x=String(m.month_start).slice(0,10); if(x) seen[x]=1; }));
+  const list=Object.keys(seen).sort().reverse().slice(0,18);
+  const mi=(on,label,call)=>`<div class="mdb-mi${on?" on":""}" onclick="event.stopPropagation();${call}">
+      <i class="ti ti-${on?"check":"point"}"></i>${escHtml(label)}</div>`;
+  return `<div class="mdb-trow prwin${PR_WINMENU?" menu":""}" data-win onclick="prWinMenuToggle(event)">
+    <i class="ti ti-calendar-month"></i><span class="nm">${escHtml(prWinName())}</span><i class="ti ti-chevron-down"></i>
+    ${PR_WINMENU?`<div class="mdb-menu" onclick="event.stopPropagation()">
+      ${PR_WINS.map(([k,l])=>mi(now===k,l,`prWinPanelSet('${k}')`)).join("")}
+      ${list.length?`<div class="mdb-msep"></div>`+list.map(ms=>mi(now==="pick"&&pick===ms,prMonthName(ms),`prWinPanelSet('pick','${ms}')`)).join(""):""}
+      </div>`:""}</div>`;
+}
 function prColsHtml(){
   const offer=PR_COLS.filter(c=>c.label), on=prShown();
   return `<span class="brfb-w prcols"><span class="brfb-chip${PR_FPOP==="cols"?" open":""}" onclick="prFPop(event,'cols')">
@@ -30745,6 +30791,38 @@ function prSortCmp(a,b){
    first time it is reached rather than showing a single stripe. */
 const PR_MOM=[["leads","Result"],["spend","Spent"],["cost","Cost each"],
               ["qualified","Qualified"],["converted","Closed"]];
+/* ══ V118.156 · PROMOTIONS JOINS THE LISTING STANDARD ═════════════
+   Chirag, 3 November: "how can we visually align the promotion page
+   with rest of the listing pages without losing the unique
+   requirements, and the functionalities should not be compromised".
+
+   Three things set this page apart and all three now follow a pattern
+   the suite had already settled somewhere else:
+
+     · the figures strip was always there. Collection met the same
+       problem on 30 October and Chirag's answer was "we can keep a
+       simple switch to turn on off the dashboard". Same switch, same
+       word, same place in the black bar corner — just before Columns.
+     · the Months picker and the list/grid switch were hiding inside
+       that strip, where they would have gone away with it. They are
+       page controls, so they moved into the black bar. They cannot go
+       in the toolbar row: at 1180 that row already wraps.
+     · the rows were always grouped under objective headings, where
+       every other listing is one flat list. Tasks solved this long
+       ago with a "Grouped" row in its left panel, flat by default.
+       The same row, the same switch, in the Promotions panel.
+
+   NOTHING THE PAGE DOES CHANGES. Every column, filter, figure and
+   door is where it was; only the furniture moved. */
+const PR_DASH_LS="cc-pr-dash", PR_GRP_LS="cc-pr-grp";
+let PR_DASH=(()=>{ try{ return localStorage.getItem(PR_DASH_LS)!=="0"; }catch(e){ return true; } })();
+let PR_GRP =(()=>{ try{ return localStorage.getItem(PR_GRP_LS)==="1";  }catch(e){ return false; } })();
+function prFlipDash(){ PR_DASH=!PR_DASH;
+  try{ localStorage.setItem(PR_DASH_LS,PR_DASH?"1":"0"); }catch(e){}
+  closeAllPops(); render(); }
+function prToggleGrouped(){ PR_GRP=!PR_GRP;
+  try{ localStorage.setItem(PR_GRP_LS,PR_GRP?"1":"0"); }catch(e){}
+  closeAllPops(); render(); }
 function prMomOn(){ return !!(PR.mom&&PR.mom.on); }
 /* THE WAY IN AND THE WAY BACK ARE THE SAME CONTROL, and it sits on
    the strip rather than in the filter bar: that bar is already full
@@ -30840,7 +30918,7 @@ function prMomHtml(rows){
       <div class="nm" title="${escAttr(p.name||"")}">${escHtml(p.name||"Untitled")}</div>${cells}</div>`;
   }).join("");
   return `<div class="nswrap" style="padding-top:0"><div class="prlist prmom">
-    ${prTotalsHtml(rows)}
+    ${PR_DASH?prTotalsHtml(rows):""}
     <div class="prmomtop">${pick}<span class="sp"></span>
       <span class="prmomwin">${escHtml(prWinName())} · ${cols.length} month${cols.length===1?"":"s"}</span></div>
     ${head}${foot}${body}</div></div>`;
@@ -30905,10 +30983,15 @@ function prListHtml(){
   const tpl=prGridTpl(), cols=prVisibleCols();
   /* V115.5 — grouped by objective, every group carrying its own
      numbers. The sort still decides the order WITHIN a group. */
-  const body=prGroupRows(rows).map(g=>prGroupHeadHtml(g,tpl,cols)
-    +g.rows.map(p=>prRowHtml(p,tpl,cols)+(PR.open===p.id?prPanelHtml(p):"")).join("")).join("");
+  /* V118.156 — FLAT BY DEFAULT, like every other listing. The
+     objective headings are what the panel's Grouped switch brings
+     back; the sort still decides the order within a group. */
+  const line=p=>prRowHtml(p,tpl,cols)+(PR.open===p.id?prPanelHtml(p):"");
+  const body=PR_GRP
+    ? prGroupRows(rows).map(g=>prGroupHeadHtml(g,tpl,cols)+g.rows.map(line).join("")).join("")
+    : rows.map(line).join("");
   return bar+`<div class="nswrap" style="padding-top:0"><div class="prlist">
-    ${prTotalsHtml(rows)}
+    ${PR_DASH?prTotalsHtml(rows):""}
     <div class="prhd" style="grid-template-columns:${tpl}">
       ${cols.map(c=>`<div${c.num?' class="prnmh"':""}>${c.lock?"Promotion":escHtml(c.label)}</div>`).join("")}<div></div>
     </div>${body}</div></div>`;
@@ -31022,8 +31105,6 @@ function prTotalsHtml(rows){
     <div><div class="prtk">Budget</div><div class="prtv sm">${prBudgetRollHtml(rows)}</div></div>
     <div><div class="prtk">${prWin().mode==="all"?"Spent so far":"Spent"}</div>
       <div class="prtv sm">${prSpendRollHtml(rows)}</div></div>
-    <div class="prtwin"><div class="prtk">Showing</div>
-      <div class="prtv sm prtwr">${prWinChipHtml()}${prShapeHtml()}</div></div>
   </div>`;
 }
 /* The groups follow the MASTER list's order, so two brands reading the
@@ -48309,6 +48390,20 @@ function v38Dress(){
 .mdb-trow.brgrp .sw::after{content:"";position:absolute;left:2px;top:2px;width:11px;height:11px;border-radius:50%;background:#fff;transition:left .15s;}
 .mdb-trow.brgrp .sw.on{background:#1E6B2E;}.mdb-trow.brgrp .sw.on::after{left:13px;}
 .mdb-trow.brgrp.on i.ti{color:#fff;}
+/* V118.156 — the Dashboard switch in the black bar. A knob, not a
+   button: a nav button says "press me", which is not what a switch
+   says. Same shape as the Client Centre's, in the Calendar's bar. The
+   bar runs narrow at 1440, where every label hides, so the switch
+   keeps an icon beside its knob — a bare green pill says nothing. */
+.pr-dsw{gap:8px;}
+.pr-dsw .pr-knob{width:26px;height:15px;border-radius:999px;background:rgba(255,255,255,.26);
+  position:relative;flex:none;transition:background .15s;}
+.pr-dsw .pr-knob::after{content:"";position:absolute;left:2px;top:2px;width:11px;height:11px;
+  border-radius:50%;background:#fff;transition:left .15s;}
+.pr-dsw.on .pr-knob{background:#2EA05A;} .pr-dsw.on .pr-knob::after{left:13px;}
+.mdb-trow.prwin .nm{font-weight:600;}
+.mdb-trow.prwin > i.ti-chevron-down{font-size:14px;color:var(--muted);}
+.mdb-mi.on{font-weight:600;}
 .dlv-c .d-act .ab{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 6px;font-size:12px;gap:4px;}
 @media(max-width:768px){ .brl-pjc,.brl-hd .h-pj{display:none!important;} }
 </style>
@@ -54637,8 +54732,21 @@ function buildPromotionsSidebar(){
     .filter(o=>o.n>0).sort((a,b)=>b.n-a.n);
   const grp=objs.map(o=>{ const g=prfavSame({f:[{k:"obj",op:"is",vals:[o.key]}],q:""},now);
     return `<div class="mdb-trow${g?" on":""}" data-grp="${escAttr(o.key)}" onclick="prfavGroupPick('${escAttr(o.key)}')"><span class="nm">${escHtml(o.label)}</span><span class="ct">${o.n}</span></div>`; }).join("");
-  sm.innerHTML=`<div class="s-lbl sb-head"><span>Favourites</span></div>`+prfavAll().map(row).join("")+
-    (objs.length?`<div class="s-lbl sb-head" style="margin-top:18px"><span>Objective</span></div>`+grp:"");
+  /* V118.156 — the same Grouped row Tasks has carried since V118.122,
+     the same switch, flat by default. It sits under Objective because
+     that is what it groups by. */
+  const grpRow=`<div class="mdb-trow brgrp${PR_GRP?" on":""}" data-grouped onclick="prToggleGrouped()">
+      <i class="ti ti-layout-rows"></i><span class="nm">Grouped</span><span class="sw${PR_GRP?" on":""}"></span></div>`;
+  /* V118.156 — the window and the shape. The black bar fits exactly
+     one more control and the Dashboard switch is it, so these live
+     here, where Tasks keeps Projects and Tags and the Mood board
+     keeps its boards. */
+  const mo=prMomOn();
+  const momRow=`<div class="mdb-trow brgrp${mo?" on":""}" data-mom onclick="prShapeBarSet(${mo?"false":"true"})">
+      <i class="ti ti-table"></i><span class="nm">Month on month</span><span class="sw${mo?" on":""}"></span></div>`;
+  sm.innerHTML=`<div class="s-lbl sb-head"><span>Showing</span></div>`+prWinRowHtml()+momRow+
+    `<div class="s-lbl sb-head" style="margin-top:18px"><span>Favourites</span></div>`+prfavAll().map(row).join("")+
+    `<div class="s-lbl sb-head" style="margin-top:18px"><span>Objective</span></div>`+grpRow+grp;
   const r=document.getElementById("prfav-ren"); if(r){ r.focus(); r.select(); }
 }
 function prfavMenu(e,id){ e.stopPropagation(); PRFAV.menu=PRFAV.menu===id?null:id; buildPromotionsSidebar(); }
@@ -55420,5 +55528,90 @@ let V155_CATS=[], V155_SORT="date", V155_POP="";
   };
 })();
 </script>
+<style id="v118157-css">
+/* ══ V118.157 TBILISI · SEVERAL LINKS AT ONCE ON A MOOD BOARD ══ */
+#mdb-url.mdb-urls{height:auto;min-height:42px;padding:9px 12px;line-height:1.45;resize:vertical;font:inherit;font-size:13.5px;}
+.mdb-ml{margin-top:10px;max-height:220px;overflow-y:auto;border:1px solid var(--div);border-radius:10px;padding:4px 0;}
+.mdb-ml div{display:flex;align-items:center;gap:8px;padding:5px 12px;font-size:12.5px;}
+.mdb-ml .u{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);}
+.mdb-ml .st{font-weight:700;white-space:nowrap;color:var(--subtle);}
+.mdb-ml .st.ok{color:#2F6E18;} .mdb-ml .st.no{color:var(--acc);}
+</style>
+<script id="v118157">
+/* ══ V118.157 TBILISI · SEVERAL LINKS AT ONCE ON A MOOD BOARD ══════════
+   Chirag, 4 Nov 04:33, on the Add box: "here need option to add multiple
+   links in one go". The link field takes one link or many — one per line,
+   or pasted in a block. One link reads as before, with its preview. Two
+   or more show as a list; Add reads each the same way a single link is
+   read, skips one already on the board, and says how many went in. The
+   tags typed below go on every one of them. */
+function mdbLinksOf(t){
+  const seen=new Set(), out=[];
+  String(t||"").split(/[\s,]+/).forEach(u=>{ u=u.trim(); if(/^https?:\/\/\S+$/i.test(u)&&!seen.has(u)){ seen.add(u); out.push(u); } });
+  return out;
+}
+function mdbMulti(){ const A=MDB.add; return !!A&&A.tab===0&&mdbLinksOf(A.url).length>1; }
+(function(){
+  const baseDraw=mdbAddDraw;
+  mdbAddDraw=function(){
+    const A=MDB.add;
+    const keep=document.getElementById("mdb-url"), at=keep&&document.activeElement===keep?keep.selectionStart:null;
+    const out=baseDraw.apply(this,arguments);
+    if(!A||A.tab!==0) return out;
+    const inp=document.getElementById("mdb-url");
+    if(inp&&inp.tagName==="INPUT"){
+      const ta=document.createElement("textarea");
+      ta.id="mdb-url"; ta.className="fi mdb-urls"; ta.rows=mdbLinksOf(A.url).length>1?5:2;
+      ta.placeholder="Paste one link, or several — one per line";
+      ta.value=A.url||"";
+      ta.oninput=()=>{ const was=mdbMulti(); MDB.add.url=ta.value; if(was!==mdbMulti()||mdbMulti()) mdbAddDraw(); };
+      ta.onpaste=()=>setTimeout(()=>{ if(!mdbMulti()) mdbRead(); },30);
+      ta.onkeydown=e=>{ if(e.key==="Enter"&&!e.shiftKey&&!mdbMulti()&&mdbLinksOf(ta.value).length===1){ e.preventDefault(); mdbRead(); } };
+      inp.replaceWith(ta);
+      if(at!=null){ ta.focus(); try{ ta.setSelectionRange(at,at); }catch(e){} }
+    }
+    if(mdbMulti()){
+      const links=mdbLinksOf(A.url), st=A.multi||{};
+      const box=document.getElementById("mdb-add-b");
+      box.querySelectorAll(".mdb-prev,.mdb-drop").forEach(n=>n.remove());
+      const field=document.getElementById("mdb-url").closest(".field");
+      field.insertAdjacentHTML("beforeend",`<div class="mdb-ml">${links.map(u=>{ const s=st[u];
+        return `<div><span class="u">${escHtml(u.replace(/^https?:\/\/(www\.)?/,""))}</span><span class="st ${s==="added"?"ok":s==="Could not read"?"no":""}">${s?escHtml(s==="added"?"Added":s==="reading"?"Reading…":s):""}</span></div>`; }).join("")}</div>`);
+      const go=document.querySelector("#mdb-add-f .btn-p");
+      if(go){ go.disabled=!!A.busy; go.textContent=A.busy?`Adding ${A.done||0} of ${links.length}…`:`Add ${links.length} to board`; }
+    }
+    return out;
+  };
+  const baseRead=mdbRead;
+  mdbRead=function(){ if(mdbMulti()) return; const i=document.getElementById("mdb-url"); if(i&&MDB.add) MDB.add.url=i.value.trim(); return baseRead.apply(this,arguments); };
+  const baseGo=mdbAddGo;
+  mdbAddGo=async function(){
+    if(!mdbMulti()) return baseGo.apply(this,arguments);
+    const A=MDB.add; if(!A||A.busy) return;
+    const links=mdbLinksOf(A.url);
+    A.busy=true; A.err=""; A.done=0; A.multi={}; mdbAddDraw();
+    let added=0, had=0, bad=0;
+    try{
+      const tagIds=await mdbTagIdsFor(String(A.tags||"").split(","));
+      for(const u of links){
+        A.multi[u]="reading"; mdbAddDraw();
+        if(MDB.items.some(x=>[x.source_url,x.pin_url].includes(u))){ A.multi[u]="Already on the board"; had++; A.done++; continue; }
+        try{
+          const R=await mdbCallFn({url:u});
+          if(mdbAlready(R)){ A.multi[u]="Already on the board"; had++; }
+          else{ await mdbInsert(mdbRowFrom(R,tagIds)); A.multi[u]="added"; added++; }
+        }catch(e){ A.multi[u]="Could not read"; bad++; }
+        A.done++; mdbAddDraw();
+      }
+    }catch(e){ A.err=String(e&&e.message||e); }
+    A.busy=false;
+    toast(`${added} added${had?` · ${had} already on the board`:""}${bad?` · ${bad} could not be read`:""}`,bad&&!added?"err":"");
+    if(view==="mood") mdbRefresh();
+    if(!bad&&!A.err){ closeM("mdb-add"); MDB.add=null; }
+    else mdbAddDraw();
+  };
+})();
+</script>
+
 </body>
 </html>
