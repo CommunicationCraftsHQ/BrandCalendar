@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.141 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.143 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -5900,6 +5900,11 @@ select.pr-fv.cc-stsel{height:34px;padding:0 28px 0 10px;background-color:#fff;}
   :root.xh-on #mf-sub > *:not(#xh-tl){display:none!important;}
   #xh-tl{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;width:100%;min-width:0;}
   :root.xh-cal #mc-row{display:none!important;}
+  /* V118.142 — the desk's grid column is a fixed 320px; on a narrower
+     phone the card ran past the right edge. One card, the screen's width,
+     the same 12px each side as the rows under it. */
+  :root.xh-cal #yr-grid{display:block!important;width:auto!important;max-width:none!important;padding:0 12px!important;margin:0!important;}
+  :root.xh-cal #yr-grid > .month-card{width:auto!important;max-width:none!important;min-width:0!important;margin:0!important;}
   :root.xh-cal #main .mc-head{align-items:center;}
   .xh-st{width:32px;height:32px;flex:none;border:0;border-radius:99px;background:#fff;color:var(--text);display:inline-flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;box-shadow:0 1px 2px rgba(13,13,13,.08);padding:0;}
   .xh-rows{margin:12px 12px 120px;background:#fff;border-radius:18px;box-shadow:0 1px 2px rgba(13,13,13,.04);overflow:hidden;}
@@ -14644,7 +14649,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.141 Tbilisi";
+const TOOL_VERSION="V118.143 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -42859,6 +42864,11 @@ async function acLoad(force){
       sb.rpc("brand_prefs_managed",{}), sb.rpc("account_services",{})]);
     /* V118.13 — the facts the adoption score needs that the page cannot read */
     const ad=await sb.rpc("account_adoption",{});
+    /* V118.143 — the Strategy score's facts (01 - Strategy score - migration).
+       Before it runs the read fails and the old four-part count stays. */
+    const stq=await sb.rpc("account_strategy",{});
+    AC.strat={}; AC.stratOk=!stq.error&&Array.isArray(stq.data);
+    if(AC.stratOk) stq.data.forEach(x=>{ AC.strat[x.brand_id]=x; });
     AC.adopt={}; AC.adoptOk=!ad.error&&Array.isArray(ad.data);
     if(AC.adoptOk) ad.data.forEach(x=>{ AC.adopt[x.brand_id]=x; });
     /* V118.10 — the contract's running lines. Before the 03 migration the
@@ -42880,7 +42890,36 @@ async function acLoad(force){
 }
 
 /* ── the health of one brand ────────────────────────────────────────── */
+/* ══ V118.143 TBILISI · THE STRATEGY SCORE, BY CHIRAG'S SHEET ═════════
+   Chirag, 3 Nov: the weightage within the Strategy page. Part marks
+   (2 of 3 competitors earns two-thirds). "Each" lines count against the
+   larger of the minimum and the number listed. Files: without a Branding
+   line on the contract the deliveries line drops and the other two are
+   50/50. Links are no longer counted. */
+function acStratScore(bid){
+  const s=AC.stratOk&&AC.strat[bid]; if(!s) return null;
+  const f=(n,of)=>Math.max(0,Math.min(1,of?(n||0)/of:0));
+  const of=(n,min)=>Math.max(min,n||0);
+  const L=(lbl,w,n,den)=>[lbl,w,f(n,den),`${n||0} of ${den}`];
+  const files=s.has_branding
+    ?[L("3 brand assets",30,s.files_assets,3),L("3 from the client",30,s.files_client,3),L("3 final deliveries",40,s.files_delivered,3)]
+    :[L("3 brand assets",50,s.files_assets,3),L("3 from the client",50,s.files_client,3)];
+  const S=[
+    ["Competitors",15,[L("3 with a type and 2 links",30,s.comp_typed,3),
+                       L("Mood board tag with 3 pictures, each",30,s.comp_tagged,of(s.comp_n,3)),
+                       L("3 strengths, each",40,s.comp_strong,of(s.comp_n,3))]],
+    ["Target groups",40,[L("2 with segments and objectives",20,s.tg_set,2),
+                         L("Segments and objectives explained, each",20,s.tg_explained,of(s.tg_n,2)),
+                         L("Talking points, each",60,s.tg_points,of(s.tg_n,2))]],
+    ["Influencers & creators",10,[L("3 with handle, followers and category",100,s.creators_ok,3)]],
+    ["Mood board",10,[L("7 pictures",100,s.mood_n,7)]],
+    ["Files",30,files]];
+  let p=0; S.forEach(([n,w,ls])=>{ p+=w*ls.reduce((a,l)=>a+l[1]*l[2],0)/100; });
+  return {p,S};
+}
 function acStrategy(bid){
+  const z=acStratScore(bid);
+  if(z) return {n:z.S.filter(([n,w,ls])=>ls.every(l=>l[2]>=1)).length,of:z.S.length};
   /* V118.9 — counts the Strategy page as it now is: links, files, target
      groups, mood board. Chirag, 16 Oct: "Count what's left". */
   const h=AC.health[bid]||{};
@@ -42937,6 +42976,8 @@ function acPct(bid,col){
   const h=AC.health[bid]||{}, a=AC.adopt[bid]||{}, mon=MN[parseInt(acToday().slice(5,7),10)]||"";
   const r=(p,checks,extra)=>({p:Math.max(0,Math.min(100,Math.round(p))),checks:checks||[],extra:extra||[]});
   if(col==="strategy"){
+    const z=acStratScore(bid);
+    if(z) return r(z.p,[],z.S.flatMap(([n,w,ls])=>ls.map(l=>[`${n} · ${l[0]}`,l[3],l[2]>=1])));
     const c=[["Target groups",h.groups_n>0,60],["Links",h.links_n>0,40/3],["Files",h.files_n>0,40/3],["Mood board",h.mood_n>0,40/3]];
     return r(c.reduce((n,x)=>n+(x[1]?x[2]:0),0),c.map(x=>[x[0]+(x[0]==="Target groups"?" · 60%":""),x[1]]));
   }
@@ -43195,7 +43236,9 @@ function acPopOpen(e,bid,col){
   const ln=(k,n,bad)=>`<div class="ln"><span class="k">${k}</span><b class="${bad&&n?"bad":""}">${n}</b></div>`;
   const NAME={strategy:"Strategy",plan:"Plan",posts:"Posts",tasks:"Tasks",promos:"Promotions",adopt:"Adoption"};
   let body="", go="";
-  if(col==="strategy"){ const c=acStrategy(bid); body=ln("Parts of the Strategy page filled in",`${c.n} of ${c.of}`); go="openBrief()"; }
+  if(col==="strategy"){ const z=acStratScore(bid), c=acStrategy(bid);
+    body=z?z.S.map(([n,w,ls])=>ln(`${n} · ${w}%`,Math.round(ls.reduce((a,l)=>a+l[1]*l[2],0))+"%")).join("")
+          :ln("Parts of the Strategy page filled in",`${c.n} of ${c.of}`); go="openBrief()"; }
   if(col==="plan"){ body=ln(`${mon} plan`,h.plan_status?(h.plan_status==="approved"?"Approved":"Drafted"):"Not made"); go="openMonthPlanView(0)"; }
   if(col==="posts"){ body=ln(`Posts in ${mon}`,h.posts_total||0)+ln("Approved",h.posts_approved||0)+ln("In review",h.posts_review||0)
     +ln("Drafting",h.posts_drafting||0)+ln("Past their date, not approved",h.posts_late||0,true); go="navPosts()"; }
