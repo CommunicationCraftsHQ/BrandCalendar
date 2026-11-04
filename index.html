@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.160 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.161 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14778,7 +14778,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.160 Tbilisi";
+const TOOL_VERSION="V118.161 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -55844,5 +55844,65 @@ async function mfxSave(x,blob,w,h){
 })();
 </script>
 
+<style id="v118161-css">
+/* ══ V118.161 TBILISI · SUB-BRANDS: THE PARENT'S SCOPE, AND TREE LINES ═══
+   Chirag, 4 Nov (mockup 10, option A): a sub-brand shows its parent's
+   contract with a "From …" tag; a brand with no contract keeps the card;
+   the brand switcher joins each sub-brand to its brand with a thin line. */
+.eng-strip .v161-from{font-size:13px;font-weight:700;color:#7A6A45;border:1px dashed #CFC8B8;border-radius:999px;padding:4px 10px;white-space:nowrap;}
+.eng-sec.v161-none .eng-strip{cursor:default;}
+.eng-sec.v161-none .v152-cv{opacity:.3;}
+.eng-sec.v161-none .v161-msg{font-size:13px;color:var(--subtle);font-style:italic;}
+#brand-panel .brow.v161-sub{position:relative;padding-left:34px!important;}
+#brand-panel .brow.v161-sub:before{content:"";position:absolute;left:20px;top:-4px;height:calc(50% + 4px);width:9px;border-left:1.5px solid #D6D2C8;border-bottom:1.5px solid #D6D2C8;border-bottom-left-radius:6px;pointer-events:none;}
+#brand-panel .brow.v161-sub.v161-mid:after{content:"";position:absolute;left:20px;top:50%;bottom:-4px;border-left:1.5px solid #D6D2C8;pointer-events:none;}
+#brand-panel .brow.v161-sub.on:before,#brand-panel .brow.v161-sub.on:after{border-color:#666;}
+</style>
+<script>
+/* ══ V118.161 TBILISI ═══════════════════════════════════════════════════ */
+(function(){
+  /* 1 · a sub-brand with no contract of its own reads its parent's */
+  const baseLoad=loadEngagement;
+  loadEngagement=async function(brandId){
+    await baseLoad.apply(this,arguments);
+    try{
+      const b=brandId&&brands[brandId], pid=b&&b.parent_id;
+      if(ENG.brand===brandId&&ENG.ok&&!ENG.err&&!ENG.lines.length&&pid&&brands[pid]){
+        await baseLoad.call(this,pid);
+        ENG.brand=brandId; ENG.fromBrand=pid;
+      } else if(ENG.brand===brandId) ENG.fromBrand=null;
+    }catch(e){ console.warn("v118.161 scope",e); }
+  };
+  /* 2 · the card: the "From" tag, and no plain box when there is nothing */
+  const baseEng=engHtml;
+  engHtml=function(){
+    let h=baseEng.apply(this,arguments);
+    const plain=h.match(/^\s*<div class="bd-card" style="padding:14px 18px;"><div class="bd-note" style="margin:0;">([\s\S]*?)<\/div><\/div>\s*$/);
+    if(plain){
+      let msg=plain[1].trim();
+      if(/^No contract is recorded/.test(msg)) msg="No contract recorded yet";
+      return `<div class="bd-card eng-sec v161-none" id="bd-scope"><div class="eng-strip"><i class="v152-cv">▸</i><span class="bd-lbl" style="margin:0;">Scope of work</span><span class="v161-msg">${msg}</span></div></div>`;
+    }
+    const f=ENG.fromBrand&&brands[ENG.fromBrand];
+    if(f&&ENG.brand===activeBrand) h=h.replace(/(<span class="bd-lbl" style="margin:0;">Scope of work<\/span>)/,`$1<span class="v161-from" title="This contract is signed with ${escAttr(f.name)}">From ${escHtml(f.name)}</span>`);
+    return h;
+  };
+  /* 3 · tree lines in the brand switcher */
+  const basePanel=buildBrandPanel;
+  buildBrandPanel=function(){
+    const out=basePanel.apply(this,arguments);
+    try{
+      const rows=[...document.querySelectorAll("#brand-panel .brow")];
+      rows.forEach((r,i)=>{
+        if(!/padding-left:\s*26px/.test(r.getAttribute("style")||"")) return;
+        r.classList.add("v161-sub");
+        const n=rows[i+1];
+        if(n&&/padding-left:\s*26px/.test(n.getAttribute("style")||"")&&n.previousElementSibling===r) r.classList.add("v161-mid");
+      });
+    }catch(e){ console.warn("v118.161 panel",e); }
+    return out;
+  };
+})();
+</script>
 </body>
 </html>
