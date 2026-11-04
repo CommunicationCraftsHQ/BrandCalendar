@@ -35,7 +35,7 @@
    Bump this with every batch that changes this file, the way every tool's
    TOOL_VERSION carries its batch name.
 
-   name="cc-tool-version" content="V70.19 Salzburg"
+   name="cc-tool-version" content="V70.20 Salzburg"
 
    Source : webapp/site/index.html (v57.5 — Oslo: the sidebar counts formats, not the total twice)
             — where these rules were extracted from, the last time this
@@ -1160,6 +1160,24 @@ a.lmn .lmn-s::before{content:"\00b7";margin:0 5px 0 1px;}
 .nav.nb-narrow .nb-lbl,.nav.nb-narrow .nb-full{display:none;}
 .nav.nb-narrow .nb-short{display:inline;}
 .nav.nb-narrow .nav-right .nav-btn{padding:0 10px;}
+/* ══ V70.20 Salzburg · THE BAR MEASURES A THING THAT HAS STOPPED MOVING
+   Chirag, 4 November: "the entire strip of buttons, starting from
+   dashboard to the end of all the buttons, right till the bell, gets
+   stretched for a moment, and then again compresses back to its size".
+
+   fitBar decides whether the words fit by taking .nb-narrow off,
+   measuring, and putting it back. But every button here carries a
+   0.12s transition, so taking the class off does not widen them at
+   once — they GLIDE. The measurement, taken immediately, saw room to
+   spare and left the words on; the buttons finished gliding, the bar
+   overflowed, and the next check slammed them off again. Measured on
+   the live build: the strip went 432px → 741px → crept to 782px over
+   eight frames → back to 432px.
+
+   This freezes the animation for the instant of the measurement, so
+   the buttons are at their final width when the bar reads them. The
+   0.12s still plays for every ordinary hover and state change. */
+.nav.nb-measuring, .nav.nb-measuring *{transition:none !important;}
 
 /* V70.15 Salzburg — the bell's red number pokes a few pixels past the
    button row; the bar check read that as "no room" and put every button
