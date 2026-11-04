@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.166 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.167 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -11634,10 +11634,21 @@ function nbColsHtml(n,of){ return `<span class="nb-n">${n}</span><span class="nb
       raf=0;
       nav.querySelectorAll(".nb-full").forEach(f=>{ const s=f.nextElementSibling;
         if(s&&s.classList.contains("nb-short")){ const w=(f.textContent||"").trim().split(/\s+/)[0]||""; if(s.textContent!==w) s.textContent=w; } });
+      /* V118.167 — THE BAR MEASURED A THING THAT WAS STILL MOVING.
+         Chirag, 4 November: the whole button strip stretched for a
+         moment and compressed back. Every button carries a 0.12s
+         transition, so taking .nb-narrow off does not widen them at
+         once — they glide. The measurement here, taken immediately,
+         read them still narrow, found room to spare and left the words
+         on; they finished gliding, the bar overflowed, and the next
+         check slammed them off. Measured live: 432 → 741 → 782 → 432.
+         nb-measuring freezes the glide for this one instant. */
+      nav.classList.add("nb-measuring");
       nav.classList.remove("nb-narrow");
       const r=nav.querySelector(":scope > .nav-right");
       /* V118.133 — the bell's red number pokes past the button row; only the bar itself running out of room counts */
       void r; if(nav.scrollWidth>nav.clientWidth+1) nav.classList.add("nb-narrow");
+      nav.classList.remove("nb-measuring");
     };
     const later=()=>{ if(!raf) raf=requestAnimationFrame(check); };
     if(typeof ResizeObserver!=="undefined") new ResizeObserver(later).observe(nav);
@@ -14798,7 +14809,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.166 Tbilisi";
+const TOOL_VERSION="V118.167 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
