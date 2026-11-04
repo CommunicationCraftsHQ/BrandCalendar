@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.161 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.163 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -4273,6 +4273,26 @@ input.ml-tt{flex:1 1 200px;height:28px;padding:0 2px;font-size:14.5px;letter-spa
 .pr-cl{font-size:12px;cursor:pointer;line-height:1.35;}.pr-cl small{display:block;color:var(--subtle);font-size:11px;}
 .pr-rc.on .nm{color:var(--acc);}
 .pr-cpanel .th-sheet{margin-top:10px;}.pr-cpanel .br-thread{max-height:min(50vh,480px);}
+/* V118.162 — the artwork leads */
+.pr-cbody.solo{grid-template-columns:minmax(0,1fr);}
+.pr-cgrid{display:grid;grid-template-columns:minmax(0,430px) minmax(0,1fr);gap:16px;margin-top:12px;align-items:start;}
+.pr-cart{background:#EDEBE6;border-radius:10px;overflow:hidden;max-height:460px;display:grid;place-items:center;align-content:center;gap:6px;color:var(--subtle);font-size:26px;position:relative;}
+.pr-cart[data-review]{cursor:zoom-in;}
+.pr-cart > span{font-size:12px;}
+.pr-cart img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#1C1916;}
+.pr-czs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.pr-cz{display:flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--div);border-radius:9px;padding:5px 9px;font-size:12px;cursor:pointer;}
+.pr-cz.on{border-color:var(--text);font-weight:700;}
+.pr-cz .m{width:22px;height:22px;border-radius:4px;overflow:hidden;flex:none;position:relative;background:#EDEBE6;}
+.pr-cz .m.empty{background:repeating-linear-gradient(45deg,#EFECE6,#EFECE6 4px,#E2DED7 4px,#E2DED7 8px);}
+.pr-cz .m img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.pr-cz .tk{color:#2EA05A;} .pr-cz .pl{color:var(--subtle);font-weight:400;}
+.pr-cz.add{color:var(--muted);}
+.pr-cside{display:grid;gap:10px;align-content:start;}
+.pr-cside > .prbox{margin-top:0;}
+.pr-cfoot{margin-top:14px;}
+.pr-crgh.solo{justify-content:flex-end;margin-bottom:6px;}
+@media (max-width:900px){ .pr-cgrid{grid-template-columns:1fr;} }
 /* sizes */
 /* V118.102 — a whole set in one go */
 .pr-szbar{display:flex;align-items:center;gap:8px;margin-top:12px;}
@@ -14778,7 +14798,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.161 Tbilisi";
+const TOOL_VERSION="V118.163 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -30374,10 +30394,12 @@ function prBriefHtml(p){
   return `<div class="pr-facts">${facts.map(([k,v])=>`<div><b>${k}</b>${v}</div>`).join("")}</div>${words?`<div class="pr-words">${wRender(words)}</div>`:""}`;
 }
 /* V118.86 — one line per creative on the Creatives tab (the listing rule) */
-function prCrLine(c){
+function prCrLine(c,p){
   const src=prCrThumb(c), st=PR_CST[c.status]||PR_CST.drafting, n=(PR.crc[c.id]||[]).length;
   const who=c.created_by?bfWho(c.created_by):"";
-  const open=PR.creative===c.id, zs=prSizes(c.id), zin=zs.filter(z=>z.asset_id).length;
+  /* V118.162 — the line used to count real rows only and said "1 of 1"
+     while the panel beside it said "1 of 3". One count, the panel's. */
+  const open=PR.creative===c.id, zs=p?prSizeRows(c,prIsLeadPromo(p)&&prCrPlatKey(c)==="meta"):prSizes(c.id), zin=zs.filter(z=>z.asset_id).length;
   return `<div class="pr-crline${open?" open":""}" onclick="event.stopPropagation();prCrOpen('${escAttr(c.promotion_id)}','${escAttr(c.id)}')">
     <span class="prtimg"${src?` data-sign="${escAttr(src)}"`:""}>${src?"":'<i class="ti ti-photo"></i>'}</span>
     <span class="tx"><b>${escHtml(c.title||"Untitled")}</b><small>${escHtml(c.format||"")}${zs.length?` · ${zin} of ${zs.length} sizes`:""}${who?" · "+escHtml(who):""}${c.created_at?" · "+escHtml(fmtShort(c.created_at)):""}</small></span>
@@ -30428,16 +30450,50 @@ function prCrPanelHtml(p,c){
      ever stranded — post_comments held 0 rows with a creative_id.
      History stays off; prLog keeps writing it, so its tab can return
      the same cheap way if it is ever wanted. */
+  /* The task thread engine, unchanged: tinted sheet, the creative’s own
+     brief pinned on top (brBriefPin reads PR_CTASK, whose _creative
+     flag sends Edit to the creative and not the promotion), hover row,
+     reply, files, the one shared message box. */
+  let thread;
+  if(TASK.id!==c.id||TASK.loading) thread=`<div class="th-load">Loading the conversation…</div>`;
+  else if(TASK.err) thread=`<div class="th-load">Could not load it — ${escHtml(TASK.err)}</div>`;
+  else thread=`<div class="th-sheet"><div class="th-strip" onclick="thStripTop(event)"><span class="k">Brief</span><span class="tx">${escHtml(thBriefWords(t))}</span><span class="go"><i class="ti ti-arrow-up"></i> Back to brief</span></div>
+    <div class="br-thread">${brBriefPin(t)}${threadHtml(t,brMsgsFor("team"))}</div>${canComment()?thComposerHtml(t,"team",[]):""}</div>`;
+
   let body;
   if(tab==="talk"){
-    /* The task thread engine, unchanged: tinted sheet, the creative’s own
-       brief pinned on top (brBriefPin reads PR_CTASK, whose _creative
-       flag sends Edit to the creative and not the promotion), hover row,
-       reply, files, the one shared message box. */
-    if(TASK.id!==c.id||TASK.loading) body=`<div class="th-load">Loading the conversation…</div>`;
-    else if(TASK.err) body=`<div class="th-load">Could not load it — ${escHtml(TASK.err)}</div>`;
-    else body=`<div class="th-sheet"><div class="th-strip" onclick="thStripTop(event)"><span class="k">Brief</span><span class="tx">${escHtml(thBriefWords(t))}</span><span class="go"><i class="ti ti-arrow-up"></i> Back to brief</span></div>
-      <div class="br-thread">${brBriefPin(t)}${threadHtml(t,brMsgsFor("team"))}</div>${canComment()?thComposerHtml(t,"team",[]):""}</div>`;
+    /* ══ V118.162 · THE ARTWORK LEADS ══════════════════════════
+       Chirag, 4 November, mockup 01 Layout A: "to see the creatives you
+       have to go into creative tabs, can we make better use of the space
+       in this page?" The picture was a 120px square in the right rail
+       while an empty message list held two thirds of the panel. Now the
+       artwork opens the view at the size of the thing itself, the sizes
+       are chips under it instead of a tab you must visit, and the thread
+       runs under both and grows with the messages. The rail went with
+       it: its three cards were a picture, a door to Sizes and a door to
+       Copy — two of them now on the page, the third a card beside the
+       artwork. */
+    const sel=zs.find(z=>z.id===PR.sz)||zs.find(z=>z.asset_id)||zs[0];
+    const sa=sel?prSzAsset(sel):null;
+    const big=sa?(sa.view_path||sa.thumb_path||sa.poster_path||""):"";
+    const ar=sel&&sel.width&&sel.height?`${sel.width}/${sel.height}`:"1/1";
+    const art=`<div class="pr-cart"${big?` data-sign="${escAttr(big)}"`:""}${sa&&sa.kind==="image"?` data-review="${escAttr(sa.id)}"`:""} style="aspect-ratio:${ar}">${
+        big?"":`<i class="ti ti-photo"></i><span>${escHtml(sel?(sel.label||sel.ratio):"Nothing uploaded yet")}</span>`}</div>`;
+    const chips=zs.map(z=>{ const a=prSzAsset(z), m=a?(a.thumb_path||a.view_path||a.poster_path||""):"";
+      return `<span class="pr-cz${sel&&sel.id===z.id?" on":""}" onclick="event.stopPropagation();PR.sz='${escAttr(z.id)}';render()">
+        <span class="m${m?"":" empty"}"${m?` data-sign="${escAttr(m)}"`:""}></span>${escHtml(z.label||z.ratio)}
+        ${a?'<b class="tk">✓</b>':'<b class="pl">—</b>'}</span>`; }).join("")
+      +(canE?`<span class="pr-cz add" onclick="event.stopPropagation();prSzPickMany('${escAttr(c.id)}')"><i class="ti ti-upload"></i> Add files</span>`:"");
+    const copyCard=`<div class="prbox"><div class="prbh">Copy<span class="prbx-t" onclick="prCTab('copy')">Edit</span></div><div class="prbb pr-cl" onclick="prCTab('copy')">${
+      c.headline||c.primary_text?`${escHtml(c.headline||String(c.primary_text||"").slice(0,60))}<small>${escHtml([c.cta,lead?"":c.link].filter(Boolean).join(" → "))}</small>`:`<span class="nsdim">Nothing written yet</span>`}${
+      lead?`<small class="pr-qn">${qs.length?`${qs.length} question${qs.length===1?"":"s"} · ${escHtml(qs.map(q=>q.question).filter(Boolean).slice(0,2).join(" · "))}`:"No lead questions yet"}</small>`:""}</div></div>`;
+    const detCard=`<div class="prbox"><div class="prbh">Details${canE?`<span class="prbx-t" onclick="prCrEditOpen('${escAttr(c.id)}')">Edit</span>`:""}</div><div class="prbb pr-cl nsdim" style="cursor:default">${
+      escHtml(c.format||"")} · ${escHtml(bfWho(c.created_by)||"")}${c.created_at?" · "+escHtml(fmtShort(c.created_at)):""}</div></div>`;
+    body=`<div class="pr-cgrid"><div>${art}<div class="pr-czs">${chips}</div></div>
+      <div class="pr-cside">${copyCard}${detCard}</div></div>
+      <div class="pr-cfoot">${thread}</div>
+      <input type="file" id="pr-szmany" multiple accept="image/*,video/*,.pdf" style="display:none" onchange="prSzScan(this.dataset.cid,this.files);this.value=''">
+      ${prSzDropHtml()}`;
   } else if(tab==="sizes"){
     const sel=zs.find(z=>z.id===PR.sz)||zs.find(z=>z.asset_id)||zs[0];
     /* V118.102 — THE WHOLE SET AT ONCE. Drop or pick any number of
@@ -30449,7 +30505,7 @@ function prCrPanelHtml(p,c){
         <button class="btn btn-s" ${PR.zip===c.id||!zin?"disabled":""} onclick="prSzZip('${escAttr(c.id)}')"><i class="ti ti-download"></i> ${PR.zip===c.id?"Zipping…":"Download all"}</button>
         <span class="nsdim">${canE?"Drop a whole set here — we work out the sizes":""}</span></div>
       ${prSzDropHtml()}
-      <div class="pr-szwrap"${canE?` ondragover="event.preventDefault();this.classList.add('dz')" ondragleave="this.classList.remove('dz')" ondrop="event.preventDefault();this.classList.remove('dz');prSzScan('${escAttr(c.id)}',event.dataTransfer.files)"`:""}><div class="pr-szlist">${zs.map(z=>{ const a=prSzAsset(z), src=a?(a.thumb_path||a.view_path||""):"";
+      <div class="pr-szwrap"${canE?` ondragover="event.preventDefault();this.classList.add('dz')" ondragleave="this.classList.remove('dz')" ondrop="event.preventDefault();this.classList.remove('dz');prSzScan('${escAttr(c.id)}',event.dataTransfer.files)"`:""}><div class="pr-szlist">${zs.map(z=>{ const a=prSzAsset(z), src=a?(a.thumb_path||a.view_path||a.poster_path||""):"";
         return `<div class="pr-szr${sel&&sel.id===z.id?" on":""}" onclick="event.stopPropagation();PR.sz='${escAttr(z.id)}';render()">
           <span class="prtimg${z._sug||!a?" empty":""}"${src?` data-sign="${escAttr(src)}"`:""}>${src?"":escHtml(z.ratio)}</span>
           <span class="tx"><b>${escHtml(z.label||z.ratio)} <small>${escHtml(z.ratio)}</small></b><small>${z.width&&z.height?`${z.width} × ${z.height}`:""}${a&&a.bytes?" · "+escHtml(kbmb(a.bytes)):""}</small></span>
@@ -30492,24 +30548,21 @@ function prCrPanelHtml(p,c){
   }
   const T=(k,l)=>`<span class="${tab===k?"on":""}" onclick="event.stopPropagation();prCTab('${k}')">${l}</span>`;
   const st=Object.keys(PR_CST).map(k=>`<option value="${k}"${c.status===k?" selected":""}>${PR_CST[k][0]}</option>`).join("");
-  const thumb=prCrThumb(c);
-  const rail=`<div class="pr-crail">
-    <div class="prbox"><div class="pr-cthumb"${thumb?` data-sign="${escAttr(thumb)}"`:""}>${thumb?"":'<i class="ti ti-photo"></i>'}</div>
-      <div class="prbb" style="padding:8px 11px 10px"><div class="pr-cl" onclick="prCTab('sizes')"><b>Sizes</b> · ${zin} of ${zs.length} in<small>${zs.map(z=>escHtml(z.label||z.ratio)+(z.asset_id?" ✓":" —")).join(" · ")}</small></div></div></div>
-    <div class="prbox"><div class="prbh">Copy<span class="prbx-t" onclick="prCTab('copy')">›</span></div><div class="prbb pr-cl" onclick="prCTab('copy')">${c.headline||c.primary_text?`${escHtml(c.headline||String(c.primary_text||"").slice(0,60))}<small>${escHtml([c.cta,lead?"":c.link].filter(Boolean).join(" → "))}</small>`:`<span class="nsdim">Nothing written yet</span>`}${lead?`<small class="pr-qn">${qs.length?`${qs.length} question${qs.length===1?"":"s"} · ${escHtml(qs.map(q=>q.question).filter(Boolean).slice(0,2).join(" · "))}`:"No lead questions yet"}</small>`:""}</div></div>
-    <div class="prbox"><div class="prbh">Details${canE?`<span class="prbx-t" onclick="prCrEditOpen('${escAttr(c.id)}')">Edit</span>`:""}</div><div class="prbb pr-cl nsdim" style="cursor:default">${escHtml(c.format||"")} · ${escHtml(bfWho(c.created_by)||"")}${c.created_at?" · "+escHtml(fmtShort(c.created_at)):""}</div></div></div>`;
+  /* V118.162 — the right rail of the creative was removed: picture,
+     Sizes door, Copy door. The picture and the sizes are the page now and
+     Copy is a card beside them. */
   return `<div class="pr-cpanel" onclick="event.stopPropagation()"><div class="pr-cin">
-    <div class="br-tabs pr-ctabs">${T("talk","Conversation"+(nMsg?` · ${nMsg}`:""))}${T("sizes","Sizes"+(zs.length?` · ${zin} of ${zs.length}`:""))}${T("copy","Copy"+(lead&&qs.length?` · ${qs.length} question${qs.length===1?"":"s"}`:""))}
+    <div class="br-tabs pr-ctabs">${T("talk","Creative"+(nMsg?` · ${nMsg}`:""))}${T("sizes","Sizes"+(zs.length?` · ${zin} of ${zs.length}`:""))}${T("copy","Copy"+(lead&&qs.length?` · ${qs.length} question${qs.length===1?"":"s"}`:""))}
       <span class="br-gap"></span><span class="prcst pl"><i class="ti ${(PR_PLAT[prCrPlatKey(c)]||PR_PLAT.other).icon}"></i>${escHtml(prCrPlat(c))}</span>
       <select class="tk-st cc-stsel" onchange="prCrStatus('${escAttr(c.id)}',this.value)" ${canE?"":"disabled"}>${st}</select>
       <button class="br-ico" onclick="prCopyLink('${escAttr(p.id)}','${escAttr(c.id)}')" title="Copy a link that opens this creative" aria-label="Copy link"><i class="ti ti-link"></i></button>
       ${canE?`<button class="br-ico" onclick="prCrTrash('${escAttr(c.id)}')" title="Move to Trash" aria-label="Move to Trash"><i class="ti ti-trash"></i></button>`:""}
       <button class="br-ico" onclick="prCrBack()" title="Close" aria-label="Close"><i class="ti ti-chevron-up"></i></button></div>
-    <div class="pr-cbody"><div class="pr-cmain">${body}</div>${rail}</div></div></div>`;
+    <div class="pr-cbody solo"><div class="pr-cmain">${body}</div></div></div></div>`;
 }
 function prSzBigHtml(c,z,canE){
   const a=prSzAsset(z), files=prSzFiles(z);
-  const pic=a?`<div class="pic${a.kind==="image"?"":" doc"}" data-sign="${escAttr(a.view_path||a.thumb_path||"")}" ${a.kind==="image"?`data-review="${escAttr(a.id)}"`:""}>${a.kind==="image"?"":`<span>${escHtml(a.filename||"")}</span>`}</div>`
+  const pic=a?`<div class="pic${a.kind==="image"?"":" doc"}" data-sign="${escAttr(a.view_path||a.thumb_path||a.poster_path||"")}" ${a.kind==="image"?`data-review="${escAttr(a.id)}"`:""}>${a.kind==="image"?"":`<span>${escHtml(a.filename||"")}</span>`}</div>`
     :`<div class="pic empty"${canE?` onclick="prSzPickFile('${escAttr(c.id)}','${escAttr(z.id)}')"`:""}><i class="ti ti-upload"></i><span>${escHtml(z.label||z.ratio)} · ${z.width&&z.height?`${z.width} × ${z.height}`:z.ratio}</span>${canE?`<b>Upload</b>`:""}</div>`;
   const under=`<div class="under"><b>${escHtml(z.label||z.ratio)}</b><span class="nsdim">${z.width&&z.height?`${z.width} × ${z.height}`:z.ratio}${a?` · ${escHtml(bfWho(a.created_by)||"")}${a.created_at?", "+escHtml(fmtShort(a.created_at)):""}`:""}</span><span class="sp"></span>
     ${a&&a.kind==="image"?`<span class="b" data-review="${escAttr(a.id)}">Review</span>`:""}${a&&assetDownloadable(a)?`<span class="b" onclick="assetDownload('${escAttr(a.id)}',event)">Download</span>`:""}
@@ -31380,10 +31433,13 @@ function prPanelHtml(p){
     else body=`<div class="th-sheet"><div class="th-strip" onclick="thStripTop(event)"><span class="k">Brief</span><span class="tx">${escHtml(thBriefWords(t))}</span><span class="go"><i class="ti ti-arrow-up"></i> Back to brief</span></div>
       <div class="br-thread">${brBriefPin(t)}${threadHtml(t,brMsgsFor("team"))}</div>${canComment()?thComposerHtml(t,"team",[]):""}</div>`;
   } else if(tab==="creatives"){
+    /* V118.162 — a heading over a single group said nothing. With one
+       platform the list runs on its own and keeps the Add door. */
+    const one=st.length===1;
     body=`<div class="pr-crlist">${st.length?st.map(x=>{ const list=prCrFor(p.id,x.id);
-      return `<div class="pr-crgrp"><div class="pr-crgh">${escHtml((PR_PLAT[x.platform]||PR_PLAT.other).label)} · ${list.length}${
+      return `<div class="pr-crgrp"><div class="pr-crgh${one?" solo":""}">${one?"":escHtml((PR_PLAT[x.platform]||PR_PLAT.other).label)+" · "+list.length}${
           canCap("edit_ad_creatives")?`<span class="pr-cradd" onclick="prCrNew('${p.id}','${x.id}')"><i class="ti ti-plus"></i> Creative</span>`:""}</div>
-        ${list.length?list.map(c=>prCrLine(c)+(PR.creative===c.id?prCrPanelHtml(p,c):"")).join(""):`<div class="nsdim" style="font-size:12.5px">Nothing yet</div>`}</div>`; }).join("")
+        ${list.length?list.map(c=>prCrLine(c,p)+(PR.creative===c.id?prCrPanelHtml(p,c):"")).join(""):`<div class="nsdim" style="font-size:12.5px">Nothing yet</div>`}</div>`; }).join("")
       :`<div class="nsdim" style="padding:8px 2px">Add a platform under Brief first</div>`}</div>`;
   } else if(tab==="brief"){
     body=`<div class="prcols3 pr-brief">${detail}<div>${plats}</div></div>`;
@@ -31404,7 +31460,7 @@ function prPanelHtml(p){
       <span class="br-gap"></span>
       <button class="br-ico" onclick="event.stopPropagation();prCopyLink('${id}')" title="Copy a link that opens this promotion" aria-label="Copy link"><i class="ti ti-link"></i></button>
       ${canEditP?`<button class="br-ico" onclick="event.stopPropagation();prTrash('${id}')" title="Move to Trash" aria-label="Move to Trash"><i class="ti ti-trash"></i></button>`:""}</div>
-    <div class="pr-body"><div class="pr-main">${body}</div><div class="pr-rail">${sofar}${railCr}</div></div>
+    <div class="pr-body"><div class="pr-main">${body}</div><div class="pr-rail">${sofar}${tab==="creatives"?"":railCr}</div></div>
   </div></div></div>`;
 }
 
@@ -32652,7 +32708,7 @@ async function prProgSave(){
 
 /* ── creatives ────────────────────────────────────────────────────── */
 function prCrThumb(c){
-  for(const z of prSizes(c.id)){ const a=z.asset_id&&assetById(z.asset_id); if(a&&(a.thumb_path||a.view_path)) return a.thumb_path||a.view_path; }   /* V118.87 */
+  for(const z of prSizes(c.id)){ const a=z.asset_id&&assetById(z.asset_id); const u=a&&(a.thumb_path||a.view_path||a.poster_path); if(u) return u; }   /* V118.87 · V118.162 poster: a video saves no thumb_path, so every reel drew a grey square */
   const cm=(PR.crc[c.id]||[]).slice().sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
   for(const m of cm){
     const a=assetsFor("message",m.id).find(x=>x.kind==="image"||x.kind==="video");
@@ -55904,5 +55960,797 @@ async function mfxSave(x,blob,w,h){
   };
 })();
 </script>
+<style id="studio-css">
+/* ══ STUDIO (Chirag, 4 Nov 2026 — mockup 03, "build") ═════════════════ */
+.stu-pill{background:var(--surface2);flex:0 0 auto;margin-right:4px}
+.stu-pill .tab-item{color:var(--muted);height:30px;font-size:12.5px;border-radius:6px;display:inline-flex;align-items:center;gap:5px}
+.stu-pill .tab-item.on{background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(13,13,13,.07)}
+.stu-pill .stu-pv{font-size:9px;font-weight:800;letter-spacing:.04em;background:#E0A800;color:#0D0D0D;border-radius:4px;padding:1px 5px;text-transform:uppercase}
+.stu-card{background:var(--surface);border-radius:var(--rc);border:1px solid var(--div);overflow-x:auto}
+/* the table spans the card so every row line runs edge to edge; each column
+   shrinks to its content and the slack goes to the last (the ⋯) column */
+table.stu-t{border-collapse:collapse;font-size:13px;width:100%}
+table.stu-t th:not(:last-child),table.stu-t td:not(.dc){width:1px}
+table.stu-t th{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--subtle);font-weight:700;text-align:left;padding:0 14px;height:38px;border-bottom:1px solid var(--div);white-space:nowrap}
+table.stu-t td{padding:0 14px;height:50px;border-bottom:1px solid #F4F4F2;white-space:nowrap;vertical-align:middle}
+table.stu-t tr.r{cursor:pointer}
+table.stu-t tr.r:hover td{background:#FAFAF9}
+table.stu-t td.ti-c .t{display:block;max-width:460px;overflow:hidden;text-overflow:ellipsis;font-weight:600;color:var(--text)}
+table.stu-t td.ti-c .t .pin{color:var(--acc);font-size:13px;margin-right:5px;vertical-align:-1px}
+table.stu-t .gp{display:inline-block;font-size:11.5px;font-weight:700;border-radius:6px;padding:3px 8px;background:var(--surface2);color:var(--text)}
+table.stu-t .vis{font-size:12.5px;font-weight:600}
+table.stu-t .vis.pub{color:#1E9A8E}
+table.stu-t .vis.prv{color:var(--subtle)}
+table.stu-t .mu{color:var(--subtle);font-size:12.5px}
+table.stu-t td.dc{padding:0 10px 0 0;text-align:right;position:relative}
+.stu-dots{width:28px;height:28px;border-radius:7px;border:1px solid transparent;background:transparent;cursor:pointer;color:var(--subtle)}
+tr.r:hover .stu-dots{border-color:var(--div);background:var(--surface)}
+.stu-menu{position:absolute;right:8px;top:40px;z-index:30;background:var(--surface);border-radius:12px;box-shadow:0 12px 32px rgba(13,13,13,.16);padding:6px;min-width:190px;text-align:left}
+.stu-empty{padding:40px 20px;text-align:center;color:var(--subtle);font-size:13.5px}
+.stu-pg{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:26px;padding:24px 28px 30px}
+.stu-pg h2{font-size:22px;margin:0 0 8px;line-height:1.25}
+.stu-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:18px;font-size:12.5px;color:var(--subtle)}
+.stu-meta .gp{font-size:11.5px;font-weight:700;border-radius:6px;padding:3px 8px;background:var(--surface2);color:var(--text)}
+.stu-meta .pub{color:#1E9A8E;font-weight:700}
+.stu-body{font-size:14px;line-height:1.6;color:var(--text);min-height:60px}
+.stu-body:empty:before{content:"Nothing written yet.";color:var(--subtle)}
+.stu-rail .stu-use{width:100%;height:40px;border:0;border-radius:10px;background:var(--acc);color:#fff;font:inherit;font-weight:800;font-size:14px;cursor:pointer;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:7px}
+.stu-rail .stu-ed{width:100%;height:36px;border-radius:10px;margin-bottom:12px}
+.stu-files{border:1px solid var(--div);border-radius:12px;padding:10px 12px;font-size:13px}
+.stu-files b{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);margin-bottom:4px}
+.stu-f{display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;min-width:0}
+.stu-f .fi-ic{width:30px;height:30px;flex:0 0 30px;border-radius:7px;background:var(--surface2);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.stu-f .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.stu-f .x{border:0;background:transparent;color:var(--subtle);cursor:pointer;font-size:15px}
+.stu-f:hover .nm{text-decoration:underline}
+.stu-ed-f{display:flex;flex-direction:column;gap:14px}
+.stu-ed-f label{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);font-weight:700;margin-bottom:6px}
+.stu-ed-f input.fi{width:100%;height:38px;font-size:15px;font-weight:600}
+.stu-ed-f .stu-box{min-height:220px}
+.stu-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+select.stu-sel.cc-stsel{height:36px;border:1px solid var(--div);border-radius:8px;padding:0 28px 0 10px;font:inherit;font-size:13px;background-color:#fff;min-width:180px}
+.stu-sw{display:inline-flex;align-items:center;gap:8px;height:36px;font-size:13px;font-weight:600;cursor:pointer;user-select:none}
+.stu-sw .sw{width:30px;height:17px;border-radius:9px;background:#D6D2C8;position:relative;display:inline-block}
+.stu-sw .sw:after{content:"";position:absolute;left:2px;top:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:left 120ms}
+.stu-sw .sw.on{background:#1E9A8E}.stu-sw .sw.on:after{left:15px}
+.stu-acts{display:flex;gap:8px}
+.stu-wgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;padding:16px}
+.stu-wt{border-radius:14px;overflow:hidden;background:var(--surface2);position:relative}
+.stu-wt .pic{height:180px;background:#E4E1DA;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--subtle);font-size:26px;overflow:hidden}
+.stu-wt .pic img{width:100%;height:100%;object-fit:cover;display:block}
+.stu-wt .cap{padding:10px 12px 12px;font-size:12.5px}
+.stu-wt .cap b{display:block;font-size:13.5px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:26px}
+.stu-wt .cap .mu{color:var(--subtle)}
+.stu-wt .who{display:flex;align-items:center;gap:7px;margin-top:7px;color:var(--text)}
+.stu-wt .who select{border:0;background-color:transparent;font:inherit;font-size:12.5px;padding:0 18px 0 0;width:auto;max-width:100%;background-position:right 2px center}
+.stu-wt .star{position:absolute;right:10px;bottom:62px;width:30px;height:30px;border-radius:50%;border:0;background:var(--surface);color:#B8B4AA;cursor:default;font-size:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(13,13,13,.12)}
+.stu-wt .star.on{color:#E0A800}
+.stu-wt .star.may{cursor:pointer}
+.stu-wt .rm{position:absolute;right:8px;top:8px;width:26px;height:26px;border-radius:7px;border:0;background:rgba(255,255,255,.9);cursor:pointer;color:var(--muted);display:none}
+.stu-wt:hover .rm{display:block}
+.stu-mp{display:inline-flex;align-items:center;background:var(--surface2);border-radius:10px;height:32px;padding:0 4px;gap:2px;font-size:13px;font-weight:800;flex:0 0 auto}
+.stu-mp button{width:26px;height:26px;border:0;background:transparent;cursor:pointer;color:var(--muted);font-size:15px;border-radius:6px}
+.stu-mp button:hover{background:var(--surface)}
+.stu-mp span{padding:0 6px;white-space:nowrap}
+.pcia.stu-nom.on,.br-ico.stu-nom.on{color:#E0A800}
+.stu-ov{position:fixed;inset:0;background:rgba(13,13,13,.28);z-index:900;display:flex;align-items:center;justify-content:center}
+.stu-mod{background:var(--surface);border-radius:16px;box-shadow:0 18px 44px rgba(13,13,13,.22);padding:18px;width:360px;max-width:calc(100vw - 32px);font-size:13px}
+.stu-mod h3{margin:0 0 12px;font-size:15px}
+.stu-mod .r{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.stu-mod .r span{color:var(--subtle);font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
+.stu-mod select.stu-sel{width:100%}
+.stu-mod .ft{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
+.stu-phrow{display:none}
+@media (max-width:760px){
+  .stu-phrow{display:block;overflow-x:auto;margin:10px 0 10px;-webkit-overflow-scrolling:touch}
+  .stu-phrow{white-space:nowrap}
+  .stu-phrow .stu-pill{display:inline-flex;vertical-align:middle}
+  .stu-phrow .stu-phnew{vertical-align:middle;margin-left:6px}
+  .stu-pg{grid-template-columns:1fr;padding:18px 16px}
+  table.stu-t th:not(:first-child):not(:last-child),table.stu-t td:not(.ti-c):not(.dc){display:none}
+  table.stu-t td.ti-c .t{max-width:calc(100vw - 110px)}
+  .stu-wgrid{grid-template-columns:1fr 1fr;padding:10px;gap:10px}
+  .stu-wt .pic{height:130px}
+}
+</style>
+<script id="studio">
+/* ══ V118.163 TBILISI — STUDIO ═════════════════════════════════════════
+   Chirag, 4 Nov: "the main page is called moodboards, but i need this to
+   be a creative hub where not just moodboards but sample briefs, common
+   guidelines, top creatives from the team for the month etc can be
+   captured." He named it Studio and the sections Mood boards · Briefs ·
+   Guidelines · WOW (mockup 03, "build"). "Only moodboard will remain open
+   to everyone. everything else will go in preview."
+   · The All brands tab "Mood boards" now reads Studio. The four sections
+     are a switch at the start of the page's one row (the Plan page's
+     Calendar · Events · Meetings switch). The left panel only filters
+     the section you are in — "left panel cant be used for navigation".
+   · Mood boards is the existing general boards page, unchanged.
+   · Briefs and Guidelines are studio_pages rows (kind brief|guideline):
+     a standard listing, then a page. "Use this brief" opens the brand's
+     own New task form already filled; once saved, the brief's files are
+     copied into the task's first message.
+   · WOW is studio_wow: a star on an approved post or creative nominates
+     it for its month; only the Super administrator picks.
+   Data: 01 - Studio - migration.sql. Keys: page_studio_briefs,
+   page_studio_guidelines, page_studio_wow (all three in preview). */
+const STU={sec:"brief",open:null,edit:null,
+  pages:{brief:[],guideline:[]},ok:{brief:false,guideline:false},loading:{},err:{},
+  f:{brief:[],guideline:[]},q:{brief:"",guideline:""},sort:{brief:"updated",guideline:"pinned"},menu:null,
+  wow:[],wowOk:false,wowLoading:false,wowErr:"",wm:"",show:"picked",use:null,nom:null};
+let STU_PENDING=null;
+const STU_LS="cc-stu-sec";
+const STU_KEY={brief:"page_studio_briefs",guideline:"page_studio_guidelines",wow:"page_studio_wow",mood:"page_mood_boards"};
+const STU_WORD={mood:"Mood boards",brief:"Briefs",guideline:"Guidelines",wow:"WOW"};
+const STU_ONE={brief:"brief",guideline:"guideline"};
+const STU_GRP_START={brief:["Social post","Film / reel","Branding","Print"],guideline:["Writing","Design","Files"]};
+const STU_GRP_WORD={brief:"Type",guideline:"Topic"};
+function stuMay(k){ return k==="mood"?(typeof mbgMay==="function"&&mbgMay()):(typeof pageOpen==="function"&&pageOpen(STU_KEY[k])); }
+function stuSecs(){ return ["mood","brief","guideline","wow"].filter(stuMay); }
+function stuAny(){ return stuSecs().length>0; }
+function stuPv(k){ return typeof pagePreview==="function"&&pagePreview(STU_KEY[k]); }
+function stuOnPage(){ return view==="studio"||(view==="mood"&&typeof mbgOn==="function"&&mbgOn()); }
+function stuMine(x){ return !!x&&!!ME&&x.owner_id===ME.id; }
+function stuWho(id){ return typeof mdbWho==="function"?mdbWho(id):"Someone"; }
+function stuDay(iso){ try{ return fmtShort(iso); }catch(e){ return String(iso||"").slice(0,10); } }
+function stuNowMonth(){ const d=new Date(Date.now()+330*60000); return d.toISOString().slice(0,7); }
+
+/* ── the way in ────────────────────────────────────────────────────── */
+function stuGo(k){
+  const secs=stuSecs();
+  if(!secs.length){ toast("Studio is not open to you yet","err"); return; }
+  let last=null; try{ last=localStorage.getItem(STU_LS); }catch(e){}
+  if(!k) k=[last,"mood"].find(x=>x&&secs.includes(x))||secs[0];
+  if(!secs.includes(k)){ toast(STU_WORD[k]+" is not open to you yet","err"); return; }
+  try{ localStorage.setItem(STU_LS,k); }catch(e){}
+  closeAllPops(); STU.menu=null;
+  if(k==="mood"){ mbgOpen(); return; }
+  if(view==="mood"&&typeof MDB!=="undefined"&&MDB.open&&typeof mdbClose==="function") mdbClose(true);
+  const changed=STU.sec!==k; STU.sec=k; if(changed){ STU.open=null; STU.edit=null; }
+  if(activeBrand&&brands[activeBrand]){
+    const sel=document.getElementById("brand-sel"); if(sel) sel.value="";
+    view="studio"; setBrand("");
+  } else if(view!=="studio") setView("studio"); else render();
+  const m=document.getElementById("main"); if(m) m.scrollTop=0;
+}
+function stuPhRow(){
+  const p=stuPillHtml();
+  const nw=view==="studio"&&(STU.sec==="brief"||STU.sec==="guideline")&&!STU.open?`<button class="fb-add stu-phnew" onclick="stuNew()"><i class="ti ti-plus"></i>New ${STU_ONE[STU.sec]}</button>`:"";
+  return p||nw?`<div class="stu-phrow">${p}${nw}</div>`:"";
+}
+function stuPillHtml(){
+  const cur=view==="studio"?STU.sec:"mood";
+  /* one section only (Mood boards for most of the team): no switch at all */
+  if(stuSecs().length<2) return "";
+  return `<div class="tab-pill stu-pill" data-gate="stu-pill">`+stuSecs().map(k=>
+    `<button class="tab-item${k===cur?" on":""}" data-stu="${k}" onclick="event.stopPropagation();stuGo('${k}')">${STU_WORD[k]}${k!=="mood"&&stuPv(k)?`<span class="stu-pv">Preview</span>`:""}</button>`).join("")+`</div>`;
+}
+
+/* ── the route ─────────────────────────────────────────────────────── */
+(function(){
+  const base=viewRoute;
+  viewRoute=function(v){
+    if(v==="studio") return {render:stuRender,sidebar:stuSide,page:STU_KEY[STU.sec]||"page_studio_briefs"};
+    return base(v);
+  };
+  /* the tab: "Mood boards" reads Studio, and is there for anyone with any of the four */
+  const baseTabs=renderBnTabs;
+  renderBnTabs=function(){
+    const out=baseTabs.apply(this,arguments);
+    try{
+      const el=document.getElementById("bn-tabs");
+      if(!el||el.style.display==="none"||(activeBrand&&brands[activeBrand])) return out;
+      let t=el.querySelector('[data-ac="mbg"]');
+      if(!t&&stuAny()){
+        const cal=el.querySelector('[data-ac="cal"]');
+        const html=`<button class="bntab" data-ac="mbg"></button>`;
+        if(cal) cal.insertAdjacentHTML("afterend",html); else el.insertAdjacentHTML("beforeend",html);
+        t=el.querySelector('[data-ac="mbg"]');
+      }
+      if(!t) return out;
+      if(!stuAny()){ t.remove(); return out; }
+      const on=stuOnPage(), open=view==="studio"&&STU.open&&STU.open!=="new"?stuPage(STU.open):null;
+      t.setAttribute("onclick","stuGo()");
+      t.classList.toggle("on",on&&!open); t.setAttribute("aria-current",on&&!open?"page":"false");
+      const pv=stuPv("mood")&&!stuSecs().some(k=>k!=="mood"&&!stuPv(k));
+      const want=`<i class="ti ti-palette"></i> Studio${pv?'<span class="pvt"><i class="ti ti-lock"></i>Preview</span>':""}`;
+      if(t.innerHTML!==want) t.innerHTML=want;
+      /* a brief or guideline open: the tab grows — Studio grey (the way back), the page bold */
+      const had=el.querySelector(".bk-pill.bk-stu");
+      if(open&&!(typeof mfNarrow==="function"&&mfNarrow())){
+        t.style.display="none";
+        const html=`<button class="bk-p" onclick="stuBack()" title="Back to ${escAttr(STU_WORD[STU.sec])}"><i class="ti ti-palette"></i>Studio</button><span class="bk-d"></span><span class="bk-c"><i class="ti ${STU.sec==="brief"?"ti-file-text":"ti-book"}"></i>${escHtml(String(open.title||"").slice(0,48))}</span>`;
+        if(had){ if(had.innerHTML!==html) had.innerHTML=html; }
+        else{ const c=document.createElement("span"); c.className="bk-pill bk-stu"; c.setAttribute("aria-current","page"); c.innerHTML=html; t.after(c); }
+      } else { t.style.display=""; if(had) had.remove(); }
+    }catch(e){}
+    return out;
+  };
+  /* the black bar's red New button */
+  const baseSpec=hbSpec;
+  hbSpec=function(){
+    if(view==="studio"&&!(activeBrand&&brands[activeBrand])&&(STU.sec==="brief"||STU.sec==="guideline")&&!STU.open)
+      return {cols:null, nw:{label:"New "+STU_ONE[STU.sec],go:()=>stuNew()}, io:false};
+    return baseSpec.apply(this,arguments);
+  };
+  const baseRender=render;
+  render=function(){
+    const out=baseRender.apply(this,arguments);
+    try{ if(view==="studio"&&typeof brNavSync==="function") brNavSync(false); }catch(e){}
+    return out;
+  };
+  /* the mood boards page carries the switch at the start of its row */
+  if(typeof mdbBar==="function"){
+    const baseBar=mdbBar;
+    mdbBar=function(){
+      const out=baseBar.apply(this,arguments);
+      try{
+        const bar=document.getElementById("mdb-bar");
+        if(bar&&mbgOn()&&!MDB.sel&&!bar.querySelector(".stu-pill")) bar.insertAdjacentHTML("afterbegin",stuPillHtml());
+      }catch(e){}
+      return out;
+    };
+  }
+  /* …and so does its empty state, when there is no board yet */
+  if(typeof renderMood==="function"){
+    const baseMood=renderMood;
+    renderMood=function(){
+      const out=baseMood.apply(this,arguments);
+      try{
+        const w0=document.querySelector("#main > div");
+        if(mbgOn()&&w0&&!w0.querySelector(".stu-phrow")) w0.insertAdjacentHTML("afterbegin",stuPhRow());
+        if(mbgOn()&&!document.querySelector("#main .fb .stu-pill")){
+          const bar=document.getElementById("mdb-bar");
+          if(bar&&!MDB.sel) bar.insertAdjacentHTML("afterbegin",stuPillHtml());
+          else if(!bar){ const w=document.querySelector("#main > div"); if(w) w.insertAdjacentHTML("afterbegin",`<div class="fb">${stuPillHtml()}</div>`); }
+        }
+      }catch(e){}
+      return out;
+    };
+  }
+  /* the phone's menu says Studio too */
+  const relabel=a=>a.map(x=>{ const i=x.indexOf("Mood boards"); if(i<0) return x; const y=x.slice(); y[i]="Studio"; y[i+1]="stuGo()"; if(y[i-1]==="ti-layout-board") y[i-1]="ti-palette"; return y; });
+  if(typeof xgTabs==="function"){ const b=xgTabs; xgTabs=function(){ let o=b.apply(this,arguments); o=relabel(o);
+    if(!o.some(x=>x.includes("Studio"))&&stuAny()) o.push(["mood","ti-palette","Studio","stuGo()",["mood","studio"]]);
+    o.forEach(x=>{ if(x.includes("Studio")&&Array.isArray(x[4])&&!x[4].includes("studio")) x[4]=x[4].concat("studio"); }); return o; }; }
+  if(typeof xhMore==="function"){ const b=xhMore; xhMore=function(){ let o=relabel(b.apply(this,arguments));
+    if(!o.some(x=>x.includes("Studio"))&&stuAny()) o.push(["ti-palette","Studio","stuGo()"]); return o; }; }
+  /* the address */
+  const baseState=urlState;
+  urlState=function(){
+    const q=baseState.apply(this,arguments);
+    if(view==="studio"){ q.delete("b"); q.set("s",STU.sec); if(STU.open&&STU.open!=="new") q.set("sp",STU.open); }
+    return q;
+  };
+  const baseApply=urlApply;
+  urlApply=async function(q){
+    if(q&&q.get("p")==="studio"){
+      const s=q.get("s"); if(s&&STU_KEY[s]&&s!=="mood") STU.sec=s;
+      STU.open=q.get("sp")||null; STU.edit=null;
+      if(activeBrand&&brands[activeBrand]){ const sel=document.getElementById("brand-sel"); if(sel) sel.value=""; activeBrand=""; }
+    }
+    return baseApply.apply(this,arguments);
+  };
+})();
+try{
+  if(typeof TR_KINDS==="object"){
+    if(!TR_KINDS.studio_pages){ TR_KINDS.studio_pages={label:"Brief or guideline",plural:"Briefs and guidelines",icon:"file-text",page:"Studio",name:r=>r.title};
+      if(TR_ORDER.indexOf("studio_pages")<0) TR_ORDER.push("studio_pages"); }
+    if(!TR_KINDS.studio_wow){ TR_KINDS.studio_wow={label:"WOW nomination",plural:"WOW nominations",icon:"star",page:"Studio",name:r=>r.title||"A nomination"};
+      if(TR_ORDER.indexOf("studio_wow")<0) TR_ORDER.push("studio_wow"); }
+  }
+}catch(e){}
+
+/* ── briefs and guidelines: the data ───────────────────────────────── */
+async function stuLoad(k){
+  if(STU.loading[k]) return;
+  STU.loading[k]=true;
+  const r=await sb.from("studio_pages").select("*").eq("kind",k).is("deleted_at",null).order("updated_at",{ascending:false});
+  STU.loading[k]=false;
+  if(r.error){ STU.err[k]=r.error.message; STU.ok[k]=false; }
+  else{ STU.pages[k]=(r.data||[]).filter(x=>x.kind===k&&!x.deleted_at); STU.ok[k]=true; STU.err[k]=""; }
+  if(view==="studio"&&STU.sec===k) render();
+}
+function stuPage(id){ return (STU.pages.brief.concat(STU.pages.guideline)).find(x=>x.id===id)||null; }
+function stuRows(){ return STU.pages[STU.sec]||[]; }
+function stuGroups(k){
+  const seen=new Map();
+  STU_GRP_START[k].forEach(g=>seen.set(g,0));
+  (STU.pages[k]||[]).forEach(x=>{ const g=String(x.grp||"").trim(); if(g) seen.set(g,(seen.get(g)||0)+1); });
+  return [...seen.entries()];
+}
+const STU_FIELDS={
+  brief:[{k:"grp",label:"Type",icon:"category"},{k:"owner",label:"Written by",icon:"user"},{k:"vis",label:"Seen by",icon:"eye"}],
+  guideline:[{k:"grp",label:"Topic",icon:"category"},{k:"owner",label:"Written by",icon:"user"},{k:"vis",label:"Seen by",icon:"eye"}]};
+function stuValsOf(x,k){
+  if(k==="grp") return String(x.grp||"").trim()||null;
+  if(k==="owner") return x.owner_id||null;
+  if(k==="vis") return x.is_public?"team":"private";
+  return null;
+}
+function stuOptionsFor(k){
+  const rows=stuRows();
+  if(k==="grp") return fltCounts(rows,k,stuValsOf,stuGroups(STU.sec).map(([g])=>[g,g]));
+  if(k==="vis") return fltCounts(rows,k,stuValsOf,[["team","Team"],["private","Private"]]);
+  return fltCounts(rows,k,stuValsOf,[],v=>stuWho(v));
+}
+FLT_HOSTS.studio={get fields(){ return STU_FIELDS[STU.sec]||STU_FIELDS.brief; },optionsFor:stuOptionsFor,
+  get:()=>STU.f[STU.sec]||[],set:fs=>{ STU.f[STU.sec]=fs; },render:()=>stuRefresh()};
+function stuVisible(){
+  const k=STU.sec, q=String(STU.q[k]||"").trim().toLowerCase(), fs=STU.f[k]||[];
+  let rows=stuRows().filter(x=>fs.every(f=>fltMatch(stuValsOf(x,f.k),f)));
+  if(q) rows=rows.filter(x=>(String(x.title||"")+" "+String(x.grp||"")+" "+stuWho(x.owner_id)).toLowerCase().includes(q));
+  const s=STU.sort[k];
+  const by={updated:(a,b)=>String(b.updated_at||"").localeCompare(String(a.updated_at||"")),
+    title:(a,b)=>String(a.title||"").localeCompare(String(b.title||"")),
+    used:(a,b)=>(b.used_count||0)-(a.used_count||0)};
+  by.pinned=(a,b)=>((b.pinned?1:0)-(a.pinned?1:0))||by.updated(a,b);
+  return rows.sort(by[s]||by.updated);
+}
+function stuPickSort(v){ STU.sort[STU.sec]=v; stuRefresh(); }
+
+/* ── the page ──────────────────────────────────────────────────────── */
+function stuRender(){
+  const mc=document.getElementById("main"); if(!mc) return;
+  if(!stuMay(STU.sec)){ const s=stuSecs().find(k=>k!=="mood"); if(s&&s!==STU.sec){ STU.sec=s; } else { mc.innerHTML=`<div style="padding:0 var(--pg-x) 26px;"><div class="stu-card"><div class="stu-empty">This part of Studio is not open to you yet.</div></div></div>`; return; } }
+  if(STU.sec==="wow"){ stuWowRender(mc); return; }
+  const k=STU.sec;
+  if(!STU.ok[k]&&!STU.loading[k]) stuLoad(k);
+  if(STU.open){ stuPageRender(mc); return; }
+  mc.innerHTML=`<div style="padding:0 var(--pg-x) 26px;">${stuPhRow()}
+      <div class="fb" id="stu-bar"></div>
+      <div id="stu-list"></div>
+    </div>`;
+  stuBar(); stuList();
+}
+function stuRefresh(){ if(view!=="studio") return; if(STU.sec==="wow"||STU.open){ render(); return; } stuSide(); stuBar(); stuList(); }
+function stuBar(){
+  const bar=document.getElementById("stu-bar"); if(!bar) return;
+  const k=STU.sec, one=STU_ONE[k];
+  const sorts=k==="brief"?[["updated","Recently updated"],["used","Most used"],["title","Name"]]:[["pinned","Pinned first"],["updated","Recently updated"],["title","Name"]];
+  bar.innerHTML=stuPillHtml()+`
+    <input class="fi fb-q" placeholder="Search ${k==="brief"?"briefs":"guidelines"}…" value="${escAttr(STU.q[k]||"")}"
+      oninput="STU.q[STU.sec]=this.value;stuList()" onclick="event.stopPropagation()">
+    ${fltChipsHtml("studio")}
+    <span class="fb-end">
+      <span id="stu-cnt">${fltCountHtml(stuVisible().length,stuRows().length,one)}</span>
+      ${fltSortHtml("studio",sorts,STU.sort[k],sorts[0][0],"stuPickSort")}
+    </span>`;
+}
+function stuList(){
+  const g=document.getElementById("stu-list"); if(!g) return;
+  const k=STU.sec;
+  const c=document.getElementById("stu-cnt"); if(c) c.innerHTML=fltCountHtml(stuVisible().length,stuRows().length,STU_ONE[k]);
+  if(STU.err[k]&&!STU.ok[k]){ g.innerHTML=`<div class="stu-card"><div class="stu-empty">Could not load — ${escHtml(STU.err[k])}</div></div>`; return; }
+  if(!STU.ok[k]){ g.innerHTML=`<div class="stu-card"><div class="stu-empty">Loading…</div></div>`; return; }
+  const rows=stuVisible();
+  if(!rows.length){ g.innerHTML=`<div class="stu-card"><div class="stu-empty">${stuRows().length?"Nothing matches these filters.":`No ${k==="brief"?"briefs":"guidelines"} yet.`}</div></div>`; return; }
+  const brief=k==="brief";
+  const head=`<tr><th>${brief?"Brief":"Page"}</th><th>${STU_GRP_WORD[k]}</th><th>Written by</th>${brief?"<th>Used</th>":""}<th>Seen by</th><th>Updated</th><th></th></tr>`;
+  const body=rows.map(x=>{
+    const m=STU.menu===x.id;
+    return `<tr class="r" data-sp="${x.id}" onclick="stuRowClick(event,'${x.id}')">
+      <td class="ti-c"><span class="t" title="${escAttr(x.title)}">${!brief&&x.pinned?`<i class="ti ti-pin-filled pin"></i>`:""}${escHtml(x.title)}</span></td>
+      <td>${x.grp?`<span class="gp">${escHtml(x.grp)}</span>`:`<span class="mu">—</span>`}</td>
+      <td>${escHtml(stuWho(x.owner_id))}</td>
+      ${brief?`<td>${x.used_count?`${x.used_count} time${x.used_count===1?"":"s"}`:`<span class="mu">—</span>`}</td>`:""}
+      <td><span class="vis ${x.is_public?"pub":"prv"}">${x.is_public?"Team":"Private"}</span></td>
+      <td class="mu">${escHtml(stuDay(x.updated_at||x.created_at))}</td>
+      <td class="dc"><button class="stu-dots" title="Options" onclick="stuMenu(event,'${x.id}')"><i class="ti ti-dots"></i></button>${m?stuMenuHtml(x):""}</td></tr>`;
+  }).join("");
+  g.innerHTML=`<div class="stu-card"><table class="stu-t">${head}${body}</table></div>`;
+}
+function stuRowClick(e,id){
+  if(e&&e.target&&e.target.closest&&e.target.closest(".stu-dots,.stu-menu")) return;
+  stuOpenPage(id);
+}
+function stuMenuHtml(x){
+  const mine=stuMine(x), id=x.id;
+  return `<div class="stu-menu mdb-menu" onclick="event.stopPropagation()">
+    <div class="mdb-mi" onclick="stuCopy('${id}')"><i class="ti ti-link"></i>Copy link</div>
+    ${mine?`<div class="mdb-mi" onclick="STU.menu=null;stuEdit('${id}')"><i class="ti ti-pencil"></i>Edit</div>
+    ${x.kind==="guideline"?`<div class="mdb-mi" onclick="stuPatch('${id}',{pinned:${!x.pinned}})"><i class="ti ${x.pinned?"ti-pinned-off":"ti-pin"}"></i>${x.pinned?"Unpin":"Pin to the top"}</div>`:""}
+    <div class="mdb-mi" onclick="stuPatch('${id}',{is_public:${!x.is_public}})"><i class="ti ${x.is_public?"ti-lock":"ti-users"}"></i>${x.is_public?"Make private":"Share with the team"}</div>
+    <div class="mdb-msep"></div>
+    <div class="mdb-mi red" onclick="stuTrash('${id}')"><i class="ti ti-trash"></i>Move to Trash</div>`
+    :`<div class="mdb-msep"></div><div class="mdb-mi" style="cursor:default;color:var(--muted)"><i class="ti ti-user"></i>${escHtml(stuWho(x.owner_id))}'s ${STU_ONE[x.kind]}</div>`}</div>`;
+}
+function stuMenu(e,id){ if(e){ e.preventDefault(); e.stopPropagation(); } STU.menu=STU.menu===id?null:id; stuList(); }
+document.addEventListener("click",e=>{
+  if(view!=="studio"||!STU.menu) return;
+  if(!(e.target.closest&&e.target.closest(".stu-menu"))){ STU.menu=null; stuList(); }
+});
+function stuCopy(id){
+  STU.menu=null;
+  const x=stuPage(id); const url=location.origin+location.pathname+"?p=studio&s="+(x?x.kind:STU.sec)+"&sp="+encodeURIComponent(id);
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(()=>toast("Link copied"),()=>toast(escHtml(url)));
+  else toast(escHtml(url));
+  if(view==="studio"&&!STU.open) stuList();
+}
+async function stuPatch(id,patch){
+  STU.menu=null;
+  const x=stuPage(id); if(!x) return;
+  const r=await sb.from("studio_pages").update({...patch,updated_at:new Date().toISOString()}).eq("id",id).select("id");
+  if(r.error||!(r.data||[]).length){ toast("Not saved"+(r.error?" — "+escHtml(r.error.message):" — only the writer can change it"),"err"); stuRefresh(); return; }
+  Object.assign(x,patch,{updated_at:new Date().toISOString()});
+  if("is_public" in patch) toast(patch.is_public?"Shared with the team":"Private — only you can see it");
+  if("pinned" in patch) toast(patch.pinned?"Pinned to the top":"Unpinned");
+  stuRefresh();
+}
+async function stuTrash(id){
+  STU.menu=null;
+  const x=stuPage(id); if(!x) return;
+  const r=await sb.from("studio_pages").update({deleted_at:new Date().toISOString()}).eq("id",id).select("id");
+  if(r.error||!(r.data||[]).length){ toast("Not moved"+(r.error?" — "+escHtml(r.error.message):""),"err"); return; }
+  STU.pages[x.kind]=STU.pages[x.kind].filter(p=>p.id!==id);
+  if(STU.open===id){ STU.open=null; STU.edit=null; }
+  toast(`“${escHtml(x.title)}” moved to Trash`);
+  render();
+}
+
+/* ── the left panel: favourites, then the type or topic ────────────── */
+function stuSide(){
+  const st=document.getElementById("sb-stats"); if(st) st.innerHTML="";
+  const sm=document.getElementById("sb-months"); if(!sm) return;
+  if(STU.sec==="wow"){ stuWowSide(sm); return; }
+  const k=STU.sec, fs=STU.f[k]||[], rows=stuRows();
+  const only=(kk,v)=>fs.length===1&&fs[0].k===kk&&fs[0].op===FLT_DEFAULT_OP&&fs[0].vals.size===1&&fs[0].vals.has(v);
+  const favs=[["all",k==="brief"?"All briefs":"All guidelines",rows.length,!fs.length],
+    ["mine","Mine",rows.filter(stuMine).length,only("owner",ME&&ME.id)]];
+  if(k==="guideline") favs.push(["pinned","Pinned",rows.filter(x=>x.pinned).length,false]);
+  const fav=favs.map(([id,l,n,on])=>`<div class="mdb-trow bfav${on?" on":""}" data-sfav="${id}" onclick="stuFav('${id}')"><span class="bfav-st">★</span><span class="nm">${escHtml(l)}</span><span class="ct">${n}</span></div>`).join("");
+  const grp=stuGroups(k).map(([g,n])=>`<div class="mdb-trow${only("grp",g)?" on":""}" data-sgrp="${escAttr(g)}" onclick="stuGrp(this.dataset.sgrp)"><span class="nm">${escHtml(g)}</span><span class="ct">${n}</span></div>`).join("");
+  sm.innerHTML=`<div class="s-lbl sb-head"><span>Favourites</span></div>${fav}
+    <div class="s-lbl sb-head" style="margin-top:18px"><span>${STU_GRP_WORD[k]}</span></div>${grp}`;
+}
+function stuFav(id){
+  const k=STU.sec;
+  if(id==="all") STU.f[k]=[];
+  else if(id==="mine") STU.f[k]=[fltNew("owner",[ME.id])];
+  else if(id==="pinned"){ STU.f[k]=[]; STU.sort[k]="pinned"; }
+  STU.open=null; stuRefresh();
+}
+function stuGrp(g){ STU.f[STU.sec]=[fltNew("grp",[g])]; STU.open=null; stuRefresh(); }
+
+/* ── one brief or guideline ────────────────────────────────────────── */
+function stuOpenPage(id){ STU.open=id; STU.edit=null; STU.menu=null; render(); const m=document.getElementById("main"); if(m) m.scrollTop=0; }
+function stuBack(){ STU.open=null; STU.edit=null; render(); }
+function stuNew(){
+  if(!stuMay(STU.sec)||STU.sec==="wow") return;
+  STU.open="new"; STU.edit={id:crypto.randomUUID(),fresh:true,kind:STU.sec,title:"",body:"",grp:"",is_public:true,files:[],add:[],gone:[]};
+  render();
+  setTimeout(()=>{ const t=document.getElementById("stu-title"); if(t) t.focus(); },40);
+}
+function stuEdit(id){
+  const x=stuPage(id); if(!x||!stuMine(x)) return;
+  STU.open=id; STU.edit={id,fresh:false,kind:x.kind,title:x.title||"",body:x.body||"",grp:x.grp||"",is_public:!!x.is_public,files:(x.files||[]).slice(),add:[],gone:[]};
+  render();
+}
+function stuPageRender(mc){
+  const E=STU.edit;
+  if(E){ mc.innerHTML=`<div style="padding:0 var(--pg-x) 26px;">${stuPhRow()}<div class="fb" id="stu-bar">${stuPillHtml()}</div><div class="stu-card">${stuEditorHtml(E)}</div></div>`; return; }
+  const x=stuPage(STU.open);
+  if(!x){
+    mc.innerHTML=`<div style="padding:0 var(--pg-x) 26px;"><div class="stu-card"><div class="stu-empty">${STU.ok[STU.sec]?"This page is private or no longer there.":"Loading…"}
+      ${STU.ok[STU.sec]?`<div style="margin-top:14px"><button class="btn btn-s" onclick="stuBack()">Back to ${STU_WORD[STU.sec]}</button></div>`:""}</div></div></div>`;
+    return;
+  }
+  const brief=x.kind==="brief";
+  const files=(x.files||[]).map((f,i)=>stuFileRow(f,`stuFileOpen('${x.id}',${i})`)).join("");
+  mc.innerHTML=`<div style="padding:0 var(--pg-x) 26px;">${stuPhRow()}<div class="fb" id="stu-bar">${stuPillHtml()}</div><div class="stu-card"><div class="stu-pg">
+    <div>
+      <h2>${escHtml(x.title)}</h2>
+      <div class="stu-meta">${x.grp?`<span class="gp">${escHtml(x.grp)}</span>`:""}<span class="${x.is_public?"pub":""}">${x.is_public?"Team":"Private"}</span><span>${escHtml(stuWho(x.owner_id))} · ${escHtml(stuDay(x.updated_at||x.created_at))}</span>${brief&&x.used_count?`<span>Used ${x.used_count} time${x.used_count===1?"":"s"}</span>`:""}</div>
+      <div class="stu-body">${wRender(x.body||"")}</div>
+    </div>
+    <div class="stu-rail">
+      ${brief?`<button class="stu-use" data-gate="stu-use" onclick="stuUseOpen('${x.id}')"><i class="ti ti-copy"></i>Use this brief</button>`:""}
+      ${stuMine(x)?`<button class="btn btn-s stu-ed" onclick="stuEdit('${x.id}')"><i class="ti ti-pencil"></i> Edit</button>`:""}
+      ${files?`<div class="stu-files"><b>Attached</b>${files}</div>`:""}
+    </div></div></div></div>`;
+}
+function stuExt(n){ const m=/\.([a-z0-9]{1,4})$/i.exec(String(n||"")); return m?m[1].toUpperCase():"FILE"; }
+function stuFileRow(f,click,rm){
+  return `<div class="stu-f" onclick="${click}"><span class="fi-ic">${escHtml(stuExt(f.name))}</span><span class="nm" title="${escAttr(f.name)}">${escHtml(f.name)}</span>${rm?`<button class="x" title="Remove" onclick="event.stopPropagation();${rm}"><i class="ti ti-x"></i></button>`:""}</div>`;
+}
+async function stuFileOpen(id,i){
+  const x=stuPage(id), f=x&&(x.files||[])[i]; if(!f) return;
+  const w=window.open("","_blank");
+  const u=await signedUrl(f.path);
+  if(!u){ if(w) w.close(); toast("That file is not available","err"); return; }
+  if(w) w.location.href=u; else window.location.href=u;
+}
+function stuEditorHtml(E){
+  const k=E.kind, groups=stuGroups(k).map(([g])=>g);
+  if(E.grp&&!groups.includes(E.grp)) groups.push(E.grp);
+  const opts=`<option value="">—</option>`+groups.map(g=>`<option value="${escAttr(g)}"${g===E.grp?" selected":""}>${escHtml(g)}</option>`).join("")+`<option value="__new__">New ${STU_GRP_WORD[k].toLowerCase()}…</option>`;
+  const files=E.files.map((f,i)=>stuFileRow(f,"",`stuEdRm('old',${i})`)).concat(E.add.map((f,i)=>stuFileRow({name:f.name},"",`stuEdRm('new',${i})`))).join("");
+  return `<div class="stu-pg"><div class="stu-ed-f">
+      <div><label>${k==="brief"?"Brief":"Guideline"}</label>
+        <input class="fi" id="stu-title" value="${escAttr(E.title)}" placeholder="${k==="brief"?"e.g. Festive offer post, real estate":"e.g. Caption rules for every brand"}" oninput="STU.edit.title=this.value"></div>
+      <div class="stu-row">
+        <div><label>${STU_GRP_WORD[k]}</label><select class="cc-stsel stu-sel" onchange="stuEdGrp(this)">${opts}</select></div>
+        <span class="stu-sw" onclick="STU.edit.is_public=!STU.edit.is_public;render()"><span class="sw${E.is_public?" on":""}"></span>${E.is_public?"Team — everyone can see it":"Private — only you"}</span>
+      </div>
+      <div><label>Writing</label>
+        <div class="brbox"><div id="stu-body" class="fi ta rt v44-ta stu-box" contenteditable="true" data-nodraft="1" data-ph="Write it out."
+          oninput="STU.edit.body=mpClean(this.innerHTML).trim()" onfocus="rtFocus(this)" onblur="mpBarHide()">${wRender(E.body||"")}</div></div></div>
+    </div>
+    <div class="stu-rail">
+      <div class="stu-files" ondragover="event.preventDefault()" ondrop="event.preventDefault();stuEdAdd(event.dataTransfer.files)"><b>Attached</b>${files||`<div class="mu" style="color:var(--subtle);padding:4px 0 8px">No files yet</div>`}
+        <button class="btn btn-s" style="margin-top:6px" onclick="document.getElementById('stu-files-in').click()"><i class="ti ti-paperclip"></i> Attach files</button>
+        <input type="file" id="stu-files-in" multiple style="display:none" onchange="stuEdAdd(this.files);this.value=''"></div>
+      <div class="stu-acts" style="margin-top:14px"><button class="btn btn-p" data-gate="stu-save" onclick="stuSave()"><i class="ti ti-check"></i> Save</button><button class="btn btn-s" onclick="stuCancel()">Cancel</button></div>
+    </div></div>`;
+}
+function stuEdGrp(sel){
+  if(sel.value!=="__new__"){ STU.edit.grp=sel.value; return; }
+  const v=(prompt("New "+STU_GRP_WORD[STU.edit.kind].toLowerCase())||"").trim();
+  if(v) STU.edit.grp=v;
+  stuKeepBody(); render();
+}
+function stuKeepBody(){ const b=document.getElementById("stu-body"); if(b&&STU.edit) STU.edit.body=mpClean(b.innerHTML).trim(); const t=document.getElementById("stu-title"); if(t&&STU.edit) STU.edit.title=t.value; }
+function stuEdAdd(list){ stuKeepBody(); [...(list||[])].forEach(f=>STU.edit.add.push(f)); render(); }
+function stuEdRm(which,i){
+  stuKeepBody();
+  if(which==="old"){ const f=STU.edit.files.splice(i,1)[0]; if(f) STU.edit.gone.push(f); }
+  else STU.edit.add.splice(i,1);
+  render();
+}
+function stuCancel(){ const E=STU.edit; STU.edit=null; if(E&&E.fresh) STU.open=null; render(); }
+async function stuSave(){
+  stuKeepBody();
+  const E=STU.edit; if(!E) return;
+  const title=String(E.title||"").trim();
+  if(!title){ toast("Give it a name first","err"); return; }
+  const files=E.files.slice();
+  for(const f of E.add){
+    const p=`studio/${E.id}/${Date.now().toString(36)}_${f.name.replace(/[^\w.\-]/g,"_")}`;
+    const up=await putObject(p,f,f.type||"application/octet-stream");
+    if(!up.path){ toast(`“${escHtml(f.name)}” did not upload — ${escHtml(up.error||"")}`,"err"); return; }
+    files.push({path:p,name:f.name,mime:f.type||"",bytes:f.size||0});
+  }
+  const now=new Date().toISOString();
+  const row={title,body:E.body||"",grp:String(E.grp||"").trim(),is_public:!!E.is_public,files,updated_at:now};
+  if(E.fresh){
+    const ins={id:E.id,kind:E.kind,owner_id:ME.id,...row};
+    const r=await sb.from("studio_pages").insert([ins]);
+    if(r.error){ toast("Not saved — "+escHtml(r.error.message),"err"); return; }
+    STU.pages[E.kind].unshift({...ins,created_at:now,used_count:0,pinned:false});
+  } else {
+    const r=await sb.from("studio_pages").update(row).eq("id",E.id).select("id");
+    if(r.error||!(r.data||[]).length){ toast("Not saved"+(r.error?" — "+escHtml(r.error.message):" — only the writer can change it"),"err"); return; }
+    Object.assign(stuPage(E.id)||{},row);
+  }
+  if(E.gone.length){ try{ await sb.storage.from(MEDIA_BUCKET).remove(E.gone.map(f=>f.path)); }catch(e){} }
+  STU.edit=null; STU.open=E.id;
+  toast(E.fresh?`${STU_WORD[E.kind].slice(0,-1)} saved`:"Saved");
+  render();
+}
+
+/* ── Use this brief: the brand's own New task form, filled ─────────── */
+function stuUseOpen(id){
+  const x=stuPage(id); if(!x) return;
+  STU.use={id,brand:""};
+  stuModal(`<h3>Use “${escHtml(x.title)}”</h3>
+    <div class="r"><span>Brand</span><select class="cc-stsel stu-sel" id="stu-use-b" onchange="STU.use.brand=this.value">
+      <option value="">Pick a brand</option>${Object.keys(brands).filter(b=>brands[b]&&!brands[b].deleted_at).sort((a,b)=>String(brands[a].name).localeCompare(String(brands[b].name)))
+        .map(b=>`<option value="${b}">${escHtml(brands[b].name)}</option>`).join("")}</select></div>
+    <div class="ft"><button class="btn btn-s" onclick="stuModalClose()">Cancel</button><button class="btn btn-p" data-gate="stu-use-go" onclick="stuUseGo()">Make the task</button></div>`);
+}
+async function stuUseGo(){
+  const U=STU.use; if(!U) return;
+  if(!U.brand){ toast("Pick a brand","err"); return; }
+  const x=stuPage(U.id); if(!x) return;
+  stuModalClose(); STU.use=null;
+  STU_PENDING={id:x.id,title:x.title,files:(x.files||[]).slice()};
+  const bid=U.brand;
+  if(activeBrand!==bid){ const sel=document.getElementById("brand-sel"); if(sel) sel.value=bid; pickBrand(bid); }
+  if(typeof navTasks==="function") navTasks(); else setView("branding");
+  for(let i=0;i<80&&!(brInSync()&&BR.ok);i++) await new Promise(r=>setTimeout(r,100));
+  if(!(brInSync()&&BR.ok)){ toast("The brand's tasks did not load — try again","err"); STU_PENDING=null; return; }
+  if(!can("task_create")){ toast("You cannot make tasks on this brand","err"); STU_PENDING=null; return; }
+  BT={id:null,title:x.title||"",brief:x.body||"",project_id:"",owner_id:null,delivery_date:"",status:"not_started",ms:[],tag_ids:[],_stu:x.id};
+  brRenderEditor(); openM("br-task");
+}
+(function(){
+  if(typeof brSaveTask!=="function") return;
+  const base=brSaveTask;
+  brSaveTask=async function(){
+    const pend=(BT&&!BT.id&&BT._stu&&STU_PENDING&&STU_PENDING.id===BT._stu)?STU_PENDING:null;
+    const before=new Set((BR.tasks||[]).map(t=>t.id));
+    const out=await base.apply(this,arguments);
+    if(!pend) return out;
+    const nt=(BR.tasks||[]).find(t=>!before.has(t.id));
+    if(!nt) return out;
+    STU_PENDING=null;
+    try{ await sb.rpc("studio_brief_used",{p:pend.id}); const x=stuPage(pend.id); if(x) x.used_count=(x.used_count||0)+1; }catch(e){}
+    if(pend.files.length) await stuCopyFiles(pend,nt);
+    if(typeof openTaskScreen==="function") openTaskScreen(nt.id);
+    return out;
+  };
+})();
+async function stuCopyFiles(pend,t){
+  const row={id:"c"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36),
+    task_id:t.id,brand_id:activeBrand,body:`Files from the brief “${escHtml(pend.title)}”`,
+    author_kind:"team",author_name:actorName(),author_email:ME.email||"",author_id:ME.id||null,mentions:[]};
+  const r=await sb.from("post_comments").insert([row]);
+  if(r.error){ toast("The task is made, but the brief's files were not copied — "+escHtml(r.error.message),"err"); return; }
+  const list=[];
+  for(const f of pend.files){
+    try{
+      const u=await signedUrl(f.path); if(!u) throw new Error("no link");
+      const b=await (await fetch(u)).blob();
+      list.push(new File([b],f.name,{type:f.mime||b.type||"application/octet-stream"}));
+    }catch(e){ toast(`“${escHtml(f.name)}” could not be copied`,"err"); }
+  }
+  if(list.length) await uploadMany(list,{ownerKind:"message",ownerId:row.id,brandId:activeBrand,master:true,taskId:t.id});
+}
+function stuModal(html){
+  stuModalClose();
+  const d=document.createElement("div"); d.className="stu-ov"; d.id="stu-ov";
+  d.innerHTML=`<div class="stu-mod" onclick="event.stopPropagation()">${html}</div>`;
+  d.addEventListener("click",stuModalClose);
+  document.body.appendChild(d);
+}
+function stuModalClose(){ const d=document.getElementById("stu-ov"); if(d) d.remove(); }
+
+/* ── WOW ───────────────────────────────────────────────────────────── */
+async function stuWowLoad(){
+  if(STU.wowLoading) return;
+  STU.wowLoading=true;
+  const r=await sb.from("studio_wow").select("*").is("deleted_at",null).order("created_at",{ascending:false});
+  STU.wowLoading=false;
+  if(r.error){ STU.wowErr=r.error.message; STU.wowOk=false; }
+  else{ STU.wow=(r.data||[]).filter(x=>!x.deleted_at); STU.wowOk=true; STU.wowErr=""; }
+  if(view==="studio"&&STU.sec==="wow") render();
+  else if(view==="content"||view==="promotions") render();
+}
+function stuWowOf(kind,id){ return STU.wow.find(x=>x.source_kind===kind&&String(x.source_id)===String(id))||null; }
+function stuWowMonth(){ return STU.wm||stuNowMonth(); }
+function stuWowIn(){ const m=stuWowMonth(); return STU.wow.filter(x=>String(x.month||"").slice(0,7)===m); }
+function stuWowShown(){
+  const L=stuWowIn();
+  const s=STU.show==="nominated"?L:L.filter(x=>x.picked);
+  return s.slice().sort((a,b)=>((b.picked?1:0)-(a.picked?1:0))||String(b.created_at).localeCompare(String(a.created_at)));
+}
+function stuMonthWord(m){ const [y,mm]=m.split("-").map(Number); return new Date(y,mm-1,1).toLocaleString("en-GB",{month:"long",year:"numeric"}); }
+function stuWowStep(d){ const [y,m]=stuWowMonth().split("-").map(Number); const t=new Date(y,m-1+d,1); STU.wm=t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0"); render(); }
+function stuWowRender(mc){
+  if(!STU.wowOk&&!STU.wowLoading) stuWowLoad();
+  const L=stuWowIn(), picked=L.filter(x=>x.picked).length, rows=stuWowShown();
+  const sup=typeof isSuperAdmin==="function"&&isSuperAdmin();
+  const people=(PEOPLE||[]).filter(p=>p&&p.id).map(p=>[p.id,p.name||String(p.email||"").split("@")[0]||"Someone"]).sort((a,b)=>a[1].localeCompare(b[1]));
+  const card=x=>{
+    const mayEdit=sup||(ME&&x.nominated_by===ME.id);
+    const who=mayEdit?`<select class="cc-stsel" onchange="stuWowSet('${x.id}',{made_by:this.value||null})"><option value="">Who made it?</option>${people.map(([id,n])=>`<option value="${id}"${id===x.made_by?" selected":""}>${escHtml(n)}</option>`).join("")}</select>`
+      :`<span>${x.made_by?escHtml(stuWho(x.made_by)):"—"}</span>`;
+    return `<div class="stu-wt" data-wow="${x.id}">
+      <div class="pic" onclick="stuWowOpen('${x.id}')" title="Open the ${x.source_kind}"${x.thumb_path?` data-sign="${escAttr(x.thumb_path)}"`:""}>${x.thumb_path?"":`<i class="ti ti-photo"></i>`}</div>
+      ${mayEdit?`<button class="rm" title="Remove the nomination" onclick="stuWowRemove('${x.id}')"><i class="ti ti-x"></i></button>`:""}
+      <button class="star${x.picked?" on":""}${sup?" may":""}" data-pick="${x.id}" title="${x.picked?"Picked for WOW":"Nominated"}${sup?(x.picked?" — click to unpick":" — click to pick"):""}" ${sup?`onclick="stuWowSet('${x.id}',{picked:${!x.picked}})"`:""}><i class="ti ${x.picked?"ti-star-filled":"ti-star"}"></i></button>
+      <div class="cap"><b title="${escAttr(x.title)}">${escHtml(x.title||"Untitled")}</b><span class="mu">${escHtml(x.brand_id&&brands[x.brand_id]?brands[x.brand_id].name:"")} · ${x.source_kind==="post"?"Post":"Creative"}</span>
+        <div class="who"><span class="av" style="display:none"></span>${who}</div></div></div>`;
+  };
+  const empty=!STU.wowOk?(STU.wowErr?"Could not load — "+escHtml(STU.wowErr):"Loading…")
+    :L.length?"Nothing picked for this month yet. Switch to Nominated to see the nominations."
+    :"No nominations for this month yet. The star on an approved post or creative nominates it.";
+  mc.innerHTML=`<div style="padding:0 var(--pg-x) 26px;">${stuPhRow()}
+    <div class="fb" id="stu-bar">${stuPillHtml()}
+      <span class="stu-mp"><button onclick="stuWowStep(-1)" title="Previous month">‹</button><span data-gate="stu-month">${escHtml(stuMonthWord(stuWowMonth()))}</span><button onclick="stuWowStep(1)" title="Next month">›</button></span>
+      <span class="fb-end"><div class="lc"><b>${picked}</b> <span class="sub">picked of ${L.length} nominated</span></div></span></div>
+    <div class="stu-card">${rows.length?`<div class="stu-wgrid">${rows.map(card).join("")}</div>`:`<div class="stu-empty">${empty}</div>`}</div></div>`;
+  try{ hydrateMedia(mc); }catch(e){}
+}
+function stuWowSide(sm){
+  const L=stuWowIn();
+  const row=(k,l,n)=>`<div class="mdb-trow${STU.show===k?" on":""}" data-wshow="${k}" onclick="STU.show='${k}';render()"><span class="nm">${l}</span><span class="ct">${n}</span></div>`;
+  sm.innerHTML=`<div class="s-lbl sb-head"><span>Show</span></div>${row("picked","Picked",L.filter(x=>x.picked).length)}${row("nominated","Nominated",L.length)}`;
+}
+async function stuWowSet(id,patch){
+  const x=STU.wow.find(w=>w.id===id); if(!x) return;
+  const r=await sb.from("studio_wow").update(patch).eq("id",id).select("id");
+  if(r.error||!(r.data||[]).length){ toast("Not saved"+(r.error?" — "+escHtml(r.error.message):""),"err"); render(); return; }
+  Object.assign(x,patch);
+  if("picked" in patch) toast(patch.picked?"Picked for WOW":"Taken off WOW");
+  render();
+}
+async function stuWowRemove(id){
+  const x=STU.wow.find(w=>w.id===id); if(!x) return;
+  const r=await sb.from("studio_wow").update({deleted_at:new Date().toISOString()}).eq("id",id).select("id");
+  if(r.error||!(r.data||[]).length){ toast("Not removed"+(r.error?" — "+escHtml(r.error.message):""),"err"); return; }
+  STU.wow=STU.wow.filter(w=>w.id!==id); toast("Nomination removed"); render();
+}
+async function stuWowOpen(id){
+  const x=STU.wow.find(w=>w.id===id); if(!x) return;
+  const base=location.origin+location.pathname;
+  if(x.source_kind==="post"){ window.open(base+"?post="+encodeURIComponent(x.source_id),"_blank"); return; }
+  const w=window.open("","_blank");
+  const r=await sb.from("ad_creatives").select("id,promotion_id,brand_id").eq("id",x.source_id).maybeSingle();
+  const c=r&&r.data&&(Array.isArray(r.data)?r.data.find(y=>y.id===x.source_id):r.data);
+  if(!c){ if(w) w.close(); toast("That creative is no longer there","err"); return; }
+  const q=new URLSearchParams({b:c.brand_id||x.brand_id||"",p:"promotions",pr:c.promotion_id||"",cr:c.id});
+  if(w) w.location.href=base+"?"+q.toString(); else window.location.href=base+"?"+q.toString();
+}
+
+/* ── the star on an approved post or creative ──────────────────────── */
+function stuNomMay(){ return stuMay("wow")&&!(typeof brIsClient==="function"&&brIsClient()); }
+function stuNomBtn(kind,id,cls){
+  if(!stuNomMay()) return "";
+  if(!STU.wowOk){ if(!STU.wowLoading) stuWowLoad(); return ""; }
+  const w=stuWowOf(kind,id);
+  return `<button class="${cls} br-ico stu-nom${w?" on":""}" data-nom="${escAttr(kind+":"+id)}" onclick="event.stopPropagation();stuNomOpen('${kind}','${escAttr(id)}')" title="${w?(w.picked?"Picked for WOW":"Nominated for WOW"):"Nominate for WOW"}" aria-label="Nominate for WOW"><i class="ti ${w?"ti-star-filled":"ti-star"}"></i></button>`;
+}
+function stuPostOk(p){ const s=typeof ccStatusKey==="function"?ccStatusKey("post",p.status):p.status; return s==="approved"||s==="posted"; }
+function stuCrOk(c){ return ["approved","live","paused","ended"].includes(String(c&&c.status||"")); }
+(function(){
+  if(typeof socialViewCard==="function"){
+    const base=socialViewCard;
+    socialViewCard=function(p){
+      let h=base.apply(this,arguments);
+      try{
+        if(p&&stuPostOk(p)){ const b=stuNomBtn("post",p.id,"pcia");
+          const at='title="Copy a link that opens this post"><i class="ti ti-link"></i></button>';
+          if(b&&h.indexOf(at)>-1) h=h.replace(at,at+b); }
+      }catch(e){}
+      return h;
+    };
+  }
+  if(typeof prCrPanelHtml==="function"){
+    const base=prCrPanelHtml;
+    prCrPanelHtml=function(p,c){
+      let h=base.apply(this,arguments);
+      try{
+        if(c&&stuCrOk(c)){ const b=stuNomBtn("creative",c.id,"");
+          const at='title="Copy a link that opens this creative" aria-label="Copy link"><i class="ti ti-link"></i></button>';
+          if(b&&h.indexOf(at)>-1) h=h.replace(at,at+b); }
+      }catch(e){}
+      return h;
+    };
+  }
+})();
+function stuNomSource(kind,id){
+  if(kind==="post"){
+    let p=null; Object.values(brands).some(b=>{ p=(b&&b.social||[]).find(x=>x.id===id)||null; return !!p; });
+    if(!p) return null;
+    const lead=(typeof leadAssetFromRound==="function"&&leadAssetFromRound(p.current_round_id))||(typeof postLeadAsset==="function"&&postLeadAsset(p.id));
+    const title=(p.content&&p.content.concept)||(typeof pcxPlain==="function"?pcxPlain(p.notes||""):"").slice(0,80)||"Post";
+    const month=`${p.year||new Date().getFullYear()}-${String(p.month||1).padStart(2,"0")}`;
+    return {brand_id:p.brand_id||activeBrand||null,title:String(title).trim(),thumb_path:lead?(lead.thumb_path||lead.poster_path||lead.view_path||null):null,month};
+  }
+  const cc=(typeof PR!=="undefined"&&PR&&Array.isArray(PR.cr))?(PR.cr.find(x=>x.id===id)||null):null;
+  if(!cc) return null;
+  return {brand_id:(cc&&cc.brand_id)||activeBrand||null,title:(cc&&cc.title)||"Creative",thumb_path:cc&&typeof prCrThumb==="function"?(prCrThumb(cc)||null):null,month:stuNowMonth()};
+}
+function stuNomOpen(kind,id){
+  const w=stuWowOf(kind,id);
+  if(w){ toast(w.picked?"Already picked for WOW":"Already nominated for WOW — see it in Studio › WOW"); return; }
+  const src=stuNomSource(kind,id);
+  if(!src){ toast("Could not read that "+kind,"err"); return; }
+  STU.nom={kind,id,src};
+  const people=(PEOPLE||[]).filter(p=>p&&p.id).map(p=>[p.id,p.name||String(p.email||"").split("@")[0]||"Someone"]).sort((a,b)=>a[1].localeCompare(b[1]));
+  stuModal(`<h3>Nominate for WOW</h3>
+    <div class="r"><span>${kind==="post"?"Post":"Creative"}</span><div style="font-weight:700">${escHtml(src.title)}</div></div>
+    <div class="r"><span>Month</span><div>${escHtml(stuMonthWord(src.month))}</div></div>
+    <div class="r"><span>Who made it</span><select class="cc-stsel stu-sel" id="stu-nom-who"><option value="">Pick a person</option>${people.map(([pid,n])=>`<option value="${pid}">${escHtml(n)}</option>`).join("")}</select></div>
+    <div class="ft"><button class="btn btn-s" onclick="stuModalClose()">Cancel</button><button class="btn btn-p" data-gate="stu-nom-go" onclick="stuNomGo()"><i class="ti ti-star"></i> Nominate</button></div>`);
+}
+async function stuNomGo(){
+  const N=STU.nom; if(!N) return;
+  const who=(document.getElementById("stu-nom-who")||{}).value||null;
+  const row={id:crypto.randomUUID(),month:N.src.month+"-01",source_kind:N.kind,source_id:String(N.id),brand_id:N.src.brand_id,
+    title:N.src.title,thumb_path:N.src.thumb_path,made_by:who,nominated_by:ME.id,picked:false};
+  const r=await sb.from("studio_wow").insert([row]);
+  if(r.error){ toast("Not nominated — "+escHtml(r.error.message),"err"); return; }
+  STU.wow.unshift({...row,created_at:new Date().toISOString()});
+  STU.nom=null; stuModalClose();
+  toast("Nominated for WOW");
+  render();
+}
+
+/* this script can arrive after boot has drawn the page */
+try{ if(typeof ME==="object"&&ME&&ME.id) renderBnTabs(); }catch(e){}
+</script>
+
 </body>
 </html>
