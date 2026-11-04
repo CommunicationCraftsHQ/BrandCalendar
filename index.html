@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.163 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.164 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14798,7 +14798,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.163 Tbilisi";
+const TOOL_VERSION="V118.164 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -29920,12 +29920,20 @@ function prProgress(p){
             target:r&&prNumOr(r.target_value)!==null?prNumOr(r.target_value):prNumOr(p.target_value),
             value:r?prNumOr(r.result_value):null,
             qual:r?prNumOr(r.qualified):null, conv:r?prNumOr(r.converted):null,   /* V118.117 */
+            imps:r?prNumOr(r.impressions):null, reach:r?prNumOr(r.reach):null, clicks:r?prNumOr(r.clicks):null,   /* V118.164 */
             spend:r?prNumOr(r.spend):null,
             at:r?(r.updated_at||r.entered_at):null,
             resAt:r?prResAt(r):null, spdAt:r?prSpdAt(r):null, by:r?r.entered_by:null};   /* V118.89 — each figure knows its own day */
   }
   let v=null,s=null,at=null,resAt=null,spdAt=null,by=null,q=null,cv=null;
+  /* V118.164 — impressions and clicks add up over a window; reach does
+     not, so it is only given when the window is one month. */
+  let im=null,ck=null,rc=null,nm=0;
   prWinMonths(p.id).forEach(m=>{
+    nm++;
+    const ii=prNumOr(m.impressions); if(ii!==null) im=(im===null?0:im)+ii;
+    const kk=prNumOr(m.clicks);      if(kk!==null) ck=(ck===null?0:ck)+kk;
+    const rr=prNumOr(m.reach);       if(rr!==null) rc=(rc===null?rr:rc);
     const qq=prNumOr(m.qualified); if(qq!==null) q=(q===null?0:q)+qq;          /* V118.117 */
     const cc=prNumOr(m.converted); if(cc!==null) cv=(cv===null?0:cv)+cc;
     const x=prNumOr(m.result_value); if(x!==null){ v=(v===null?0:v)+x; const ra=prResAt(m); if(ra&&(!resAt||String(ra)>String(resAt))) resAt=ra; }
@@ -29946,7 +29954,8 @@ function prProgress(p){
         if(a!==null) tgt=(tgt===null?0:tgt)+a; });
     }
   }
-  return {label:W.mode==="all"?"":W.label, target:tgt, value:v, qual:q, conv:cv, spend:s, at, resAt, spdAt, by};
+  return {label:W.mode==="all"?"":W.label, target:tgt, value:v, qual:q, conv:cv, spend:s,
+          imps:im, clicks:ck, reach:nm>1?null:rc, at, resAt, spdAt, by};
 }
 /* ══ V118.117 · WHAT ONE LEAD COST ═════════════════════════════════
    Chirag, 26 October: 871 corporate enquiries and 136 franchise ones
@@ -29980,6 +29989,8 @@ function prBar(g){
 function prTargetLine(p){
   const g=prProgress(p), u=prUnit(p), b=prBasis(p);
   if(g.target===null&&g.value===null) return '<span class="nsdim">No target</span>';
+  /* V118.164 — the figure stands on its own when nothing was promised. */
+  if(g.target===null) return `<div class="prtgt"><b>${prFmt(g.value)}</b> ${escHtml(u)} <span class="prwinw">${escHtml(prWinIn())}</span></div>`;
   /* A DAILY TARGET IS NOT COMPARED TO A MONTH'S FIGURE. The months
      table holds one row a month, so a bar against a daily number would
      be arithmetic nobody asked for. Both numbers are shown instead. */
@@ -30277,6 +30288,17 @@ const PR_COLS=[
   {k:"qual",   label:"Qualified",     w:"minmax(74px,86px)",  num:true},
   {k:"conv",   label:"Closed",        w:"minmax(62px,74px)",  num:true},
   {k:"cost",   label:"Cost each",     w:"minmax(72px,88px)",  num:true},
+  /* ══ V118.164 · WHAT META ALREADY KNEW ══════════════════════════
+     Chirag, 30 October: impressions, reach and clicks were being read
+     from Meta and stored every time, and never shown. Three columns,
+     OFF by default, in META'S OWN WORDS so the Calendar reads the same
+     as Ads Manager. Nothing is calculated — these are the stored
+     figures. REACH IS NOT ADDED UP across months: the same person seen
+     in two months is one person, so a multi-month window shows a dash
+     rather than a number that overstates. */
+  {k:"imps",   label:"Impressions",   w:"minmax(84px,98px)",  num:true},
+  {k:"reach",  label:"Reach",         w:"minmax(74px,88px)",  num:true},
+  {k:"clicks", label:"Clicks",        w:"minmax(66px,80px)",  num:true},
   {k:"budget", label:"Budget",        w:"minmax(100px,124px)",num:true},
   {k:"spent",  label:"Spent",         w:"minmax(96px,122px)", num:true},
   {k:"plats",  label:"Platforms",     w:"minmax(96px,124px)"},
@@ -30843,7 +30865,10 @@ function prSortCmp(a,b){
    which is useless, so this view opens the window to six months the
    first time it is reached rather than showing a single stripe. */
 const PR_MOM=[["leads","Result"],["spend","Spent"],["cost","Cost each"],
-              ["qualified","Qualified"],["converted","Closed"]];
+              ["qualified","Qualified"],["converted","Closed"],
+              /* V118.164 — Meta's own words, so the Calendar reads the
+                 same as Ads Manager. */
+              ["impressions","Impressions"],["reach","Reach"],["clicks","Clicks"]];
 /* ══ V118.156 · PROMOTIONS JOINS THE LISTING STANDARD ═════════════
    Chirag, 3 November: "how can we visually align the promotion page
    with rest of the listing pages without losing the unique
@@ -30956,7 +30981,8 @@ function prMomHtml(rows){
         if(a!==null) sp=(sp===null?0:sp)+a; if(b!==null) res=(res===null?0:res)+b; cur=prCur(p); });
       t=(sp===null||res===null||res<=0)?null:sp/res;
     }
-    foot+=`<div class="prnm">${prMomVal(t,k,cur)}</div>`;
+    /* V118.164 — a column of reach is not a sum. */
+    foot+=`<div class="prnm">${k==="reach"?'<span class="nsdim">—</span>':prMomVal(t,k,cur)}</div>`;
   });
   foot+=`</div>`;
   const body=rows.map(p=>{
@@ -31262,8 +31288,14 @@ function prCellHtml(p,k){
         ${/* NO TARGET IS NOT A TARGET OF NOUGHT, and the unit is not
               repeated here — the objective column one across already
               names it, and carrying it twice clipped the cell. */""}
+        ${/* V118.164 — Chirag, 30 Oct: Amar Cars Kolkata's 226 October
+              leads were invisible on their own row, because "No target"
+              was printed where the figure belonged. A promotion without
+              a target still has a result. */''}
         <div class="t">${tgt===null
-          ? '<span class="nsdim">No target</span>'
+          ? (val!==null
+              ? `<b>${prFmt(val)}</b> <span class="nsdim">${escHtml(prWinShort())}</span>`
+              : '<span class="nsdim">No target</span>')
           : `${val!==null?`<b>${prFmt(val)}</b>`:'<span class="nsdim">—</span>'} of ${prFmt(tgt)}${
               prBasis(p)==="per_month"?` <span class="nsdim">${escHtml(prWinShort())}</span>`:""}`}</div>
         <div class="prpgb"><i style="width:${pc}%"></i></div>${asOf}</div>`;
@@ -31277,6 +31309,10 @@ function prCellHtml(p,k){
        qualified. Drawing a 0 would hide that. */
     case "qual":   return `<div class="prmn prnum">${g.qual!==null?prFmt(g.qual)+share(g.qual):'<span class="nsdim">—</span>'}</div>`;
     case "conv":   return `<div class="prmn prnum">${g.conv!==null?prFmt(g.conv)+share(g.conv):'<span class="nsdim">—</span>'}</div>`;
+    case "imps":   return `<div class="prmn prnum">${g.imps!==null?prFmt(g.imps):'<span class="nsdim">—</span>'}</div>`;
+    case "clicks": return `<div class="prmn prnum">${g.clicks!==null?prFmt(g.clicks):'<span class="nsdim">—</span>'}</div>`;
+    case "reach":  return `<div class="prmn prnum">${g.reach!==null?prFmt(g.reach):
+        `<span class="nsdim" title="Reach cannot be added across months — the same person seen twice is one person. Pick a single month to see it.">—</span>`}</div>`;
     case "cost": { const c=prCostEach(g,cur);
       return `<div class="prmn prnum">${c||'<span class="nsdim">—</span>'}</div>`; }
     case "plats": {
