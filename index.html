@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.159 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.160 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14778,7 +14778,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.159 Tbilisi";
+const TOOL_VERSION="V118.160 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -55819,6 +55819,29 @@ async function mfxSave(x,blob,w,h){
   (MDB.items||[]).forEach(y=>{ if(y.id===x.id){ y.thumb_path=p.path; y.width=out.w; y.height=out.h; } });
   return true;
 }
+</script>
+
+<script id="v118160">
+/* ══ V118.160 TBILISI · ADD ON A FILTERED BOARD CARRIES THE TAG ════════
+   Chirag, 4 Nov 05:36, on PPC Ads filtered to "Automobile": "when the view
+   is already filtered to a specific tag and then when you add an image to
+   the board, it should automatically get tagged for that filtered tag."
+   Add opens with the filtered tag(s) already in its Tags field — visible,
+   so it can be taken out — for a pasted link, several links or an upload. */
+(function(){
+  const base=mdbAddOpen;
+  mdbAddOpen=function(){
+    const out=base.apply(this,arguments);
+    try{
+      const A=MDB.add;
+      if(A&&!A.tags){
+        const names=mdbTagSel().map(id=>(mdbTag(id)||{}).name).filter(Boolean);
+        if(names.length){ A.tags=names.join(", "); mdbAddDraw(); setTimeout(()=>{ const i=document.getElementById("mdb-url"); if(i) i.focus(); },60); }
+      }
+    }catch(e){}
+    return out;
+  };
+})();
 </script>
 
 </body>
