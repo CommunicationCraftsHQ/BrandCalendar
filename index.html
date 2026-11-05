@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.167 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.168 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14809,7 +14809,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.167 Tbilisi";
+const TOOL_VERSION="V118.168 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -18242,7 +18242,7 @@ function brMentionables(){
 function brMentions(body){
   const out=[];
   brMentionables().forEach(pp=>{
-    const re=new RegExp("@"+pp.name.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i");
+    const re=new RegExp("@"+pp.name.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"(?![A-Za-z0-9_]|\\.[A-Za-z0-9_])","i");   /* V118.168 — "@chirag" no longer matches "@chirag.p" */
     if(re.test(body||"")) out.push(pp.email);
   });
   return [...new Set(out)];
@@ -26464,7 +26464,7 @@ function wMentionsIn(body, people, brandId, myEmail){
   const out=[];
   wMentionables(people, brandId, myEmail).forEach(pp=>{
     if(!pp.name) return;
-    const re=new RegExp("@"+String(pp.name).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i");
+    const re=new RegExp("@"+String(pp.name).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"(?![A-Za-z0-9_]|\\.[A-Za-z0-9_])","i");   /* V118.168 — "@chirag" no longer matches "@chirag.p" */
     if(re.test(text)) out.push(pp.email);
   });
   return [...new Set(out)];
