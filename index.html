@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.173 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.174 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -6077,11 +6077,6 @@ select.pr-fv.cc-stsel{height:34px;padding:0 28px 0 10px;background-color:#fff;}
 .pr-szmeta .under{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px;}
 .pr-szmeta .under .sp{flex:1;}.pr-szmeta .under .b{cursor:pointer;color:var(--text);font-weight:650;}.pr-szmeta .under .b.dim{color:var(--subtle);font-weight:400;}
 .pr-copybox .pr-formg{padding:12px 14px;}
-.pr-cpanel .th-sheet .br-thread .br-pin.bb{max-width:none;background:#fff;border:0;border-left:4px solid var(--text);border-radius:10px;margin:0 0 14px;}
-.pr-cpanel .th-sheet .br-thread .br-pin.bb .lbl{background:transparent;color:var(--subtle);padding:10px 14px 0;}
-.pr-cpanel .th-sheet .br-thread .br-pin.bb .lbl .act span{color:#2A5BD7;font-weight:700;}
-.pr-cpanel .th-sheet .br-thread .br-pin.bb .bx{padding:4px 14px 12px;}
-.pr-cpanel .br-thread .th-m,.pr-cpanel .br-thread .th-div,.pr-cpanel .br-thread .th-m.tm{max-width:none;}
 </style>
 </head>
 <body class="mf-framed">
@@ -12251,7 +12246,7 @@ function brBriefPin(t){
      as one more message, and a "Conversation" line under it. */
   return `<div class="br-pin bb${BR_BRIEF_OPEN?" open":""}${t._promo?" pr":""}">
     <div class="lbl">Brief<span class="act">${canEdit()?`<span onclick="event.stopPropagation();${t._creative?`prCrEditOpen('${t.id}')`:t._promo?"prTab('brief')":`brOpenTask('${t.id}')`}">Edit</span>`:""}${t._promo?"":`<span onclick="brBriefMore(event)">${BR_BRIEF_OPEN?"less":"more"}</span>`}</span></div>
-    <div class="bx">${t._promo?b:fbBody(b)}</div></div>${t._creative?"":`<div class="br-start">Conversation</div>`}`;   /* V118.86 — a promotion's brief is drawn ready-made */
+    <div class="bx">${t._promo?b:fbBody(b)}</div></div><div class="br-start">Conversation</div>`;   /* V118.174 — back to the standard brief, creatives too */   /* V118.86 — a promotion's brief is drawn ready-made */
 }
 function brBriefMore(e){ if(e){ e.preventDefault(); e.stopPropagation(); } BR_BRIEF_OPEN=!BR_BRIEF_OPEN; render(); }
 
@@ -13635,7 +13630,7 @@ function taskJumpMsg(e,mid){
 }
 /* the pinned strip: the brief's first words, and a way back up */
 function thBriefWords(t){
-  const w=String(wPlain((t&&t.brief)||"")).replace(/\s+/g," ").trim();
+  const w=String(wPlain(String((t&&t.brief)||"").replace(/></g,"> <"))).replace(/\s+/g," ").trim();   /* V118.174 — "ObjectiveLeads" read as one word */
   return w.length>140?w.slice(0,138)+"…":w;
 }
 function thStripTop(e){
@@ -14836,7 +14831,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.173 Tbilisi";
+const TOOL_VERSION="V118.174 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
