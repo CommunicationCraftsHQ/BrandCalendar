@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.176 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.177 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -6078,6 +6078,7 @@ select.pr-fv.cc-stsel{height:34px;padding:0 28px 0 10px;background-color:#fff;}
 .pr-szmeta .under .sp{flex:1;}.pr-szmeta .under .b{cursor:pointer;color:var(--text);font-weight:650;}.pr-szmeta .under .b.dim{color:var(--subtle);font-weight:400;}
 .pr-copybox .pr-formg{padding:12px 14px;}
 </style>
+<style>/* V118.177 */.pr-auto{display:inline-flex;align-items:center;gap:3px;}.pr-auto i{font-size:11px;color:#E8A33D;}</style>
 </head>
 <body class="mf-framed">
 
@@ -14831,7 +14832,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.176 Tbilisi";
+const TOOL_VERSION="V118.177 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -29956,7 +29957,7 @@ function prProgress(p){
             imps:r?prNumOr(r.impressions):null, reach:r?prNumOr(r.reach):null, clicks:r?prNumOr(r.clicks):null,   /* V118.164 */
             spend:r?prNumOr(r.spend):null,
             at:r?(r.updated_at||r.entered_at):null,
-            resAt:r?prResAt(r):null, spdAt:r?prSpdAt(r):null, by:r?r.entered_by:null};   /* V118.89 — each figure knows its own day */
+            resAt:r?prResAt(r):null, spdAt:r?prSpdAt(r):null, by:r?r.entered_by:null, src:r?r.figures_source:null};   /* V118.89 — each figure knows its own day */
   }
   let v=null,s=null,at=null,resAt=null,spdAt=null,by=null,q=null,cv=null;
   /* V118.164 — impressions and clicks add up over a window; reach does
@@ -30010,8 +30011,12 @@ function prCostEach(g,cur){
    only when that figure changes; a row from before carries its one date. */
 function prResAt(m){ return m.result_at||m.updated_at||m.entered_at||null; }
 function prSpdAt(m){ return m.spend_at||m.updated_at||m.entered_at||null; }
-function prAsOf(at,by,lead){
+/* V118.177 — Chirag, 5 Nov: a figure the tool fetched itself must say so,
+   in as few letters as possible. "Auto · 5 Nov"; the hover names where from. */
+const PR_AUTO={followers:"Instagram",meta:"Meta"};
+function prAsOf(at,by,lead,src){
   if(!at) return "";
+  if(src&&PR_AUTO[src]) return `<span class="pr-asof pr-auto" title="${escAttr("Fetched automatically from "+PR_AUTO[src]+" · "+prShort(String(at).slice(0,10)))}">${lead===false?"":"· "}<i class="ti ti-bolt"></i>Auto · ${escHtml(prShort(String(at).slice(0,10)))}</span>`;
   const who=by?brPersonName(by):"";
   return `<span class="pr-asof" title="${escAttr((who?who+" · ":"")+prShort(String(at).slice(0,10)))}">${lead===false?"":"· "}as of ${escHtml(prShort(String(at).slice(0,10)))}</span>`;
 }
@@ -31351,7 +31356,7 @@ function prCellHtml(p,k){
          is named off to the side instead. */
       const part=(prBasis(p)!=="per_month")&&!prWinCoversRun(p);
       const pc=(tgt&&val!==null&&!part)?Math.max(2,Math.min(100,Math.round(val/tgt*100))):0;
-      const asOf=val!==null&&g.resAt?`<small class="pr-asofl">${prAsOf(g.resAt,g.by,false)}</small>`:"";
+      const asOf=val!==null&&g.resAt?`<small class="pr-asofl">${prAsOf(g.resAt,g.by,false,g.src)}</small>`:"";
       /* THE ROW IS A GLANCE. "· 900 over the run" ran past the Result
          column and came out as "900 over …", which reads as a fault.
          The run's target lives in the panel, where there is room for
@@ -31377,7 +31382,7 @@ function prCellHtml(p,k){
     }
     case "budget": return `<div class="prmn prbd prnum">${prBudgetCell(p)}</div>`;
     case "spent":  return `<div class="prmn prnum">${g.spend!==null&&g.spend!==undefined?prMoney(g.spend,cur)+(budOn?"":prBudgetOpen(p)?` <small class="prof">Team to set</small>`
-        :prNumOr(p.planned_spend)===null?"":` <small class="prof">of ${prBudgetCell(p)}</small>`)+(g.spdAt?`<small class="pr-asofl">${prAsOf(g.spdAt,g.by,false)}</small>`:""):'<span class="nsdim">—</span>'}</div>`;
+        :prNumOr(p.planned_spend)===null?"":` <small class="prof">of ${prBudgetCell(p)}</small>`)+(g.spdAt?`<small class="pr-asofl">${prAsOf(g.spdAt,g.by,false,g.src==="meta"?"meta":null)}</small>`:""):'<span class="nsdim">—</span>'}</div>`;
     /* ── V118.117 · the funnel ──────────────────────────────────────
        A DASH IS NOT A NOUGHT. Blank means nobody has marked that month
        — which is itself worth seeing: no franchise lead has ever been
@@ -31504,7 +31509,7 @@ function prPanelHtml(p){
     const ms=prMonths(p.id);
     const body=ms.length?ms.map(m=>`<tr><td style="text-align:left"><b>${escHtml(prMonthName(m.month_start))}</b></td>
         <td style="text-align:left">${prFmt(prNumOr(m.target_value)!==null?m.target_value:p.target_value)}</td>
-        <td>${prFmt(m.result_value)}${prNumOr(m.result_value)!==null?`<small class="pr-asofl">${prAsOf(prResAt(m),m.entered_by,false)}</small>`:""}</td><td>${prMoney(prNumOr(m.spend),cur)}${prNumOr(m.spend)!==null?`<small class="pr-asofl">${prAsOf(prSpdAt(m),m.entered_by,false)}</small>`:""}</td>
+        <td>${prFmt(m.result_value)}${prNumOr(m.result_value)!==null?`<small class="pr-asofl">${prAsOf(prResAt(m),m.entered_by,false,m.figures_source)}</small>`:""}</td><td>${prMoney(prNumOr(m.spend),cur)}${prNumOr(m.spend)!==null?`<small class="pr-asofl">${prAsOf(prSpdAt(m),m.entered_by,false,m.figures_source==="meta"?"meta":null)}</small>`:""}</td>
         <td style="text-align:left" class="nsdim">${escHtml(m.note||"—")}</td>
         <td>${canOut?`<a class="prlink" href="javascript:void 0" onclick="prProgOpen('${p.id}','${m.month_start}')">Update</a>`:""}</td></tr>`).join("")
       :`<tr><td colspan="6" class="nsdim">Nothing recorded yet</td></tr>`;
@@ -31521,9 +31526,9 @@ function prPanelHtml(p){
     <div class="prbig">${val!==null?`<b>${prFmt(val)}</b>`:'<b class="nsdim">—</b>'}
       <span class="nsdim">${tgt===null?"no target":"of "+prFmt(tgt)+" "+escHtml(prUnit(p))+prBasisTail(p)}</span></div>
     <div class="prpgb" style="margin:9px 0 11px"><i style="width:${pc}%"></i></div>
-    ${val!==null&&g.resAt?`<div class="nsdim" style="font-size:12px;margin-top:-6px;margin-bottom:8px">${prAsOf(g.resAt,g.by,false)}</div>`:""}
+    ${val!==null&&g.resAt?`<div class="nsdim" style="font-size:12px;margin-top:-6px;margin-bottom:8px">${prAsOf(g.resAt,g.by,false,g.src)}</div>`:""}
     <div class="nsdim" style="font-size:12.5px">${g.spend!==null&&g.spend!==undefined
-      ? prMoney(g.spend,cur)+" spent "+prAsOf(g.spdAt,g.by) : "Nothing spent yet"}</div>
+      ? prMoney(g.spend,cur)+" spent "+prAsOf(g.spdAt,g.by,undefined,g.src==="meta"?"meta":null) : "Nothing spent yet"}</div>
     <div class="prbtns">
       ${canOut?`<button class="prmini" onclick="prProgOpen('${p.id}')">Update progress</button>`:""}
     </div>
@@ -32805,6 +32810,7 @@ async function prProgSave(){
     if(!cur||prNumOr(cur.result_value)!==vals.result_value) stamp.result_at=vals.result_value===null?null:now;
     if(!cur||prNumOr(cur.spend)!==vals.spend) stamp.spend_at=vals.spend===null?null:now;
     Object.assign(vals,stamp);
+    if(cur&&"result_at" in stamp&&cur.figures_source) vals.figures_source=null;   /* V118.177 — typed over an automatic figure: now it is typed */
     if(cur){
       const r=await sb.from("promotion_months").update({...vals,entered_by:ME.id,updated_at:now}).eq("id",cur.id).select("id");
       if(r.error) throw new Error(r.error.message);
