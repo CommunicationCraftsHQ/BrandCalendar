@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.168 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.169 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14809,7 +14809,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.168 Tbilisi";
+const TOOL_VERSION="V118.169 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -55185,6 +55185,19 @@ function xcRowsFor(id){
   }catch(e){ console.warn(e); }
   return null;
 }
+/* V118.169 — a section that has not loaded for this brand yet says so,
+   instead of "0 · None yet" for the first few seconds (Chirag, 3 Nov). */
+function xcReady(id){
+  const b=activeBrand;
+  try{
+    if(id==="bd-cp") return typeof CP==="undefined"||!!CP.err||(CP.ok&&CP.bid===b);
+    if(id==="bd-vb"){ if(!window.tgIo) return true; const v=tgIo.vb(); return !v||!!v.err||v.key===b; }
+    if(id==="bd-in") return typeof BC==="undefined"||!!BC.err||(BC.ok&&BC.bid===b);
+    if(id==="bd-s5") return typeof MDB==="undefined"||!!MDB.err||(MDB.ok&&MDB.bid===b);
+    if(id==="bd-s6") return typeof BF==="undefined"||!!BF.err||(BF.ok&&BF.bid===b);
+  }catch(e){}
+  return true;
+}
 function xcAdd(id){
   if(id==="bd-s5"){ mdbGo(); setTimeout(()=>{ try{ mdbAddOpen(); }catch(e){} },300); return; }
   if(id==="bd-s6"){ bfGo("all"); return; }
@@ -55195,9 +55208,10 @@ function xcAdd(id){
   xsListHtml=function(){
     const b=brands[activeBrand]||{}, may=typeof canEdit==="function"&&canEdit();
     const secs=xsCards().map(card=>{
-      const s=xsInfo(card), id=s.id;
-      const hd=`<div class="xc-hd" onclick="xsTap('${escAttr(id)}')">${s.no?`<span class="no">${escHtml(s.no)}</span>`:""}<b>${escHtml(s.title)}</b><span class="n${s.n?"":" zero"}">${s.n}</span>`+
+      const s=xsInfo(card), id=s.id, ready=xcReady(id);
+      const hd=`<div class="xc-hd" onclick="xsTap('${escAttr(id)}')">${s.no?`<span class="no">${escHtml(s.no)}</span>`:""}<b>${escHtml(s.title)}</b>${ready?`<span class="n${s.n?"":" zero"}">${s.n}</span>`:`<span class="n zero">…</span>`}`+
         (may?`<button class="xc-add" aria-label="Add" onclick="event.stopPropagation();xcAdd('${escAttr(id)}')"><i class="ti ti-plus"></i></button>`:"")+`</div>`;
+      if(!ready) return `<div class="xc-sec" data-k="${escAttr(id)}">${hd}<div class="xc-none xc-ld">Loading…</div></div>`;
       if(id==="bd-s5"){
         const st=card.querySelector(".mdb-strip");
         const body=st&&st.children.length?`<div class="xc-th" onclick="xsTap('bd-s5')">${[...st.children].slice(0,4).map(n=>n.outerHTML).join("")}</div>`
