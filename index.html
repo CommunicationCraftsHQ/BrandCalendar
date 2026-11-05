@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.178 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.179 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -6081,6 +6081,7 @@ select.pr-fv.cc-stsel{height:34px;padding:0 28px 0 10px;background-color:#fff;}
 <style>/* V118.177 */.pr-auto{display:inline-flex;align-items:center;gap:3px;}.pr-auto i{font-size:11px;color:#E8A33D;}</style>
 <style>/* V118.178 — the Link button grows to hold its word */.nav:not(.nb-narrow) #pg-link{width:auto;padding:0 12px;gap:6px;}
 .nav.nb-measuring::after{content:"";display:block;flex:0 0 24px;}</style>
+<style>/* V118.179 */.pr-tot{font-weight:600;color:var(--muted,#555);}</style>
 </head>
 <body class="mf-framed">
 
@@ -14843,7 +14844,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.178 Tbilisi";
+const TOOL_VERSION="V118.179 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -30025,9 +30026,21 @@ function prSpdAt(m){ return m.spend_at||m.updated_at||m.entered_at||null; }
 /* V118.177 — Chirag, 5 Nov: a figure the tool fetched itself must say so,
    in as few letters as possible. "Auto · 5 Nov"; the hover names where from. */
 const PR_AUTO={followers:"Instagram",meta:"Meta"};
-function prAsOf(at,by,lead,src){
+/* V118.179 — the brand's follower total for a month: the last reading in
+   it, or today's figure for the current month */
+function prFolTotal(ms){
+  const f=PR.fol; if(!f) return null;
+  if(ms&&f.byMonth[ms]!=null&&ms<prThisMonth()) return f.byMonth[ms];
+  if(!ms||ms>=prThisMonth()) return f.now!=null?f.now:(f.byMonth[ms]!=null?f.byMonth[ms]:null);
+  return null;
+}
+function prFolNote(p,ms){
+  if(!p||p.objective_key!=="follower_increase") return "";
+  const n=prFolTotal(ms); return n===null?"":Number(n).toLocaleString("en-IN")+" total";
+}
+function prAsOf(at,by,lead,src,extra){
   if(!at) return "";
-  if(src&&PR_AUTO[src]) return `<span class="pr-asof pr-auto" title="${escAttr("Fetched automatically from "+PR_AUTO[src]+" · "+prShort(String(at).slice(0,10)))}">${lead===false?"":"· "}<i class="ti ti-bolt"></i>Auto · ${escHtml(prShort(String(at).slice(0,10)))}</span>`;
+  if(src&&PR_AUTO[src]) return `<span class="pr-asof pr-auto" title="${escAttr("Fetched automatically from "+PR_AUTO[src]+" · "+prShort(String(at).slice(0,10)))}">${lead===false?"":"· "}<i class="ti ti-bolt"></i>Auto · ${extra?`<b class="pr-tot">${escHtml(extra)}</b> · `:""}${escHtml(prShort(String(at).slice(0,10)))}</span>`;
   const who=by?brPersonName(by):"";
   return `<span class="pr-asof" title="${escAttr((who?who+" · ":"")+prShort(String(at).slice(0,10)))}">${lead===false?"":"· "}as of ${escHtml(prShort(String(at).slice(0,10)))}</span>`;
 }
@@ -30102,6 +30115,19 @@ async function prLoad(k){
       const m=await sb.from("promotion_months").select("*").in("promotion_id",ids).is("deleted_at",null);
       if(m.error) throw new Error(m.error.message);
       months=(m.data||[]).filter(x=>ids.indexOf(x.promotion_id)>-1);
+      /* V118.179 — Chirag, 5 Nov: a Followers promotion shows the gain,
+         and the brand's TOTAL is wanted beside it. Read from the daily
+         follower job's own record; if the read rule is not there yet the
+         page simply shows no total. */
+      PR.fol=null;
+      if(list.some(p=>p.objective_key==="follower_increase")) try{
+        const [fs,fr]=await Promise.all([
+          sb.from("brand_follower_state").select("followers,measured_on").eq("brand_id",k).eq("platform","instagram").maybeSingle(),
+          sb.from("brand_follower_readings").select("read_on,followers").eq("brand_id",k).eq("platform","instagram").order("read_on")]);
+        const byMonth={}; (fr.data||[]).forEach(x=>{ if(x.followers!=null) byMonth[String(x.read_on).slice(0,8)+"01"]=Number(x.followers); });
+        const now=fs.data&&fs.data.followers!=null?Number(fs.data.followers):null;
+        if(now!==null||Object.keys(byMonth).length) PR.fol={now,on:fs.data?fs.data.measured_on:null,byMonth};
+      }catch(e){ PR.fol=null; }
       /* V118.118 — which campaigns in Meta feed each promotion. A
          table this new may not be there on an old database, so a
          failure here leaves the list empty and the rest of the page
@@ -31367,7 +31393,9 @@ function prCellHtml(p,k){
          is named off to the side instead. */
       const part=(prBasis(p)!=="per_month")&&!prWinCoversRun(p);
       const pc=(tgt&&val!==null&&!part)?Math.max(2,Math.min(100,Math.round(val/tgt*100))):0;
-      const asOf=val!==null&&g.resAt?`<small class="pr-asofl">${prAsOf(g.resAt,g.by,false,g.src)}</small>`:"";
+      const _W=prWin(), _ms=_W.single?(_W.from||prThisMonth()):prThisMonth(), tot=prFolNote(p,_ms);
+      const asOf=val!==null&&g.resAt?`<small class="pr-asofl">${g.src?prAsOf(g.resAt,g.by,false,g.src,tot):prAsOf(g.resAt,g.by,false)+(tot?` · <b class="pr-tot">${escHtml(tot)}</b>`:"")}</small>`
+        :(tot?`<small class="pr-asofl"><b class="pr-tot">${escHtml(tot)}</b></small>`:"");
       /* THE ROW IS A GLANCE. "· 900 over the run" ran past the Result
          column and came out as "900 over …", which reads as a fault.
          The run's target lives in the panel, where there is room for
@@ -31520,7 +31548,7 @@ function prPanelHtml(p){
     const ms=prMonths(p.id);
     const body=ms.length?ms.map(m=>`<tr><td style="text-align:left"><b>${escHtml(prMonthName(m.month_start))}</b></td>
         <td style="text-align:left">${prFmt(prNumOr(m.target_value)!==null?m.target_value:p.target_value)}</td>
-        <td>${prFmt(m.result_value)}${prNumOr(m.result_value)!==null?`<small class="pr-asofl">${prAsOf(prResAt(m),m.entered_by,false,m.figures_source)}</small>`:""}</td><td>${prMoney(prNumOr(m.spend),cur)}${prNumOr(m.spend)!==null?`<small class="pr-asofl">${prAsOf(prSpdAt(m),m.entered_by,false,m.figures_source==="meta"?"meta":null)}</small>`:""}</td>
+        <td>${prFmt(m.result_value)}${prNumOr(m.result_value)!==null?`<small class="pr-asofl">${prAsOf(prResAt(m),m.entered_by,false,m.figures_source,m.figures_source?prFolNote(p,m.month_start):"")}${!m.figures_source&&prFolNote(p,m.month_start)?` · <b class="pr-tot">${escHtml(prFolNote(p,m.month_start))}</b>`:""}</small>`:""}</td><td>${prMoney(prNumOr(m.spend),cur)}${prNumOr(m.spend)!==null?`<small class="pr-asofl">${prAsOf(prSpdAt(m),m.entered_by,false,m.figures_source==="meta"?"meta":null)}</small>`:""}</td>
         <td style="text-align:left" class="nsdim">${escHtml(m.note||"—")}</td>
         <td>${canOut?`<a class="prlink" href="javascript:void 0" onclick="prProgOpen('${p.id}','${m.month_start}')">Update</a>`:""}</td></tr>`).join("")
       :`<tr><td colspan="6" class="nsdim">Nothing recorded yet</td></tr>`;
