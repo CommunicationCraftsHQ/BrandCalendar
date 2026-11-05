@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.179 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.181 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14844,7 +14844,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.179 Tbilisi";
+const TOOL_VERSION="V118.181 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -31395,7 +31395,7 @@ function prCellHtml(p,k){
       const pc=(tgt&&val!==null&&!part)?Math.max(2,Math.min(100,Math.round(val/tgt*100))):0;
       const _W=prWin(), _ms=_W.single?(_W.from||prThisMonth()):prThisMonth(), tot=prFolNote(p,_ms);
       const asOf=val!==null&&g.resAt?`<small class="pr-asofl">${g.src?prAsOf(g.resAt,g.by,false,g.src,tot):prAsOf(g.resAt,g.by,false)+(tot?` · <b class="pr-tot">${escHtml(tot)}</b>`:"")}</small>`
-        :(tot?`<small class="pr-asofl"><b class="pr-tot">${escHtml(tot)}</b></small>`:"");
+        :(tot?`<small class="pr-asofl">${PR.fol&&PR.fol.on?prAsOf(PR.fol.on,null,false,"followers",tot):`<b class="pr-tot">${escHtml(tot)}</b>`}</small>`:"");   /* V118.180 — Mirwah: the total alone is fetched too, so it says Auto */
       /* THE ROW IS A GLANCE. "· 900 over the run" ran past the Result
          column and came out as "900 over …", which reads as a fault.
          The run's target lives in the panel, where there is room for
@@ -57301,7 +57301,7 @@ async function lrQsLoad(){
 }
 function lrQsSnap(){ return (LR.qs&&LR.qs.length?LR.qs:LR_DEFAULT_Q).map(q=>({id:q.id,kind:q.kind,label:q.label,options:[...(q.options||[])],required:!!q.required})); }
 PAGE_NAME.lost="Lost client review"; PAGE_NAME.lostlist="Lost client reviews";
-function lrMgr(){ return typeof isSuperAdmin==="function"&&isSuperAdmin(); }
+function lrMgr(){ return !!ME&&ME.role!=="client"&&(ME.toolRole==="super_admin"||ME.toolRole==="admin"); }   /* V118.181 — released to administrators (Chirag, 5 Nov) */
 function lrNm(p){ const pp=p&&p.user_id?personById(p.user_id):null; return (pp&&pp.name)||String((p&&p.email)||"").split("@")[0]||"Someone"; }
 function lrIni(s){ const w=String(s||"?").split(/[.\s_-]+/).filter(Boolean); return ((w[0]||"?")[0]+((w[1]||"")[0]||"")).toUpperCase(); }
 function lrDay(d){ if(!d) return ""; try{ return new Date(String(d).length<=10?d+"T00:00:00":d).toLocaleDateString("en-GB",{day:"numeric",month:"short"}); }catch(e){ return ""; } }
