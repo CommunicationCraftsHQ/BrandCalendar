@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.177 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.178 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -6079,6 +6079,8 @@ select.pr-fv.cc-stsel{height:34px;padding:0 28px 0 10px;background-color:#fff;}
 .pr-copybox .pr-formg{padding:12px 14px;}
 </style>
 <style>/* V118.177 */.pr-auto{display:inline-flex;align-items:center;gap:3px;}.pr-auto i{font-size:11px;color:#E8A33D;}</style>
+<style>/* V118.178 — the Link button grows to hold its word */.nav:not(.nb-narrow) #pg-link{width:auto;padding:0 12px;gap:6px;}
+.nav.nb-measuring::after{content:"";display:block;flex:0 0 24px;}</style>
 </head>
 <body class="mf-framed">
 
@@ -11670,7 +11672,16 @@ function nbColsHtml(n,of){ return `<span class="nb-n">${n}</span><span class="nb
       nav.classList.remove("nb-narrow");
       const r=nav.querySelector(":scope > .nav-right");
       /* V118.133 — the bell's red number pokes past the button row; only the bar itself running out of room counts */
+      /* V118.178 — Chirag, 5 Nov: the strip STILL widened and shrank on
+         every click. The freeze above made the measurement right, but the
+         browser remembered the wide size it computed while measuring, so
+         the moment the freeze lifted the buttons glided from wide back to
+         narrow — the flicker, on every redraw of a narrow bar. Settling
+         the narrow size while still frozen (the read below) means there
+         is nothing left to glide. A bar that only just fits (24px) also
+         counts as full (a 24px spacer joins the bar only while measuring), so "Link" never ends up squeezed out of its box. */
       void r; if(nav.scrollWidth>nav.clientWidth+1) nav.classList.add("nb-narrow");
+      void nav.offsetWidth;
       nav.classList.remove("nb-measuring");
     };
     const later=()=>{ if(!raf) raf=requestAnimationFrame(check); };
@@ -14832,7 +14843,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.177 Tbilisi";
+const TOOL_VERSION="V118.178 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
