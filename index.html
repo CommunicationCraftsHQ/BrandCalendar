@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.174 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.175 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14831,7 +14831,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.174 Tbilisi";
+const TOOL_VERSION="V118.175 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -57201,6 +57201,15 @@ try{ if(typeof ME==="object"&&ME&&ME.id) renderBnTabs(); }catch(e){}
 .lr-pick div{padding:7px 10px;font-size:13px;cursor:pointer;display:flex;gap:8px;align-items:center}.lr-pick div:hover{background:#F4F2EE}
 .lr-banner{position:fixed;right:18px;bottom:18px;z-index:9000;background:#141414;color:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 12px 30px rgba(0,0,0,.25);display:flex;align-items:center;gap:12px;max-width:min(420px,calc(100vw - 36px));font-size:13px}
 .lr-banner b{font-weight:700}.lr-banner .lr-btn{height:30px}.lr-banner .x{color:#aaa;cursor:pointer;padding:0 2px}
+.lr-tabs{display:flex;gap:2px;padding:3px;background:#E7E6E1;border-radius:9px;margin:0 0 12px;width:max-content}
+.lr-tabs button{height:28px;padding:0 14px;border:0;border-radius:7px;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:#77736B;cursor:pointer}
+.lr-tabs button.on{background:#fff;color:#141414;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.lr-qe{border:1px solid #E6E2DA;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff}
+.lr-qe .top{display:flex;gap:8px;align-items:center}.lr-qe .n{font-weight:800;color:#A8A39A;width:18px;flex:none}
+.lr-qe .ic{color:#A8A39A;cursor:pointer;padding:2px 4px;font-size:15px}.lr-qe .ic:hover{color:#141414}.lr-qe .ic.rm:hover{color:#D62828}
+.lr-qe .ic.off{opacity:.25;pointer-events:none}
+.lr-kinds{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}.lr-kinds .lr-chip{height:24px;font-size:11.5px;padding:0 9px}
+.lr-req{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#77736B;cursor:pointer;margin-top:8px}
 .lr-row{display:grid;grid-template-columns:minmax(0,1fr) 110px 110px 90px;gap:10px;padding:10px 4px;border-bottom:1px solid #F0EFEC;cursor:pointer;align-items:center;font-size:13px}.lr-row:hover{background:#FAF8F4}
 @media (max-width:700px){
   .lr-wrap{padding:0 12px 24px}
@@ -57223,8 +57232,27 @@ try{ if(typeof ME==="object"&&ME&&ME.id) renderBnTabs(); }catch(e){}
    Preview rule (20 Oct): only the Super administrator starts reviews
    until Chirag releases it.                                            */
 const LR={bid:null,ok:false,err:"",reviews:[],people:[],open:null,menu:false,draft:{},mine:null,mineAt:0};
-const LR_REASONS=[["price","Price"],["results","Results"],["speed","Speed"],["communication","Communication"],["quality","Quality of work"],["client","Their budget / plans changed"],["other","Other"]];
-const LR_BACK=[["yes","Yes"],["maybe","Maybe"],["no","No"]];
+/* V118.175 — the questions are a list Chirag edits (lost_review_questions);
+   each review keeps the copy it was sent with (lost_reviews.questions) and
+   each person's answers sit by question id (lost_review_people.reply).
+   These six are the starting list, used if the list cannot be read. */
+const LR_DEFAULT_Q=[
+  {id:"q_happy",kind:"scale",label:"How happy was the client with us, overall?",options:[],required:true},
+  {id:"q_reasons",kind:"chips",label:"Main reason we lost them",options:["Price","Results","Speed","Communication","Quality of work","Their budget / plans changed","Other"],required:true},
+  {id:"q_signs",kind:"short",label:"When did you first see signs?",options:[],required:false},
+  {id:"q_wrong",kind:"long",label:"What went wrong?",options:[],required:true},
+  {id:"q_next",kind:"long",label:"What should we do differently next time?",options:[],required:false},
+  {id:"q_back",kind:"choice",label:"Could they come back?",options:["Yes","Maybe","No"],required:false}];
+const LR_KINDS=[["scale","Score 1–5"],["chips","Pick many"],["choice","Pick one"],["short","Short answer"],["long","Long answer"]];
+LR.qs=null; LR.tab="reviews";
+function lrQs(r){ return (r&&Array.isArray(r.questions)&&r.questions.length)?r.questions:LR_DEFAULT_Q; }
+function lrHas(v){ return Array.isArray(v)?v.length>0:(v!=null&&String(v).trim()!==""&&v!==0); }
+async function lrQsLoad(){
+  try{ const r=await sb.from("lost_review_questions").select("*").is("deleted_at",null).order("sort");
+    if(r.error) throw r.error; LR.qs=(r.data||[]).filter(q=>!q.deleted_at).sort((a,b)=>(a.sort||0)-(b.sort||0)); LR.qsErr=""; }
+  catch(e){ LR.qs=null; LR.qsErr=String(e.message||e); }
+}
+function lrQsSnap(){ return (LR.qs&&LR.qs.length?LR.qs:LR_DEFAULT_Q).map(q=>({id:q.id,kind:q.kind,label:q.label,options:[...(q.options||[])],required:!!q.required})); }
 PAGE_NAME.lost="Lost client review";
 function lrMgr(){ return typeof isSuperAdmin==="function"&&isSuperAdmin(); }
 function lrNm(p){ const pp=p&&p.user_id?personById(p.user_id):null; return (pp&&pp.name)||String((p&&p.email)||"").split("@")[0]||"Someone"; }
@@ -57299,6 +57327,7 @@ function renderLost(){
   if(!LR.ok){ mc.innerHTML=`<div class="lr-wrap"><div class="lr-empty">${LR.err?escHtml(LR.err):"Loading…"}</div></div>`; return; }
   const r=lrCur();
   if(!r){
+    if(view==="lost") try{ buildLostSidebar(); }catch(e){}
     mc.innerHTML=`<div class="lr-wrap">${lrMgr()?`<div class="lr-empty"><b>No review yet</b>Start one when ${escHtml(b.name||"this client")} is lost.<br><br><button class="lr-btn p" onclick="lrStartOpen()">Start review</button></div>`
       :`<div class="lr-empty">Nothing here for you.</div>`}</div>`;
     return;
@@ -57306,6 +57335,7 @@ function renderLost(){
   const others=LR.reviews.filter(x=>x.id!==r.id);
   const older=others.length?`<div class="lr-card"><div class="lr-lbl" style="margin-top:0">Earlier reviews</div>${others.map(x=>`<div class="lr-row" onclick="LR.open='${x.id}';renderLost()"><span>${escHtml(lrDay(x.created_at))}${x.lost_on?` · lost ${escHtml(lrDay(x.lost_on))}`:""}</span><span>${lrStatusPill(x)}</span><span></span><span></span></div>`).join("")}</div>`:"";
   mc.innerHTML=`<div class="lr-wrap">${lrMgr()?lrMgrHtml(r):lrLeaderHtml(r)}${lrMgr()?older:""}</div>`;
+  if(view==="lost") try{ buildLostSidebar(); }catch(e){}   /* V118.175 — the left panel lists the review straight away */
 }
 function lrStatusPill(r){
   if(r.status==="collecting"){ const ps=lrPeopleOf(r.id).filter(p=>p.answers); const n=ps.filter(p=>p.submitted_at).length; return `<span class="lr-pill lr-run">Collecting${ps.length?` · ${n} of ${ps.length}`:""}</span>`; }
@@ -57322,6 +57352,7 @@ function lrMgrHtml(r){
   const vis=[["private","🔒 Only me"],["answered","👥 Everyone who answered"],["chosen","✓ Chosen people"]];
   return `<div class="lr-card">
     <div class="lr-hd"><b>Lost client review</b>${lrStatusPill(r)}<span class="lr-mut" style="font-size:12px">${r.lost_on?"Lost "+escHtml(lrDay(r.lost_on)):""}${r.answer_by&&coll?` · answers by ${escHtml(lrDay(r.answer_by))}`:""}</span><span class="sp"></span>
+      <button class="lr-btn" onclick="lrPreview('${r.id}')"><i class="ti ti-eye"></i>Questions</button>
       <button class="lr-btn" onclick="lrCopyLink()"><i class="ti ti-link"></i>Copy link</button>
       ${coll?`<button class="lr-btn" onclick="lrAddOpen()"><i class="ti ti-user-plus"></i>Add person</button><button class="lr-btn k" onclick="lrClose()">Close and see answers</button>`
         :`<span style="position:relative"><button class="lr-btn" onclick="event.stopPropagation();LR.menu=!LR.menu;renderLost()">Who can see ▾</button>${LR.menu?`<div class="lr-menu" onclick="event.stopPropagation()">${vis.map(([k,l])=>`<div class="lr-mi${r.visibility===k?" on":""}" onclick="lrSetVis('${k}')">${l}${r.visibility===k?"<small>now</small>":""}</div>`).join("")}
@@ -57338,23 +57369,23 @@ function lrAnswersHtml(r,forOthers){
   const ps=lrPeopleOf(r.id).filter(p=>p.answers&&p.submitted_at);
   const all=lrPeopleOf(r.id).filter(p=>p.answers).length;
   if(!ps.length) return `<div class="lr-hd"><b>Answers</b></div><div class="lr-mut">No answers yet.</div>`;
-  const rated=ps.filter(p=>p.rating), avg=rated.length?(rated.reduce((s,p)=>s+p.rating,0)/rated.length):0;
-  const cnt={}; ps.forEach(p=>(p.reasons||[]).forEach(k=>{ cnt[k]=(cnt[k]||0)+1; }));
-  const reasons=Object.entries(cnt).sort((a,b)=>b[1]-a[1]), max=reasons.length?reasons[0][1]:1;
-  const back={yes:0,maybe:0,no:0}; ps.forEach(p=>{ if(back[p.come_back]!=null) back[p.come_back]++; });
-  const signs=ps.map(p=>p.first_signs).filter(Boolean);
-  const hide=forOthers&&r.hide_names;
+  const qs=lrQs(r), hide=forOthers&&r.hide_names, R=p=>p.reply||{};
+  const cards=[], bars=[];
+  qs.forEach(q=>{
+    const vals=ps.map(p=>R(p)[q.id]).filter(lrHas);
+    if(q.kind==="scale"){ const n=vals.map(Number).filter(x=>x>0); cards.push(`<div class="lr-k"><small>${escHtml(q.label.toUpperCase())}</small><b>${n.length?(n.reduce((s,x)=>s+x,0)/n.length).toFixed(1):"—"}</b> / 5</div>`); }
+    else if(q.kind==="choice"){ cards.push(`<div class="lr-k"><small>${escHtml(q.label.toUpperCase())}</small><span style="font-size:13px;font-weight:600">${(q.options||[]).map(o=>`${vals.filter(v=>v===o).length} ${escHtml(o.toLowerCase())}`).join(" · ")||"—"}</span></div>`); }
+    else if(q.kind==="chips"){ const cnt={}; vals.forEach(v=>(Array.isArray(v)?v:[v]).forEach(o=>{ cnt[o]=(cnt[o]||0)+1; })); const rows=Object.entries(cnt).sort((x,y)=>y[1]-x[1]); const mx=rows.length?rows[0][1]:1;
+      if(rows.length) bars.push(`<div class="lr-lbl">${escHtml(q.label)}</div>${rows.map(([o,n])=>`<div class="lr-bar"><span>${escHtml(o)}</span><i style="width:${Math.max(12,Math.round(n/mx*180))}px"></i>${n}</div>`).join("")}`); }
+  });
+  const texts=qs.filter(q=>q.kind==="short"||q.kind==="long");
+  const heads=qs.filter(q=>q.kind==="scale"||q.kind==="choice");
   return `<div class="lr-hd"><b>Answers · ${ps.length} of ${all}</b>${!forOthers&&r.status==="collecting"?`<span class="lr-mut" style="font-size:12px">Only you see these while it collects</span>`:""}</div>
-    <div class="lr-sum">
-      <div class="lr-k"><small>AVERAGE HAPPINESS</small><b>${avg?avg.toFixed(1):"—"}</b> / 5</div>
-      <div class="lr-k"><small>COULD COME BACK</small><b>${back.yes}</b> yes · ${back.maybe} maybe · ${back.no} no</div>
-      <div class="lr-k"><small>FIRST SIGNS</small><span style="font-size:13px;font-weight:600">${escHtml(signs[0]||"—")}${signs.length>1?` <span class="lr-mut">+${signs.length-1}</span>`:""}</span></div>
-    </div>
-    ${reasons.length?`<div class="lr-lbl">Main reasons</div>${reasons.map(([k,n])=>`<div class="lr-bar"><span>${escHtml((LR_REASONS.find(x=>x[0]===k)||[k,k])[1])}</span><i style="width:${Math.max(12,Math.round(n/max*180))}px"></i>${n}</div>`).join("")}`:""}
-    ${ps.map((p,i)=>`<div class="lr-ans"><div class="hd"><span class="lr-av">${hide?(i+1):escHtml(lrIni(lrNm(p)))}</span>${hide?`Leader ${i+1}`:escHtml(lrNm(p))}${p.rating?` · ${p.rating} / 5`:""}${p.come_back?` · could come back: ${escHtml(p.come_back)}`:""}</div>
-      ${p.went_wrong?`<p><b>Went wrong:</b> ${escHtml(p.went_wrong)}</p>`:""}
-      ${p.next_time?`<p><b>Next time:</b> ${escHtml(p.next_time)}</p>`:""}
-      ${p.first_signs?`<p><b>First signs:</b> ${escHtml(p.first_signs)}</p>`:""}</div>`).join("")}`;
+    ${cards.length?`<div class="lr-sum">${cards.join("")}</div>`:""}${bars.join("")}
+    ${ps.map((p,i)=>{ const rp=R(p);
+      const sub=heads.map(q=>lrHas(rp[q.id])?(q.kind==="scale"?`${rp[q.id]} / 5`:escHtml(String(rp[q.id]))):"").filter(Boolean).join(" · ");
+      return `<div class="lr-ans"><div class="hd"><span class="lr-av">${hide?(i+1):escHtml(lrIni(lrNm(p)))}</span>${hide?`Leader ${i+1}`:escHtml(lrNm(p))}${sub?` · ${sub}`:""}</div>
+        ${texts.filter(q=>lrHas(rp[q.id])).map(q=>`<p><b>${escHtml(q.label)}</b> ${escHtml(String(rp[q.id]))}</p>`).join("")}</div>`; }).join("")}`;
 }
 /* a leader's view: their own form, or the opened answers */
 function lrLeaderHtml(r){
@@ -57364,26 +57395,45 @@ function lrLeaderHtml(r){
   if(opened) return `<div class="lr-card">${lrAnswersHtml(r,true)}</div>`;
   if(!me.answers) return `<div class="lr-empty">The answers have not been opened to you yet.</div>`;
   if(r.status!=="collecting") return `<div class="lr-empty"><b>This review is closed</b>${me.submitted_at?"Thank you for your answers.":"It closed before you answered."}</div>`;
-  const d=LR.draft[r.id]||(LR.draft[r.id]={rating:me.rating||0,reasons:[...(me.reasons||[])],first_signs:me.first_signs||"",went_wrong:me.went_wrong||"",next_time:me.next_time||"",come_back:me.come_back||""});
+  const qs=lrQs(r);
+  const d=LR.draft[r.id]||(LR.draft[r.id]=JSON.parse(JSON.stringify(me.reply||{})));
   const b=brands[r.brand_id]||{};
   return `<div class="lr-card" style="max-width:640px">
     <div class="lr-hd"><b>Lost client review · ${escHtml(b.name||"")}</b>${me.submitted_at?`<span class="lr-pill lr-open">Submitted ${escHtml(lrDay(me.submitted_at))}</span>`:""}</div>
     <div class="lr-lock">🔒 Only you and the reviewer see your answers until they are opened.</div>
-    <div class="lr-q"><div class="t">How happy was the client with us, overall?</div><div class="lr-scale">${[1,2,3,4,5].map(n=>`<button class="${d.rating===n?"on":""}" onclick="lrSet('${r.id}','rating',${n})">${n}</button>`).join("")}</div></div>
-    <div class="lr-q"><div class="t">Main reason we lost them</div><div class="lr-chips">${LR_REASONS.map(([k,l])=>`<button class="lr-chip${d.reasons.includes(k)?" on":""}" onclick="lrToggleReason('${r.id}','${k}')">${escHtml(l)}</button>`).join("")}</div></div>
-    <div class="lr-q"><div class="t">When did you first see signs?</div><input class="lr-in" maxlength="200" value="${escAttr(d.first_signs)}" placeholder="e.g. about 2 months before" oninput="LR.draft['${r.id}'].first_signs=this.value"></div>
-    <div class="lr-q"><div class="t">What went wrong?</div><textarea class="lr-ta" maxlength="4000" oninput="LR.draft['${r.id}'].went_wrong=this.value">${escHtml(d.went_wrong)}</textarea></div>
-    <div class="lr-q"><div class="t">What should we do differently next time?</div><textarea class="lr-ta" maxlength="4000" oninput="LR.draft['${r.id}'].next_time=this.value">${escHtml(d.next_time)}</textarea></div>
-    <div class="lr-q"><div class="t">Could they come back?</div><div class="lr-chips">${LR_BACK.map(([k,l])=>`<button class="lr-chip${d.come_back===k?" on":""}" onclick="lrSet('${r.id}','come_back','${k}')">${l}</button>`).join("")}</div></div>
+    ${lrFormHtml(qs,d,r.id,false)}
     <div class="lr-acts"><button class="lr-btn" onclick="lrSave('${r.id}',false)">Save draft</button><button class="lr-btn p" onclick="lrSave('${r.id}',true)">${me.submitted_at?"Update answers":"Submit"}</button></div>
   </div>`;
 }
-function lrSet(rid,k,v){ const d=LR.draft[rid]; if(!d) return; d[k]=(d[k]===v&&k!=="rating")?"":v; renderLost(); }
-function lrToggleReason(rid,k){ const d=LR.draft[rid]; if(!d) return; d.reasons=d.reasons.includes(k)?d.reasons.filter(x=>x!==k):d.reasons.concat(k); renderLost(); }
+/* the questions as a form — the leader's, and the read-only preview */
+function lrFormHtml(qs,d,rid,ro){
+  const on=(rid&&!ro)?"":" disabled";
+  return qs.map((q,i)=>{
+    const v=d[q.id], qi=escAttr(q.id), star=q.required?` <span style="color:var(--acc,#D62828)">*</span>`:"";
+    let inp="";
+    if(q.kind==="scale") inp=`<div class="lr-scale">${[1,2,3,4,5].map(n=>`<button class="${Number(v)===n?"on":""}"${on} onclick="lrSet('${rid}','${qi}',${n})">${n}</button>`).join("")}</div>`;
+    else if(q.kind==="chips") inp=`<div class="lr-chips">${(q.options||[]).map((o,k)=>`<button class="lr-chip${Array.isArray(v)&&v.includes(o)?" on":""}"${on} onclick="lrPick('${rid}','${qi}',${k},true)">${escHtml(o)}</button>`).join("")}</div>`;
+    else if(q.kind==="choice") inp=`<div class="lr-chips">${(q.options||[]).map((o,k)=>`<button class="lr-chip${v===o?" on":""}"${on} onclick="lrPick('${rid}','${qi}',${k},false)">${escHtml(o)}</button>`).join("")}</div>`;
+    else if(q.kind==="short") inp=`<input class="lr-in" maxlength="300" value="${escAttr(v||"")}"${on} oninput="LR.draft['${rid}']['${qi}']=this.value">`;
+    else inp=`<textarea class="lr-ta" maxlength="4000"${on} oninput="LR.draft['${rid}']['${qi}']=this.value">${escHtml(v||"")}</textarea>`;
+    return `<div class="lr-q"><div class="t">${escHtml(q.label)}${star}</div>${inp}</div>`;
+  }).join("");
+}
+function lrPick(rid,qid,k,many){
+  const r=LR.reviews.find(x=>x.id===rid), q=lrQs(r).find(x=>x.id===qid), d=LR.draft[rid]; if(!q||!d) return;
+  const o=(q.options||[])[k]; if(o==null) return;
+  if(many){ const cur=Array.isArray(d[qid])?d[qid]:[]; d[qid]=cur.includes(o)?cur.filter(x=>x!==o):cur.concat(o); }
+  else d[qid]=d[qid]===o?"":o;
+  renderLost();
+}
+function lrSet(rid,k,v){ const d=LR.draft[rid]; if(!d) return; d[k]=v; renderLost(); }
 async function lrSave(rid,submit){
   const me=lrMe(rid), d=LR.draft[rid]; if(!me||!d) return;
-  if(submit&&(!d.rating||!d.reasons.length||!String(d.went_wrong).trim())){ toast("Give a score, at least one reason and what went wrong","err"); return; }
-  const patch={rating:d.rating||null,reasons:d.reasons,first_signs:String(d.first_signs||"").trim(),went_wrong:String(d.went_wrong||"").trim(),next_time:String(d.next_time||"").trim(),come_back:d.come_back||""};
+  const qs=lrQs(LR.reviews.find(x=>x.id===rid));
+  const miss=qs.filter(q=>q.required&&!lrHas(d[q.id]));
+  if(submit&&miss.length){ toast(`Please answer: ${escHtml(miss.map(q=>q.label).join(" · "))}`,"err"); return; }
+  const reply={}; qs.forEach(q=>{ const v=d[q.id]; if(!lrHas(v)) return; reply[q.id]=typeof v==="string"?v.trim():v; });
+  const patch={reply};
   if(submit) patch.submitted_at=me.submitted_at||new Date().toISOString();
   const r=await sb.from("lost_review_people").update(patch).eq("id",me.id);
   if(r.error){ toast("Not saved — "+escHtml(r.error.message),"err"); return; }
@@ -57419,6 +57469,13 @@ function lrCopyLink(){
   const done=()=>toast("Link copied — only the people on this review can open it");
   try{ navigator.clipboard.writeText(u).then(done,()=>toast(u)); }catch(e){ toast(u); }
 }
+/* the questions a review was sent with, as the leaders see them */
+function lrPreview(rid){
+  const r=LR.reviews.find(x=>x.id===rid);
+  lrBox(`<div class="h">Questions${r?" · as sent "+escHtml(lrDay(r.created_at)):""}</div>
+    <div style="max-height:60vh;overflow:auto">${lrFormHtml(lrQs(r),{},null,true)}</div>
+    <div class="lr-acts">${lrMgr()?`<button class="lr-btn" onclick="lrBoxClose();openLostList('questions')">Edit the question list</button>`:""}<button class="lr-btn k" onclick="lrBoxClose()">Close</button></div>`);
+}
 /* the box: start a review, or add people to one */
 let LR_BOX=null;
 function lrBox(html){
@@ -57431,6 +57488,7 @@ function lrBoxClose(){ LR_BOX=null; closeM("lrbox"); }
 function lrStaff(){ return (PEOPLE||[]).filter(p=>p.role!=="client"&&p.email); }
 async function lrStartOpen(){
   if(!lrMgr()) return;
+  if(LR.qs===null) lrQsLoad();
   LR_BOX={mode:"start",ids:[],q:"",lost_on:new Date().toISOString().slice(0,10),answer_by:new Date(Date.now()+7*864e5).toISOString().slice(0,10)};
   lrBoxPaint();
   try{
@@ -57464,7 +57522,8 @@ async function lrBoxGo(){
   const now=new Date().toISOString();
   const rowsFor=(rid,answers)=>B.ids.map(id=>({id:crypto.randomUUID(),review_id:rid,user_id:id,email:((personById(id)||{}).email||"").toLowerCase(),answers,can_view:!answers,created_at:now}));
   if(B.mode==="start"){
-    const rev={id:crypto.randomUUID(),brand_id:activeBrand,lost_on:B.lost_on||null,answer_by:B.answer_by||null,status:"collecting",visibility:"private",hide_names:false,created_by:ME.id||null,created_at:now};
+    if(LR.qs===null) await lrQsLoad();   /* the copy sent must be the list, not the fallback */
+    const rev={id:crypto.randomUUID(),brand_id:activeBrand,lost_on:B.lost_on||null,answer_by:B.answer_by||null,status:"collecting",visibility:"private",hide_names:false,questions:lrQsSnap(),created_by:ME.id||null,created_at:now};
     const a=await sb.from("lost_reviews").insert([rev]);
     if(a.error){ B.busy=false; toast("Not started — "+escHtml(a.error.message),"err"); return; }
     const ppl=rowsFor(rev.id,true);
@@ -57480,28 +57539,81 @@ async function lrBoxGo(){
   }
   lrBoxClose(); renderLost();
 }
-/* ── every review, from the account menu ─────────────────────────── */
-async function openLostList(){
-  closeAllPops();
+/* ── every review, and the question list, from the account menu ── */
+async function openLostList(tab){
+  closeAllPops(); if(tab) LR.tab=tab;
   let ov=document.getElementById("ov-lrlist");
   if(!ov){ ov=document.createElement("div"); ov.className="overlay"; ov.id="ov-lrlist"; ov.onclick=e=>{ if(e.target===ov) closeM("lrlist"); };
-    ov.innerHTML=`<div class="modal lr-modal" style="width:640px"><div id="lr-list-body"></div></div>`; document.body.appendChild(ov); }
-  const body=document.getElementById("lr-list-body");
-  body.innerHTML=`<div class="h">Lost client reviews</div><div class="lr-mut">Loading…</div>`; openM("lrlist");
+    ov.innerHTML=`<div class="modal lr-modal" style="width:680px"><div id="lr-list-body"></div></div>`; document.body.appendChild(ov); }
+  openM("lrlist"); lrListPaint(true);
+}
+function lrTabsHtml(){ return `<div class="lr-tabs"><button class="${LR.tab==="reviews"?"on":""}" onclick="LR.tab='reviews';lrListPaint(true)">Reviews</button><button class="${LR.tab==="questions"?"on":""}" onclick="LR.tab='questions';lrListPaint(true)">Questions</button></div>`; }
+async function lrListPaint(reload){
+  const body=document.getElementById("lr-list-body"); if(!body) return;
+  if(LR.tab==="questions"){
+    if(reload||LR.qs===null){ body.innerHTML=`<div class="h">Lost client reviews</div>${lrTabsHtml()}<div class="lr-mut">Loading…</div>`; await lrQsLoad(); }
+    body.innerHTML=`<div class="h">Lost client reviews</div>${lrTabsHtml()}${lrQEditHtml()}`; return;
+  }
+  body.innerHTML=`<div class="h">Lost client reviews</div>${lrTabsHtml()}<div class="lr-mut">Loading…</div>`;
   const r=await sb.from("lost_reviews").select("*").is("deleted_at",null).order("created_at",{ascending:false});
-  if(r.error){ body.innerHTML=`<div class="h">Lost client reviews</div><div class="lr-mut">${escHtml(r.error.message)}</div>`; return; }
+  if(r.error){ body.innerHTML=`<div class="h">Lost client reviews</div>${lrTabsHtml()}<div class="lr-mut">${escHtml(r.error.message)}</div>`; return; }
   const revs=(r.data||[]).filter(x=>!x.deleted_at);
-  let ppl=[]; if(revs.length){ const p=await sb.from("lost_review_people").select("review_id,answers,rating,reasons,submitted_at").in("review_id",revs.map(x=>x.id)); ppl=p.data||[]; }
+  let ppl=[]; if(revs.length){ const p=await sb.from("lost_review_people").select("review_id,answers,reply,submitted_at").in("review_id",revs.map(x=>x.id)); ppl=p.data||[]; }
   const rows=revs.map(v=>{
-    const ps=ppl.filter(p=>p.review_id===v.id&&p.answers), done=ps.filter(p=>p.submitted_at), rated=done.filter(p=>p.rating);
-    const avg=rated.length?(rated.reduce((s,p)=>s+p.rating,0)/rated.length).toFixed(1):"—";
-    const cnt={}; done.forEach(p=>(p.reasons||[]).forEach(k=>{ cnt[k]=(cnt[k]||0)+1; }));
+    const qs=lrQs(v), sq=qs.find(q=>q.kind==="scale"), cq=qs.find(q=>q.kind==="chips");
+    const ps=ppl.filter(p=>p.review_id===v.id&&p.answers), done=ps.filter(p=>p.submitted_at);
+    const nums=sq?done.map(p=>Number((p.reply||{})[sq.id])).filter(x=>x>0):[];
+    const avg=nums.length?(nums.reduce((s,x)=>s+x,0)/nums.length).toFixed(1):"—";
+    const cnt={}; if(cq) done.forEach(p=>{ const a=(p.reply||{})[cq.id]; (Array.isArray(a)?a:[]).forEach(k=>{ cnt[k]=(cnt[k]||0)+1; }); });
     const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
     return `<div class="lr-row" onclick="lrGoTo('${escAttr(v.brand_id)}','${escAttr(v.id)}')"><span><b>${escHtml((brands[v.brand_id]||{}).name||"A brand")}</b> <span class="lr-mut">· ${escHtml(lrDay(v.lost_on||v.created_at))}</span></span>
       <span>${v.status==="collecting"?`<span class="lr-pill lr-run">${done.length} of ${ps.length}</span>`:`<span class="lr-pill lr-priv">Closed</span>`}</span>
-      <span class="lr-mut">${top?escHtml((LR_REASONS.find(x=>x[0]===top[0])||[0,top[0]])[1]):""}</span><span style="text-align:right;font-weight:700">${avg} / 5</span></div>`;
+      <span class="lr-mut">${top?escHtml(top[0]):""}</span><span style="text-align:right;font-weight:700">${sq?avg+" / 5":""}</span></div>`;
   }).join("");
-  body.innerHTML=`<div class="h">Lost client reviews</div>${rows||`<div class="lr-mut">No reviews yet. Start one from a brand's Strategy page.</div>`}`;
+  body.innerHTML=`<div class="h">Lost client reviews</div>${lrTabsHtml()}${rows||`<div class="lr-mut">No reviews yet. Start one from a brand's Strategy page.</div>`}`;
+}
+function lrQEditHtml(){
+  if(LR.qs===null) return `<div class="lr-mut">${LR.qsErr&&/exist|relation|schema/i.test(LR.qsErr)?"The question list is not set up yet.":escHtml(LR.qsErr||"Could not load the questions.")}</div>`;
+  const qs=LR.qs, may=lrMgr();
+  return `<div style="max-height:62vh;overflow:auto">${qs.map((q,i)=>`<div class="lr-qe">
+      <div class="top"><span class="n">${i+1}</span>
+        <input class="lr-in" maxlength="200" value="${escAttr(q.label)}"${may?"":" disabled"} onchange="lrQPatch('${escAttr(q.id)}',{label:this.value.trim()||'Untitled question'})">
+        ${may?`<span class="ic${i?"":" off"}" title="Move up" onclick="lrQMove('${escAttr(q.id)}',-1)">↑</span><span class="ic${i<qs.length-1?"":" off"}" title="Move down" onclick="lrQMove('${escAttr(q.id)}',1)">↓</span><span class="ic rm" title="Remove" onclick="lrQRemove('${escAttr(q.id)}')">✕</span>`:""}</div>
+      <div class="lr-kinds">${LR_KINDS.map(([k,l])=>`<button class="lr-chip${q.kind===k?" on":""}"${may?"":" disabled"} onclick="lrQPatch('${escAttr(q.id)}',{kind:'${k}'})">${l}</button>`).join("")}</div>
+      ${q.kind==="chips"||q.kind==="choice"?`<input class="lr-in" style="margin-top:8px" placeholder="Options, separated by commas" value="${escAttr((q.options||[]).join(", "))}"${may?"":" disabled"} onchange="lrQPatch('${escAttr(q.id)}',{options:this.value.split(',').map(x=>x.trim()).filter(Boolean)})">`:""}
+      <label class="lr-req"><input type="checkbox"${q.required?" checked":""}${may?"":" disabled"} onchange="lrQPatch('${escAttr(q.id)}',{required:this.checked})"> Must answer</label>
+    </div>`).join("")||`<div class="lr-mut">No questions.</div>`}</div>
+    ${may?`<div class="lr-acts" style="justify-content:space-between"><span class="lr-mut" style="font-size:12px">Reviews already sent keep their own questions.</span><span style="display:flex;gap:8px"><button class="lr-btn" onclick="lrPreviewList()"><i class="ti ti-eye"></i>Preview</button><button class="lr-btn p" onclick="lrQAdd()"><i class="ti ti-plus"></i>Add question</button></span></div>`:""}`;
+}
+async function lrQPatch(id,patch){
+  const q=(LR.qs||[]).find(x=>x.id===id); if(!q||!lrMgr()) return;
+  if(patch.kind&&(patch.kind==="chips"||patch.kind==="choice")&&!(q.options||[]).length) patch.options=["Option 1","Option 2"];
+  const was={...q}; Object.assign(q,patch,{updated_at:new Date().toISOString()}); lrListPaint(false);
+  const r=await sb.from("lost_review_questions").update({...patch,updated_at:q.updated_at}).eq("id",id);
+  if(r.error){ Object.assign(q,was); lrListPaint(false); toast("Not saved — "+escHtml(r.error.message),"err"); }
+}
+async function lrQMove(id,dir){
+  const qs=LR.qs||[], i=qs.findIndex(x=>x.id===id), j=i+dir; if(i<0||j<0||j>=qs.length) return;
+  [qs[i],qs[j]]=[qs[j],qs[i]]; qs.forEach((q,k)=>{ q.sort=(k+1)*10; }); lrListPaint(false);
+  for(const q of [qs[i],qs[j]]){ const r=await sb.from("lost_review_questions").update({sort:q.sort}).eq("id",q.id); if(r.error){ toast("Order not saved — "+escHtml(r.error.message),"err"); break; } }
+}
+async function lrQRemove(id){
+  const q=(LR.qs||[]).find(x=>x.id===id); if(!q||!confirm(`Remove “${q.label}” from the list? Reviews already sent keep it.`)) return;
+  const r=await sb.from("lost_review_questions").update({deleted_at:new Date().toISOString()}).eq("id",id);
+  if(r.error){ toast("Not removed — "+escHtml(r.error.message),"err"); return; }
+  LR.qs=LR.qs.filter(x=>x.id!==id); lrListPaint(false);
+}
+async function lrQAdd(){
+  const qs=LR.qs||[]; const row={id:"q_"+Math.random().toString(36).slice(2,10),sort:((qs[qs.length-1]||{}).sort||0)+10,kind:"long",label:"New question",options:[],required:false,created_at:new Date().toISOString()};
+  const r=await sb.from("lost_review_questions").insert([row]);
+  if(r.error){ toast("Not added — "+escHtml(r.error.message),"err"); return; }
+  qs.push(row); LR.qs=qs; lrListPaint(false);
+  setTimeout(()=>{ const ins=document.querySelectorAll("#lr-list-body .lr-qe .lr-in"); const el=ins[ins.length-1]; if(el){ el.focus(); el.select(); } },30);
+}
+function lrPreviewList(){
+  closeM("lrlist");
+  lrBox(`<div class="h">Questions · as a leader sees them</div><div style="max-height:60vh;overflow:auto">${lrFormHtml(lrQsSnap(),{},null,true)}</div>
+    <div class="lr-acts"><button class="lr-btn" onclick="lrBoxClose();openLostList('questions')">Back to the list</button><button class="lr-btn k" onclick="lrBoxClose()">Close</button></div>`);
 }
 /* ── the route, the Strategy tab, the sidebar row, the menu row ──── */
 function buildLostSidebar(){
@@ -57510,7 +57622,7 @@ function buildLostSidebar(){
   const revs=LR.bid===activeBrand?LR.reviews:[];
   sm.innerHTML=`<div class="mdb-up" onclick="openBrief()"><i class="ti ti-arrow-left"></i> Strategy</div>
     <div class="s-lbl">Lost client review</div>
-    ${revs.map(r=>`<div class="mdb-trow${lrCur()&&lrCur().id===r.id?" on":""}" onclick="LR.open='${r.id}';buildLostSidebar();renderLost()"><span class="nm">${escHtml(lrDay(r.created_at))}</span><span class="ct">${r.status==="collecting"?"open":""}</span></div>`).join("")}`;
+    ${revs.map(r=>`<div class="mdb-trow${lrCur()&&lrCur().id===r.id?" on":""}" onclick="LR.open='${r.id}';buildLostSidebar();renderLost()"><span class="nm">Started ${escHtml(lrDay(r.created_at))}</span><span class="ct">${r.status==="collecting"?"open":"closed"}</span></div>`).join("")}`;
 }
 (function(){
   const base=viewRoute;
