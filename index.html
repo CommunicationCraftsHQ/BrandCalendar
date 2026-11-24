@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.2 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.3 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14856,7 +14856,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.2 Cappadocia";
+const TOOL_VERSION="V119.3 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -58009,6 +58009,7 @@ function acxDashPaint(){
     if(AC.tab==="prod"&&ACX.pr.ok&&!ACX.pr.err) h=acxPrDash(acxPrBrands());
     if(AC.tab==="people"&&AC.ok) h=acxPplDash(acVisible());
     if(AC.tab==="health"&&AC.ok) h=acxHlDash(acVisible());
+    if(AC.tab==="dlb"&&ACX.so.ok&&!ACX.so.err) h=acxSoDash(acxSoRows());
   }
   d.innerHTML=h;
   const c=document.getElementById("ac-cnt"); if(c) c.innerHTML="";
@@ -58087,6 +58088,105 @@ async function acxGoDelivery(bid,tid,did,vid){
   };
   setTimeout(go,120);
 }
+
+/* ══ V119.3 CAPPADOCIA · DELIVERABLES ═══════════════════════════════
+   Chirag, 25 Nov — mockup "03 - Ac Mgmt deliverables tab" (locked): the
+   Plan page's Scope of work for every brand, one line per service on a
+   contract. Read through account_scope(), which carries no amounts and
+   follows the Plan page's rules (running · renewal due · starts soon).
+   A new section: the Super administrator only, until released. */
+function acxSoMay(){ return typeof isSuperAdmin==="function"&&isSuperAdmin(); }
+ACX.so={ok:false,busy:false,err:"",rows:[],svc:""};
+async function acxSoLoad(){
+  if(ACX.so.busy||ACX.so.ok) return;
+  ACX.so.busy=true; ACX.so.err="";
+  try{ const r=await sb.rpc("account_scope"); if(r.error) throw r.error; ACX.so.rows=r.data||[]; ACX.so.ok=true; }
+  catch(e){ ACX.so.err=String(e&&e.message||e); }
+  ACX.so.busy=false;
+  if(view==="accounts"&&AC.tab==="dlb"){ acList(); buildAccountsSidebar(); }
+}
+function acxSoRows(){
+  const S=acxScope(), q=AC.q.trim().toLowerCase();
+  const nm=b=>String((brands[b]||{}).name||"");
+  return ACX.so.rows.filter(r=>brands[r.brand_id]&&(S.has(r.brand_id)||(q&&String(r.title||"").toLowerCase().includes(q)&&acInScope().indexOf(r.brand_id)>-1))&&(!ACX.so.svc||r.title===ACX.so.svc))
+    .sort((a,b)=>nm(a.brand_id).localeCompare(nm(b.brand_id))||(a.pos-b.pos)||String(a.title).localeCompare(String(b.title)));
+}
+function acxSoState(r){ return r.renewal_due&&!r.running?"due":(r.upcoming&&!r.running?"soon":"on"); }
+const ACX_SOCOLS=[["so_svc","Service"],["so_term","Term"],["so_mo","A month"],["so_prod","Production"],["so_ads","Ads"],["so_cov","Covers"]];
+function acxSoColsVar(){
+  const W={so_svc:"150px",so_term:"210px",so_mo:"105px",so_prod:"130px",so_ads:"135px",so_cov:"minmax(150px,1.3fr)"};
+  return ["14px","minmax(110px,1fr)"].concat(ACX_SOCOLS.filter(([k])=>!AC_HIDE.has(k)).map(([k])=>W[k])).concat(["14px"]).join(" ");
+}
+(function(){ const base=acColsNow; acColsNow=function(){ if(AC.tab==="dlb"&&acxSoMay()) return ACX_SOCOLS; return base.apply(this,arguments); }; })();
+function acxSoTerm(r){
+  const bas=/^ad\s*hoc$/i.test(r.basis||"")?"Ad hoc":(r.basis||"Retainer");
+  const t=(r.starts_on?engDate(r.starts_on):"")+(r.term_end?" – "+engDate(r.term_end):"");
+  if(acxSoState(r)==="due") return `<span class="acx-sodue">Renewal due</span> · ${escHtml(engDate(r.term_end))}`;
+  if(acxSoState(r)==="soon") return `<span class="acx-sosoon">Starts ${escHtml(engDate(r.starts_on))}</span> · ${escHtml(bas)}`;
+  return escHtml(bas+(t?" · "+t:""));
+}
+function acxSoHtml(){
+  if(ACX.so.err) return `<div class="acx-list"><div class="acx-empty">${/account_scope/.test(ACX.so.err)?"This needs this week's database update.":"Could not load the scope — "+escHtml(ACX.so.err)}</div></div>`;
+  if(!ACX.so.ok) return `<div class="acx-list"><div class="acx-empty">Loading…</div></div>`;
+  const X=acxX, ST=`style="--acx-cols:${acxSoColsVar()}"`, NA='<span class="acx-na">—</span>';
+  const hd=`<div class="acx-r hd"><span></span><span>Brand</span>${X("so_svc","<span>Service</span>")}${X("so_term","<span>Term</span>")}${X("so_mo","<span>A month</span>")}${X("so_prod","<span>Production</span>")}${X("so_ads","<span>Ads</span>")}${X("so_cov","<span>Covers</span>")}<span></span></div>`;
+  const rs=acxSoRows();
+  if(!rs.length) return `<div class="acx-list acx-so" ${ST}>${hd}<div class="acx-empty">No service here.</div></div>`;
+  const body=rs.map(r=>{
+    const mo=[[r.posts,"post","posts"],[r.reels,"reel","reels"],[r.stories,"story","stories"]].filter(x=>x[0]).map(x=>x[0]+" "+(x[0]===1?x[1]:x[2])).join(" · ");
+    const pr=r.production?`<span class="acx-soyes">✓</span> ${r.prod_every_n===2?"Alternate months":"Every month"}`:NA;
+    const ad=(r.ad_platforms&&r.ad_platforms.length)||r.paid_by?escHtml([(r.ad_platforms||[]).join(" + "),(typeof PAID_BY_SAYS!=="undefined"&&PAID_BY_SAYS[r.paid_by])||""].filter(Boolean).join(" · ")):NA;
+    const cv=(r.covers||[]).filter(x=>String(x||"").trim());
+    const cov=cv.length?`<span class="acx-cv" title="${escAttr(cv.join(" · "))}"><i>${escHtml(cv[0])}</i>${cv.length>1?`<i class="more">+${cv.length-1}</i>`:""}</span>`:NA;
+    return `<div class="acx-r" onclick="acxSoGo('${escAttr(r.brand_id)}')"><span><span class="acx-sodot ${acxSoState(r)}"></span></span>
+      <span class="acx-c acx-b">${escHtml((brands[r.brand_id]||{}).name||"")}</span>
+      ${X("so_svc",`<span class="acx-c acx-sosvc" title="${escAttr(r.title||"")}">${escHtml(r.title||"")}</span>`)}
+      ${X("so_term",`<span class="acx-c acx-m">${acxSoTerm(r)}</span>`)}
+      ${X("so_mo",`<span class="acx-c">${mo||NA}</span>`)}
+      ${X("so_prod",`<span class="acx-c">${pr}</span>`)}
+      ${X("so_ads",`<span class="acx-c" title="${escAttr(String(ad).replace(/<[^>]*>/g,""))}">${ad}</span>`)}
+      ${X("so_cov",`<span class="acx-c">${cov}</span>`)}<span class="acx-car">›</span></div>`;
+  }).join("");
+  return `<div class="acx-list acx-so" ${ST}>${hd}${body}</div>`;
+}
+function acxSoDash(rs){
+  const run=rs.filter(r=>r.running), due=rs.filter(r=>acxSoState(r)==="due");
+  const lim=new Date(Date.now()+60*864e5).toISOString().slice(0,10), today=new Date().toISOString().slice(0,10);
+  const soon=run.filter(r=>!/^ad\s*hoc$/i.test(r.basis||"")&&r.term_end&&r.term_end>=today&&r.term_end<=lim);
+  const B=new Set(run.map(r=>r.brand_id)).size, P=run.reduce((t,r)=>t+(r.posts||0)+(r.reels||0)+(r.stories||0),0);
+  return `<div class="fin-stats">${acxCard(run.length,"Services running","across "+B+(B===1?" brand":" brands"))}${acxCard(due.length,"Renewal due","term ended, not closed",due.length?"rd":"")}${acxCard(soon.length,"Renewing soon","in the next 60 days","bl")}${acxCard(P,"Posts a month","posts, reels and stories promised")}</div>`;
+}
+function acxSoGo(bid){
+  try{ localStorage.setItem("cc.eng.open."+bid,"1"); }catch(e){}
+  try{ pickBrand(bid); setView("mplan"); }catch(e){}
+  setTimeout(()=>{ const el=document.getElementById("bd-scope"); if(el) try{ el.scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){} },400);
+}
+function acxSoPickSvc(t){ ACX.so.svc=ACX.so.svc===t?"":t; acList(); buildAccountsSidebar(); }
+(function(){
+  const base=buildAccountsSidebar;
+  buildAccountsSidebar=function(){
+    const out=base.apply(this,arguments);
+    if(view!=="accounts"||AC.tab!=="dlb"||!ACX.so.ok) return out;
+    const sm=document.getElementById("sb-months"); if(!sm) return out;
+    const S=acxScope(), by={};
+    ACX.so.rows.filter(r=>S.has(r.brand_id)).forEach(r=>{ by[r.title]=(by[r.title]||0)+1; });
+    const ks=Object.keys(by).sort((a,b)=>by[b]-by[a]||a.localeCompare(b));
+    if(ks.length) sm.insertAdjacentHTML("beforeend",`<div class="s-lbl" style="margin-top:18px">Service</div>`+ks.map(k=>`<div class="mdb-trow${ACX.so.svc===k?" on":""}" onclick="acxSoPickSvc('${escAttr(k)}')"><span class="ac-sbe">·</span><span class="nm">${escHtml(k)}</span><span class="ct">${by[k]}</span></div>`).join(""));
+    return out;
+  };
+})();
+document.head.insertAdjacentHTML("beforeend",`<style id="acx-119-3">
+.acx-list.acx-so .acx-r{grid-template-columns:var(--acx-cols);gap:0 10px}
+.acx-sodot{width:8px;height:8px;border-radius:50%;background:#2EA05A;display:inline-block}
+.acx-sodot.due{background:var(--acc)}.acx-sodot.soon{background:#E0A93B}
+.acx-sosvc{font-weight:600}
+.acx-sodue{color:var(--acc);font-weight:700}.acx-sosoon{color:#9A6B12;font-weight:700}
+.acx-soyes{color:#1E6B2E;font-weight:700}
+.acx-na{color:#c4c1ba}
+.acx-cv{display:flex;gap:4px;align-items:center;overflow:hidden}
+.acx-cv i{font-style:normal;font-size:11.5px;font-weight:600;padding:3px 8px;border:1px solid var(--div);border-radius:999px;background:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;min-width:0}
+.acx-cv i.more{flex:none;background:#F1EFEA;border-color:#F1EFEA;color:#555}
+</style>`);
 async function acxMonthShoots(ev,bid,ym){
   ev.stopPropagation();
   const y=parseInt(ym.slice(0,4),10), m=parseInt(ym.slice(5,7),10);
@@ -58115,33 +58215,36 @@ function acxPickWin(k){ ACX.win=k; try{ localStorage.setItem("cc-acx-win",k); }c
 (function(){
   const baseTab=acTab;
   acTab=function(t){
-    if((t==="dlv"||t==="prod")&&acxMay()){ AC.tab=t; try{ localStorage.setItem("cc-ac-tab",t); }catch(e){} acPopClose(); acMenuClose(); acRefresh(); return; }
+    if(((t==="dlv"||t==="prod")&&acxMay())||(t==="dlb"&&acxSoMay())){ AC.tab=t; try{ localStorage.setItem("cc-ac-tab",t); }catch(e){} acPopClose(); acMenuClose(); acRefresh(); return; }
     return baseTab.apply(this,arguments);
   };
-  try{ const t=localStorage.getItem("cc-ac-tab"); if((t==="dlv"||t==="prod")) AC.tab=t; }catch(e){}
+  try{ const t=localStorage.getItem("cc-ac-tab"); if((t==="dlv"||t==="prod"||t==="dlb")) AC.tab=t; }catch(e){}
   const baseBar=acBar;
   acBar=function(){
     if((AC.tab==="dlv"||AC.tab==="prod")&&!acxMay()) AC.tab="health";
+    if(AC.tab==="dlb"&&!acxSoMay()) AC.tab="health";
     baseBar.apply(this,arguments);
     const bar=document.getElementById("ac-bar"); if(!bar||!acxMay()) return;
     const lens=bar.querySelector(".ac-tabs");
     if(lens){
-      lens.insertAdjacentHTML("beforeend",`<span class="${AC.tab==="dlv"?"on":""}" data-tab="dlv" onclick="acTab('dlv')"><i class="ti ti-package"></i>Deliveries</span><span class="${AC.tab==="prod"?"on":""}" data-tab="prod" onclick="acTab('prod')"><i class="ti ti-video"></i>Productions</span>`);
-      if(AC.tab==="dlv"||AC.tab==="prod") lens.querySelectorAll("span[data-tab]").forEach(s=>s.classList.toggle("on",s.dataset.tab===AC.tab));
+      lens.insertAdjacentHTML("beforeend",`${acxSoMay()?`<span class="${AC.tab==="dlb"?"on":""}" data-tab="dlb" onclick="acTab('dlb')"><i class="ti ti-file-certificate"></i>Deliverables</span>`:""}<span class="${AC.tab==="dlv"?"on":""}" data-tab="dlv" onclick="acTab('dlv')"><i class="ti ti-package"></i>Deliveries</span><span class="${AC.tab==="prod"?"on":""}" data-tab="prod" onclick="acTab('prod')"><i class="ti ti-video"></i>Productions</span>`);
+      if(AC.tab==="dlv"||AC.tab==="prod"||AC.tab==="dlb") lens.querySelectorAll("span[data-tab]").forEach(s=>s.classList.toggle("on",s.dataset.tab===AC.tab));
     }
-    if(AC.tab==="dlv"||AC.tab==="prod"){
+    if(AC.tab==="dlv"||AC.tab==="prod"||AC.tab==="dlb"){
       const cnt=document.getElementById("ac-cnt"); if(cnt) cnt.innerHTML="";
       const sort=bar.querySelector(".fb-end .fb-sortw");
-      const btn=AC.tab==="dlv"?`<span class="fb-w fb-sortw acx-win"><button class="fb-chip" onclick="acxWinMenu(event)"><i class="ti ti-calendar"></i><span class="fb-val">${escHtml(acxWinLabel())}</span><i class="ti ti-chevron-down"></i></button></span>`
+      const btn=AC.tab==="dlb"?`<span class="fb-w fb-sortw"><button class="fb-chip"><i class="ti ti-arrows-sort"></i>Sort <span class="fb-op">by</span> <span class="fb-val">Brand</span></button></span>`:AC.tab==="dlv"?`<span class="fb-w fb-sortw acx-win"><button class="fb-chip" onclick="acxWinMenu(event)"><i class="ti ti-calendar"></i><span class="fb-val">${escHtml(acxWinLabel())}</span><i class="ti ti-chevron-down"></i></button></span>`
         :`<span class="fb-w fb-sortw"><button class="fb-chip"><i class="ti ti-arrows-sort"></i>Sort <span class="fb-op">by</span> <span class="fb-val">Most owed</span></button></span>`;
       if(sort) sort.outerHTML=btn; else bar.querySelector(".fb-end").insertAdjacentHTML("beforeend",btn);
     }
   };
   const baseList=acList;
   acList=function(){
-    if((AC.tab==="dlv"||AC.tab==="prod")&&acxMay()){
+    if(AC.tab==="dlb"&&!acxSoMay()) AC.tab="health";
+    if(((AC.tab==="dlv"||AC.tab==="prod")&&acxMay())||AC.tab==="dlb"){
       const g=document.getElementById("ac-list"); if(!g) return;
-      if(AC.tab==="dlv"){ acxDlLoad(); g.innerHTML=acxDlHtml(); } else { acxPrLoad(); g.innerHTML=acxPrHtml(); }
+      if(AC.tab==="dlb"){ acxSoLoad(); g.innerHTML=acxSoHtml(); }
+      else if(AC.tab==="dlv"){ acxDlLoad(); g.innerHTML=acxDlHtml(); } else { acxPrLoad(); g.innerHTML=acxPrHtml(); }
       acxDashPaint();
       return;
     }
