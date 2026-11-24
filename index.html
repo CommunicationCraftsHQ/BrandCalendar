@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V118.181 Tbilisi"/>
+<meta name="cc-tool-version" content="V118.182 Tbilisi"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -11357,10 +11357,10 @@ let BR_OPEN=null, BR_MENU=null, BR_STMENU=null, BR_TAB='talk';
 let BR_OWMENU=null;   /* V117.2 — the row's owner menu, like the status menu */
 let brGroup=false;   /* flat, by default */
 let brDlvView=false;   /* V118.94 — the third view: Deliveries */
-function brSetGroup(v){ v=Number(v); brDlvView=(v===2); brGroup=(v===1); closeAllPops(); render(); }
+function brSetGroup(v){ v=Number(v); brDlvView=false; brGroup=(v===1); closeAllPops(); render(); }
 /* V118.122 — Grouped is a switch in the Projects panel; All | Deliveries is the switch on the bar */
 function brToggleGrouped(){ const on=!brGroup; brDlvView=false; brGroup=on; if(on&&brSort==="manual"){ brSort="due"; try{ localStorage.setItem(BR_SORT_LS,brSort); }catch(e){} } closeAllPops(); render(); }
-function brSetView(dv){ brDlvView=!!dv; if(dv) brGroup=false; closeAllPops(); render(); }
+function brSetView(dv){ brDlvView=false; closeAllPops(); render(); }   /* V118.182 — one list; the Deliveries view is gone */
 /* NAPLES - ONE ORDER CANNOT ALSO BE SEVEN. Group by project draws the
    list as one section per project, and a single stored order has nothing
    to say about where a row sits inside a section it was not dragged in.
@@ -11871,15 +11871,16 @@ function brDlvCell(t){
   const ok=typeof DLV!=="undefined"&&DLV.ok&&DLV.brand===activeBrand;
   const ds=ok?dlvFor(t.id):[], may=brMayRow(t)&&ok, open=(BR_DLMENU===t.id);
   const menu=open?brDlvMenu(t):"";
-  if(!ds.length) return may
-    ? `<div class="brl-dw"><span class="brl-sgadd" onclick="brOpenDlv(event,'${t.id}')">+ Add a delivery</span>${menu}</div>`
-    : `<div class="brl-dw"><span class="nsdim">—</span></div>`;
-  const chip=d=>{ const st=dlvState(d), v=st==="delivered"?dlvFinalVer(d):dlvLast(d.id);
-    return `<span class="dvch s-${st}" title="${escAttr(d.name+" · "+DLV_WORD[st])}">${v?"v"+v.version:"—"}</span>`; };
-  const shown=ds.slice(0,3), rest=ds.length-shown.length;
-  const tip=`<div class="brl-tip">${ds.map(d=>{ const st=dlvState(d), v=st==="delivered"?dlvFinalVer(d):dlvLast(d.id);
-    return `<span class="${st==="delivered"?"old":""}">${st==="delivered"?"✓":(st==="none"?"○":"●")} ${escHtml(d.name)}<span class="dt">${escAttr((v?"v"+v.version+" · ":"")+DLV_WORD[st])}</span></span>`; }).join("<br>")}</div>`;
-  return `<div class="brl-dw${may?" may":""}" onclick="brOpenDlv(event,'${t.id}')" aria-label="Deliveries">${shown.map(chip).join("")}${rest?`<span class="dvmore">+${rest}</span>`:""}${open?"":tip}${may?`<b class="brl-sgcar">▾</b>`:""}${menu}</div>`;
+  /* V118.182 — Chirag, 24 Nov (mockup 05, B): no adding from the list —
+     a delivery is added inside the task, from the conversation. Every
+     delivery shows in its own small box with EVERY version sent, the
+     final one solid green with a tick. */
+  if(!ds.length) return `<div class="brl-dw"><span class="nsdim">—</span></div>`;
+  const vchip=v=>v.status==="approved"?`<span class="dvv fin">v${v.version} ✓</span>`
+    :`<span class="dvv ${v.status==="changes"?"chg":"sent"}">v${v.version}</span>`;
+  const box=d=>{ const vs=dlvVers(d.id);
+    return `<span class="dvbox" title="${escAttr(d.name+" · "+DLV_WORD[dlvState(d)])}"><span class="n">${escHtml(d.name)}</span>${vs.length?vs.map(vchip).join(""):`<span class="dvv none">—</span>`}</span>`; };
+  return `<div class="brl-dw dvstack${may?" may":""}" onclick="brOpenDlv(event,'${t.id}')" aria-label="Deliveries">${ds.map(box).join("")}${menu}</div>`;
 }
 function brDlvMenu(t){
   const ds=dlvFor(t.id), may=brMayRow(t), n=ds.filter(dlvDone).length;
@@ -14057,7 +14058,7 @@ function renderBranding(){
        ${BR.ok&&!brIsClient()&&brHasClient()?`<span class="brl-lens">
      <span class="${BR_CV?"":"on"}" onclick="brSetCV(0)">Team</span>
      <span class="cv${BR_CV?" on":""}" onclick="brSetCV(1)"><i class="ti ti-eye"></i>Client view <span class="beta">beta</span></span></span>`:""}
-       ${BR.ok?`<span class="br-seg" data-gate="br-seg"><span class="${!brDlvView?"on":""}" onclick="brSetView(0)">All</span><span class="${brDlvView?"on":""}" onclick="brSetView(1)">Deliveries</span></span>`:""}
+       
        ${BR.ok&&!brIsClient()&&brHasClient()?`<span class="fb-w fb-view"><button class="fb-chip${fltIsOpen("tasks","view")?" open":""}" onclick="fltOpen(event,'tasks','view')" data-gate="br-view"><i class="ti ti-eye"></i>View
      <span class="fb-val">${BR_CV?"Client view":"Team"}</span><i class="ti ti-chevron-down"></i></button>${
      fltIsOpen("tasks","view")?`<div class="fb-pop open" onclick="event.stopPropagation()">${brIsClient()||!brHasClient()?"":[["0","Team"],["1","Client view"]].map(([k,l])=>
@@ -14182,7 +14183,7 @@ function toggleExportSw(e){ buildExportPanel(); popOpen("export-panel",e); }
 /* ── notification bell (panel content wired in S5) ── */
 /* (S3 placeholder removed — the real notification builder lives in S5) */
 
-function toggleBell(e){ buildNotifPanel(); popOpen("notif-panel",e); }
+function toggleBell(e){ const p=document.getElementById("notif-panel"); if(!(p&&p.classList.contains("open"))) NOTIF_TAB="mention"; buildNotifPanel(); popOpen("notif-panel",e); }   /* V118.182 — every open lands on Mentions */
 
 // TOAST
 function toast(msg,type=""){
@@ -14844,7 +14845,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V118.181 Tbilisi";
+const TOOL_VERSION="V118.182 Tbilisi";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -17705,7 +17706,8 @@ function notifDrop(commentId){
    the window, not a cap: pressing "load more" widens it and refetches. */
 let NOTIF_TOTAL=0;          // what the database says exists, muted included
 let NOTIF_WANT=200;         // how many we have asked for
-let NOTIF_TAB="all";        // all | mention | client
+let NOTIF_TAB="mention";    // mention | all  (V118.182 — Mentions first; Clients hidden until clients join)
+const NOTIF_CLIENTS_TAB=false;   /* switch back on when clients are added */
 async function loadNotifications(){
   try{
     const r=await sb.from("unread_notifications")
@@ -18962,10 +18964,9 @@ function buildNotifPanel(){
      that nobody is waiting on you, which is worth more than a tab that
      appears and disappears depending on the week. The tabs are the
      panel's structure, not a reward for having the right data. */
-  const tabs=[["all","All",all.length],
-              ["mention","Mentions",mentions.length],
-              ["client","Clients",clients.length]];
-  if(!tabs.some(t=>t[0]===NOTIF_TAB)) NOTIF_TAB="all";
+  const tabs=[["mention","Mentions",mentions.length],
+              ["all","All",all.length]].concat(NOTIF_CLIENTS_TAB?[["client","Clients",clients.length]]:[]);
+  if(!tabs.some(t=>t[0]===NOTIF_TAB)) NOTIF_TAB="mention";
   const head=`<div class="nphead"><b>Notifications</b>
       ${all.length?`<span class="mark" onclick="notifMarkAll()">Mark all read</span>`:""}</div>`;
 
@@ -18995,7 +18996,7 @@ function buildNotifPanel(){
     el.innerHTML=head+tabBar
       +(list.length?list.map(it=>notifRowHtml(it,it.brandId)).join("")
         :`<div class="npempty">${NOTIF_TAB==="mention"
-            ?"Nobody has mentioned you in what is loaded."
+            ?"Nobody is waiting on you."
             :"No client has commented in what is loaded."}</div>`)
       +seenBlock
       +notifTruncHtml()+notifMutedBlock()+notifMailBlock();
@@ -45117,8 +45118,8 @@ function saInitials(n){ return String(n||"?").trim().split(/\s+/).map(x=>x[0]||"
 function saWa(p){ let d=String(p||"").replace(/\D/g,""); if(d.length===10) d="91"+d; return d.length>=10?"https://wa.me/"+d:""; }
 
 /* ══ 1B · CLIENT TEAM ═══════════════════════════════════════════════ */
-var CT={bid:null,ok:false,busy:false,rows:[],edit:null};
-function ctMay(){ return !!ME&&ME.role!=="client"&&(ME.role==="admin"||["admin","account_manager","super_admin"].includes(ME.toolRole)); }
+var CT={bid:null,ok:false,busy:false,rows:[],edit:null,focus:null};
+function ctMay(){ return !!ME&&ME.role!=="client"&&["admin","account_manager","super_admin"].includes(ME.toolRole); }   /* V118.182 — the database rule exactly */
 function ctRows(){ return CT.rows.filter(r=>r.brand_id===CT.bid&&!r.deleted_at).sort((a,b)=>String(a.created_at||"").localeCompare(String(b.created_at||""))||String(a.name).localeCompare(String(b.name))); }
 async function ctEnsure(){
   const bid=activeBrand; if(!bid||!ctMay()||CT.busy||(CT.bid===bid&&CT.ok)) return;
@@ -45163,42 +45164,62 @@ function stCntPaint(){
 function ctPhone(r){ return r.phone_official||r.phone_personal||""; }
 function ctMail(r){ return r.email_official||r.email_personal||""; }
 function ctPopHtml(){
+  /* V118.182 — Chirag, 24 Nov (mockup 05): two lines a person, the contact
+     details as chips that act, the pencil at the end of the chip line,
+     Delete inside the form, a LinkedIn chip. Every chip always shows. */
   const rows=ctRows();
+  const ic=n=>`<i class="ti ti-${n}"></i>`;
   const form=(r)=>`<div class="ct-r ct-ed"><input class="fi" id="ct-n" placeholder="Name" value="${saA(r?r.name:"")}">
       <input class="fi" id="ct-t" placeholder="Designation" value="${saA(r?r.title:"")}">
-      <input class="fi" id="ct-p" placeholder="Phone" value="${saA(r?ctPhone(r):"")}">
       <input class="fi" id="ct-e" placeholder="Email" value="${saA(r?ctMail(r):"")}">
-      <div class="row"><button class="btn btn-g btn-sm" onclick="CT.edit=null;ctPaintPop()">Cancel</button><span class="sp"></span>
+      <input class="fi" id="ct-p" placeholder="Phone" value="${saA(r?ctPhone(r):"")}">
+      <input class="fi ct-full" id="ct-l" placeholder="LinkedIn address, e.g. linkedin.com/in/name" value="${saA(r?(r.linkedin||""):"")}">
+      <div class="row">${r?`<button class="ct-delb" onclick="ctDel('${saA(r.id)}')">Delete</button>`:""}<span class="sp"></span>
+        <button class="btn btn-g btn-sm" onclick="CT.edit=null;ctPaintPop()">Cancel</button>
         <button class="btn btn-p btn-sm" onclick="ctSave('${r?saA(r.id):""}')">${r?"Save":"Add"}</button></div></div>`;
+  const go=(id,f)=>`onclick="CT.edit='${saA(id)}';CT.focus='${f}';ctPaintPop()"`;
+  const li=r=>{ const u=String(r.linkedin||"").trim(); if(!u) return "";
+    return /^https?:\/\//i.test(u)?u:"https://"+u.replace(/^\/+/,""); };
   return `<div class="ct-pop"><div class="bf-mh" style="padding:2px 2px 6px"><i class="ti ti-address-book"></i> Client team · ${saH((brands[activeBrand]||{}).name)}</div>
-    ${rows.map(r=>CT.edit===r.id?form(r):`<div class="ct-r"><div class="who"><b>${saH(r.name)}</b><span>${saH(r.title||"")}</span></div>
-      <div class="ml">${ctMail(r)?`<a href="mailto:${saA(ctMail(r))}"><i class="ti ti-mail"></i>${saH(ctMail(r))}</a>`:`<span class="nsdim">—</span>`}</div>
-      <div class="ph">${ctPhone(r)?`<a href="tel:${saA(ctPhone(r))}"><i class="ti ti-phone"></i>${saH(ctPhone(r))}</a>`:`<span class="nsdim">—</span>`}</div>
-      <div class="ac">${saWa(ctPhone(r))?`<a class="ct-ic" href="${saA(saWa(ctPhone(r)))}" target="_blank" rel="noopener" title="WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>`:""}
-        <span class="ct-ic" title="Change" onclick="CT.edit='${saA(r.id)}';ctPaintPop()"><i class="ti ti-pencil"></i></span>
-        <span class="ct-ic" title="Take off" onclick="ctDel('${saA(r.id)}')"><i class="ti ti-x"></i></span></div></div>`).join("")}
+    ${rows.map(r=>CT.edit===r.id?form(r):`<div class="ct-r"><div class="ct-l1"><b>${saH(r.name)}</b>${r.title?`<span class="t">· ${saH(r.title)}</span>`:""}</div>
+      <div class="ct-chips">
+        ${ctMail(r)?`<span class="ct-chip"><a href="mailto:${saA(ctMail(r))}" title="Write a mail">${ic("mail")}${saH(ctMail(r))}</a></span>`
+                   :`<span class="ct-chip off"><a ${go(r.id,"ct-e")} title="Add an email">${ic("mail")}No email</a></span>`}
+        ${ctPhone(r)?`<span class="ct-chip"><a href="tel:${saA(ctPhone(r))}" title="Call">${ic("phone")}${saH(ctPhone(r))}</a>${saWa(ctPhone(r))?`<a class="wa" href="${saA(saWa(ctPhone(r)))}" target="_blank" rel="noopener" title="WhatsApp">${ic("brand-whatsapp")}</a>`:`<a class="wa">${ic("brand-whatsapp")}</a>`}</span>`
+                    :`<span class="ct-chip off"><a ${go(r.id,"ct-p")} title="Add a number">${ic("phone")}No number</a><a class="wa" ${go(r.id,"ct-p")}>${ic("brand-whatsapp")}</a></span>`}
+        ${li(r)?`<span class="ct-chip li"><a href="${saA(li(r))}" target="_blank" rel="noopener" title="LinkedIn">${ic("brand-linkedin")}</a></span>`
+               :`<span class="ct-chip li off"><a ${go(r.id,"ct-l")} title="Add LinkedIn">${ic("brand-linkedin")}</a></span>`}
+        <span class="ct-ic ct-pen" title="Change or delete" ${go(r.id,"ct-n")}><i class="ti ti-pencil"></i></span>
+      </div></div>`).join("")}
     ${!rows.length&&CT.edit!=="new"?`<div class="ct-none">No one yet.</div>`:""}
-    ${CT.edit==="new"?form(null):`<div class="ct-add"><span class="vb-plus" onclick="CT.edit='new';ctPaintPop()">+ person</span></div>`}</div>`;
+    ${CT.edit==="new"?form(null):`<div class="ct-add"><span class="vb-plus" onclick="CT.edit='new';CT.focus='ct-n';ctPaintPop()">+ person</span></div>`}</div>`;
 }
-function ctPaintPop(){ const p=document.getElementById("bf-pop"); if(!p) return; p.innerHTML=ctPopHtml(); const f=p.querySelector("#ct-n"); if(f) f.focus(); }
+function ctPaintPop(){ const p=document.getElementById("bf-pop"); if(!p) return; p.innerHTML=ctPopHtml(); const f=p.querySelector("#"+(CT.focus||"ct-n"))||p.querySelector("#ct-n"); if(f) f.focus(); CT.focus=null; }
 async function ctOpen(ev){
   if(!ctMay()) return;
+  /* V118.182 — the button opens and closes: a second click puts it away */
+  const open=document.getElementById("bf-pop");
+  if(open&&open.querySelector(".ct-pop")){ if(ev) ev.stopPropagation(); bfPopClose(); return; }
   CT.edit=null;
   if(!(CT.bid===activeBrand&&CT.ok)) await ctEnsure();
-  bfPop(ev,ctPopHtml());
+  bfPop(ev,ctPopHtml(),true);   /* lined up with the button's right edge */
 }
 async function ctSave(id){
   const v=k=>String((document.getElementById(k)||{}).value||"").replace(/\s+/g," ").trim();
-  const row={name:v("ct-n"),title:v("ct-t"),phone_official:v("ct-p"),email_official:v("ct-e")};
+  const row={name:v("ct-n"),title:v("ct-t"),phone_official:v("ct-p"),email_official:v("ct-e"),linkedin:v("ct-l")};
   if(!row.name){ toast("Type the name first","err"); return; }
+  /* LinkedIn needs this week's database update; until then save the rest */
+  const noLi=e=>e&&/linkedin/i.test(String(e.message||""));
   if(id){
     const r=CT.rows.find(x=>x.id===id); if(!r) return;
-    const u=await sb.from("contacts").update(Object.assign({updated_at:new Date().toISOString()},row)).eq("id",id);
+    let u=await sb.from("contacts").update(Object.assign({updated_at:new Date().toISOString()},row)).eq("id",id);
+    if(noLi(u.error)){ const {linkedin,...rest}=row; u=await sb.from("contacts").update(Object.assign({updated_at:new Date().toISOString()},rest)).eq("id",id); if(!u.error) delete row.linkedin; }
     if(u.error){ toast("Not saved — "+saH(u.error.message),"err"); return; }
     Object.assign(r,row);
   }else{
-    const n=Object.assign({id:crypto.randomUUID(),brand_id:activeBrand,source:"calendar",created_at:new Date().toISOString()},row);
-    const u=await sb.from("contacts").insert([n]);
+    let n=Object.assign({id:crypto.randomUUID(),brand_id:activeBrand,source:"calendar",created_at:new Date().toISOString()},row);
+    let u=await sb.from("contacts").insert([n]);
+    if(noLi(u.error)){ delete n.linkedin; u=await sb.from("contacts").insert([n]); }
     if(u.error){ toast("Not added — "+saH(u.error.message),"err"); return; }
     CT.rows.push(n);
   }
@@ -45211,7 +45232,7 @@ async function ctDel(id){
   const at=new Date().toISOString();
   const u=await sb.from("contacts").update({deleted_at:at}).eq("id",id);
   if(u.error){ toast("Not saved — "+saH(u.error.message),"err"); return; }
-  r.deleted_at=at; ctPaintPop();
+  r.deleted_at=at; CT.edit=null; ctPaintPop();
   const lk=document.getElementById("bf-links"); if(lk) lk.innerHTML=bfLinksHtml();
 }
 
@@ -57724,6 +57745,281 @@ function buildLostSidebar(){
   document.addEventListener("click",()=>{ if(LR.menu&&view==="lost"){ LR.menu=false; renderLost(); } });
 })();
 try{ if(typeof ME==="object"&&ME&&ME.id) lrMineLoad(); }catch(e){}
+</script>
+
+<style id="v118-182-css">
+/* ══ V118.182 TBILISI · client team pop-up, delivery boxes ══ */
+#bf-links{align-items:center;}
+#bf-links .st-cnt{line-height:32px;}
+#bf-links .ct-btn{user-select:none;-webkit-user-select:none;}
+body:has(#bf-pop .ct-pop) #bf-links .ct-btn{border-color:var(--text)!important;background:var(--surface2,#F5F4F1)!important;}
+.bf-pop .ct-pop{width:500px;max-width:calc(100vw - 40px);padding:2px 2px 4px;}
+.ct-pop .ct-r{display:block;padding:9px 10px;border-bottom:0;border-radius:8px;}
+.ct-pop .ct-r+.ct-r{border-top:1px solid #F0EEE9;}
+.ct-pop .ct-r:not(.ct-ed):hover{background:#FAF9F7;}
+.ct-l1{display:flex;align-items:baseline;gap:6px;white-space:nowrap;overflow:hidden;}
+.ct-l1 b{font-size:13.5px;} .ct-l1 .t{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;}
+.ct-chips{display:flex;align-items:center;gap:5px;margin-top:6px;min-width:0;}
+.ct-chip{display:inline-flex;align-items:stretch;height:26px;border:1px solid var(--div);border-radius:999px;background:#fff;font-size:12px;overflow:hidden;white-space:nowrap;min-width:0;flex:0 1 auto;}
+.ct-chip>a{display:inline-flex;align-items:center;gap:5px;padding:0 9px;color:var(--text)!important;text-decoration:none;cursor:pointer;min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.ct-chip>a:hover{background:var(--surface2,#F5F4F1);}
+.ct-chip i{font-size:13px;color:var(--muted)!important;}
+.ct-chip .wa{border-left:1px solid var(--div);padding:0 8px;flex:none;} .ct-chip .wa i{color:#1FA855!important;}
+.ct-chip.li{flex:none;} .ct-chip.li>a{padding:0 8px;} .ct-chip.li i{color:#0A66C2!important;}
+.ct-chip.off{border-style:dashed;} .ct-chip.off>a{color:#b5b2ab!important;} .ct-chip.off i{color:#c4c1ba!important;} .ct-chip.off .wa{border-left-style:dashed;}
+.ct-pop .ct-pen{width:26px!important;height:26px!important;margin-left:auto;flex:none;}
+.ct-pop .ct-ed{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#FAF9F7;}
+.ct-pop .ct-ed .ct-full,.ct-pop .ct-ed .row{grid-column:1 / -1;}
+.ct-pop .ct-ed .row{display:flex;align-items:center;gap:6px;}
+.ct-pop .ct-ed .row .sp{flex:1;}
+.ct-delb{border:0;background:none;color:var(--acc,#D23B2B);font:inherit;font-weight:600;font-size:12.5px;cursor:pointer;padding:0 4px;}
+.ct-delb:hover{text-decoration:underline;}
+.xs-sh .xs-ct .ct-r:not(.ct-ed){display:block!important;}
+.xs-sh .xs-ct .ct-chips{flex-wrap:wrap;}
+/* Tasks — every delivery in its own box, every version */
+.brl-dw.dvstack{flex-direction:column;align-items:flex-start;gap:4px;padding:3px 0;}
+.dvbox{display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 4px 0 9px;border:1px solid var(--div);border-radius:8px;background:#FAF9F7;max-width:100%;min-width:0;}
+.dvbox .n{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:120px;flex:0 1 auto;}
+.dvv{display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:6px;font-size:11px;font-weight:700;border:1px solid;flex:none;}
+.dvv.sent{border-color:#c9daf3;background:#f0f5fd;color:#1f4f8f}
+.dvv.chg{border-color:#f0d9a8;background:#fff8ea;color:#8a5a0a}
+.dvv.fin{border-color:#1E6B2E;background:#1E6B2E;color:#fff}
+.dvv.none{border-style:dashed;border-color:#ddd;color:#bbb}
+</style>
+<style id="ac-dlv-prod-css">
+/* ══ V118.182 TBILISI · Ac Mgmt — Deliveries and Productions lenses ══ */
+.acx-card{background:#fff;border:1px solid var(--div);border-radius:12px;padding:14px 16px;margin:0 0 18px}
+.acx-card .l{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle)}
+.acx-card .n{font-size:32px;font-weight:800;color:var(--acc,#D23B2B);line-height:1.15;margin-top:4px}
+.acx-card .s{color:var(--muted);font-size:12.5px}
+.acx-card .mix{display:flex;gap:12px;margin-top:10px;font-size:12px;color:var(--muted)} .acx-card .mix b{color:var(--text)}
+.acx-win{position:relative}
+.acx-list{background:#fff;border:1px solid var(--div);border-radius:14px;overflow:hidden}
+.acx-r{display:grid;align-items:center;gap:0 14px;padding:6px 18px;min-height:46px;border-top:1px solid #EFEDE8;cursor:pointer}
+.acx-r:hover{background:#FAF9F7}
+.acx-r.hd{min-height:40px;border-top:0;font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);cursor:default}
+.acx-r.hd:hover{background:none}
+.acx-day{padding:10px 18px 6px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--subtle);border-top:1px solid #EFEDE8;background:#FBFAF8}
+.acx-dl .acx-r{grid-template-columns:90px minmax(120px,170px) minmax(160px,1.2fr) minmax(200px,1.4fr) 110px 130px 14px}
+.acx-c{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acx-b{font-weight:700} .acx-m{color:var(--muted)}
+.acx-st{font-size:12px;font-weight:600;white-space:nowrap}
+.acx-st.sent{color:#1f4f8f}.acx-st.changes{color:#8a5a0a}.acx-st.approved{color:#1E6B2E}
+.acx-car{color:var(--subtle);font-size:16px}
+.dvv.old{border-color:#E4E1DA;background:#fff;color:#B5B2AB;font-weight:600}
+.acx-empty{padding:40px;text-align:center;color:var(--muted)}
+.acx-pr .acx-r{grid-template-columns:minmax(120px,1fr) 150px 56px minmax(380px,470px) 74px 48px 84px 14px;gap:0 12px}
+.acx-mo{display:grid;grid-template-columns:repeat(12,1fr);gap:4px}
+.acx-mo.lab span{font-size:10px;font-weight:700;color:var(--subtle);text-align:center;letter-spacing:0;text-transform:none}
+.acx-mb{height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.acx-mb.miss{border:1.5px dashed #E7A9A1;background:#FDF3F1}
+.acx-mb.hit{background:#1E6B2E;color:#fff}
+.acx-mb.extra{background:#DCEBDD;color:#1E6B2E}
+.acx-mb.plan{border:1.5px solid #B9CFE9;background:#F2F7FD;color:#1f4f8f}
+.acx-mb.now{outline:2px solid var(--text);outline-offset:1px}
+.acx-n{text-align:center;font-weight:700}
+.acx-bal{font-weight:700;font-size:12.5px;white-space:nowrap}
+.acx-bal.owe{color:var(--acc,#D23B2B)}.acx-bal.ok{color:#1E6B2E}.acx-bal.ahead{color:#1f4f8f}
+</style>
+<script>
+/* ══ V118.182 TBILISI · AC MGMT — DELIVERIES AND PRODUCTIONS ═══════════
+   Chirag, 24 Nov 2026 (mockups 02 and 03, locked):
+   · Deliveries — every version sent in a period, across the brands this
+     page shows. Today by default; Yesterday, This week, Last week, This
+     month, Last month. Each row: time, brand, task, the delivery box
+     (earlier versions faded, the one sent bold in its state), who sent
+     it, what the client said. A row opens its task.
+   · Productions — one line per brand with a production commitment:
+     the last twelve months as boxes, committed against done, and the
+     balance. The numbers come from production_brand_months() and
+     production_brand_totals(), the same reading the Production Planner's
+     Commitments tab uses, so the two never disagree.
+   Both are new sections: the Super administrator only, until released. */
+function acxMay(){ return !!ME&&ME.toolRole==="super_admin"; }
+var ACX={win:"today",dl:{key:null,rows:[],vers:[],dels:{},tasks:{},err:"",busy:false},
+         pr:{ok:false,busy:false,err:"",months:[],tot:{}}};
+const ACX_WINS=[["today","Today"],["yest","Yesterday"],["tw","This week"],["lw","Last week"],["tm","This month"],["lm","Last month"]];
+try{ const w=localStorage.getItem("cc-acx-win"); if(ACX_WINS.some(x=>x[0]===w)) ACX.win=w; }catch(e){}
+function acxRange(){
+  const d0=new Date(); d0.setHours(0,0,0,0);
+  const add=(d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+  const mon=d=>{ const x=new Date(d); const k=(x.getDay()+6)%7; return add(x,-k); };
+  const w=ACX.win;
+  if(w==="yest") return [add(d0,-1),d0];
+  if(w==="tw") return [mon(d0),add(d0,1)];
+  if(w==="lw"){ const m=mon(d0); return [add(m,-7),m]; }
+  if(w==="tm") return [new Date(d0.getFullYear(),d0.getMonth(),1),add(d0,1)];
+  if(w==="lm") return [new Date(d0.getFullYear(),d0.getMonth()-1,1),new Date(d0.getFullYear(),d0.getMonth(),1)];
+  return [d0,add(d0,1)];
+}
+function acxWinLabel(){ return (ACX_WINS.find(x=>x[0]===ACX.win)||ACX_WINS[0])[1]; }
+function acxPerson(id){ const p=(typeof personById==="function"&&personById(id))||null; return p?String(p.email||p.name||"").split("@")[0]:"—"; }
+async function acxDlLoad(){
+  const [a,b]=acxRange(), key=ACX.win+"|"+a.toISOString();
+  if(ACX.dl.busy||ACX.dl.key===key) return;
+  ACX.dl.busy=true; ACX.dl.err="";
+  try{
+    const r=await sb.from("deliverable_versions").select("id,deliverable_id,task_id,brand_id,version,status,created_by,created_at")
+      .is("deleted_at",null).gte("created_at",a.toISOString()).lt("created_at",b.toISOString()).order("created_at",{ascending:false}).limit(1000);
+    if(r.error) throw r.error;
+    const rows=r.data||[];
+    const dids=[...new Set(rows.map(x=>x.deliverable_id))], tids=[...new Set(rows.map(x=>x.task_id).filter(Boolean))];
+    const [dv,dd,tt]=await Promise.all([
+      dids.length?sb.from("deliverable_versions").select("deliverable_id,version,status").in("deliverable_id",dids).is("deleted_at",null):{data:[]},
+      dids.length?sb.from("task_deliverables").select("id,name").in("id",dids):{data:[]},
+      tids.length?sb.from("branding_tasks").select("id,title").in("id",tids):{data:[]}]);
+    ACX.dl.rows=rows; ACX.dl.vers=dv.data||[];
+    ACX.dl.dels=Object.fromEntries((dd.data||[]).map(x=>[x.id,x.name]));
+    ACX.dl.tasks=Object.fromEntries((tt.data||[]).map(x=>[x.id,x.title]));
+    ACX.dl.key=key;
+  }catch(e){ ACX.dl.err=String(e&&e.message||e); }
+  ACX.dl.busy=false;
+  if(view==="accounts"&&AC.tab==="dlv"){ acList(); buildAccountsSidebar(); }
+}
+async function acxPrLoad(){
+  if(ACX.pr.busy||ACX.pr.ok) return;
+  ACX.pr.busy=true; ACX.pr.err="";
+  try{
+    const [m,t]=await Promise.all([sb.rpc("production_brand_months"),sb.rpc("production_brand_totals")]);
+    if(m.error) throw m.error; if(t.error) throw t.error;
+    ACX.pr.months=m.data||[]; ACX.pr.tot=Object.fromEntries((t.data||[]).map(x=>[x.brand_id,x])); ACX.pr.ok=true;
+  }catch(e){ ACX.pr.err=String(e&&e.message||e); }
+  ACX.pr.busy=false;
+  if(view==="accounts"&&AC.tab==="prod"){ acList(); buildAccountsSidebar(); }
+}
+function acxScope(){ const q=AC.q.trim().toLowerCase(); return new Set(acInScope().filter(b=>!q||String((brands[b]||{}).name||"").toLowerCase().includes(q))); }
+/* ── Deliveries ── */
+function acxDlRows(){ const S=acxScope(); return ACX.dl.rows.filter(r=>S.has(r.brand_id)); }
+function acxDlHtml(){
+  if(ACX.dl.err) return `<div class="acx-list"><div class="acx-empty">Could not load deliveries — ${escHtml(ACX.dl.err)}</div></div>`;
+  if(ACX.dl.key===null) return `<div class="acx-list"><div class="acx-empty">Loading…</div></div>`;
+  const rs=acxDlRows(), W={sent:"Waiting for client",changes:"Changes asked",approved:"Approved ✓"};
+  const hd=`<div class="acx-r hd"><span>Time</span><span>Brand</span><span>Task</span><span>Delivery</span><span>Sent by</span><span>Client says</span><span></span></div>`;
+  if(!rs.length) return `<div class="acx-list acx-dl">${hd}<div class="acx-empty">Nothing delivered ${escHtml(acxWinLabel().toLowerCase())}.</div></div>`;
+  const multi=ACX.win!=="today"&&ACX.win!=="yest";
+  const tm=s=>new Date(s).toLocaleTimeString("en-GB",{hour:"numeric",minute:"2-digit",hour12:true}).replace(" "," ");
+  const dk=s=>{ const d=new Date(s); return d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate(); };
+  const dn=s=>new Date(s).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"short"});
+  let h=hd, last="";
+  rs.forEach(r=>{
+    if(multi&&dk(r.created_at)!==last){ last=dk(r.created_at); h+=`<div class="acx-day">${escHtml(dn(r.created_at))}</div>`; }
+    const earlier=[...new Set(ACX.dl.vers.filter(v=>v.deliverable_id===r.deliverable_id&&v.version<r.version).map(v=>v.version))].sort((a,b)=>a-b);
+    const st=r.status==="approved"?"approved":r.status==="changes"?"changes":"sent";
+    const chip=st==="approved"?`<span class="dvv fin">v${r.version} ✓</span>`:`<span class="dvv ${st==="changes"?"chg":"sent"}">v${r.version}</span>`;
+    const name=ACX.dl.dels[r.deliverable_id]||"Delivery", task=ACX.dl.tasks[r.task_id]||"";
+    h+=`<div class="acx-r" onclick="goToTask('${escAttr(r.brand_id)}','${escAttr(r.task_id||"")}')">
+      <span class="acx-m">${escHtml(tm(r.created_at))}</span>
+      <span class="acx-c acx-b">${escHtml((brands[r.brand_id]||{}).name||"")}</span>
+      <span class="acx-c" title="${escAttr(task)}">${escHtml(task)}</span>
+      <span><span class="dvbox" title="${escAttr(name)}"><span class="n">${escHtml(name)}</span>${earlier.map(v=>`<span class="dvv old" title="Sent earlier">v${v}</span>`).join("")}${chip}</span></span>
+      <span class="acx-c acx-m">${escHtml(acxPerson(r.created_by))}</span>
+      <span class="acx-st ${st}">${W[st]}</span><span class="acx-car">›</span></div>`;
+  });
+  return `<div class="acx-list acx-dl">${h}</div>`;
+}
+/* ── Productions ── */
+function acxPrBrands(){
+  const S=acxScope(), by=new Map();
+  ACX.pr.months.forEach(m=>{ if(!S.has(m.brand_id)) return; if(!by.has(m.brand_id)) by.set(m.brand_id,[]); by.get(m.brand_id).push(m); });
+  const now=new Date(), nowK=now.getFullYear()*12+now.getMonth();
+  const out=[...by.entries()].map(([bid,ms])=>{
+    ms.sort((a,b)=>String(a.month_start).localeCompare(String(b.month_start)));
+    const t=ACX.pr.tot[bid]||{committed_over:0,shots_done:0};
+    const com=t.committed_over||0, done=t.shots_done||0;
+    return {bid,ms,com,done,owe:com-done,since:ms[0]&&ms[0].since,every:(ms[0]&&ms[0].every_n)||1,nowK};
+  });
+  return out.sort((a,b)=>b.owe-a.owe||String((brands[a.bid]||{}).name).localeCompare(String((brands[b.bid]||{}).name)));
+}
+function acxPrHtml(){
+  if(ACX.pr.err) return `<div class="acx-list"><div class="acx-empty">${/production_brand/.test(ACX.pr.err)?"This needs this week's database update.":"Could not load productions — "+escHtml(ACX.pr.err)}</div></div>`;
+  if(!ACX.pr.ok) return `<div class="acx-list"><div class="acx-empty">Loading…</div></div>`;
+  const rs=acxPrBrands();
+  const labs=(rs[0]?rs[0].ms:[]).map(m=>new Date(m.month_start+"T00:00:00").toLocaleDateString("en-GB",{month:"short"}));
+  const hd=`<div class="acx-r hd"><span>Brand</span><span>Account managers</span><span>Since</span><span class="acx-mo lab">${labs.map(x=>`<span>${x}</span>`).join("")}</span><span style="text-align:center">Committed</span><span style="text-align:center">Done</span><span>Balance</span><span></span></div>`;
+  if(!rs.length) return `<div class="acx-list acx-pr">${hd}<div class="acx-empty">No brand here has a production commitment.</div></div>`;
+  const now=new Date(), nowS=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");
+  const body=rs.map(r=>{
+    const cells=r.ms.map(m=>{ const ym=String(m.month_start).slice(0,7), cur=ym===nowS, nw=cur?" now":"";
+      const d=m.shots_done||0, p=m.shots_scheduled||0, c=!!m.committed;
+      if(d) return `<span class="acx-mb ${c?"hit":"extra"}${nw}" title="${d} shoot${d>1?"s":""} done${c?"":" — catch-up"}">${d}</span>`;
+      if(p&&cur) return `<span class="acx-mb plan${nw}" title="Scheduled">${p}</span>`;
+      if(c) return `<span class="acx-mb ${cur?"plan":"miss"}${nw}" title="${cur?"Due this month":"Committed, no shoot"}"></span>`;
+      return `<span class="acx-mb${nw}"></span>`; }).join("");
+    const bal=r.owe>0?`<span class="acx-bal owe">${r.owe} owed</span>`:r.owe<0?`<span class="acx-bal ahead">${-r.owe} ahead</span>`:`<span class="acx-bal ok">On track</span>`;
+    const since=r.since?new Date(r.since+"T00:00:00").toLocaleDateString("en-GB",{month:"short",year:"2-digit"}):"—";
+    const ams=acAMsOf(r.bid).map(t=>acName(t.user_id)).join(" · ")||"—";
+    return `<div class="acx-r" onclick="goToBrandTab('${escAttr(r.bid)}')"><span class="acx-c acx-b" title="${r.every>1?"1 shoot every "+r.every+" months":"1 shoot a month"}">${escHtml((brands[r.bid]||{}).name||"")}</span>
+      <span class="acx-c acx-m">${escHtml(ams)}</span><span class="acx-m">${escHtml(since)}</span>
+      <span class="acx-mo">${cells}</span><span class="acx-n">${r.com}</span><span class="acx-n">${r.done}</span>${bal}<span class="acx-car">›</span></div>`;
+  }).join("");
+  return `<div class="acx-list acx-pr">${hd}${body}</div>`;
+}
+function goToBrandTab(bid){ try{ pickBrand(bid); setView("mplan"); }catch(e){} }
+function acxWinMenu(ev){
+  ev.stopPropagation();
+  const html=`<div class="bf-mh">Period</div>`+ACX_WINS.map(([k,l])=>`<div class="bf-mi${ACX.win===k?" on":""}" onclick="acxPickWin('${k}')">${l}</div>`).join("");
+  bfPop(ev,html,true);
+}
+function acxPickWin(k){ ACX.win=k; try{ localStorage.setItem("cc-acx-win",k); }catch(e){} bfPopClose(); acBar(); acList(); buildAccountsSidebar(); acxDlLoad(); }
+(function(){
+  const baseTab=acTab;
+  acTab=function(t){
+    if((t==="dlv"||t==="prod")&&acxMay()){ AC.tab=t; try{ localStorage.setItem("cc-ac-tab",t); }catch(e){} acPopClose(); acMenuClose(); acRefresh(); return; }
+    return baseTab.apply(this,arguments);
+  };
+  try{ const t=localStorage.getItem("cc-ac-tab"); if((t==="dlv"||t==="prod")) AC.tab=t; }catch(e){}
+  const baseBar=acBar;
+  acBar=function(){
+    if((AC.tab==="dlv"||AC.tab==="prod")&&!acxMay()) AC.tab="health";
+    baseBar.apply(this,arguments);
+    const bar=document.getElementById("ac-bar"); if(!bar||!acxMay()) return;
+    const lens=bar.querySelector(".ac-tabs");
+    if(lens){
+      lens.insertAdjacentHTML("beforeend",`<span class="${AC.tab==="dlv"?"on":""}" data-tab="dlv" onclick="acTab('dlv')"><i class="ti ti-package"></i>Deliveries</span><span class="${AC.tab==="prod"?"on":""}" data-tab="prod" onclick="acTab('prod')"><i class="ti ti-video"></i>Productions</span>`);
+      if(AC.tab==="dlv"||AC.tab==="prod") lens.querySelectorAll("span[data-tab]").forEach(s=>s.classList.toggle("on",s.dataset.tab===AC.tab));
+    }
+    if(AC.tab==="dlv"||AC.tab==="prod"){
+      const cnt=document.getElementById("ac-cnt"); if(cnt) cnt.innerHTML=acxCntHtml();
+      const sort=bar.querySelector(".fb-end .fb-sortw");
+      const btn=AC.tab==="dlv"?`<span class="fb-w fb-sortw acx-win"><button class="fb-chip" onclick="acxWinMenu(event)"><i class="ti ti-calendar"></i><span class="fb-val">${escHtml(acxWinLabel())}</span><i class="ti ti-chevron-down"></i></button></span>`
+        :`<span class="fb-w fb-sortw"><button class="fb-chip"><i class="ti ti-arrows-sort"></i>Sort <span class="fb-op">by</span> <span class="fb-val">Most owed</span></button></span>`;
+      if(sort) sort.outerHTML=btn; else bar.querySelector(".fb-end").insertAdjacentHTML("beforeend",btn);
+    }
+  };
+  const baseList=acList;
+  acList=function(){
+    if((AC.tab==="dlv"||AC.tab==="prod")&&acxMay()){
+      const g=document.getElementById("ac-list"); if(!g) return;
+      const c=document.getElementById("ac-cnt"); if(c) c.innerHTML=acxCntHtml();
+      if(AC.tab==="dlv"){ acxDlLoad(); g.innerHTML=acxDlHtml(); } else { acxPrLoad(); g.innerHTML=acxPrHtml(); }
+      return;
+    }
+    return baseList.apply(this,arguments);
+  };
+  const baseSide=buildAccountsSidebar;
+  buildAccountsSidebar=function(){
+    baseSide.apply(this,arguments);
+    if(!((AC.tab==="dlv"||AC.tab==="prod")&&acxMay())) return;
+    const sm=document.getElementById("sb-months"); if(!sm) return;
+    const old=sm.querySelector(".ac-sbad"); if(old) old.remove();
+    let card="";
+    if(AC.tab==="dlv"){
+      const rs=acxDlRows(), n=k=>rs.filter(r=>(r.status==="approved"?"approved":r.status==="changes"?"changes":"sent")===k).length;
+      card=`<div class="acx-card"><div class="l">Deliveries · ${AC.am&&AC.am!=="all"?"these brands":"all brands"}</div><div class="n">${rs.length}</div><div class="s">${escHtml(acxWinLabel())}</div>
+        <div class="mix"><span><b>${n("sent")}</b> waiting</span><span><b>${n("changes")}</b> changes</span><span><b>${n("approved")}</b> approved</span></div></div>`;
+    }else if(ACX.pr.ok){
+      const rs=acxPrBrands(), C=rs.reduce((a,r)=>a+r.com,0), D=rs.reduce((a,r)=>a+r.done,0), O=rs.reduce((a,r)=>a+Math.max(0,r.owe),0);
+      const kept=rs.reduce((a,r)=>a+Math.min(r.done,r.com),0);
+      card=`<div class="acx-card"><div class="l">Productions · ${AC.am&&AC.am!=="all"?"these brands":"all brands"}</div><div class="n">${C?Math.round(100*kept/C):0}%</div><div class="s">of committed shoots done</div>
+        <div class="mix"><span><b>${C}</b> committed</span><span><b>${D}</b> done</span><span><b>${O}</b> owed</span></div></div>`;
+    }
+    sm.insertAdjacentHTML("afterbegin",card);
+  };
+})();
+function acxCntHtml(){
+  if(AC.tab==="dlv") return `<b>${acxDlRows().length}</b> deliveries`;
+  return `<b>${ACX.pr.ok?acxPrBrands().length:0}</b> brands`;
+}
 </script>
 
 </body>
