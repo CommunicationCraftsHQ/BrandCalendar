@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.1 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.2 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14856,7 +14856,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.1 Cappadocia";
+const TOOL_VERSION="V119.2 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -39357,10 +39357,15 @@ function urlSync(){
     const depth=(history.state&&history.state.cc&&history.state.n)||0;
     /* a thread closed whose opening is the entry on top: step back to it
        — only when that entry was pushed by us (n>0), never out of the tool */
-    if(moved&&hadThread&&!thread&&depth>0&&history.state.waTask===here.get("task")&&urlEntryOf(here).replace(hadThread,"")===urlEntryOf(q)){
+    /* V119.2 — Chirag, 25 Nov: a task opened from Ac Mgmt, then closed,
+       went back to Ac Mgmt. Back is only right when opening the task was
+       the ONLY thing that entry changed; the entry now remembers where it
+       came from (prev), and an opening that also changed page or brand
+       is folded in place. */
+    if(moved&&hadThread&&!thread&&depth>0&&history.state.waTask===here.get("task")&&history.state.prev===urlEntryOf(q)){
       URL_SETTLING=true; history.back(); return;
     }
-    if(moved) history.pushState({cc:1,n:depth+1,waTask:q.get("task")||null},"",location.pathname+next);
+    if(moved) history.pushState({cc:1,n:depth+1,waTask:q.get("task")||null,prev:urlEntryOf(here)},"",location.pathname+next);
     else history.replaceState({cc:1,n:depth,waTask:q.get("task")||null},"",location.pathname+next);
     URL_WROTE=true;
   }catch(e){}
@@ -43521,7 +43526,7 @@ function acBar(){
         :fltSortHtml("accounts",[["adopt","Adoption"],["health","Most red"],["name","Brand"],["team","Team size"]],AC.sort,"adopt","acPickSort")}
     </span>`;
 }
-function acCntHtml(){ return fltCountHtml(acVisible().length,acInScope().length,"brand"); }
+function acCntHtml(){ return ""; }   /* V119.2 — Chirag, 25 Nov: no count on any Ac Mgmt tab; the cards carry it */
 function acColsVar(){
   const H="var(--ac-h)";
   const w={ams:"minmax(var(--ac-a),1.1fr)",team:AC.tab==="people"?"minmax(var(--ac-t),150px)":"var(--ac-t)",strategy:H,plan:H,posts:H,tasks:H,promos:H,adopt:AC.tab==="people"?H:"minmax(var(--ac-ad),1.5fr)",
@@ -43609,7 +43614,7 @@ function buildAccountsSidebar(){
     return `<div class="mdb-trow${AC.am===k?" on":""}${cls?" "+cls:""}" data-am="${k}" onclick="acPickAM('${k}')">
       <span class="ac-sbe">${emo}</span><span class="nm">${label}</span><span class="ct${p!=null?" p"+acColour(p):""}">${p!=null?p+"%":n}</span></div>`; };
   const mine=id=>all.filter(b=>acAMsOf(b).some(t=>t.user_id===id));
-  const office=showP?acAvg(all):null;
+  const office=null;   /* V119.2 — the adoption figure is the Health dashboard's first card now */
   sm.innerHTML=(office!=null?`<div class="ac-sbad ${acColour(office)}"><div class="l">Adoption · all brands</div><div class="n">${office}%</div>
       <div class="s">${escHtml(MN[parseInt(acToday().slice(5,7),10)]||"")}</div><div class="tr"><div class="fl" style="width:${office}%"></div></div></div>`:"")+
     `<div class="s-lbl">Account managers</div>
@@ -57939,7 +57944,7 @@ function acxDlHtml(){
     const st=r.status==="approved"?"approved":r.status==="changes"?"changes":"sent";
     const chip=st==="approved"?`<span class="dvv fin">v${r.version} ✓</span>`:`<span class="dvv ${st==="changes"?"chg":"sent"}">v${r.version}</span>`;
     const name=ACX.dl.dels[r.deliverable_id]||"Delivery", task=ACX.dl.tasks[r.task_id]||"";
-    h+=`<div class="acx-r" onclick="goToTask('${escAttr(r.brand_id)}','${escAttr(r.task_id||"")}')">
+    h+=`<div class="acx-r" onclick="acxGoDelivery('${escAttr(r.brand_id)}','${escAttr(r.task_id||"")}','${escAttr(r.deliverable_id||"")}','${escAttr(r.id||"")}')">
       ${X("dl_time",`<span class="acx-m">${escHtml(tm(r.created_at))}</span>`)}
       <span class="acx-c acx-b">${escHtml((brands[r.brand_id]||{}).name||"")}</span>
       ${X("dl_task",`<span class="acx-c" title="${escAttr(task)}">${escHtml(task)}</span>`)}
@@ -57954,7 +57959,7 @@ function acxDlHtml(){
 var ACX_DASH=(()=>{ try{ return localStorage.getItem("cc-acx-dash")!=="0"; }catch(e){ return true; } })();
 function acxFlipDash(){ ACX_DASH=!ACX_DASH; try{ localStorage.setItem("cc-acx-dash",ACX_DASH?"1":"0"); }catch(e){} acxDashSync(); acList(); }
 function acxDashSync(){
-  const on=view==="accounts"&&(AC.tab==="dlv"||AC.tab==="prod")&&acxMay();
+  const on=view==="accounts"&&acxMay();
   const pd=document.getElementById("prk-dash");                 /* V119.0 borrowed Promotions' switch — hand it back */
   if(pd&&pd.dataset.acx){ delete pd.dataset.acx; pd.style.display="none"; }
   let sw=document.getElementById("acx-dsw");
@@ -57993,7 +57998,7 @@ function acxColsVar(t){
 }
 (function(){ const base=acColsNow; acColsNow=function(){ if(AC.tab==="dlv"&&acxMay()) return ACX_DCOLS; if(AC.tab==="prod"&&acxMay()) return ACX_PRCOLS; return base.apply(this,arguments); }; })();
 function acxDashPaint(){
-  const on=view==="accounts"&&(AC.tab==="dlv"||AC.tab==="prod")&&acxMay();
+  const on=view==="accounts"&&acxMay();
   let d=document.getElementById("acx-dash");
   if(!on){ if(d) d.remove(); return; }
   const bar=document.getElementById("ac-bar"); if(!bar) return;
@@ -58002,9 +58007,11 @@ function acxDashPaint(){
   if(ACX_DASH){
     if(AC.tab==="dlv"&&!ACX.dl.err&&ACX.dl.key!==null) h=acxDlDash(acxDlRows());
     if(AC.tab==="prod"&&ACX.pr.ok&&!ACX.pr.err) h=acxPrDash(acxPrBrands());
+    if(AC.tab==="people"&&AC.ok) h=acxPplDash(acVisible());
+    if(AC.tab==="health"&&AC.ok) h=acxHlDash(acVisible());
   }
   d.innerHTML=h;
-  const c=document.getElementById("ac-cnt"); if(c) c.innerHTML=ACX_DASH?"":acxCntHtml();   /* the cards carry the count */
+  const c=document.getElementById("ac-cnt"); if(c) c.innerHTML="";
 }
 /* ── Productions ── */
 function acxPrBrands(){
@@ -58032,8 +58039,9 @@ function acxPrHtml(){
   const body=rs.map(r=>{
     const cells=r.ms.map(m=>{ const ym=String(m.month_start).slice(0,7), cur=ym===nowS, nw=cur?" now":"";
       const d=m.shots_done||0, p=m.shots_scheduled||0, c=!!m.committed;
-      if(d) return `<span class="acx-mb ${c?"hit":"extra"}${nw}" title="${d} shoot${d>1?"s":""} done${c?"":" — catch-up"}">${d}</span>`;
-      if(p&&cur) return `<span class="acx-mb plan${nw}" title="Scheduled">${p}</span>`;
+      const go=` onclick="acxMonthShoots(event,'${escAttr(r.bid)}','${ym}')"`;
+      if(d) return `<span class="acx-mb go ${c?"hit":"extra"}${nw}"${go} title="${d} shoot${d>1?"s":""} done${c?"":" — catch-up"} · open in the Production Planner">${d}</span>`;
+      if(p&&cur) return `<span class="acx-mb go plan${nw}"${go} title="Scheduled · open in the Production Planner">${p}</span>`;
       if(c) return `<span class="acx-mb ${cur?"plan":"miss"}${nw}" title="${cur?"Due this month":"Committed, no shoot"}"></span>`;
       return `<span class="acx-mb${nw}"></span>`; }).join("");
     const bal=r.owe>0?`<span class="acx-bal owe">${r.owe} owed</span>`:r.owe<0?`<span class="acx-bal ahead">${-r.owe} ahead</span>`:`<span class="acx-bal ok">On track</span>`;
@@ -58046,6 +58054,58 @@ function acxPrHtml(){
   return `<div class="acx-list acx-pr" ${ST}>${hd}${body}</div>`;
 }
 function goToBrandTab(bid){ try{ pickBrand(bid); setView("mplan"); }catch(e){} }
+/* ══ V119.2 CAPPADOCIA ═══════════════════════════════════════════════
+   Chirag, 25 Nov — mockup "02 - Dashboards on the kit standard":
+   People and Health get the same four cards and switch; no count on any
+   tab. A delivery row opens its task on that delivery and the version
+   glows; a month box on Productions opens that shoot in the Planner. */
+function acxPplDash(bids){
+  const am=new Set(), ppl=new Set(); let muted=0; const mb=new Set();
+  bids.forEach(b=>{ acAMsOf(b).forEach(t=>am.add(t.user_id)); acTeamOf(b).forEach(t=>ppl.add(t.user_id));
+    const n=acSeeOf(b).filter(p=>acPrefOf(b,p).muted).length; muted+=n; if(n) mb.add(b); });
+  const un=bids.filter(b=>!acAMsOf(b).length).length;
+  const per=bids.length?Math.round(bids.reduce((a,b)=>a+acTeamOf(b).length,0)/bids.length):0;
+  return `<div class="fin-stats">${acxCard(bids.length,"Brands",am.size+(am.size===1?" account manager":" account managers"))}${acxCard(ppl.size,"People on brands",per+" per brand on average","bl")}${acxCard(muted,"Notifications off","on "+mb.size+(mb.size===1?" brand":" brands"))}${acxCard(un,"Unclaimed","no account manager",un?"rd":"")}</div>`;
+}
+function acxHlDash(bids){
+  const ps=bids.map(acAdoption).filter(x=>x!=null), avg=acAvg(bids);
+  const n=c=>ps.filter(p=>acColour(p)===c).length;
+  return `<div class="fin-stats">${acxCard(avg==null?"—":avg+"%","Adoption",(bids.length===acInScope().length?"all brands":bids.length+" brands")+" · "+escHtml(MN[parseInt(acToday().slice(5,7),10)]||""),"bl")}${acxCard(n("g"),"Green","80% and above","ok")}${acxCard(n("a"),"Amber","40% to 79%")}${acxCard(n("r"),"Red","below 40%",n("r")?"rd":"")}</div>`;
+}
+async function acxGoDelivery(bid,tid,did,vid){
+  if(!tid) return;
+  try{ await goToTask(bid,tid); }catch(e){}
+  if(did){ DLV_OPEN=did; try{ DLV_ALLV.add(did); }catch(e){} if(view==="branding") render(); }
+  let tries=0;
+  const go=()=>{
+    const card=did&&document.querySelector(`.dlv-rail .dlv-c[data-did="${CSS.escape(did)}"]`);
+    if(!card){ if(++tries<25) setTimeout(go,160); return; }
+    const el=(vid&&card.querySelector(`[data-dv="${CSS.escape(vid)}"]`))||card.querySelector(".dlv-fb")||card;
+    try{ el.scrollIntoView({behavior:"smooth",block:"center"}); }catch(e){}
+    el.classList.remove("acx-glow"); void el.offsetWidth; el.classList.add("acx-glow");
+    setTimeout(()=>el.classList.remove("acx-glow"),2600);
+  };
+  setTimeout(go,120);
+}
+async function acxMonthShoots(ev,bid,ym){
+  ev.stopPropagation();
+  const y=parseInt(ym.slice(0,4),10), m=parseInt(ym.slice(5,7),10);
+  let rows=[];
+  try{ const r=await sb.from("productions").select("*").eq("brand_id",bid).eq("date_year",y).eq("date_month",m).is("deleted_at",null).is("withdrawn_at",null);
+    rows=(r.data||[]).filter(p=>(p.status||"scheduled")!=="cancelled"); }catch(e){}
+  if(!rows.length){ toast("No shoot found for that month","err"); return; }
+  rows.sort((a,b)=>(a.date_day||0)-(b.date_day||0));
+  if(rows.length===1){ openProdInPlanner(rows[0].id); return; }
+  const html=`<div class="bf-mh">${escHtml((brands[bid]||{}).name||"")} · ${escHtml(MN[m]||"")}</div>`+rows.map(p=>`<div class="bf-mi" onclick="bfPopClose();openProdInPlanner('${escAttr(p.id)}')">${escHtml(prodWhen(p))} · ${escHtml(prodWhat(p))} · ${escHtml(PROD_STATUS_LBL[p.status||"scheduled"]||"")}</div>`).join("");
+  bfPop(ev,html,true);
+}
+document.head.insertAdjacentHTML("beforeend",`<style id="acx-119-2">
+@keyframes acxglow{0%{box-shadow:0 0 0 3px #F2C14E;background-color:#FFF4D6}70%{box-shadow:0 0 0 3px #F2C14E;background-color:#FFF4D6}100%{box-shadow:0 0 0 0 transparent;background-color:transparent}}
+.acx-glow{animation:acxglow 2.6s ease-out 1;border-radius:8px}
+.acx-pr .acx-mb.go{cursor:pointer}
+.acx-pr .acx-mb.go:hover{outline:2px solid #0D0D0D;outline-offset:1px}
+</style>`);
+
 function acxWinMenu(ev){
   ev.stopPropagation();
   const html=`<div class="bf-mh">Period</div>`+ACX_WINS.map(([k,l])=>`<div class="bf-mi${ACX.win===k?" on":""}" onclick="acxPickWin('${k}')">${l}</div>`).join("");
@@ -58070,7 +58130,7 @@ function acxPickWin(k){ ACX.win=k; try{ localStorage.setItem("cc-acx-win",k); }c
       if(AC.tab==="dlv"||AC.tab==="prod") lens.querySelectorAll("span[data-tab]").forEach(s=>s.classList.toggle("on",s.dataset.tab===AC.tab));
     }
     if(AC.tab==="dlv"||AC.tab==="prod"){
-      const cnt=document.getElementById("ac-cnt"); if(cnt) cnt.innerHTML=ACX_DASH?"":acxCntHtml();   /* V119.1 — the cards carry the count */
+      const cnt=document.getElementById("ac-cnt"); if(cnt) cnt.innerHTML="";
       const sort=bar.querySelector(".fb-end .fb-sortw");
       const btn=AC.tab==="dlv"?`<span class="fb-w fb-sortw acx-win"><button class="fb-chip" onclick="acxWinMenu(event)"><i class="ti ti-calendar"></i><span class="fb-val">${escHtml(acxWinLabel())}</span><i class="ti ti-chevron-down"></i></button></span>`
         :`<span class="fb-w fb-sortw"><button class="fb-chip"><i class="ti ti-arrows-sort"></i>Sort <span class="fb-op">by</span> <span class="fb-val">Most owed</span></button></span>`;
@@ -58085,8 +58145,7 @@ function acxPickWin(k){ ACX.win=k; try{ localStorage.setItem("cc-acx-win",k); }c
       acxDashPaint();
       return;
     }
-    acxDashPaint();
-    return baseList.apply(this,arguments);
+    const out=baseList.apply(this,arguments); acxDashPaint(); return out;
   };
 })();
 document.head.insertAdjacentHTML("beforeend",`<style id="kit-dash-119-1">
