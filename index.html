@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.0 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.1 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14856,7 +14856,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.0 Cappadocia";
+const TOOL_VERSION="V119.1 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -31024,7 +31024,7 @@ const PR_MOM=[["leads","Result"],["spend","Spent"],["cost","Cost each"],
 const PR_DASH_LS="cc-pr-dash", PR_GRP_LS="cc-pr-grp";
 let PR_DASH=(()=>{ try{ return localStorage.getItem(PR_DASH_LS)!=="0"; }catch(e){ return true; } })();
 let PR_GRP =(()=>{ try{ return localStorage.getItem(PR_GRP_LS)==="1";  }catch(e){ return false; } })();
-function prFlipDash(){ if(view==="accounts"&&typeof acxFlipDash==="function"){ acxFlipDash(); return; } PR_DASH=!PR_DASH;
+function prFlipDash(){ PR_DASH=!PR_DASH;
   try{ localStorage.setItem(PR_DASH_LS,PR_DASH?"1":"0"); }catch(e){}
   closeAllPops(); render(); }
 function prToggleGrouped(){ PR_GRP=!PR_GRP;
@@ -39406,6 +39406,13 @@ async function urlApply(q,viaHistory){
       if(pr&&view==="promotions"){ PR.open=pr; PR.creative=cr||null; if(cr&&typeof prThLoad==="function") prThLoad(cr); render(); }
     }
     else if(p==="numbers"&&hasBrand&&typeof navNumbers==="function"){ await navNumbers(); }
+    /* V119.1 — Chirag, 25 Nov: a task opened from Ac Mgmt › Deliveries,
+       then closed, landed on that brand's Plan. Closing steps Back to the
+       Ac Mgmt address, which names no brand — but the brand the task
+       opened was still picked, and Ac Mgmt with a brand picked turns into
+       Plan. Ac Mgmt belongs to All brands, so going back to it puts the
+       brand down first (acGo). */
+    else if(p==="accounts"&&!b&&typeof acGo==="function"&&typeof acMay==="function"&&acMay()){ acGo(); }
     else if(p&&p!==view&&viewRoute(p)){ setView(p); }
     if(viaHistory){
       if(q.get("task")&&hasBrand&&typeof goToTask==="function"&&BR_OPEN!==q.get("task")) await goToTask(activeBrand,q.get("task"));
@@ -57918,8 +57925,9 @@ function acxDlHtml(){
   if(ACX.dl.err) return `<div class="acx-list"><div class="acx-empty">Could not load deliveries — ${escHtml(ACX.dl.err)}</div></div>`;
   if(ACX.dl.key===null) return `<div class="acx-list"><div class="acx-empty">Loading…</div></div>`;
   const rs=acxDlRows(), W={sent:"Waiting for client",changes:"Changes asked",approved:"Approved ✓"};
-  const hd=`<div class="acx-r hd"><span>Time</span><span>Brand</span><span>Task</span><span>Delivery</span><span>Sent by</span><span>Client says</span><span></span></div>`;
-  if(!rs.length) return `<div class="acx-list acx-dl">${hd}<div class="acx-empty">Nothing delivered ${escHtml(acxWinLabel().toLowerCase())}.</div></div>`;
+  const X=acxX, ST=`style="--acx-cols:${acxColsVar("dl")}"`;
+  const hd=`<div class="acx-r hd">${X("dl_time","<span>Time</span>")}<span>Brand</span>${X("dl_task","<span>Task</span>")}${X("dl_dlv","<span>Delivery</span>")}${X("dl_by","<span>Sent by</span>")}${X("dl_st","<span>Client says</span>")}<span></span></div>`;
+  if(!rs.length) return `<div class="acx-list acx-dl" ${ST}>${hd}<div class="acx-empty">Nothing delivered ${escHtml(acxWinLabel().toLowerCase())}.</div></div>`;
   const multi=ACX.win!=="today"&&ACX.win!=="yest";
   const tm=s=>new Date(s).toLocaleTimeString("en-GB",{hour:"numeric",minute:"2-digit",hour12:true}).replace(" "," ");
   const dk=s=>{ const d=new Date(s); return d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate(); };
@@ -57932,36 +57940,71 @@ function acxDlHtml(){
     const chip=st==="approved"?`<span class="dvv fin">v${r.version} ✓</span>`:`<span class="dvv ${st==="changes"?"chg":"sent"}">v${r.version}</span>`;
     const name=ACX.dl.dels[r.deliverable_id]||"Delivery", task=ACX.dl.tasks[r.task_id]||"";
     h+=`<div class="acx-r" onclick="goToTask('${escAttr(r.brand_id)}','${escAttr(r.task_id||"")}')">
-      <span class="acx-m">${escHtml(tm(r.created_at))}</span>
+      ${X("dl_time",`<span class="acx-m">${escHtml(tm(r.created_at))}</span>`)}
       <span class="acx-c acx-b">${escHtml((brands[r.brand_id]||{}).name||"")}</span>
-      <span class="acx-c" title="${escAttr(task)}">${escHtml(task)}</span>
-      <span><span class="dvbox" title="${escAttr(name)}"><span class="n">${escHtml(name)}</span>${earlier.map(v=>`<span class="dvv old" title="Sent earlier">v${v}</span>`).join("")}${chip}</span></span>
-      <span class="acx-c acx-m">${escHtml(acxPerson(r.created_by))}</span>
-      <span class="acx-st ${st}">${W[st]}</span><span class="acx-car">›</span></div>`;
+      ${X("dl_task",`<span class="acx-c" title="${escAttr(task)}">${escHtml(task)}</span>`)}
+      ${X("dl_dlv",`<span><span class="dvbox" title="${escAttr(name)}"><span class="n">${escHtml(name)}</span>${earlier.map(v=>`<span class="dvv old" title="Sent earlier">v${v}</span>`).join("")}${chip}</span></span>`)}
+      ${X("dl_by",`<span class="acx-c acx-m">${escHtml(acxPerson(r.created_by))}</span>`)}
+      ${X("dl_st",`<span class="acx-st ${st}">${W[st]}</span>`)}<span class="acx-car">›</span></div>`;
   });
-  return `<div class="acx-list acx-dl">${acxDlDash(rs)}${h}</div>`;
+  return `<div class="acx-list acx-dl" ${ST}>${h}</div>`;
 }
 /* V119.0 — the kit's Dashboard switch (Chirag, 25 Nov): the figures sit
    on top of the list when it is on, like Promotions. */
 var ACX_DASH=(()=>{ try{ return localStorage.getItem("cc-acx-dash")!=="0"; }catch(e){ return true; } })();
 function acxFlipDash(){ ACX_DASH=!ACX_DASH; try{ localStorage.setItem("cc-acx-dash",ACX_DASH?"1":"0"); }catch(e){} acxDashSync(); acList(); }
 function acxDashSync(){
-  const pd=document.getElementById("prk-dash"), on=view==="accounts"&&(AC.tab==="dlv"||AC.tab==="prod")&&acxMay();
-  if(pd&&on){ pd.dataset.acx="1"; pd.style.display=""; pd.classList.toggle("on",ACX_DASH); pd.setAttribute("aria-checked",ACX_DASH?"true":"false"); }
-  else if(pd&&pd.dataset.acx){ delete pd.dataset.acx; pd.style.display="none"; if(typeof brNavSync==="function"&&activeBrand) try{ brNavSync(canEdit()); }catch(e){} }
-  const ac=document.getElementById("ac-cols"); if(ac&&on) ac.style.display="none";
+  const on=view==="accounts"&&(AC.tab==="dlv"||AC.tab==="prod")&&acxMay();
+  const pd=document.getElementById("prk-dash");                 /* V119.0 borrowed Promotions' switch — hand it back */
+  if(pd&&pd.dataset.acx){ delete pd.dataset.acx; pd.style.display="none"; }
+  let sw=document.getElementById("acx-dsw");
+  if(!sw){ const ref=document.getElementById("ac-cols")||document.getElementById("brk-cols");
+    if(ref){ ref.insertAdjacentHTML("beforebegin",`<button class="fin-sw mf-hide" id="acx-dsw" role="switch" style="display:none;" onclick="acxFlipDash()"><span class="fin-knob" aria-hidden="true"></span><span class="fin-lbl">Dashboard</span></button>`); sw=document.getElementById("acx-dsw"); } }
+  if(sw){ sw.style.display=on?"":"none"; sw.classList.toggle("on",ACX_DASH); sw.setAttribute("aria-checked",ACX_DASH?"true":"false");
+    sw.title=ACX_DASH?"Hide the summary cards":"Show the summary cards"; }
 }
 function acxStat(k,v,sub){ return `<div><div class="prtk">${k}</div><div class="prtv">${v}${sub?` <small>${sub}</small>`:""}</div></div>`; }
+/* V119.1 — Chirag, 25 Nov: "the dashboard ... already finalised ... follow
+   the kit". The kit's dashboard is Client Centre › Collection's: four
+   white cards ABOVE the one row, behind the bar's Dashboard switch
+   (.fin-sw). Approved in "01 - Dashboards on the kit standard - mockup". */
+function acxCard(n,k,s,t){ return `<div class="fin-sc${t?" "+t:""}"><div class="n">${n}</div><div class="k">${k}</div>${s?`<div class="s">${s}</div>`:""}</div>`; }
+function acxAgo(ts){ const m=Math.max(0,Math.round((Date.now()-new Date(ts))/60000)); if(m<60) return m+" min"; const h=Math.round(m/60); if(h<48) return h+(h===1?" hour":" hours"); const d=Math.round(h/24); return d+" days"; }
 function acxDlDash(rs){
-  if(!ACX_DASH) return "";
-  const n=k=>rs.filter(r=>(r.status==="approved"?"approved":r.status==="changes"?"changes":"sent")===k).length;
-  return `<div class="prtot">${acxStat("Sent",rs.length,escHtml(acxWinLabel().toLowerCase()))}${acxStat("Waiting for client",n("sent"))}${acxStat("Changes asked",n("changes"))}${acxStat("Approved",n("approved"))}${acxStat("Brands",new Set(rs.map(r=>r.brand_id)).size)}${acxStat("Tasks",new Set(rs.map(r=>r.task_id)).size)}</div>`;
+  const st=r=>r.status==="approved"?"approved":r.status==="changes"?"changes":"sent";
+  const n=k=>rs.filter(r=>st(r)===k).length, B=new Set(rs.map(r=>r.brand_id)).size;
+  const wait=rs.filter(r=>st(r)==="sent").map(r=>r.created_at).sort()[0];
+  return `<div class="fin-stats">${acxCard(rs.length,"Sent",escHtml(acxWinLabel().toLowerCase())+" · "+B+(B===1?" brand":" brands"))}${acxCard(n("sent"),"Waiting for client",wait?"oldest sent "+acxAgo(wait)+" ago":"nobody waiting","bl")}${acxCard(n("changes"),"Changes asked",n("changes")?"to redo":"nothing to redo",n("changes")?"rd":"")}${acxCard(n("approved"),"Approved",n("approved")+" of "+rs.length+" sent","ok")}</div>`;
 }
 function acxPrDash(rs){
-  if(!ACX_DASH) return "";
-  const C=rs.reduce((a,r)=>a+r.com,0), D=rs.reduce((a,r)=>a+r.done,0), O=rs.reduce((a,r)=>a+Math.max(0,r.owe),0), A=rs.reduce((a,r)=>a+Math.max(0,-r.owe),0);
-  const kept=rs.reduce((a,r)=>a+Math.min(r.done,r.com),0);
-  return `<div class="prtot">${acxStat("Committed shoots done",(C?Math.round(100*kept/C):0)+"%")}${acxStat("Committed",C)}${acxStat("Done",D)}${acxStat("Owed",O)}${acxStat("Ahead",A)}${acxStat("Brands behind",rs.filter(r=>r.owe>0).length,"of "+rs.length)}</div>`;
+  const C=rs.reduce((a,r)=>a+r.com,0), O=rs.reduce((a,r)=>a+Math.max(0,r.owe),0), A=rs.reduce((a,r)=>a+Math.max(0,-r.owe),0);
+  const kept=rs.reduce((a,r)=>a+Math.min(r.done,r.com),0), bh=rs.filter(r=>r.owe>0).length, ah=rs.filter(r=>r.owe<0).length;
+  return `<div class="fin-stats">${acxCard((C?Math.round(100*kept/C):0)+"%","Done",kept+" of "+C+" committed shoots","ok")}${acxCard(C,"Committed","since each contract began")}${acxCard(O,"Owed",bh+(bh===1?" brand":" brands")+" behind",O?"rd":"")}${acxCard(A,"Ahead",ah+(ah===1?" brand":" brands")+" shot extra","bl")}</div>`;
+}
+/* the columns of the two new lenses, in the same Columns button as Health */
+const ACX_DCOLS=[["dl_time","Time"],["dl_task","Task"],["dl_dlv","Delivery"],["dl_by","Sent by"],["dl_st","Client says"]];
+const ACX_PRCOLS=[["pr_ams","Account managers"],["pr_since","Since"],["pr_mo","Last 12 months"],["pr_com","Committed"],["pr_done","Done"],["pr_bal","Balance"]];
+function acxX(k,html){ return AC_HIDE.has(k)?"":html; }
+function acxColsVar(t){
+  const W=t==="dl"?{dl_time:"90px",brand:"minmax(120px,170px)",dl_task:"minmax(160px,1.2fr)",dl_dlv:"minmax(200px,1.4fr)",dl_by:"110px",dl_st:"130px"}
+    :{brand:"minmax(120px,1fr)",pr_ams:"150px",pr_since:"56px",pr_mo:"minmax(380px,470px)",pr_com:"74px",pr_done:"48px",pr_bal:"84px"};
+  const order=t==="dl"?["dl_time","brand","dl_task","dl_dlv","dl_by","dl_st"]:["brand","pr_ams","pr_since","pr_mo","pr_com","pr_done","pr_bal"];
+  return order.filter(k=>k==="brand"||!AC_HIDE.has(k)).map(k=>W[k]).concat(["14px"]).join(" ");
+}
+(function(){ const base=acColsNow; acColsNow=function(){ if(AC.tab==="dlv"&&acxMay()) return ACX_DCOLS; if(AC.tab==="prod"&&acxMay()) return ACX_PRCOLS; return base.apply(this,arguments); }; })();
+function acxDashPaint(){
+  const on=view==="accounts"&&(AC.tab==="dlv"||AC.tab==="prod")&&acxMay();
+  let d=document.getElementById("acx-dash");
+  if(!on){ if(d) d.remove(); return; }
+  const bar=document.getElementById("ac-bar"); if(!bar) return;
+  if(!d){ bar.insertAdjacentHTML("beforebegin",`<div id="acx-dash"></div>`); d=document.getElementById("acx-dash"); }
+  let h="";
+  if(ACX_DASH){
+    if(AC.tab==="dlv"&&!ACX.dl.err&&ACX.dl.key!==null) h=acxDlDash(acxDlRows());
+    if(AC.tab==="prod"&&ACX.pr.ok&&!ACX.pr.err) h=acxPrDash(acxPrBrands());
+  }
+  d.innerHTML=h;
+  const c=document.getElementById("ac-cnt"); if(c) c.innerHTML=ACX_DASH?"":acxCntHtml();   /* the cards carry the count */
 }
 /* ── Productions ── */
 function acxPrBrands(){
@@ -57982,8 +58025,9 @@ function acxPrHtml(){
   const rs=acxPrBrands();
   const nowYM=new Date().getFullYear()+"-"+String(new Date().getMonth()+1).padStart(2,"0");
   const labs=(rs[0]?rs[0].ms:[]).map(m=>{ const l=new Date(m.month_start+"T00:00:00").toLocaleDateString("en-GB",{month:"short"}); return String(m.month_start).slice(0,7)===nowYM?`<b class="acx-now">${l}</b>`:l; });
-  const hd=`<div class="acx-r hd"><span>Brand</span><span>Account managers</span><span>Since</span><span class="acx-mo lab">${labs.map(x=>`<span>${x}</span>`).join("")}</span><span style="text-align:center">Committed</span><span style="text-align:center">Done</span><span>Balance</span><span></span></div>`;
-  if(!rs.length) return `<div class="acx-list acx-pr">${hd}<div class="acx-empty">No brand here has a production commitment.</div></div>`;
+  const X=acxX, ST=`style="--acx-cols:${acxColsVar("pr")}"`;
+  const hd=`<div class="acx-r hd"><span>Brand</span>${X("pr_ams","<span>Account managers</span>")}${X("pr_since","<span>Since</span>")}${X("pr_mo",`<span class="acx-mo lab">${labs.map(x=>`<span>${x}</span>`).join("")}</span>`)}${X("pr_com",'<span style="text-align:center">Committed</span>')}${X("pr_done",'<span style="text-align:center">Done</span>')}${X("pr_bal","<span>Balance</span>")}<span></span></div>`;
+  if(!rs.length) return `<div class="acx-list acx-pr" ${ST}>${hd}<div class="acx-empty">No brand here has a production commitment.</div></div>`;
   const now=new Date(), nowS=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");
   const body=rs.map(r=>{
     const cells=r.ms.map(m=>{ const ym=String(m.month_start).slice(0,7), cur=ym===nowS, nw=cur?" now":"";
@@ -57996,10 +58040,10 @@ function acxPrHtml(){
     const since=r.since?new Date(r.since+"T00:00:00").toLocaleDateString("en-GB",{month:"short",year:"2-digit"}):"—";
     const ams=acAMsOf(r.bid).map(t=>acName(t.user_id)).join(" · ")||"—";
     return `<div class="acx-r" onclick="goToBrandTab('${escAttr(r.bid)}')"><span class="acx-c acx-b" title="${r.every>1?"1 shoot every "+r.every+" months":"1 shoot a month"}">${escHtml((brands[r.bid]||{}).name||"")}</span>
-      <span class="acx-c acx-m">${escHtml(ams)}</span><span class="acx-m">${escHtml(since)}</span>
-      <span class="acx-mo">${cells}</span><span class="acx-n">${r.com}</span><span class="acx-n">${r.done}</span>${bal}<span class="acx-car">›</span></div>`;
+      ${X("pr_ams",`<span class="acx-c acx-m">${escHtml(ams)}</span>`)}${X("pr_since",`<span class="acx-m">${escHtml(since)}</span>`)}
+      ${X("pr_mo",`<span class="acx-mo">${cells}</span>`)}${X("pr_com",`<span class="acx-n">${r.com}</span>`)}${X("pr_done",`<span class="acx-n">${r.done}</span>`)}${X("pr_bal",bal)}<span class="acx-car">›</span></div>`;
   }).join("");
-  return `<div class="acx-list acx-pr">${acxPrDash(rs)}${hd}${body}</div>`;
+  return `<div class="acx-list acx-pr" ${ST}>${hd}${body}</div>`;
 }
 function goToBrandTab(bid){ try{ pickBrand(bid); setView("mplan"); }catch(e){} }
 function acxWinMenu(ev){
@@ -58026,7 +58070,7 @@ function acxPickWin(k){ ACX.win=k; try{ localStorage.setItem("cc-acx-win",k); }c
       if(AC.tab==="dlv"||AC.tab==="prod") lens.querySelectorAll("span[data-tab]").forEach(s=>s.classList.toggle("on",s.dataset.tab===AC.tab));
     }
     if(AC.tab==="dlv"||AC.tab==="prod"){
-      const cnt=document.getElementById("ac-cnt"); if(cnt) cnt.innerHTML="";   /* V119.0 — the dashboard carries the numbers */
+      const cnt=document.getElementById("ac-cnt"); if(cnt) cnt.innerHTML=ACX_DASH?"":acxCntHtml();   /* V119.1 — the cards carry the count */
       const sort=bar.querySelector(".fb-end .fb-sortw");
       const btn=AC.tab==="dlv"?`<span class="fb-w fb-sortw acx-win"><button class="fb-chip" onclick="acxWinMenu(event)"><i class="ti ti-calendar"></i><span class="fb-val">${escHtml(acxWinLabel())}</span><i class="ti ti-chevron-down"></i></button></span>`
         :`<span class="fb-w fb-sortw"><button class="fb-chip"><i class="ti ti-arrows-sort"></i>Sort <span class="fb-op">by</span> <span class="fb-val">Most owed</span></button></span>`;
@@ -58037,13 +58081,31 @@ function acxPickWin(k){ ACX.win=k; try{ localStorage.setItem("cc-acx-win",k); }c
   acList=function(){
     if((AC.tab==="dlv"||AC.tab==="prod")&&acxMay()){
       const g=document.getElementById("ac-list"); if(!g) return;
-      const c=document.getElementById("ac-cnt"); if(c) c.innerHTML="";
       if(AC.tab==="dlv"){ acxDlLoad(); g.innerHTML=acxDlHtml(); } else { acxPrLoad(); g.innerHTML=acxPrHtml(); }
+      acxDashPaint();
       return;
     }
+    acxDashPaint();
     return baseList.apply(this,arguments);
   };
 })();
+document.head.insertAdjacentHTML("beforeend",`<style id="kit-dash-119-1">
+.acx-list.acx-dl .acx-r,.acx-list.acx-pr .acx-r{grid-template-columns:var(--acx-cols)}
+#acx-dash .fin-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding-top:20px}
+#acx-dash:empty{display:none}
+#acx-dash:not(:empty) + .fb{margin-top:14px}
+#acx-dash .fin-sc{background:#fff;border:1px solid var(--div);border-radius:10px;padding:11px 13px}
+#acx-dash .fin-sc .n{font-size:21px;font-weight:800;line-height:1.15;color:var(--text)}
+#acx-dash .fin-sc .k{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+#acx-dash .fin-sc .s{font-size:11.5px;color:var(--subtle);margin-top:2px}
+#acx-dash .fin-sc.ok .n{color:#1E6B2E}#acx-dash .fin-sc.bl .n{color:#2B6CB0}#acx-dash .fin-sc.rd .n{color:var(--acc)}
+.fin-sw{display:inline-flex;align-items:center;gap:9px;height:36px;padding:0 12px 0 10px;border-radius:8px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);color:#E9E9E9;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex:none}
+.fin-sw:hover{background:rgba(255,255,255,.12)}
+.fin-knob{width:30px;height:17px;border-radius:10px;background:rgba(255,255,255,.26);position:relative;flex:0 0 auto;transition:background .14s}
+.fin-knob::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:left .14s}
+.fin-sw.on .fin-knob{background:var(--acc)}
+.fin-sw.on .fin-knob::after{left:15px}
+</style>`);
 (function(){ const base=acColsSync; acColsSync=function(){ const r=base.apply(this,arguments); try{ acxDashSync(); }catch(e){} return r; }; })();
 function acxCntHtml(){
   if(AC.tab==="dlv") return `<b>${acxDlRows().length}</b> deliveries`;
