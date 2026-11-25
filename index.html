@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.4 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.3 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14856,7 +14856,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.4 Cappadocia";
+const TOOL_VERSION="V119.3 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -19679,13 +19679,9 @@ function startRealtime(){
       brands:            rtCalendarChange,
       brand_event_prefs: rtCalendarChange,
       productions:       rtProduction,
-      /* V119.4 — Chirag, 25 Nov: the whole suite went slow. EVERY new
-         comment anywhere made EVERY open Calendar re-read all shoot notes
-         (and every new file re-read all shoot files) — 25 open tabs × each
-         message, all morning. Now only a change that belongs to a shoot
-         re-reads, and a burst of them is read once. */
-      post_comments:     (p)=>{ rtComment(p); if(rtProdRow(p,"production_id")) rtProdLater("c"); },
-      assets:            (p)=>{ if(rtProdRow(p,"owner_kind",k=>k==="production"||k==="production_comment")) rtProdLater("f"); },
+      post_comments:     async(p)=>{ rtComment(p);
+                                     await loadProductionComments(); rerenderAfterProd(); },
+      assets:            async()=>{ await loadProductionFiles(); rerenderAfterProd(); },
       branding_tasks:      p=>rtBrRow(p,'tasks'),
       branding_milestones: p=>rtBrRow(p,'ms'),
       task_deliverables:   p=>rtDlvRow(p,'list'),
@@ -21192,19 +21188,6 @@ window.addEventListener("message",async e=>{
   if(d.saved){ await loadProductions(); toast("Request sent"); rerenderAfterProd(); }
 });
 /* the two screens that draw shoots, and only those */
-function rtProdRow(p,f,test){
-  const a=(p&&(p.new||p.record))||{}, b=(p&&(p.old||p.old_record))||{};
-  const v=a[f]!=null?a[f]:b[f];
-  if(v==null) return !!(p&&(p.eventType||p.type)==="DELETE"&&!Object.keys(a).length&&!(f in b));  /* a hard delete carries only the id — read once to be safe */
-  return test?test(v):true;
-}
-let RT_PROD_T=null, RT_PROD_W={};
-function rtProdLater(k){
-  RT_PROD_W[k]=1; clearTimeout(RT_PROD_T);
-  RT_PROD_T=setTimeout(async()=>{ const w=RT_PROD_W; RT_PROD_W={};
-    try{ await Promise.all([w.c?loadProductionComments():null, w.f?loadProductionFiles():null]); }catch(e){}
-    rerenderAfterProd(); },1500);
-}
 function rerenderAfterProd(){
   /* WASP — the month plan CARD lives on the Content view and draws the
      same Production section, so it was going stale for the same reason
