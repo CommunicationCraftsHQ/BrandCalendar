@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.4 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.5 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14856,7 +14856,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.4 Cappadocia";
+const TOOL_VERSION="V119.5 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -57349,12 +57349,30 @@ const LR={bid:null,ok:false,err:"",reviews:[],people:[],open:null,menu:false,dra
    These six are the starting list, used if the list cannot be read. */
 const LR_DEFAULT_Q=[
   {id:"q_happy",kind:"scale",label:"How happy was the client with us, overall?",options:[],required:true},
-  {id:"q_reasons",kind:"chips",label:"Main reason we lost them",options:["Price","Results","Speed","Communication","Quality of work","Their budget / plans changed","Other"],required:true},
-  {id:"q_signs",kind:"short",label:"When did you first see signs?",options:[],required:false},
+  {id:"q_reasons",kind:"chips",label:"What was the main reason we lost them?",options:["Price","Results","Speed","Communication","Quality of work","Their budget / plans changed","Other"],required:true},
+  {id:"q_signs",kind:"month",label:"In which month did you first see signs?",options:[],required:true},
+  {id:"q_told",kind:"short",label:"What told you something was wrong?",options:[],required:true},
   {id:"q_wrong",kind:"long",label:"What went wrong?",options:[],required:true},
   {id:"q_next",kind:"long",label:"What should we do differently next time?",options:[],required:false},
   {id:"q_back",kind:"choice",label:"Could they come back?",options:["Yes","Maybe","No"],required:false}];
-const LR_KINDS=[["scale","Score 1–5"],["chips","Pick many"],["choice","Pick one"],["short","Short answer"],["long","Long answer"]];
+/* V119.5 — Chirag, 25 Nov: when someone says the client can come back,
+   ask how. "Should show for maybe as well." It hangs off the
+   could-they-come-back question, is never required, and is not one of
+   the counted questions. Its text sits in the reply under LR_HOW. */
+const LR_HOW="q_back_how", LR_HOW_Q="How? What steps do you suggest?", LR_HOW_ROW="How to bring them back";
+function lrBackQ(qs){ return (qs||[]).find(q=>q.id==="q_back")||null; }
+function lrHowOn(qs,d){ const q=lrBackQ(qs); return !!q&&/^(yes|maybe)$/i.test(String((d||{})[q.id]||"")); }
+function lrMonthSay(v){ const m=/^(\d{4})-(\d{2})$/.exec(String(v||"")); return m?["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m[2]-1]+" "+m[1]:String(v||""); }
+function lrMonths(r){ const e=new Date(String((r&&(r.lost_on||r.created_at))||new Date().toISOString()).slice(0,10)+"T00:00:00"), out=[];
+  for(let i=11;i>=0;i--){ const d=new Date(e.getFullYear(),e.getMonth()-i,1); out.push(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")); } return out; }
+/* which face of the page a review shows: the form, the read-only
+   preview, or the reviewer's answers. Somebody asked to answer who has
+   not yet lands on their form — an administrator too. */
+LR.mode={};
+function lrCanAnswer(r){ const me=r&&lrMe(r.id); return !!(me&&me.answers&&r.status==="collecting"); }
+function lrModeOf(r){ const m=LR.mode[r.id]; if(m==="pv") return "pv"; if(!lrCanAnswer(r)) return "mgr"; if(m) return m; return lrMe(r.id).submitted_at?"mgr":"form"; }
+function lrMode(rid,m){ LR.mode[rid]=m; renderLost(); const mc=document.getElementById("main"); if(mc) mc.scrollTop=0; }
+const LR_KINDS=[["scale","Score 1–5"],["chips","Pick many"],["choice","Pick one"],["month","Pick a month"],["short","Short answer"],["long","Long answer"]];
 LR.qs=null; LR.tab="reviews";
 function lrQs(r){ return (r&&Array.isArray(r.questions)&&r.questions.length)?r.questions:LR_DEFAULT_Q; }
 function lrHas(v){ return Array.isArray(v)?v.length>0:(v!=null&&String(v).trim()!==""&&v!==0); }
@@ -57427,6 +57445,7 @@ function lrGoTo(bid,rid){
   closeAllPops(); const o=document.getElementById("ov-lrlist"); if(o) closeM("lrlist");
   if(activeBrand!==bid) pickBrand(bid);
   LR.open=rid||null; if(LR.bid!==bid) LR.bid=null;
+  if(rid) LR.mode[rid]="form";   /* V119.5 — "Answer" opens the form, for an administrator too */
   setView("lost"); const m=document.getElementById("main"); if(m) m.scrollTop=0;
 }
 function lrGo(){ lrGoTo(activeBrand, null); }
@@ -57445,7 +57464,10 @@ function renderLost(){
   }
   const others=LR.reviews.filter(x=>x.id!==r.id);
   const older=others.length?`<div class="lr-card"><div class="lr-lbl" style="margin-top:0">Earlier reviews</div>${others.map(x=>`<div class="lr-row" onclick="LR.open='${x.id}';renderLost()"><span>${escHtml(lrDay(x.created_at))}${x.lost_on?` · lost ${escHtml(lrDay(x.lost_on))}`:""}</span><span>${lrStatusPill(x)}</span><span></span><span></span></div>`).join("")}</div>`:"";
-  mc.innerHTML=`<div class="lr-wrap">${lrMgr()?lrMgrHtml(r):lrLeaderHtml(r)}${lrMgr()?older:""}</div>`;
+  const face=lrModeOf(r);
+  if(face==="pv") mc.innerHTML=`<div class="lr-wrap lr2-w">${lrFormPage(r,true)}</div>`;
+  else if(lrMgr()) mc.innerHTML=`<div class="lr-wrap lr2-w">${face==="form"?lrFormPage(r,false):lrMgrHtml(r)+older}</div>`;
+  else mc.innerHTML=`<div class="lr-wrap lr2-w">${lrLeaderHtml(r)}</div>`;
   if(view==="lost") try{ buildLostSidebar(); }catch(e){}   /* V118.175 — the left panel lists the review straight away */
 }
 function lrStatusPill(r){
@@ -57454,15 +57476,11 @@ function lrStatusPill(r){
 }
 /* the manager's view: who answered, the answers, and who may see them */
 function lrMgrHtml(r){
-  const ps=lrPeopleOf(r.id), resp=ps.filter(p=>p.answers), viewers=ps.filter(p=>!p.answers);
-  const coll=r.status==="collecting";
-  const rows=resp.map(p=>`<div class="lr-tr"><span class="lr-who"><span class="lr-av">${escHtml(lrIni(lrNm(p)))}</span><span>${escHtml(lrNm(p))}</span></span>
-      <span class="${p.submitted_at?"lr-done":"lr-wait"}">${p.submitted_at?"✓ "+escHtml(lrDay(p.submitted_at)):"Not yet"}</span>
-      <span class="lr-mut">${escHtml(lrDay(p.created_at))}</span>
-      ${coll&&!p.submitted_at?`<span class="lr-x" title="Take off this review" onclick="lrDropPerson('${p.id}')">✕</span>`:"<span></span>"}</div>`).join("");
+  const ps=lrPeopleOf(r.id), b=brands[r.brand_id]||{};
+  const coll=r.status==="collecting", me=lrMe(r.id);
   const vis=[["private","🔒 Only me"],["answered","👥 Everyone who answered"],["chosen","✓ Chosen people"]];
-  return `<div class="lr-card">
-    <div class="lr-hd"><b>Lost client review</b>${lrStatusPill(r)}<span class="lr-mut" style="font-size:12px">${r.lost_on?"Lost "+escHtml(lrDay(r.lost_on)):""}${r.answer_by&&coll?` · answers by ${escHtml(lrDay(r.answer_by))}`:""}</span><span class="sp"></span>
+  return `<div class="lr2-hd"><h2>Lost client review · ${escHtml(b.name||"")}</h2>${lrStatusPill(r)}<span class="lr-mut">${r.lost_on?"Lost "+escHtml(lrDay(r.lost_on)):""}${r.answer_by&&coll?` · answers by ${escHtml(lrDay(r.answer_by))}`:""}</span><span class="sp"></span>
+      ${lrCanAnswer(r)?`<button class="lr-btn p" onclick="lrMode('${r.id}','form')"><i class="ti ti-pencil"></i>${me.submitted_at?"Change my answers":"Answer the questions"}</button>`:""}
       <button class="lr-btn" onclick="lrPreview('${r.id}')"><i class="ti ti-eye"></i>Preview questions</button>
       <button class="lr-btn" onclick="lrCopyLink()"><i class="ti ti-link"></i>Copy link</button>
       ${coll?`<button class="lr-btn" onclick="lrAddOpen()"><i class="ti ti-user-plus"></i>Add person</button><button class="lr-btn k" onclick="lrClose()">Close and see answers</button>`
@@ -57470,64 +57488,91 @@ function lrMgrHtml(r){
             <div style="height:1px;background:#E6E2DA;margin:4px 0"></div><div class="lr-mi" onclick="lrHideNames()">${r.hide_names?"☑":"☐"} Hide names from others</div></div>`:""}</span>
           <button class="lr-btn" onclick="lrReopen()">Reopen</button>`}
     </div>
-    <div class="lr-tbl"><div class="lr-th"><span>LEADER</span><span>ANSWERED</span><span>SENT</span><span></span></div>${rows||`<div class="lr-tr"><span class="lr-mut">Nobody asked yet</span></div>`}</div>
-    ${!coll&&r.visibility==="chosen"?`<div class="lr-lbl">Chosen people</div><div class="lr-chips">${ps.map(p=>`<button class="lr-chip${p.can_view?" on":""}" onclick="lrToggleView('${p.id}')">${escHtml(lrNm(p))}</button>`).join("")}<button class="lr-chip" onclick="lrAddOpen(true)">+ Add</button></div>`:""}
-  </div>
-  <div class="lr-card">${lrAnswersHtml(r,false)}</div>`;
+    ${!coll&&r.visibility==="chosen"?`<div class="lr-card"><div class="lr-lbl" style="margin-top:0">Chosen people</div><div class="lr-chips">${ps.map(p=>`<button class="lr-chip${p.can_view?" on":""}" onclick="lrToggleView('${p.id}')">${escHtml(lrNm(p))}</button>`).join("")}<button class="lr-chip" onclick="lrAddOpen(true)">+ Add</button></div></div>`:""}
+    ${lrAnswersHtml(r,false)}`;
 }
-/* the summary and every person's answers */
+/* V119.5 — the answers as a grid: questions down the side, one column
+   per person who answered, one column naming everyone still to answer.
+   Locked as "Answers B" of "02 - Lost client review pages - mockup". */
 function lrAnswersHtml(r,forOthers){
-  const ps=lrPeopleOf(r.id).filter(p=>p.answers&&p.submitted_at);
-  const all=lrPeopleOf(r.id).filter(p=>p.answers).length;
-  if(!ps.length) return `<div class="lr-hd"><b>Answers</b></div><div class="lr-mut">No answers yet.</div>`;
-  const qs=lrQs(r), hide=forOthers&&r.hide_names, R=p=>p.reply||{};
-  const cards=[], bars=[];
-  qs.forEach(q=>{
-    const vals=ps.map(p=>R(p)[q.id]).filter(lrHas);
-    if(q.kind==="scale"){ const n=vals.map(Number).filter(x=>x>0); cards.push(`<div class="lr-k"><small>${escHtml(q.label.toUpperCase())}</small><b>${n.length?(n.reduce((s,x)=>s+x,0)/n.length).toFixed(1):"—"}</b> / 5</div>`); }
-    else if(q.kind==="choice"){ cards.push(`<div class="lr-k"><small>${escHtml(q.label.toUpperCase())}</small><span style="font-size:13px;font-weight:600">${(q.options||[]).map(o=>`${vals.filter(v=>v===o).length} ${escHtml(o.toLowerCase())}`).join(" · ")||"—"}</span></div>`); }
-    else if(q.kind==="chips"){ const cnt={}; vals.forEach(v=>(Array.isArray(v)?v:[v]).forEach(o=>{ cnt[o]=(cnt[o]||0)+1; })); const rows=Object.entries(cnt).sort((x,y)=>y[1]-x[1]); const mx=rows.length?rows[0][1]:1;
-      if(rows.length) bars.push(`<div class="lr-lbl">${escHtml(q.label)}</div>${rows.map(([o,n])=>`<div class="lr-bar"><span>${escHtml(o)}</span><i style="width:${Math.max(12,Math.round(n/mx*180))}px"></i>${n}</div>`).join("")}`); }
-  });
-  const texts=qs.filter(q=>q.kind==="short"||q.kind==="long");
-  const heads=qs.filter(q=>q.kind==="scale"||q.kind==="choice");
-  return `<div class="lr-hd"><b>Answers · ${ps.length} of ${all}</b>${!forOthers&&r.status==="collecting"?`<span class="lr-mut" style="font-size:12px">Only you see these while it collects</span>`:""}</div>
-    ${cards.length?`<div class="lr-sum">${cards.join("")}</div>`:""}${bars.join("")}
-    ${ps.map((p,i)=>{ const rp=R(p);
-      const sub=heads.map(q=>lrHas(rp[q.id])?(q.kind==="scale"?`${rp[q.id]} / 5`:escHtml(String(rp[q.id]))):"").filter(Boolean).join(" · ");
-      return `<div class="lr-ans"><div class="hd"><span class="lr-av">${hide?(i+1):escHtml(lrIni(lrNm(p)))}</span>${hide?`Leader ${i+1}`:escHtml(lrNm(p))}${sub?` · ${sub}`:""}</div>
-        ${texts.filter(q=>lrHas(rp[q.id])).map(q=>`<p><b>${escHtml(q.label)}</b> ${escHtml(String(rp[q.id]))}</p>`).join("")}</div>`; }).join("")}`;
+  const asked=lrPeopleOf(r.id).filter(p=>p.answers);
+  const ps=asked.filter(p=>p.submitted_at), wait=forOthers?[]:asked.filter(p=>!p.submitted_at);
+  const qs=lrQs(r), hide=forOthers&&r.hide_names, R=p=>p.reply||{}, coll=r.status==="collecting";
+  const sq=qs.find(q=>q.kind==="scale"), cq=qs.find(q=>q.kind==="choice"), kq=qs.find(q=>q.kind==="chips");
+  /* three cards: how happy, could they come back, why */
+  const nums=sq?ps.map(p=>Number(R(p)[sq.id])).filter(x=>x>0):[], avg=nums.length?nums.reduce((a,x)=>a+x,0)/nums.length:0;
+  const tone=o=>/^yes$/i.test(o)?"g":/^maybe$/i.test(o)?"a":"n";
+  const cnt={}; if(kq) ps.forEach(p=>{ const v=R(p)[kq.id]; (Array.isArray(v)?v:lrHas(v)?[v]:[]).forEach(o=>{ cnt[o]=(cnt[o]||0)+1; }); });
+  const bars=Object.entries(cnt).sort((x,y)=>y[1]-x[1]), mx=bars.length?bars[0][1]:1;
+  const stats=`<div class="lr2-stats">
+    ${sq?`<div class="lr-card"><div class="lr2-lbl">${escHtml(sq.label)}</div><div class="lr2-big">${nums.length?avg.toFixed(1):"—"} <span>/ 5</span></div><div class="lr2-meter">${nums.length?`<b style="left:${Math.round((avg-1)/4*100)}%"></b>`:""}</div></div>`:""}
+    ${cq?`<div class="lr-card"><div class="lr2-lbl">${escHtml(cq.label)}</div><div class="lr2-b3">${(cq.options||[]).map(o=>`<div class="${tone(o)}">${ps.filter(p=>R(p)[cq.id]===o).length}<small>${escHtml(o)}</small></div>`).join("")}</div></div>`:""}
+    ${kq?`<div class="lr-card"><div class="lr2-lbl">${escHtml(kq.label)}</div><div style="margin-top:8px">${bars.map(([o,n])=>`<div class="lr2-bar"><span title="${escAttr(o)}">${escHtml(o)}</span><i style="width:${Math.round(n/mx*100)}%"></i><b>${n}</b></div>`).join("")||`<span class="lr-mut">—</span>`}</div></div>`:""}
+  </div>`;
+  if(!ps.length&&!wait.length) return stats+`<div class="lr-card"><span class="lr-mut">Nobody asked yet.</span></div>`;
+  const cell=(q,p)=>{ const v=R(p)[q.id]; if(!lrHas(v)) return `<span class="lr-mut">—</span>`;
+    if(q.kind==="scale") return `<b class="lr2-num">${escHtml(String(v))}</b>`;
+    if(q.kind==="choice") return `<span class="lr2-chip ${tone(String(v))}">${escHtml(String(v))}</span>`;
+    if(q.kind==="chips") return (Array.isArray(v)?v:[v]).map(o=>`<span class="lr2-chip r">${escHtml(o)}</span>`).join("");
+    if(q.kind==="month") return escHtml(lrMonthSay(v));
+    return escHtml(String(v)); };
+  const rows=[]; qs.forEach(q=>{ rows.push([q.label,p=>cell(q,p)]);
+    if(q.id==="q_back") rows.push([LR_HOW_ROW,p=>lrHas(R(p)[LR_HOW])&&/^(yes|maybe)$/i.test(String(R(p)[q.id]||""))?escHtml(String(R(p)[LR_HOW])):`<span class="lr-mut">—</span>`]); });
+  const cols=`200px ${ps.map(()=>"minmax(260px,1fr)").join(" ")}${wait.length?" 190px":""}`, minW=200+ps.length*260+(wait.length?190:0);
+  const head=`<div class="h q"></div>`+ps.map((p,i)=>`<div class="h"><span class="lr2-who"><span class="lr-av">${hide?(i+1):escHtml(lrIni(lrNm(p)))}</span>${hide?`Leader ${i+1}`:escHtml(lrNm(p))}</span><div class="s">answered ${escHtml(lrDay(p.submitted_at))}</div></div>`).join("")
+    +(wait.length?`<div class="h"><span class="lr2-who"><span class="lr-av w">${wait.length}</span>Waiting</span>${wait.map(p=>`<div class="s lr2-wn"><span>${escHtml(lrNm(p))}</span>${coll&&lrMgr()?`<span class="lr-x" title="Take off this review" onclick="lrDropPerson('${p.id}')">✕</span>`:""}</div>`).join("")}</div>`:"");
+  const body=rows.map(([l,f])=>`<div class="q">${escHtml(l)}</div>`+ps.map(p=>`<div>${f(p)}</div>`).join("")+(wait.length?`<div class="lr-mut">—</div>`:"")).join("");
+  return stats+`<div class="lr2-gw"><div class="lr2-grid" style="grid-template-columns:${cols};min-width:${minW}px">${head}${body}</div></div>`;
 }
 /* a leader's view: their own form, or the opened answers */
 function lrLeaderHtml(r){
   const me=lrMe(r.id);
   if(!me) return `<div class="lr-empty">Nothing here for you.</div>`;
   const opened=r.status==="closed"&&((r.visibility==="answered"&&me.answers&&me.submitted_at)||(r.visibility==="chosen"&&me.can_view));
-  if(opened) return `<div class="lr-card">${lrAnswersHtml(r,true)}</div>`;
+  if(opened) return `<div class="lr2-hd"><h2>Lost client review · ${escHtml((brands[r.brand_id]||{}).name||"")}</h2></div>${lrAnswersHtml(r,true)}`;
   if(!me.answers) return `<div class="lr-empty">The answers have not been opened to you yet.</div>`;
   if(r.status!=="collecting") return `<div class="lr-empty"><b>This review is closed</b>${me.submitted_at?"Thank you for your answers.":"It closed before you answered."}</div>`;
-  const qs=lrQs(r);
-  const d=LR.draft[r.id]||(LR.draft[r.id]=JSON.parse(JSON.stringify(me.reply||{})));
-  const b=brands[r.brand_id]||{};
-  return `<div class="lr-card" style="max-width:640px">
-    <div class="lr-hd"><b>Lost client review · ${escHtml(b.name||"")}</b>${me.submitted_at?`<span class="lr-pill lr-open">Submitted ${escHtml(lrDay(me.submitted_at))}</span>`:""}</div>
-    <div class="lr-lock">🔒 Only you and the reviewer see your answers until they are opened.</div>
-    ${lrFormHtml(qs,d,r.id,false)}
-    <div class="lr-acts"><button class="lr-btn" onclick="lrSave('${r.id}',false)">Save draft</button><button class="lr-btn p" onclick="lrSave('${r.id}',true)">${me.submitted_at?"Update answers":"Submit"}</button></div>
-  </div>`;
+  return lrFormPage(r,false);
+}
+/* V119.5 — the form is a page of its own, never a pop-up. Locked as
+   "Form B2": one card, every question one line in one text style, wide
+   space between questions, and a small panel on the right. */
+function lrFormPage(r,ro){
+  const me=lrMe(r.id), qs=lrQs(r), b=brands[r.brand_id]||{};
+  const d=ro?{}:(LR.draft[r.id]||(LR.draft[r.id]=JSON.parse(JSON.stringify((me&&me.reply)||{}))));
+  const back=lrMgr()?` onclick="lrMode('${r.id}',${ro?"LR.pvWas||''":"'mgr'"})" style="cursor:pointer"`:"";
+  const n=qs.filter(q=>lrHas(d[q.id])).length;
+  return `<div class="lr2-back"${back}>${lrMgr()?"‹ ":""}<b>Lost client review</b> · ${escHtml(b.name||"")}${r.answer_by&&r.status==="collecting"?` · answers by ${escHtml(lrDay(r.answer_by))}`:""}${ro?" · preview":""}</div>
+  <div class="lr2-fb"><div class="lr-card lr2-f2">${lrFormHtml(qs,d,ro?null:r.id,ro,r)}</div>
+    <div class="lr2-aside"><div class="lr-card">
+      <div class="lr2-cnt" id="lr2-cnt">${ro?qs.length+(qs.length===1?" question":" questions"):n+" of "+qs.length+" answered"}</div>
+      <div class="lr2-prog" id="lr2-prog">${qs.map(q=>`<i class="${!ro&&lrHas(d[q.id])?"d":""}"></i>`).join("")}</div>
+      ${ro?`<div class="lr2-btns">${lrMgr()?`<button class="lr-btn" onclick="openLostList('questions')">Edit the question list</button>`:""}<button class="lr-btn k" onclick="lrMode('${r.id}',LR.pvWas||'')">Close</button></div>`
+        :`<div class="lr2-btns"><button class="lr-btn" onclick="lrSave('${r.id}',false)">Save draft</button><button class="lr-btn p" style="flex:1;justify-content:center" onclick="lrSave('${r.id}',true)">${me&&me.submitted_at?"Update answers":"Submit"}</button></div>
+        <div class="lr2-lock">🔒 Only you and the reviewer see your answers until they are opened.</div>`}
+    </div></div></div>`;
+}
+/* typing must move the count without redrawing the box being typed in */
+function lrType(rid,k,v){ const d=LR.draft[rid]; if(!d) return; d[k]=v;
+  const r=LR.reviews.find(x=>x.id===rid), qs=lrQs(r), c=document.getElementById("lr2-cnt"), p=document.getElementById("lr2-prog");
+  if(c) c.textContent=qs.filter(q=>lrHas(d[q.id])).length+" of "+qs.length+" answered";
+  if(p) p.innerHTML=qs.map(q=>`<i class="${lrHas(d[q.id])?"d":""}"></i>`).join("");
 }
 /* the questions as a form — the leader's, and the read-only preview */
-function lrFormHtml(qs,d,rid,ro){
+function lrFormHtml(qs,d,rid,ro,r){
   const on=(rid&&!ro)?"":" disabled";
+  const SC=["1 · Very unhappy","2","3 · OK","4","5 · Very happy"];
   return qs.map((q,i)=>{
-    const v=d[q.id], qi=escAttr(q.id), star=q.required?` <span style="color:var(--acc,#D62828)">*</span>`:"";
+    const v=d[q.id], qi=escAttr(q.id), star=q.required?` <i>*</i>`:"";
     let inp="";
-    if(q.kind==="scale") inp=`<div class="lr-scale">${[1,2,3,4,5].map(n=>`<button class="${Number(v)===n?"on":""}"${on} onclick="lrSet('${rid}','${qi}',${n})">${n}</button>`).join("")}</div>`;
-    else if(q.kind==="chips") inp=`<div class="lr-chips">${(q.options||[]).map((o,k)=>`<button class="lr-chip${Array.isArray(v)&&v.includes(o)?" on":""}"${on} onclick="lrPick('${rid}','${qi}',${k},true)">${escHtml(o)}</button>`).join("")}</div>`;
-    else if(q.kind==="choice") inp=`<div class="lr-chips">${(q.options||[]).map((o,k)=>`<button class="lr-chip${v===o?" on":""}"${on} onclick="lrPick('${rid}','${qi}',${k},false)">${escHtml(o)}</button>`).join("")}</div>`;
-    else if(q.kind==="short") inp=`<input class="lr-in" maxlength="300" value="${escAttr(v||"")}"${on} oninput="LR.draft['${rid}']['${qi}']=this.value">`;
-    else inp=`<textarea class="lr-ta" maxlength="4000"${on} oninput="LR.draft['${rid}']['${qi}']=this.value">${escHtml(v||"")}</textarea>`;
-    return `<div class="lr-q"><div class="t">${escHtml(q.label)}${star}</div>${inp}</div>`;
+    if(q.kind==="scale") inp=`<div class="lr2-pills">${[1,2,3,4,5].map(n=>`<button class="${Number(v)===n?"on":""}"${on} onclick="lrSet('${rid}','${qi}',${n})">${SC[n-1]}</button>`).join("")}</div>`;
+    else if(q.kind==="chips") inp=`<div class="lr2-pills">${(q.options||[]).map((o,k)=>`<button class="${Array.isArray(v)&&v.includes(o)?"on":""}"${on} onclick="lrPick('${rid}','${qi}',${k},true)">${escHtml(o)}</button>`).join("")}</div>`;
+    else if(q.kind==="choice") inp=`<div class="lr2-pills">${(q.options||[]).map((o,k)=>`<button class="${v===o?"on":""}"${on} onclick="lrPick('${rid}','${qi}',${k},false)">${escHtml(o)}</button>`).join("")}</div>`;
+    else if(q.kind==="month"){ const ms=lrMonths(r); inp=`<div class="lr2-tl">${ms.map(m=>`<button class="${v===m?"pin":(v&&m>v?"on":"")}"${on} onclick="lrSet('${rid}','${qi}','${v===m?"":m}')"><i></i><small>${escHtml(lrMonthSay(m).slice(0,3))}</small></button>`).join("")}</div>`; }
+    else if(q.kind==="short") inp=`<input class="lr-in lr2-in" maxlength="300" value="${escAttr(v||"")}"${on} oninput="lrType('${rid}','${qi}',this.value)">`;
+    else inp=`<textarea class="lr-ta lr2-ta" maxlength="4000"${on} oninput="lrType('${rid}','${qi}',this.value)">${escHtml(v||"")}</textarea>`;
+    const how=q.id==="q_back"&&(ro||lrHowOn(qs,d))?`<div class="lr2-how"><div class="lr2-qt"><span class="qn"></span>${LR_HOW_Q}</div><textarea class="lr-ta lr2-ta" maxlength="4000"${on} oninput="LR.draft['${rid}']&&(LR.draft['${rid}']['${LR_HOW}']=this.value)">${escHtml(d[LR_HOW]||"")}</textarea></div>`:"";
+    return `<div class="lr2-q"><div class="lr2-qt"><span class="qn">${i+1}</span>${escHtml(q.label)}${star}</div>${inp}${how}</div>`;
   }).join("");
 }
 function lrPick(rid,qid,k,many){
@@ -57544,13 +57589,16 @@ async function lrSave(rid,submit){
   const miss=qs.filter(q=>q.required&&!lrHas(d[q.id]));
   if(submit&&miss.length){ toast(`Please answer: ${escHtml(miss.map(q=>q.label).join(" · "))}`,"err"); return; }
   const reply={}; qs.forEach(q=>{ const v=d[q.id]; if(!lrHas(v)) return; reply[q.id]=typeof v==="string"?v.trim():v; });
+  if(lrHowOn(qs,d)&&lrHas(d[LR_HOW])) reply[LR_HOW]=String(d[LR_HOW]).trim();
   const patch={reply};
   if(submit) patch.submitted_at=me.submitted_at||new Date().toISOString();
   const r=await sb.from("lost_review_people").update(patch).eq("id",me.id);
   if(r.error){ toast("Not saved — "+escHtml(r.error.message),"err"); return; }
   Object.assign(me,patch);
   const mine=(LR.mine||[]).find(x=>x.review_id===rid); if(mine&&patch.submitted_at) mine.submitted_at=patch.submitted_at;
-  toast(submit?"Thank you — your answers are in":"Draft saved"); lrBanner(); renderLost();
+  toast(submit?"Thank you — your answers are in":"Draft saved"); lrBanner();
+  if(submit&&lrMgr()){ lrMode(rid,"mgr"); return; }
+  renderLost();
 }
 /* ── manager actions ─────────────────────────────────────────────── */
 async function lrUpdate(r,patch,msg){
@@ -57581,12 +57629,7 @@ function lrCopyLink(){
   try{ navigator.clipboard.writeText(u).then(done,()=>toast(u)); }catch(e){ toast(u); }
 }
 /* the questions a review was sent with, as the leaders see them */
-function lrPreview(rid){
-  const r=LR.reviews.find(x=>x.id===rid);
-  lrBox(`<div class="h">Questions${r?" · as sent "+escHtml(lrDay(r.created_at)):""}</div>
-    <div style="max-height:60vh;overflow:auto">${lrFormHtml(lrQs(r),{},null,true)}</div>
-    <div class="lr-acts">${lrMgr()?`<button class="lr-btn" onclick="lrBoxClose();openLostList('questions')">Edit the question list</button>`:""}<button class="lr-btn k" onclick="lrBoxClose()">Close</button></div>`);
-}
+function lrPreview(rid){ const r=LR.reviews.find(x=>x.id===rid); if(!r) return; LR.pvWas=LR.mode[rid]||""; lrMode(rid,"pv"); }
 /* the box: start a review, or add people to one */
 let LR_BOX=null;
 function lrBox(html){
@@ -57650,6 +57693,61 @@ async function lrBoxGo(){
   }
   lrBoxClose(); renderLost();
 }
+document.head.insertAdjacentHTML("beforeend",`<style id="lr-119-5">
+.lr-wrap.lr2-w{max-width:none}
+.lr2-back{font-size:12.5px;color:#77736B;margin:0 0 12px}.lr2-back b{color:#141414}
+.lr2-hd{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px}.lr2-hd h2{margin:0;font-size:20px;font-weight:800}.lr2-hd .sp{flex:1}
+.lr2-fb{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:22px;align-items:start;max-width:1040px}
+.lr-card.lr2-f2{padding:40px 44px;margin:0}
+.lr2-q{margin-bottom:52px}.lr2-q:last-child{margin-bottom:0}
+.lr2-qt{font-size:15px;font-weight:600;margin-bottom:16px;display:flex;gap:10px;align-items:baseline}
+.lr2-qt i{color:var(--acc,#D62828);font-style:normal}
+.lr2-qt .qn{color:#9a9a9a;font-weight:600;min-width:16px;flex:none}
+.lr2-q>.lr2-pills,.lr2-q>.lr2-in,.lr2-q>.lr2-ta,.lr2-q>.lr2-tl,.lr2-how>.lr2-ta{margin-left:26px;width:calc(100% - 26px)}
+.lr2-how{margin-top:28px}
+.lr2-pills{display:flex;gap:7px;flex-wrap:wrap}
+.lr2-pills button{height:38px;display:inline-flex;align-items:center;padding:0 16px;border:1.5px solid #E3E0DA;border-radius:999px;font:inherit;font-weight:600;font-size:15px;background:#fff;color:#141414;cursor:pointer}
+.lr2-pills button.on{border-color:#141414;background:#141414;color:#fff}
+.lr2-pills button:disabled,.lr2-tl button:disabled{cursor:default}
+.lr-in.lr2-in,.lr-ta.lr2-ta{border:1.5px solid #E3E0DA;border-radius:10px;font-size:15px;padding:10px 12px}
+.lr-in.lr2-in{height:44px}.lr-ta.lr2-ta{min-height:110px}
+.lr2-tl{display:flex;gap:4px;align-items:flex-end}
+.lr2-tl button{flex:1;min-width:0;text-align:center;border:0;background:none;padding:0;font:inherit;cursor:pointer;color:#141414}
+.lr2-tl button i{display:block;height:30px;border-radius:6px;background:#F1EFEA;border:1.5px solid #E1DDD5}
+.lr2-tl button.on i{background:#FDF0EE;border-color:#E7A9A1}
+.lr2-tl button.pin i{background:var(--acc,#D62828);border-color:var(--acc,#D62828)}
+.lr2-tl button small{display:block;font-size:13px;font-weight:500;margin-top:4px}
+.lr2-aside{position:sticky;top:10px}.lr2-aside .lr-card{padding:16px;margin:0}
+.lr2-cnt{font-weight:600}
+.lr2-prog{display:flex;gap:4px;margin:10px 0 0}.lr2-prog i{flex:1;height:5px;border-radius:3px;background:#E1DDD5}.lr2-prog i.d{background:#141414}
+.lr2-btns{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.lr2-lock{margin-top:12px;font-size:12px;color:#77736B;background:#F7F5F1;border-radius:9px;padding:9px 10px}
+.lr2-stats{display:grid;grid-template-columns:1.1fr 1fr 1.3fr;gap:12px;margin-bottom:14px}.lr2-stats .lr-card{margin:0}
+.lr2-lbl{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#9a9a9a}
+.lr2-big{font-size:34px;font-weight:800;letter-spacing:-.02em}.lr2-big span{font-size:15px;color:#77736B;font-weight:600}
+.lr2-meter{height:10px;border-radius:5px;background:linear-gradient(90deg,#D23B2B,#E0A93B,#2EA05A);position:relative;margin-top:10px}
+.lr2-meter b{position:absolute;top:-5px;width:4px;height:20px;background:#141414;border-radius:2px;margin-left:-2px}
+.lr2-b3{display:flex;gap:8px;margin-top:10px}
+.lr2-b3 div{flex:1;border-radius:10px;padding:10px;text-align:center;font-weight:800;font-size:18px;background:#F4F2ED;color:#aaa}
+.lr2-b3 div.g{background:#E8F3EA;color:#1E6B2E}.lr2-b3 div.a{background:#FFF4D6;color:#8a5a0a}
+.lr2-b3 small{display:block;font-size:12px;font-weight:700}
+.lr2-bar{display:grid;grid-template-columns:150px 1fr 24px;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+.lr2-bar span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lr2-bar i{display:block;height:10px;border-radius:5px;background:var(--acc,#D62828)}
+.lr2-gw{overflow-x:auto;border:1px solid #E6E2DA;border-radius:14px;background:#fff}
+.lr2-grid{display:grid}
+.lr2-grid>div{padding:12px 14px;border-top:1px solid #EFEDE8;border-left:1px solid #EFEDE8;line-height:1.5;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
+.lr2-grid>.h{background:#FAF9F6;font-weight:800;border-top:0;white-space:normal}
+.lr2-grid>.h .s{font-weight:500;font-size:11.5px;color:#77736B}
+.lr2-grid>.q{font-weight:700;border-left:0;background:#FAF9F6;position:sticky;left:0;z-index:1;white-space:normal}
+.lr2-who{display:flex;gap:8px;align-items:center}
+.lr-av.w{background:#F4F2ED;color:#aaa;border:1.5px dashed #ccc}
+.lr2-wn{display:flex;justify-content:space-between;gap:8px;margin-top:4px}.lr2-wn .lr-x{cursor:pointer;color:#aaa}
+.lr2-num{font-size:18px}
+.lr2-chip{display:inline-flex;height:24px;align-items:center;padding:0 9px;border-radius:999px;font-size:12px;font-weight:700;background:#F1EFEA;margin:2px 4px 2px 0;white-space:nowrap}
+.lr2-chip.r{background:#FDF0EE;color:var(--acc,#D62828)}.lr2-chip.g{background:#E8F3EA;color:#1E6B2E}.lr2-chip.a{background:#FFF4D6;color:#8a5a0a}
+@media(max-width:900px){.lr2-fb{grid-template-columns:1fr}.lr2-aside{position:static}.lr-card.lr2-f2{padding:22px 18px}.lr2-stats{grid-template-columns:1fr}.lr2-q{margin-bottom:38px}
+  .lr2-q>.lr2-pills,.lr2-q>.lr2-in,.lr2-q>.lr2-ta,.lr2-q>.lr2-tl,.lr2-how>.lr2-ta{margin-left:0;width:100%}.lr2-tl button small{font-size:10.5px}.lr2-grid>.q{position:static}}
+</style>`);
 /* ── every review, and the question list, from the account menu ── */
 /* V118.176 — a page from the account menu, as the kit's standard says:
    the tabs stay, the page sits after them lit, with an ✕ back. */
@@ -58122,76 +58220,114 @@ async function acxSoLoad(){
   ACX.so.busy=false;
   if(view==="accounts"&&AC.tab==="dlb"){ acList(); buildAccountsSidebar(); }
 }
-function acxSoRows(){
-  const S=acxScope(), q=AC.q.trim().toLowerCase();
-  const nm=b=>String((brands[b]||{}).name||"");
-  return ACX.so.rows.filter(r=>brands[r.brand_id]&&(S.has(r.brand_id)||(q&&String(r.title||"").toLowerCase().includes(q)&&acInScope().indexOf(r.brand_id)>-1))&&(!ACX.so.svc||r.title===ACX.so.svc))
-    .sort((a,b)=>nm(a.brand_id).localeCompare(nm(b.brand_id))||(a.pos-b.pos)||String(a.title).localeCompare(String(b.title)));
+/* ══ V119.5 CAPPADOCIA · DELIVERABLES, ONE ROW PER BRAND ════════════
+   Chirag, 25 Nov, on the V119.3 list: "too cluttered ... the most
+   important information is what are the services that we are offering
+   to the client and then expanding upon what is included". Frozen as
+   option A2 of "05 - Ac Mgmt deliverables tab - mockup": one line per
+   brand, every kind of service always in the same column, and the
+   brand opens in place with one box per service. */
+const ACX_SOGRP=[["so_smm","Social media"],["so_ads","Ads"],["so_brd","Branding"],["so_web","Website"],["so_vid","Video"],["so_set","Setup"]];
+const ACX_SOSHORT={"Social Media Marketing":"Social media","Performance Marketing":"Ads","Branding & Design":"Branding","Logo - Identity Design":"Logo & identity","Packaging Design":"Packaging","Corporate Website":"Website","Brand Website":"Website","SEO & AEO":"SEO","Web AMC":"Web upkeep","Corporate Film":"Corporate film","Video Production":"Video","Video Editing Retainer":"Video editing","DVC / TVC":"DVC / TVC","One time setup - Social Media Marketing":"Setup","One - Time Setup Cost":"Setup"};
+function acxSoShort(t){ return ACX_SOSHORT[t]||t||"Service"; }
+/* which column a service sits in. The catalogue grows; a title nobody
+   has mapped still lands somewhere a person would look for it. */
+function acxSoGroup(r){
+  const t=String(r.title||"").toLowerCase();
+  if(/set\s*-?\s*up/.test(t)) return "so_set";
+  if(r.kind==="social"||/social media/.test(t)) return "so_smm";
+  if(r.kind==="ads"||/performance|ppc/.test(t)) return "so_ads";
+  if(/web|seo|aeo|amc/.test(t)) return "so_web";
+  if(/video|film|dvc|tvc|content adaption|motion/.test(t)) return "so_vid";
+  return "so_brd";
 }
 function acxSoState(r){ return r.renewal_due&&!r.running?"due":(r.upcoming&&!r.running?"soon":"on"); }
-const ACX_SOCOLS=[["so_svc","Service"],["so_term","Term"],["so_mo","A month"],["so_prod","Production"],["so_ads","Ads"],["so_cov","Covers"]];
+function acxSoBrands(){
+  const S=acxScope(), q=AC.q.trim().toLowerCase(), by={}, inS=new Set(acInScope());
+  const nm=b=>String((brands[b]||{}).name||"");
+  ACX.so.rows.forEach(r=>{ if(brands[r.brand_id]) (by[r.brand_id]=by[r.brand_id]||[]).push(r); });
+  return Object.keys(by).filter(b=>S.has(b)||(q&&inS.has(b)&&by[b].some(r=>String(r.title||"").toLowerCase().includes(q))))
+    .map(b=>({b,ss:by[b].slice().sort((x,y)=>(x.pos-y.pos)||String(x.title).localeCompare(String(y.title)))}))
+    .sort((x,y)=>nm(x.b).localeCompare(nm(y.b),undefined,{sensitivity:"base"}));
+}
+function acxSoRows(){ return acxSoBrands().reduce((a,x)=>a.concat(x.ss),[]); }
+const ACX_SOCOLS=[["so_am","Account manager"]].concat(ACX_SOGRP);
 function acxSoColsVar(){
-  const W={so_svc:"150px",so_term:"210px",so_mo:"105px",so_prod:"130px",so_ads:"135px",so_cov:"minmax(150px,1.3fr)"};
-  return ["14px","minmax(110px,1fr)"].concat(ACX_SOCOLS.filter(([k])=>!AC_HIDE.has(k)).map(([k])=>W[k])).concat(["14px"]).join(" ");
+  return ["minmax(140px,1fr)"].concat(ACX_SOCOLS.filter(([k])=>!AC_HIDE.has(k)).map(([k])=>k==="so_am"?"130px":"minmax(104px,1fr)")).concat(["20px"]).join(" ");
 }
 (function(){ const base=acColsNow; acColsNow=function(){ if(AC.tab==="dlb"&&acxSoMay()) return ACX_SOCOLS; return base.apply(this,arguments); }; })();
 function acxSoTerm(r){
   const bas=/^ad\s*hoc$/i.test(r.basis||"")?"Ad hoc":(r.basis||"Retainer");
   const t=(r.starts_on?engDate(r.starts_on):"")+(r.term_end?" – "+engDate(r.term_end):"");
-  if(acxSoState(r)==="due") return `<span class="acx-sodue">Renewal due</span> · ${escHtml(engDate(r.term_end))}`;
+  if(acxSoState(r)==="due") return `<span class="acx-sodue">Renewal due</span> · ended ${escHtml(engDate(r.term_end))}`;
   if(acxSoState(r)==="soon") return `<span class="acx-sosoon">Starts ${escHtml(engDate(r.starts_on))}</span> · ${escHtml(bas)}`;
   return escHtml(bas+(t?" · "+t:""));
 }
+/* what one service includes, the contract's own words last */
+function acxSoInc(r){
+  const a=[];
+  const m=[[r.posts,"post","posts"],[r.reels,"reel","reels"],[r.stories,"story","stories"]].filter(x=>x[0]).map(x=>x[0]+" "+(x[0]===1?x[1]:x[2]));
+  if(m.length) a.push([1,m.join(" · ")+" a month"]);
+  if(r.production) a.push([1,"Production "+(r.prod_every_n===2?"every alternate month":"every month")]);
+  if(r.setup) a.push([1,"One-time setup"]);
+  if((r.ad_platforms&&r.ad_platforms.length)||r.paid_by) a.push([1,["Ads"+((r.ad_platforms||[]).length?" on "+r.ad_platforms.join(" + "):""),(typeof PAID_BY_SAYS!=="undefined"&&PAID_BY_SAYS[r.paid_by])||""].filter(Boolean).join(" · ")]);
+  (r.covers||[]).filter(x=>String(x||"").trim()).forEach(c=>a.push([0,c]));
+  return a;
+}
+function acxSoBox(r){
+  const a=acxSoInc(r);
+  return `<div class="acx-sv"><h4><span class="acx-sodot ${acxSoState(r)}"></span>${escHtml(r.title||"Service")}</h4><div class="t">${acxSoTerm(r)}</div>${a.length?`<ul>${a.map(x=>`<li${x[0]?' class="k"':""}>${escHtml(x[1])}</li>`).join("")}</ul>`:`<div class="t">Nothing more written in the contract.</div>`}</div>`;
+}
+function acxSoFlip(bid){ const o=ACX.so.open=ACX.so.open||new Set(); o.has(bid)?o.delete(bid):o.add(bid); acList(); }
 function acxSoHtml(){
   if(ACX.so.err) return `<div class="acx-list"><div class="acx-empty">${/account_scope/.test(ACX.so.err)?"This needs this week's database update.":"Could not load the scope — "+escHtml(ACX.so.err)}</div></div>`;
   if(!ACX.so.ok) return `<div class="acx-list"><div class="acx-empty">Loading…</div></div>`;
-  const X=acxX, ST=`style="--acx-cols:${acxSoColsVar()}"`, NA='<span class="acx-na">—</span>';
-  const hd=`<div class="acx-r hd"><span></span><span>Brand</span>${X("so_svc","<span>Service</span>")}${X("so_term","<span>Term</span>")}${X("so_mo","<span>A month</span>")}${X("so_prod","<span>Production</span>")}${X("so_ads","<span>Ads</span>")}${X("so_cov","<span>Covers</span>")}<span></span></div>`;
-  const rs=acxSoRows();
-  if(!rs.length) return `<div class="acx-list acx-so" ${ST}>${hd}<div class="acx-empty">No service here.</div></div>`;
-  const body=rs.map(r=>{
-    const mo=[[r.posts,"post","posts"],[r.reels,"reel","reels"],[r.stories,"story","stories"]].filter(x=>x[0]).map(x=>x[0]+" "+(x[0]===1?x[1]:x[2])).join(" · ");
-    const pr=r.production?`<span class="acx-soyes">✓</span> ${r.prod_every_n===2?"Alternate months":"Every month"}`:NA;
-    const ad=(r.ad_platforms&&r.ad_platforms.length)||r.paid_by?escHtml([(r.ad_platforms||[]).join(" + "),(typeof PAID_BY_SAYS!=="undefined"&&PAID_BY_SAYS[r.paid_by])||""].filter(Boolean).join(" · ")):NA;
-    const cv=(r.covers||[]).filter(x=>String(x||"").trim());
-    const cov=cv.length?`<span class="acx-cv" title="${escAttr(cv.join(" · "))}"><i>${escHtml(cv[0])}</i>${cv.length>1?`<i class="more">+${cv.length-1}</i>`:""}</span>`:NA;
-    return `<div class="acx-r" onclick="acxSoGo('${escAttr(r.brand_id)}')"><span><span class="acx-sodot ${acxSoState(r)}"></span></span>
-      <span class="acx-c acx-b">${escHtml((brands[r.brand_id]||{}).name||"")}</span>
-      ${X("so_svc",`<span class="acx-c acx-sosvc" title="${escAttr(r.title||"")}">${escHtml(r.title||"")}</span>`)}
-      ${X("so_term",`<span class="acx-c acx-m">${acxSoTerm(r)}</span>`)}
-      ${X("so_mo",`<span class="acx-c">${mo||NA}</span>`)}
-      ${X("so_prod",`<span class="acx-c">${pr}</span>`)}
-      ${X("so_ads",`<span class="acx-c" title="${escAttr(String(ad).replace(/<[^>]*>/g,""))}">${ad}</span>`)}
-      ${X("so_cov",`<span class="acx-c">${cov}</span>`)}<span class="acx-car">›</span></div>`;
+  const X=acxX, ST=`style="--acx-cols:${acxSoColsVar()}"`, O=ACX.so.open=ACX.so.open||new Set();
+  const hd=`<div class="acx-r hd"><span>Brand</span>${X("so_am","<span>Account manager</span>")}${ACX_SOGRP.map(([k,l])=>X(k,`<span>${l}</span>`)).join("")}<span></span></div>`;
+  const bs=acxSoBrands();
+  if(!bs.length) return `<div class="acx-list acx-so" ${ST}>${hd}<div class="acx-empty">No service here.</div></div>`;
+  const body=bs.map(x=>{
+    const ams=acAMsOf(x.b).map(t=>acName(t.user_id)).join(", "), open=O.has(x.b);
+    const cells=ACX_SOGRP.map(([k,l])=>{
+      const rs=x.ss.filter(r=>acxSoGroup(r)===k);
+      if(!rs.length) return X(k,`<span class="acx-na">·</span>`);
+      const r=rs[0], st=acxSoState(r), n=(r.posts||0)+(r.reels||0)+(r.stories||0), sh=acxSoShort(r.title);
+      const lab=st==="due"?"Renewal due":st==="soon"?"Starts "+engDate(r.starts_on):(k==="so_smm"&&n?n+" posts":(sh===l||k==="so_set"?l:sh));
+      const tip=escAttr(rs.map(y=>y.title).join(" · "));
+      return X(k,`<span class="acx-chips"><span class="acx-chip ${st==="due"?"due":st==="soon"?"soon":"g"}" title="${tip}">${escHtml(lab)}</span>${rs.length>1?`<span class="acx-chip" title="${escAttr(rs.slice(1).map(y=>y.title).join(" · "))}">+${rs.length-1}</span>`:""}</span>`);
+    }).join("");
+    return `<div class="acx-r acx-click${open?" isopen":""}" onclick="acxSoFlip('${escAttr(x.b)}')"><span class="acx-c acx-b">${escHtml((brands[x.b]||{}).name||"")}</span>${X("so_am",`<span class="acx-c acx-m" title="${escAttr(ams)}">${escHtml(ams)||'<span class="acx-na">—</span>'}</span>`)}${cells}<span class="acx-car">›</span></div>${open?`<div class="acx-soopen">${x.ss.map(acxSoBox).join("")}</div>`:""}`;
   }).join("");
   return `<div class="acx-list acx-so" ${ST}>${hd}${body}</div>`;
 }
 function acxSoDash(rs){
   const run=rs.filter(r=>r.running), due=rs.filter(r=>acxSoState(r)==="due");
-  const lim=new Date(Date.now()+60*864e5).toISOString().slice(0,10), today=new Date().toISOString().slice(0,10);
-  const soon=run.filter(r=>!/^ad\s*hoc$/i.test(r.basis||"")&&r.term_end&&r.term_end>=today&&r.term_end<=lim);
-  const B=new Set(run.map(r=>r.brand_id)).size, P=run.reduce((t,r)=>t+(r.posts||0)+(r.reels||0)+(r.stories||0),0);
-  return `<div class="fin-stats">${acxCard(run.length,"Services running","across "+B+(B===1?" brand":" brands"))}${acxCard(due.length,"Renewal due","term ended, not closed",due.length?"rd":"")}${acxCard(soon.length,"Renewing soon","in the next 60 days","bl")}${acxCard(P,"Posts a month","posts, reels and stories promised")}</div>`;
+  const B=new Set(run.map(r=>r.brand_id)).size, P=run.filter(r=>r.production).length;
+  return `<div class="fin-stats">${acxCard(B,"Brands","with a running contract")}${acxCard(run.length,"Services","running today")}${acxCard(due.length,"Renewal due","term ended, not closed",due.length?"rd":"")}${acxCard(P,"With production","shoots in the contract","bl")}</div>`;
 }
 function acxSoGo(bid){
   try{ localStorage.setItem("cc.eng.open."+bid,"1"); }catch(e){}
   try{ pickBrand(bid); setView("mplan"); }catch(e){}
   setTimeout(()=>{ const el=document.getElementById("bd-scope"); if(el) try{ el.scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){} },400);
 }
-function acxSoPickSvc(t){ ACX.so.svc=ACX.so.svc===t?"":t; acList(); buildAccountsSidebar(); }
-(function(){
-  const base=buildAccountsSidebar;
-  buildAccountsSidebar=function(){
-    const out=base.apply(this,arguments);
-    if(view!=="accounts"||AC.tab!=="dlb"||!ACX.so.ok) return out;
-    const sm=document.getElementById("sb-months"); if(!sm) return out;
-    const S=acxScope(), by={};
-    ACX.so.rows.filter(r=>S.has(r.brand_id)).forEach(r=>{ by[r.title]=(by[r.title]||0)+1; });
-    const ks=Object.keys(by).sort((a,b)=>by[b]-by[a]||a.localeCompare(b));
-    if(ks.length) sm.insertAdjacentHTML("beforeend",`<div class="s-lbl" style="margin-top:18px">Service</div>`+ks.map(k=>`<div class="mdb-trow${ACX.so.svc===k?" on":""}" onclick="acxSoPickSvc('${escAttr(k)}')"><span class="ac-sbe">·</span><span class="nm">${escHtml(k)}</span><span class="ct">${by[k]}</span></div>`).join(""));
-    return out;
-  };
-})();
+document.head.insertAdjacentHTML("beforeend",`<style id="acx-119-5">
+.acx-chips{display:flex;gap:5px;overflow:hidden;align-items:center;min-width:0}
+.acx-chip{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;border:1px solid var(--div);background:#fff;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
+.acx-chip.g{background:#E8F3EA;border-color:#CFE3D2;color:#1E6B2E}
+.acx-chip.due{border-color:#F0B9B1;background:#FDF0EE;color:var(--acc)}
+.acx-chip.soon{border-color:#F1DDB0;background:#FFF6E5;color:#8a5a0a}
+.acx-chips .acx-chip+.acx-chip{flex:none}
+.acx-list.acx-so .acx-r.acx-click{cursor:pointer}
+.acx-list.acx-so .acx-r .acx-car{transition:transform .15s;display:inline-block}
+.acx-list.acx-so .acx-r.isopen .acx-car{transform:rotate(90deg)}
+.acx-soopen{background:#FAF9F6;border-top:1px solid #EFEDE8;padding:14px 18px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.acx-sv{background:#fff;border:1px solid var(--div);border-radius:12px;padding:12px 14px;min-width:0}
+.acx-sv h4{margin:0;font-size:13.5px;display:flex;align-items:center;gap:7px}
+.acx-sv .t{font-size:11.5px;color:var(--muted);margin:2px 0 8px}
+.acx-sv ul{margin:0;padding-left:16px}.acx-sv li{margin:3px 0;font-size:12.5px}
+.acx-sv li.k{font-weight:700}
+@media(max-width:760px){.acx-soopen{grid-template-columns:1fr;padding:12px}}
+</style>`);
 document.head.insertAdjacentHTML("beforeend",`<style id="acx-119-3">
 .acx-list.acx-so .acx-r{grid-template-columns:var(--acx-cols);gap:0 10px}
 .acx-sodot{width:8px;height:8px;border-radius:50%;background:#2EA05A;display:inline-block}
