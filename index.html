@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.6 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.7 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14856,7 +14856,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.6 Cappadocia";
+const TOOL_VERSION="V119.7 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -58255,19 +58255,42 @@ async function acxSoLoad(){
    option A2 of "05 - Ac Mgmt deliverables tab - mockup": one line per
    brand, every kind of service always in the same column, and the
    brand opens in place with one box per service. */
-const ACX_SOGRP=[["so_smm","Social media"],["so_ads","Ads"],["so_brd","Branding"],["so_web","Website"],["so_vid","Video"],["so_set","Setup"]];
+/* V119.7 — Chirag, 25 Nov, on the live page: "the key objective is to
+   see what all services you are selling and clients are buying". The
+   columns are SM · PM · Branding · Video · Web · Other, a cell says only
+   the service's status, the cards count the active clients of each, and
+   an opened brand shows each service's detail under its own column. */
+const ACX_SOGRP=[["so_smm","SM"],["so_ads","PM"],["so_brd","Branding"],["so_vid","Video"],["so_web","Web"],["so_oth","Other"]];
 const ACX_SOSHORT={"Social Media Marketing":"Social media","Performance Marketing":"Ads","Branding & Design":"Branding","Logo - Identity Design":"Logo & identity","Packaging Design":"Packaging","Corporate Website":"Website","Brand Website":"Website","SEO & AEO":"SEO","Web AMC":"Web upkeep","Corporate Film":"Corporate film","Video Production":"Video","Video Editing Retainer":"Video editing","DVC / TVC":"DVC / TVC","One time setup - Social Media Marketing":"Setup","One - Time Setup Cost":"Setup"};
 function acxSoShort(t){ return ACX_SOSHORT[t]||t||"Service"; }
 /* which column a service sits in. The catalogue grows; a title nobody
    has mapped still lands somewhere a person would look for it. */
 function acxSoGroup(r){
   const t=String(r.title||"").toLowerCase();
-  if(/set\s*-?\s*up/.test(t)) return "so_set";
+  if(/set\s*-?\s*up/.test(t)) return "so_oth";
   if(r.kind==="social"||/social media/.test(t)) return "so_smm";
   if(r.kind==="ads"||/performance|ppc/.test(t)) return "so_ads";
   if(/web|seo|aeo|amc/.test(t)) return "so_web";
   if(/video|film|dvc|tvc|content adaption|motion/.test(t)) return "so_vid";
-  return "so_brd";
+  if(/brand|logo|packag|brochure|design|identity/.test(t)) return "so_brd";
+  return "so_oth";
+}
+/* one status for a column that may hold several services: what needs a
+   person first */
+function acxSoColState(rs){ return rs.some(r=>acxSoState(r)==="due")?"due":rs.some(r=>acxSoState(r)==="on")?"on":"soon"; }
+/* how far away the renewal is, in the words a person would use */
+function acxSoAway(r){
+  const st=acxSoState(r), adhoc=/^ad\s*hoc$/i.test(r.basis||"");
+  if(st==="due") return `<span class="acx-sodue">Renewal due</span> · ended ${escHtml(engDate(r.term_end))}`;
+  if(st==="soon") return `<span class="acx-sosoon">Starts ${escHtml(engDate(r.starts_on))}</span>`;
+  if(adhoc||!r.term_end) return r.starts_on?"since "+escHtml(engDate(r.starts_on)):"";
+  const d=Math.round((new Date(r.term_end+"T00:00:00")-new Date(new Date().toISOString().slice(0,10)+"T00:00:00"))/864e5);
+  const say=d<=0?"today":d<60?"in "+d+(d===1?" day":" days"):"in "+Math.round(d/30.4)+" months";
+  return `renews ${say} · ${escHtml(engDate(r.term_end))}`;
+}
+function acxSoCell(r,many){
+  const a=acxSoInc(r), adhoc=/^ad\s*hoc$/i.test(r.basis||"");
+  return `<div class="acx-sd">${many?`<div class="n">${escHtml(r.title||"Service")}</div>`:""}<div class="b"><b>${adhoc?"Ad hoc":"Retainer"}</b>${acxSoAway(r)?" · "+acxSoAway(r):""}</div>${a.length?`<ul>${a.map(x=>`<li${x[0]?' class="k"':""}>${escHtml(x[1])}</li>`).join("")}</ul>`:""}</div>`;
 }
 function acxSoState(r){ return r.renewal_due&&!r.running?"due":(r.upcoming&&!r.running?"soon":"on"); }
 function acxSoBrands(){
@@ -58319,19 +58342,21 @@ function acxSoHtml(){
     const cells=ACX_SOGRP.map(([k,l])=>{
       const rs=x.ss.filter(r=>acxSoGroup(r)===k);
       if(!rs.length) return X(k,`<span class="acx-na">·</span>`);
-      const r=rs[0], st=acxSoState(r), n=(r.posts||0)+(r.reels||0)+(r.stories||0), sh=acxSoShort(r.title);
-      const lab=st==="due"?"Renewal due":st==="soon"?"Starts "+engDate(r.starts_on):(k==="so_smm"&&n?n+" posts":(sh===l||k==="so_set"?l:sh));
-      const tip=escAttr(rs.map(y=>y.title).join(" · "));
-      return X(k,`<span class="acx-chips"><span class="acx-chip ${st==="due"?"due":st==="soon"?"soon":"g"}" title="${tip}">${escHtml(lab)}</span>${rs.length>1?`<span class="acx-chip" title="${escAttr(rs.slice(1).map(y=>y.title).join(" · "))}">+${rs.length-1}</span>`:""}</span>`);
+      const st=acxSoColState(rs), first=rs.find(r=>acxSoState(r)===st)||rs[0];
+      const lab=st==="due"?"Renewal due":st==="soon"?"Starts "+engDate(first.starts_on):"Active";
+      return X(k,`<span class="acx-chips"><span class="acx-chip ${st==="due"?"due":st==="soon"?"soon":"g"}" title="${escAttr(rs.map(y=>y.title).join(" · "))}">${escHtml(lab)}</span></span>`);
     }).join("");
-    return `<div class="acx-r acx-click${open?" isopen":""}" onclick="acxSoFlip('${escAttr(x.b)}')"><span class="acx-c acx-b">${escHtml((brands[x.b]||{}).name||"")}</span>${X("so_am",`<span class="acx-c acx-m" title="${escAttr(ams)}">${escHtml(ams)||'<span class="acx-na">—</span>'}</span>`)}${cells}<span class="acx-car">›</span></div>${open?`<div class="acx-soopen">${x.ss.map(acxSoBox).join("")}</div>`:""}`;
+    const det=open?`<div class="acx-r acx-sodet"><span></span>${X("so_am","<span></span>")}${ACX_SOGRP.map(([k])=>{ const rs=x.ss.filter(r=>acxSoGroup(r)===k); return X(k,`<span class="acx-sdc">${rs.map(r=>acxSoCell(r,rs.length>1||acxSoShortFull(r,k))).join("")}</span>`); }).join("")}<span></span></div>`:"";
+    return `<div class="acx-r acx-click${open?" isopen":""}" onclick="acxSoFlip('${escAttr(x.b)}')"><span class="acx-c acx-b">${escHtml((brands[x.b]||{}).name||"")}</span>${X("so_am",`<span class="acx-c acx-m" title="${escAttr(ams)}">${escHtml(ams)||'<span class="acx-na">—</span>'}</span>`)}${cells}<span class="acx-car">›</span></div>${det}`;
   }).join("");
   return `<div class="acx-list acx-so" ${ST}>${hd}${body}</div>`;
 }
+/* the name is shown in a detail cell when the column's title does not
+   already say which service this is */
+function acxSoShortFull(r,k){ return !({so_smm:/^social media marketing$/i,so_ads:/^performance marketing$/i,so_brd:/^branding & design$/i}[k]||/^$/).test(String(r.title||"")); }
 function acxSoDash(rs){
-  const run=rs.filter(r=>r.running), due=rs.filter(r=>acxSoState(r)==="due");
-  const B=new Set(run.map(r=>r.brand_id)).size, P=run.filter(r=>r.production).length;
-  return `<div class="fin-stats">${acxCard(B,"Brands","with a running contract")}${acxCard(run.length,"Services","running today")}${acxCard(due.length,"Renewal due","term ended, not closed",due.length?"rd":"")}${acxCard(P,"With production","shoots in the contract","bl")}</div>`;
+  const run=rs.filter(r=>r.running);
+  return `<div class="fin-stats acx-s6">${ACX_SOGRP.map(([k,l])=>{ const n=new Set(run.filter(r=>acxSoGroup(r)===k).map(r=>r.brand_id)).size; return acxCard(n,l,n===1?"active client":"active clients"); }).join("")}</div>`;
 }
 function acxSoGo(bid){
   try{ localStorage.setItem("cc.eng.open."+bid,"1"); }catch(e){}
@@ -58340,6 +58365,14 @@ function acxSoGo(bid){
 }
 document.head.insertAdjacentHTML("beforeend",`<style id="acx-119-5">
 .br-past{flex:none;font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 8px;background:#ECEAE6;color:#555;margin-left:8px}
+#acx-dash .fin-stats.acx-s6{grid-template-columns:repeat(6,minmax(0,1fr)) !important}
+@media(max-width:900px){#acx-dash .fin-stats.acx-s6{grid-template-columns:repeat(3,minmax(0,1fr)) !important}}
+.acx-list.acx-so .acx-r.acx-sodet{height:auto;min-height:0;align-items:start;padding-top:12px;padding-bottom:16px;background:#FAF9F6;cursor:default}
+.acx-list.acx-so .acx-r.acx-sodet>span{white-space:normal;overflow:visible}
+.acx-sd{font-size:12.5px;line-height:1.45;margin-bottom:12px}.acx-sd:last-child{margin-bottom:0}
+.acx-sd .n{font-weight:700;margin-bottom:2px}
+.acx-sd .b{color:var(--muted)}.acx-sd .b b{color:var(--text)}
+.acx-sd ul{margin:6px 0 0;padding-left:15px}.acx-sd li{margin:2px 0}.acx-sd li.k{font-weight:700}
 .acx-chips{display:flex;gap:5px;overflow:hidden;align-items:center;min-width:0}
 .acx-chip{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;border:1px solid var(--div);background:#fff;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
 .acx-chip.g{background:#E8F3EA;border-color:#CFE3D2;color:#1E6B2E}
