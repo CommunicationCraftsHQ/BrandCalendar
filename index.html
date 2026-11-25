@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.5 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.6 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -10287,7 +10287,7 @@ function brandRowHtml(k,b,indent){
     canEdit()?act("", "Who is on this brand", `openBrandPeople('${k}')`, "ti-users"):""
   ].join("");
   return `<div class="brow${activeBrand===k?" on":""}${mut?" bmuted":""}${hid?" bhid":""}"${indent?` style="padding-left:26px;"`:""} onclick="pickBrand('${k}')">
-        <span class="bnm">${escAttr(b.name)}</span>
+        <span class="bnm">${escAttr(b.name)}</span>${b.past?`<span class="br-past">Past</span>`:""}
         <span class="bct">${(b.posts||[]).length||""}</span>
         <span class="bacts">${acts}</span>
       </div>`;
@@ -14856,7 +14856,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.5 Cappadocia";
+const TOOL_VERSION="V119.6 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -15718,6 +15718,34 @@ async function sbAllRows(make,order){
   }
   return {data:out,error:null};
 }
+/* ══ V119.6 CAPPADOCIA · A PAST CLIENT THAT IS STILL HERE ═══════════
+   Chirag, 25 Nov: "even if a client is marked past client, in some
+   cases, I would want the client to continue appearing in marketing
+   calendar for a while" — and the same night he could not open the
+   Mobex lost client review, because marking Mobex past had taken the
+   brand out of this tool.
+
+   The switcher still wants only the brands we work with now. Two kinds
+   of past brand ride along with them: one the Client Centre was told to
+   keep here until a date (brands.calendar_until), and one with a lost
+   client review still collecting answers. Both carry `_past`, which is
+   the small "Past" tag on their row and nothing else.
+
+   The two extra reads may fail (the column arrives with a database
+   update) and the brands we work with now still load. */
+async function ccBrandRows(){
+  const base=await sbAllRows(()=>sb.from("brands").select("*").is("deleted_at",null).eq("status","active"));
+  if(base.error) return base;
+  const have=new Set(base.data.map(b=>b.id)), extra=[];
+  const today=new Date(Date.now()+5.5*3600e3).toISOString().slice(0,10);
+  try{ const k=await sb.from("brands").select("*").is("deleted_at",null).neq("status","active").gte("calendar_until",today);
+    if(!k.error) (k.data||[]).forEach(b=>{ if(!have.has(b.id)){ have.add(b.id); b._past=true; extra.push(b); } }); }catch(e){}
+  try{ const r=await sb.from("lost_reviews").select("brand_id").eq("status","collecting").is("deleted_at",null);
+    const ids=[...new Set(((r&&r.data)||[]).map(x=>x.brand_id))].filter(id=>id&&!have.has(id));
+    if(ids.length){ const b=await sb.from("brands").select("*").is("deleted_at",null).in("id",ids);
+      if(!b.error) (b.data||[]).forEach(x=>{ if(!have.has(x.id)){ have.add(x.id); x._past=true; extra.push(x); } }); } }catch(e){}
+  return {data:base.data.concat(extra),error:null};
+}
 async function loadAll(showToast){
   /* SPEED, 10 Oct — these eight used to run one after another, AFTER the
      calendar's own read below, so a refresh waited through ten rounds of
@@ -15736,7 +15764,7 @@ async function loadAll(showToast){
   const [inds,evts,brs,bevs,prefs,posts,briefs,social,monthPlans,monthItems]=await Promise.all([
     sb.from("industries").select("*").order("pos"),
     sbAllRows(()=>sb.from("events").select("*").is("deleted_at",null)),
-    sbAllRows(()=>sb.from("brands").select("*").is("deleted_at",null).eq("status","active")),  /* PORTO 3.6 — only the brands we work with now. Portfolio is the
+    ccBrandRows(),  /* PORTO 3.6 — only the brands we work with now. Portfolio is the
      record of every brand there has ever been (400 and counting);
      this switcher wants the 40-50 that are live. `status` is set by
      hand on the Portfolio Clients screen, never derived here.
@@ -15836,7 +15864,7 @@ function buildYearView(){
      Portfolio arrived here looking independent. ONE PLACE CONVERTS — the
      in-memory key stays `parent_id`, so the panel, brandChildren and the
      indent rules did not all have to move at once. */
-  brands[r.id]={name:r.name,parent_id:r.parent_brand_id||null,inds:r.inds||[],audience:r.audience||[],brief:r.brief||{},evIds:[],notes:{},posts:[],social:[],monthPlans:{}};});
+  brands[r.id]={name:r.name,parent_id:r.parent_brand_id||null,inds:r.inds||[],audience:r.audience||[],brief:r.brief||{},evIds:[],notes:{},posts:[],social:[],monthPlans:{},past:!!r._past};});
   (G.prefs||[]).forEach(p=>{const b=brands[p.brand_id]; if(b)(b.prefs=b.prefs||{})[p.event_id]={state:p.state,by:p.set_by||"",at:p.set_at||""};});
   G.bevs.forEach(r=>{if(brands[r.brand_id]&&!brands[r.brand_id].evIds.includes(r.id))brands[r.brand_id].evIds.push(r.id);});
   G.posts.forEach(p=>{if(brands[p.brand_id])brands[p.brand_id].posts.push({id:p.id,month:p.month,date:p.date,type:p.type,notes:p.notes,year:p.year||2026});});
@@ -19555,7 +19583,7 @@ async function rtRefetchCalendar(){
   try{
     const [evts,brs,bevs,prefs]=await Promise.all([
       sbAllRows(()=>sb.from("events").select("*").is("deleted_at",null)),
-      sbAllRows(()=>sb.from("brands").select("*").is("deleted_at",null).eq("status","active")),  /* PORTO 3.6 — only the brands we work with now. Portfolio is the
+      ccBrandRows(),  /* PORTO 3.6 — only the brands we work with now. Portfolio is the
      record of every brand there has ever been (400 and counting);
      this switcher wants the 40-50 that are live. `status` is set by
      hand on the Portfolio Clients screen, never derived here.
@@ -58210,7 +58238,7 @@ async function acxGoDelivery(bid,tid,did,vid){
    contract. Read through account_scope(), which carries no amounts and
    follows the Plan page's rules (running · renewal due · starts soon).
    A new section: the Super administrator only, until released. */
-function acxSoMay(){ return typeof isSuperAdmin==="function"&&isSuperAdmin(); }
+function acxSoMay(){ return acxMay(); }   /* V119.6 — released: "open to everyone who can see Ac Mgmt" (Chirag, 25 Nov) */
 ACX.so={ok:false,busy:false,err:"",rows:[],svc:""};
 async function acxSoLoad(){
   if(ACX.so.busy||ACX.so.ok) return;
@@ -58311,6 +58339,7 @@ function acxSoGo(bid){
   setTimeout(()=>{ const el=document.getElementById("bd-scope"); if(el) try{ el.scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){} },400);
 }
 document.head.insertAdjacentHTML("beforeend",`<style id="acx-119-5">
+.br-past{flex:none;font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 8px;background:#ECEAE6;color:#555;margin-left:8px}
 .acx-chips{display:flex;gap:5px;overflow:hidden;align-items:center;min-width:0}
 .acx-chip{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;border:1px solid var(--div);background:#fff;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
 .acx-chip.g{background:#E8F3EA;border-color:#CFE3D2;color:#1E6B2E}
