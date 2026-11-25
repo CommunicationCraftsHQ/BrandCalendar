@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.9 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.10 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14856,7 +14856,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.9 Cappadocia";
+const TOOL_VERSION="V119.10 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -58621,6 +58621,114 @@ async function mdbIgImport(){
       A.busy=false; closeM("mdb-add"); MDB.add=null;
       if(view==="mood") mdbRefresh(); else mdbGo();
     }catch(e){ A.busy=false; A.err=String(e&&e.message||e); mdbAddDraw(); }
+  };
+})();
+</script>
+
+<script id="mbg-move">
+/* ══ V119.10 CAPPADOCIA · MOVE A REFERENCE TO ANOTHER STUDIO BOARD ═══════
+   Chirag, 26 Nov 2026, with 341 references just landed on "Ads": "How to
+   move a content into a different board". There was Send to brand (a
+   link, shown in both places) and nothing between two Studio boards.
+   Move to board changes where the reference lives. Its picture stays
+   where it is in storage (any staff member can read it), its brand links
+   stay, and its tags follow by NAME: a tag the other board lacks is made
+   there. Select several, or use the line inside an opened picture. */
+function mbgMoveOpen(ids){
+  ids=ids||(MDB.sel?[...MDB.sel]:[]); ids=ids.filter(id=>{ const x=MDB.items.find(i=>i.id===id); return x&&!x._link; });
+  if(!ids.length||!mbgOn()) return;
+  MBG.move={ids,pick:null,q:"",busy:false};
+  MDB.pop=null;
+  if(!document.getElementById("ov-mbg-move")){
+    document.body.insertAdjacentHTML("beforeend",`<div class="overlay" id="ov-mbg-move" style="z-index:950" onclick="if(event.target===this)mbgMoveClose()">
+      <div class="modal" style="max-width:440px"><div class="modal-top"><div class="modal-title" id="mbg-move-t"></div>
+        <button class="modal-x" onclick="mbgMoveClose()">✕</button></div>
+      <div class="modal-body" id="mbg-move-b"></div>
+      <div class="modal-foot" id="mbg-move-f"></div></div></div>`);
+  }
+  mbgMoveDraw(); openM("mbg-move");
+  setTimeout(()=>{ const i=document.getElementById("mbg-move-q"); if(i) i.focus(); },60);
+}
+function mbgMoveClose(){ if(MBG.move&&MBG.move.busy) return; closeM("mbg-move"); MBG.move=null; }
+function mbgMoveDraw(){
+  const S=MBG.move; if(!S) return;
+  const n=S.ids.length, q=S.q.trim().toLowerCase();
+  document.getElementById("mbg-move-t").textContent=`Move ${n} reference${n===1?"":"s"} to a board`;
+  const list=mbgSorted().filter(b=>b.id!==MDB.board&&(!q||String(b.name).toLowerCase().indexOf(q)>-1));
+  const rows=list.map(b=>`<div class="brfb-opt${S.pick===b.id?" on":""}" onclick="MBG.move.pick='${escAttr(b.id)}';mbgMoveDraw()"><span class="bx">${S.pick===b.id?"✓":""}</span>
+      <span class="nm">${escHtml(b.name)}</span><span class="ct">${b.is_public?"Public":"Private"}</span></div>`).join("")||'<div class="brfb-none">No other board</div>';
+  const keep=document.getElementById("mbg-move-q"), listEl=document.getElementById("mbg-move-l");
+  if(keep&&listEl) listEl.innerHTML=rows;
+  else document.getElementById("mbg-move-b").innerHTML=`<input class="fi" id="mbg-move-q" placeholder="Find a board" value="${escAttr(S.q)}" oninput="MBG.move.q=this.value;mbgMoveDraw()">
+    <div class="mbg-brl" id="mbg-move-l">${rows}</div>`;
+  const b=S.pick&&mbgBoard(S.pick);
+  document.getElementById("mbg-move-f").innerHTML=`<button class="btn btn-s" onclick="mbgMoveClose()">Cancel</button>
+    <button class="btn btn-p" ${b&&!S.busy?"":"disabled"} onclick="mbgMoveGo()">${S.busy?"Moving…":"Move"}</button>`;
+}
+async function mbgMoveGo(){
+  const S=MBG.move; if(!S||S.busy||!S.pick) return;
+  const to=mbgBoard(S.pick); if(!to) return;
+  S.busy=true; mbgMoveDraw();
+  try{
+    /* the other board's tags, by name */
+    const t=await sb.from("mood_tags").select("*").eq("board_id",to.id).is("deleted_at",null);
+    if(t.error) throw new Error(t.error.message);
+    const there={}; (t.data||[]).forEach(x=>{ there[String(x.name).toLowerCase()]=x.id; });
+    const items=S.ids.map(id=>MDB.items.find(i=>i.id===id)).filter(Boolean);
+    const need=new Map();
+    items.forEach(x=>(x.tag_ids||[]).forEach(id=>{ const g=mdbTag(id); if(g&&!there[String(g.name).toLowerCase()]) need.set(String(g.name).toLowerCase(),g.name); }));
+    if(need.size){
+      const rows=[...need.values()].map(name=>({id:crypto.randomUUID(),name,created_by:ME.id||null,brand_id:null,board_id:to.id}));
+      const r=await sb.from("mood_tags").insert(rows).select("*");
+      if(r.error) throw new Error(r.error.message);
+      rows.forEach(x=>{ there[x.name.toLowerCase()]=x.id; });
+    }
+    /* one write per distinct set of tags */
+    const groups=new Map();
+    items.forEach(x=>{
+      const ids=[...new Set((x.tag_ids||[]).map(id=>{ const g=mdbTag(id); return g?there[String(g.name).toLowerCase()]:null; }).filter(Boolean))];
+      const k=ids.slice().sort().join(",");
+      if(!groups.has(k)) groups.set(k,{ids,items:[]});
+      groups.get(k).items.push(x.id);
+    });
+    const now=new Date().toISOString();
+    for(const g of groups.values()){
+      for(let i=0;i<g.items.length;i+=80){
+        const r=await sb.from("mood_items").update({board_id:to.id,brand_id:null,tag_ids:g.ids,updated_at:now}).in("id",g.items.slice(i,i+80));
+        if(r.error) throw new Error(r.error.message);
+      }
+    }
+    const gone=new Set(items.map(x=>x.id));
+    MDB.items=MDB.items.filter(x=>!gone.has(x.id));
+    if(MDB.open&&gone.has(MDB.open)){ try{ mdbClose(true); }catch(e){ MDB.open=null; } }
+    S.busy=false; closeM("mbg-move"); MBG.move=null;
+    if(MDB.sel){ MDB.sel=null; }
+    toast(`${gone.size} moved to “${escHtml(to.name)}”`);
+    try{ mdbRefresh(); }catch(e){}
+    try{ buildMoodSidebar(); }catch(e){}
+  }catch(e){ S.busy=false; toast("Not moved — "+escHtml(String(e&&e.message||e)),"err"); mbgMoveDraw(); }
+}
+(function(){
+  const baseSel=mdbSelBar;
+  mdbSelBar=function(){
+    const h=baseSel.apply(this,arguments);
+    if(!mbgOn()||MBG.list.length<2) return h;
+    const dis=MDB.sel&&MDB.sel.size?"":' style="opacity:.45;pointer-events:none"';
+    return h.replace(/(<span class="brfb-w"[^>]*><button class="btn btn-s btn-sm" onclick="mbgSendOpen\(\)")/,
+      `<span class="brfb-w"${dis}><button class="btn btn-s btn-sm" onclick="mbgMoveOpen()"><i class="ti ti-arrows-right-left"></i> Move to board</button></span>$1`);
+  };
+  const baseDw=mdbDrawer;
+  mdbDrawer=function(){
+    const out=baseDw.apply(this,arguments);
+    try{
+      const dw=document.getElementById("mdb-dw"); const x=MDB.items.find(i=>i.id===MDB.open);
+      if(dw&&x&&!x._link&&mbgOn()&&MBG.list.length>1){
+        const tags=dw.querySelector(".mbg-place .mdb-tags");
+        if(tags&&!tags.querySelector(".mbg-mv")) tags.insertAdjacentHTML("beforeend",
+          `<button class="mdb-addtag mbg-mv" style="width:auto;cursor:pointer" onclick="mbgMoveOpen(['${x.id}'])">+ Move to board</button>`);
+      }
+    }catch(e){}
+    return out;
   };
 })();
 </script>
