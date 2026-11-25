@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.7 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.8 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14856,7 +14856,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.7 Cappadocia";
+const TOOL_VERSION="V119.8 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -58288,17 +58288,34 @@ function acxSoAway(r){
   const say=d<=0?"today":d<60?"in "+d+(d===1?" day":" days"):"in "+Math.round(d/30.4)+" months";
   return `renews ${say} · ${escHtml(engDate(r.term_end))}`;
 }
+/* V119.8 (mockup 09) — row 1 the basis, row 2 the renewal in one line,
+   row 3 the heading (the service's own title where the column does not
+   already say it), then the list: every column starts each on the same row */
+function acxSoWhen(r){
+  const st=acxSoState(r), adhoc=/^ad\s*hoc$/i.test(r.basis||"");
+  if(st==="due") return ["due","Due since "+engDate(r.term_end)];
+  if(st==="soon") return ["soon","Starts "+engDate(r.starts_on)];
+  if(adhoc||!r.term_end) return ["",r.starts_on?"Started "+engDate(r.starts_on):""];
+  return ["","Renews "+engDate(r.term_end)];
+}
 function acxSoCell(r,many){
-  const a=acxSoInc(r), adhoc=/^ad\s*hoc$/i.test(r.basis||"");
-  return `<div class="acx-sd">${many?`<div class="n">${escHtml(r.title||"Service")}</div>`:""}<div class="b"><b>${adhoc?"Ad hoc":"Retainer"}</b>${acxSoAway(r)?" · "+acxSoAway(r):""}</div>${a.length?`<ul>${a.map(x=>`<li${x[0]?' class="k"':""}>${escHtml(x[1])}</li>`).join("")}</ul>`:""}</div>`;
+  const a=acxSoInc(r), adhoc=/^ad\s*hoc$/i.test(r.basis||""), w=acxSoWhen(r);
+  const head=many?`<div class="h t" title="${escAttr(r.title||"Service")}">${escHtml(acxSoShort(r.title))}</div>`:(a.length?`<div class="h">Deliverables</div>`:"");
+  return `<div class="acx-sd"><div class="l1"><span class="acx-bs${adhoc?" adhoc":""}">${adhoc?"Ad hoc":"Retainer"}</span></div><div class="l2${w[0]?" "+w[0]:""}" title="${escAttr(w[1])}">${escHtml(w[1])||"&nbsp;"}</div>${head}${a.length?`<ul>${a.map(x=>`<li${x[0]?' class="k"':""}>${escHtml(x[1])}</li>`).join("")}</ul>`:""}</div>`;
 }
 function acxSoState(r){ return r.renewal_due&&!r.running?"due":(r.upcoming&&!r.running?"soon":"on"); }
+/* V119.8 — a lapsed line stops reading "Renewal due" once the same
+   service is running or booked again on a later contract (Amar Cars:
+   the Mar–Aug paper lapsed, the Nov renewal is in). */
+function acxSoLive(ss){
+  return ss.filter(r=>!(acxSoState(r)==="due"&&ss.some(o=>o!==r&&o.service_id&&o.service_id===r.service_id&&(o.running||o.upcoming)&&String(o.starts_on||"")>String(r.starts_on||""))));
+}
 function acxSoBrands(){
   const S=acxScope(), q=AC.q.trim().toLowerCase(), by={}, inS=new Set(acInScope());
   const nm=b=>String((brands[b]||{}).name||"");
   ACX.so.rows.forEach(r=>{ if(brands[r.brand_id]) (by[r.brand_id]=by[r.brand_id]||[]).push(r); });
   return Object.keys(by).filter(b=>S.has(b)||(q&&inS.has(b)&&by[b].some(r=>String(r.title||"").toLowerCase().includes(q))))
-    .map(b=>({b,ss:by[b].slice().sort((x,y)=>(x.pos-y.pos)||String(x.title).localeCompare(String(y.title)))}))
+    .map(b=>({b,ss:acxSoLive(by[b]).sort((x,y)=>(x.pos-y.pos)||String(x.title).localeCompare(String(y.title)))}))
     .sort((x,y)=>nm(x.b).localeCompare(nm(y.b),undefined,{sensitivity:"base"}));
 }
 function acxSoRows(){ return acxSoBrands().reduce((a,x)=>a.concat(x.ss),[]); }
@@ -58369,10 +58386,16 @@ document.head.insertAdjacentHTML("beforeend",`<style id="acx-119-5">
 @media(max-width:900px){#acx-dash .fin-stats.acx-s6{grid-template-columns:repeat(3,minmax(0,1fr)) !important}}
 .acx-list.acx-so .acx-r.acx-sodet{height:auto;min-height:0;align-items:start;padding-top:12px;padding-bottom:16px;background:#FAF9F6;cursor:default}
 .acx-list.acx-so .acx-r.acx-sodet>span{white-space:normal;overflow:visible}
-.acx-sd{font-size:12.5px;line-height:1.45;margin-bottom:12px}.acx-sd:last-child{margin-bottom:0}
-.acx-sd .n{font-weight:700;margin-bottom:2px}
-.acx-sd .b{color:var(--muted)}.acx-sd .b b{color:var(--text)}
-.acx-sd ul{margin:6px 0 0;padding-left:15px}.acx-sd li{margin:2px 0}.acx-sd li.k{font-weight:700}
+.acx-sd{font-size:12.5px;line-height:1.45;min-width:0}
+.acx-sd+.acx-sd{margin-top:14px;padding-top:12px;border-top:1px dashed var(--div)}
+.acx-sd .l1{height:22px;display:flex;align-items:center}
+.acx-bs{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:5px;font-size:11px;font-weight:800;background:#0D0D0D;color:#fff;white-space:nowrap}
+.acx-bs.adhoc{background:#fff;color:#0D0D0D;border:1.5px solid #0D0D0D}
+.acx-sd .l2{height:22px;line-height:22px;margin-top:4px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acx-sd .l2.due{color:var(--acc)}.acx-sd .l2.soon{color:#8a5a0a}
+.acx-sd .h{height:20px;line-height:20px;margin-top:10px;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--subtle);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acx-sd .h.t{font-size:12.5px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--text)}
+.acx-sd ul{margin:4px 0 0;padding-left:15px}.acx-sd li{margin:2px 0}.acx-sd li.k{font-weight:700}
 .acx-chips{display:flex;gap:5px;overflow:hidden;align-items:center;min-width:0}
 .acx-chip{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;border:1px solid var(--div);background:#fff;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
 .acx-chip.g{background:#E8F3EA;border-color:#CFE3D2;color:#1E6B2E}
@@ -58433,7 +58456,7 @@ function acxPickWin(k){ ACX.win=k; try{ localStorage.setItem("cc-acx-win",k); }c
     if(((t==="dlv"||t==="prod")&&acxMay())||(t==="dlb"&&acxSoMay())){ AC.tab=t; try{ localStorage.setItem("cc-ac-tab",t); }catch(e){} acPopClose(); acMenuClose(); acRefresh(); return; }
     return baseTab.apply(this,arguments);
   };
-  try{ const t=localStorage.getItem("cc-ac-tab"); if((t==="dlv"||t==="prod"||t==="dlb")) AC.tab=t; }catch(e){}
+  try{ const t=localStorage.getItem("cc-ac-tab"); if((t==="dlv"||t==="prod"||t==="dlb")) AC.tab=t; else if(!t) AC.tab="dlb"; }catch(e){}
   const baseBar=acBar;
   acBar=function(){
     if((AC.tab==="dlv"||AC.tab==="prod")&&!acxMay()) AC.tab="health";
@@ -58442,7 +58465,9 @@ function acxPickWin(k){ ACX.win=k; try{ localStorage.setItem("cc-acx-win",k); }c
     const bar=document.getElementById("ac-bar"); if(!bar||!acxMay()) return;
     const lens=bar.querySelector(".ac-tabs");
     if(lens){
-      lens.insertAdjacentHTML("beforeend",`${acxSoMay()?`<span class="${AC.tab==="dlb"?"on":""}" data-tab="dlb" onclick="acTab('dlb')"><i class="ti ti-file-certificate"></i>Deliverables</span>`:""}<span class="${AC.tab==="dlv"?"on":""}" data-tab="dlv" onclick="acTab('dlv')"><i class="ti ti-package"></i>Deliveries</span><span class="${AC.tab==="prod"?"on":""}" data-tab="prod" onclick="acTab('prod')"><i class="ti ti-video"></i>Productions</span>`);
+      /* V119.8 — the tab is called Clients and comes first */
+      if(acxSoMay()) lens.insertAdjacentHTML("afterbegin",`<span class="${AC.tab==="dlb"?"on":""}" data-tab="dlb" onclick="acTab('dlb')"><i class="ti ti-file-certificate"></i>Clients</span>`);
+      lens.insertAdjacentHTML("beforeend",`<span class="${AC.tab==="dlv"?"on":""}" data-tab="dlv" onclick="acTab('dlv')"><i class="ti ti-package"></i>Deliveries</span><span class="${AC.tab==="prod"?"on":""}" data-tab="prod" onclick="acTab('prod')"><i class="ti ti-video"></i>Productions</span>`);
       if(AC.tab==="dlv"||AC.tab==="prod"||AC.tab==="dlb") lens.querySelectorAll("span[data-tab]").forEach(s=>s.classList.toggle("on",s.dataset.tab===AC.tab));
     }
     if(AC.tab==="dlv"||AC.tab==="prod"||AC.tab==="dlb"){
