@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.8 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.9 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14856,7 +14856,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.8 Cappadocia";
+const TOOL_VERSION="V119.9 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -58513,6 +58513,116 @@ function acxCntHtml(){
   if(AC.tab==="dlv") return `<b>${acxDlRows().length}</b> deliveries`;
   return `<b>${ACX.pr.ok?acxPrBrands().length:0}</b> brands`;
 }
+</script>
+
+<script id="mdb-igfile">
+/* ══ V119.9 CAPPADOCIA · AN INSTAGRAM SAVED FILE ON A MOOD BOARD ═════════
+   Chirag, 26 Nov 2026: two saved collections (Ads, Reel Reference) as
+   files — one card per reference, its Instagram link and its thumbnail
+   inside the file. Instagram refuses its pictures to a server more often
+   than not, so the file's own thumbnail is the one kept: Add › Instagram
+   file reads the file here, in the browser, saves every thumbnail under
+   the board and keeps the link. A reference already on the board is
+   skipped, so the same file can be dropped twice. Each one is tagged
+   Reel or Photo, plus whatever is typed in Tags. */
+const MDB_IG_RE=/instagram\.com\/(?:([^\/?#]+)\/)?(reels?|p|tv)\/([A-Za-z0-9_-]+)/i;
+function mdbIgCode(u){ const m=String(u||"").match(MDB_IG_RE); return m?m[3]:""; }
+async function mdbIgFile(file){
+  const A=MDB.add; if(!A||!file||A.busy) return;
+  A.err=""; A.ig=null; A.of=0; A.done=0; A.igRead=true; mdbAddDraw();
+  try{
+    const doc=new DOMParser().parseFromString(await file.text(),"text/html");
+    const out=[], seen=new Set();
+    doc.querySelectorAll("a[href*='instagram.com/']").forEach(a=>{
+      const m=String(a.getAttribute("href")||"").match(MDB_IG_RE); if(!m||seen.has(m[3])) return;
+      const card=a.closest(".card")||a.parentElement;
+      const img=card&&card.querySelector("img[src^='data:image/']");
+      const lab=card&&card.querySelector(".meta span");
+      seen.add(m[3]);
+      out.push({code:m[3],user:/^(reels?|p|tv|explore|stories)$/i.test(m[1]||"")?"":(m[1]||""),
+        reel:/^(reels?|tv)$/i.test(m[2])||/reel|video/i.test(lab?lab.textContent:""),img:img?img.getAttribute("src"):""});
+    });
+    if(!out.length) throw new Error("No Instagram links found in this file.");
+    A.ig=out;
+  }catch(e){ A.err=String(e&&e.message||e); A.ig=null; }
+  A.igRead=false; mdbAddDraw();
+}
+function mdbIgBlob(dataUri){
+  const i=dataUri.indexOf(","), b=atob(dataUri.slice(i+1)), u=new Uint8Array(b.length);
+  for(let k=0;k<b.length;k++) u[k]=b.charCodeAt(k);
+  return new Blob([u],{type:(dataUri.slice(5,i).split(";")[0])||"image/jpeg"});
+}
+async function mdbIgImport(){
+  const A=MDB.add, list=A.ig; A.of=list.length; A.done=0;
+  let added=0, skipped=0, failed=0;
+  const have=new Set(MDB.items.map(x=>mdbIgCode(x.source_url)||mdbIgCode(x.pin_url)).filter(Boolean));
+  const typed=String(A.tags||"").split(",");
+  const tReel=list.some(r=>r.reel)?await mdbTagIdsFor(["Reel",...typed]):[];
+  const tPhoto=list.some(r=>!r.reel)?await mdbTagIdsFor(["Photo",...typed]):[];
+  const t0=Date.now(); let next=0;
+  const worker=async()=>{
+    while(next<list.length){
+      const n=next++, r=list[n];
+      if(have.has(r.code)){ skipped++; A.done++; mdbAddDraw(); continue; }
+      have.add(r.code);
+      try{
+        let tp="", w=null, h=null;
+        if(r.img){
+          const blob=mdbIgBlob(r.img);
+          try{ const bm=await createImageBitmap(blob); w=bm.width; h=bm.height; if(bm.close) bm.close(); }catch(e){}
+          const p=await putObject(mediaPath(activeBrand,"mood","ig-"+r.code,"thumb.jpg"),blob,blob.type||"image/jpeg");
+          if(!p.path) throw new Error(p.error||"The picture did not upload");
+          tp=p.path;
+        }
+        const src="https://www.instagram.com/p/"+r.code+"/";
+        const row=mdbRowFrom({kind:r.reel?"video":"image",title:(r.user?"@"+r.user+" · ":"")+(r.reel?"Reel":"Photo"),
+          source_url:src,pin_url:"",domain:"instagram.com",provider:"instagram",embed_url:r.reel?src+"embed/":"",
+          thumb_path:tp,thumb_src:"",width:w,height:h},r.reel?tReel:tPhoto);
+        /* the file lists the newest saved first; the board shows the newest added first */
+        row.created_at=new Date(t0-n*1000).toISOString();
+        await mdbInsert(row); added++;
+      }catch(e){ failed++; have.delete(r.code); A.igWhy=String(e&&e.message||e); }
+      A.done++; mdbAddDraw();
+    }
+  };
+  await Promise.all([worker(),worker(),worker(),worker()]);
+  MDB.items.sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||"")));
+  toast(`${added} added${skipped?` · ${skipped} already on the board`:""}${failed?` · ${failed} did not save${A.igWhy?" — "+escHtml(A.igWhy):""}`:""}`,failed?"err":"");
+}
+(function(){
+  const baseDraw=mdbAddDraw;
+  mdbAddDraw=function(){
+    const out=baseDraw.apply(this,arguments);
+    const A=MDB.add, body=document.getElementById("mdb-add-b"), foot=document.getElementById("mdb-add-f");
+    if(!A||!body) return out;
+    const tabs=body.querySelector(".mdb-tabs");
+    if(tabs&&!tabs.querySelector("[data-ig]")) tabs.insertAdjacentHTML("beforeend",
+      `<button data-ig="1" class="${A.tab===3?"on":""}" onclick="MDB.add.tab=3;MDB.add.err='';mdbAddDraw()"><i class="ti ti-brand-instagram"></i> Instagram file</button>`);
+    if(A.tab!==3) return out;
+    const drop=body.querySelector(".mdb-drop");
+    body.querySelectorAll(".mdb-files").forEach(e=>e.remove());
+    const n=A.ig?A.ig.length:0;
+    const html=`<label class="mdb-drop"><input type="file" accept=".html,.htm" style="display:none" onchange="mdbIgFile(this.files[0])">
+        <i class="ti ti-brand-instagram"></i>Drop the Instagram saved file here</label>
+      ${A.igRead?`<div class="mdb-files">Reading the file…</div>`:A.ig?`<div class="mdb-files">${n} reference${n===1?"":"s"} in the file${A.of?` · ${A.done} of ${A.of} done`:""}</div>`:""}`;
+    if(drop) drop.outerHTML=html;
+    if(foot) foot.innerHTML=`<button class="btn btn-s" onclick="mdbAddClose()">Cancel</button>
+      <button class="btn btn-p" ${n&&!A.busy&&!A.igRead?"":"disabled"} onclick="mdbAddGo()">${A.busy?"Adding…":"Import"}</button>`;
+    return out;
+  };
+  const baseGo=mdbAddGo;
+  mdbAddGo=async function(){
+    const A=MDB.add;
+    if(!A||A.tab!==3) return baseGo.apply(this,arguments);
+    if(A.busy||!A.ig||!A.ig.length) return;
+    A.busy=true; A.err=""; mdbAddDraw();
+    try{
+      await mdbIgImport();
+      A.busy=false; closeM("mdb-add"); MDB.add=null;
+      if(view==="mood") mdbRefresh(); else mdbGo();
+    }catch(e){ A.busy=false; A.err=String(e&&e.message||e); mdbAddDraw(); }
+  };
+})();
 </script>
 
 </body>
