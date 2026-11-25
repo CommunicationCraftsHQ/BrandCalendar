@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.10 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.11 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14856,7 +14856,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.10 Cappadocia";
+const TOOL_VERSION="V119.11 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -41424,7 +41424,7 @@ function mdbBar(){
     <span class="fb-end">
       ${MDB.ok&&MDB.items.length?`<button class="fb-add" onclick="mdbSelect(true)" title="Select several pictures"><i class="ti ti-checkbox"></i>Select</button>`:""}
       <span id="mdb-cnt">${mdbCntHtml(n)}</span>
-      ${fltSortHtml("mood",[["newest","Newest first"],["oldest","Oldest first"]],MDB.sort,"newest","mdbPickSort")}
+      ${fltSortHtml("mood",mdbSorts(),MDB.sort,mdbSortDflt(),"mdbPickSort")}
     </span>`;
 }
 function mdbCntHtml(n){ return fltCountHtml(n,MDB.items.length,"reference"); }
@@ -58731,6 +58731,124 @@ async function mbgMoveGo(){
     return out;
   };
 })();
+</script>
+
+<script id="mdb-order">
+/* ══ V119.11 CAPPADOCIA · A BOARD IN YOUR ORDER ══════════════════════════
+   Chirag, 26 Nov 2026 (mockup "Mood board drag to rearrange" 01): "Is
+   there a way to move content around within a board?" The board only
+   knew newest-first. Now Sort has "Your order": drag a picture onto
+   another and it lands just before it, for everyone who opens the board.
+   On a long board, Select › Move to top. The order is ONE row per board
+   in mood_orders (a list of picture ids), so a drag is one write and a
+   linked picture on a brand's board can sit anywhere too. A picture not
+   in the list yet (just added) shows first. Until the table exists the
+   choice is simply not offered. */
+MDB.order=null; MDB.orderOk=false; MDB.orderFor=null; MDB.sortPicked=false; MDB.dragId=null;
+function mdbHomeKey(k){ k=String(k==null?MDB.bid||"":k); return !k?"":k.indexOf("board:")===0?k:"brand:"+k; }
+function mdbSorts(){ return (MDB.orderOk?[["mine","Your order"]]:[]).concat([["newest","Newest first"],["oldest","Oldest first"]]); }
+function mdbSortDflt(){ return MDB.orderOk&&MDB.order&&MDB.order.length?"mine":"newest"; }
+function mdbMayOrder(){ return !!MDB.orderOk&&(typeof canEdit!=="function"||canEdit()); }
+function mdbMine(list){
+  const rank=new Map(); (MDB.order||[]).forEach((id,i)=>rank.set(id,i));
+  return list.slice().sort((a,b)=>{
+    const ra=rank.has(a.id)?rank.get(a.id):-1, rb=rank.has(b.id)?rank.get(b.id):-1;
+    return ra!==rb?ra-rb:String(b.created_at||"").localeCompare(String(a.created_at||""));
+  });
+}
+async function mdbOrderSave(ids){
+  const was=MDB.order, hk=mdbHomeKey(); if(!hk) return false;
+  MDB.order=ids; mdbGrid();
+  const isB=hk.indexOf("board:")===0;
+  const row={home_key:hk,board_id:isB?hk.slice(6):null,brand_id:isB?null:hk.slice(6),ids,updated_by:ME.id||null,updated_at:new Date().toISOString()};
+  let err="";
+  try{ const r=await sb.from("mood_orders").upsert([row],{onConflict:"home_key"}); if(r.error) err=r.error.message; }catch(e){ err=String(e&&e.message||e); }
+  if(err){ MDB.order=was; mdbGrid(); toast("The order was not saved — "+escHtml(err),"err"); return false; }
+  return true;
+}
+async function mdbOrderTop(){
+  if(!MDB.sel||!MDB.sel.size||!mdbMayOrder()) return;
+  const cur=mdbMine(MDB.items).map(x=>x.id), up=cur.filter(id=>MDB.sel.has(id)); if(!up.length) return;
+  MDB.sort="mine"; MDB.sortPicked=true; MDB.sel=new Set();
+  const ok=await mdbOrderSave(up.concat(cur.filter(id=>up.indexOf(id)<0)));
+  mdbBar(); if(ok) toast(`${up.length} moved to the top`);
+}
+(function(){
+  const baseVis=mdbVisible;
+  mdbVisible=function(){ const r=baseVis.apply(this,arguments); return MDB.sort==="mine"?mdbMine(r):r; };
+  const basePick=mdbPickSort;
+  mdbPickSort=function(){ MDB.sortPicked=true; return basePick.apply(this,arguments); };
+  const baseLoad=mdbLoad;
+  mdbLoad=async function(key){
+    const hk=mdbHomeKey(key);
+    let pr=null;
+    try{ if(hk) pr=sb.from("mood_orders").select("ids").eq("home_key",hk).maybeSingle(); }catch(e){ pr=null; }
+    const out=await baseLoad.apply(this,arguments);
+    try{
+      const r=pr?await pr:null;
+      if(MDB.bid!==key) return out;
+      MDB.orderOk=!!r&&!r.error;
+      MDB.order=(r&&r.data&&Array.isArray(r.data.ids))?r.data.ids:[];
+      if(MDB.orderFor!==hk){ MDB.orderFor=hk; MDB.sortPicked=false; }
+    }catch(e){ MDB.orderOk=false; MDB.order=[]; }
+    const want=!MDB.sortPicked?mdbSortDflt():(MDB.sort==="mine"&&!MDB.orderOk?"newest":MDB.sort);
+    if(want!==MDB.sort) MDB.sort=want;
+    try{ if(view==="mood"&&MDB.ok){ mdbBar(); mdbGrid(); } }catch(e){}
+    return out;
+  };
+  const baseGrid=mdbGrid;
+  mdbGrid=function(){
+    const out=baseGrid.apply(this,arguments);
+    try{
+      const g=document.getElementById("mdb-grid"); if(!g) return out;
+      const can=MDB.sort==="mine"&&!MDB.sel&&mdbMayOrder()&&!(window.matchMedia&&matchMedia("(pointer:coarse)").matches);
+      g.classList.toggle("mdb-drag-on",can);
+      if(can){
+        g.querySelectorAll(".mdb-tile").forEach(t=>t.setAttribute("draggable","true"));
+        g.querySelectorAll(".mdb-tile img,.mdb-tile a").forEach(e=>e.setAttribute("draggable","false"));
+      }
+      if(!g.dataset.ord){
+        g.dataset.ord="1";
+        const clear=()=>g.querySelectorAll(".mdb-over,.mdb-dragging").forEach(x=>x.classList.remove("mdb-over","mdb-dragging"));
+        g.addEventListener("dragstart",e=>{
+          const t=e.target.closest&&e.target.closest(".mdb-tile");
+          if(!t||!g.classList.contains("mdb-drag-on")) return;
+          MDB.dragId=t.dataset.item; t.classList.add("mdb-dragging");
+          try{ e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",MDB.dragId); }catch(x){}
+        });
+        g.addEventListener("dragover",e=>{
+          if(!MDB.dragId) return; e.preventDefault(); e.stopPropagation();
+          const t=e.target.closest&&e.target.closest(".mdb-tile");
+          g.querySelectorAll(".mdb-over").forEach(x=>x.classList.remove("mdb-over"));
+          if(t&&t.dataset.item!==MDB.dragId) t.classList.add("mdb-over");
+        });
+        g.addEventListener("drop",e=>{
+          if(!MDB.dragId) return; e.preventDefault(); e.stopPropagation();
+          const t=e.target.closest&&e.target.closest(".mdb-tile"), from=MDB.dragId; MDB.dragId=null; clear();
+          if(!t||t.dataset.item===from) return;
+          const ids=mdbMine(MDB.items).map(x=>x.id).filter(id=>id!==from), at=ids.indexOf(t.dataset.item);
+          ids.splice(at<0?ids.length:at,0,from);
+          mdbOrderSave(ids);
+        });
+        g.addEventListener("dragend",()=>{ MDB.dragId=null; clear(); });
+      }
+    }catch(e){}
+    return out;
+  };
+  const baseSel=mdbSelBar;
+  mdbSelBar=function(){
+    const h=baseSel.apply(this,arguments);
+    if(!mdbMayOrder()) return h;
+    const dis=MDB.sel&&MDB.sel.size?"":' style="opacity:.45;pointer-events:none"';
+    return h.replace(/(<span class="brfb-w"[^>]*><button class="btn btn-s btn-sm" onclick="mdbPop\(event,'addtag'\)")/,
+      `<span class="brfb-w"${dis}><button class="btn btn-s btn-sm" onclick="mdbOrderTop()"><i class="ti ti-arrow-bar-to-up"></i> Move to top</button></span>$1`);
+  };
+})();
+document.head.insertAdjacentHTML("beforeend",`<style id="mdb-order-css">
+.mdb-drag-on .mdb-tile{cursor:grab}
+.mdb-tile.mdb-dragging{opacity:.35}
+.mdb-tile.mdb-over{box-shadow:-5px 0 0 0 var(--acc)}
+</style>`);
 </script>
 
 </body>
