@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.12 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.13 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14856,7 +14856,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.12 Cappadocia";
+const TOOL_VERSION="V119.13 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -43607,8 +43607,8 @@ function acRowHtml(bid){
     if(k==="ams"){
       const ams=acAMsOf(bid);
       const mine=ams.some(t=>t.user_id===ME.id);
-      const who=ams.map(t=>{ const p=acPerson(t.user_id);
-        return `<span class="ac-who${t.user_id===ME.id?" me":""}"><span class="e">${acEmoji(p)}</span>${escHtml(p?p.name:"Someone")}</span>`; }).join("");
+      const who=ams.slice(0,1).map(t=>{ const p=acPerson(t.user_id);
+        return `<span class="ac-who${t.user_id===ME.id?" me":""}"><span class="e">${acEmoji(p)}</span>${escHtml(p?p.name:"Someone")}</span>`; }).join("")+(ams.length>1?`<b class="acx-more" title="${escAttr(ams.map(t=>acName(t.user_id)).join(", "))}">+${ams.length-1}</b>`:"");
       const claim=(!mine&&acIsAM()&&AC.migr)?`<button class="ac-claim" onclick="event.stopPropagation();acClaim('${bid}')"><i class="ti ti-hand-grab"></i>Claim</button>`:"";
       const mm=AC.migr&&canManagePeople(bid);
       return `<span class="ac-ams${mm?" may":""}" ${mm?`onclick="acMenuOpen(event,'${bid}','ams')"`:""}>${who}${claim}${mm&&!ams.length&&!claim?`<span class="ac-pick">Add</span>`:""}${mm?`<b class="brl-sgcar">▾</b>`:""}</span>`;
@@ -58178,7 +58178,7 @@ function acxPrHtml(){
   const nowYM=new Date().getFullYear()+"-"+String(new Date().getMonth()+1).padStart(2,"0");
   const labs=(rs[0]?rs[0].ms:[]).map(m=>{ const l=new Date(m.month_start+"T00:00:00").toLocaleDateString("en-GB",{month:"short"}); return String(m.month_start).slice(0,7)===nowYM?`<b class="acx-now">${l}</b>`:l; });
   const X=acxX, ST=`style="--acx-cols:${acxColsVar("pr")}"`;
-  const hd=`<div class="acx-r hd"><span>Brand</span>${X("pr_ams","<span>Account managers</span>")}${X("pr_since","<span>Since</span>")}${X("pr_mo",`<span class="acx-mo lab">${labs.map(x=>`<span>${x}</span>`).join("")}</span>`)}${X("pr_com",'<span style="text-align:center">Committed</span>')}${X("pr_done",'<span style="text-align:center">Done</span>')}${X("pr_bal","<span>Balance</span>")}<span></span></div>`;
+  const hd=`<div class="acx-r hd"><span>Brand</span>${X("pr_ams","<span>Account manager</span>")}${X("pr_since","<span>Since</span>")}${X("pr_mo",`<span class="acx-mo lab">${labs.map(x=>`<span>${x}</span>`).join("")}</span>`)}${X("pr_com",'<span style="text-align:center">Committed</span>')}${X("pr_done",'<span style="text-align:center">Done</span>')}${X("pr_bal","<span>Balance</span>")}<span></span></div>`;
   if(!rs.length) return `<div class="acx-list acx-pr" ${ST}>${hd}<div class="acx-empty">No brand here has a production commitment.</div></div>`;
   const now=new Date(), nowS=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");
   const body=rs.map(r=>{
@@ -58193,7 +58193,7 @@ function acxPrHtml(){
     const since=r.since?new Date(r.since+"T00:00:00").toLocaleDateString("en-GB",{month:"short",year:"2-digit"}):"—";
     const ams=acAMsOf(r.bid).map(t=>acName(t.user_id)).join(" · ")||"—";
     return `<div class="acx-r" onclick="goToBrandTab('${escAttr(r.bid)}')"><span class="acx-c acx-b" title="${r.every>1?"1 shoot every "+r.every+" months":"1 shoot a month"}">${escHtml((brands[r.bid]||{}).name||"")}</span>
-      ${X("pr_ams",`<span class="acx-c acx-m">${escHtml(ams)}</span>`)}${X("pr_since",`<span class="acx-m">${escHtml(since)}</span>`)}
+      ${X("pr_ams",`<span class="acx-c" title="${escAttr(ams)}">${acxAmCell(r.bid)}</span>`)}${X("pr_since",`<span class="acx-m">${escHtml(since)}</span>`)}
       ${X("pr_mo",`<span class="acx-mo">${cells}</span>`)}${X("pr_com",`<span class="acx-n">${r.com}</span>`)}${X("pr_done",`<span class="acx-n">${r.done}</span>`)}${X("pr_bal",bal)}<span class="acx-car">›</span></div>`;
   }).join("");
   return `<div class="acx-list acx-pr" ${ST}>${hd}${body}</div>`;
@@ -58365,7 +58365,7 @@ function acxSoHtml(){
       return X(k,`<span class="acx-chips"><span class="acx-chip ${st==="due"?"due":st==="soon"?"soon":"g"}" title="${escAttr(rs.map(y=>y.title).join(" · "))}">${escHtml(lab)}</span></span>`);
     }).join("");
     const det=open?`<div class="acx-r acx-sodet"><span></span>${X("so_am","<span></span>")}${ACX_SOGRP.map(([k])=>{ const rs=x.ss.filter(r=>acxSoGroup(r)===k); return X(k,`<span class="acx-sdc">${rs.map(r=>acxSoCell(r,rs.length>1||acxSoShortFull(r,k))).join("")}</span>`); }).join("")}<span></span></div>`:"";
-    return `<div class="acx-r acx-click${open?" isopen":""}" onclick="acxSoFlip('${escAttr(x.b)}')"><span class="acx-c acx-b">${escHtml((brands[x.b]||{}).name||"")}</span>${X("so_am",`<span class="acx-c acx-m" title="${escAttr(ams)}">${escHtml(ams)||'<span class="acx-na">—</span>'}</span>`)}${cells}<span class="acx-car">›</span></div>${det}`;
+    return `<div class="acx-r acx-click${open?" isopen":""}" onclick="acxSoFlip('${escAttr(x.b)}')"><span class="acx-c acx-b">${escHtml((brands[x.b]||{}).name||"")}</span>${X("so_am",`<span class="acx-c" title="${escAttr(ams)}">${acxAmCell(x.b)}</span>`)}${cells}<span class="acx-car">›</span></div>${det}`;
   }).join("");
   return `<div class="acx-list acx-so" ${ST}>${hd}${body}</div>`;
 }
@@ -58880,22 +58880,25 @@ document.head.insertAdjacentHTML("beforeend",`<style id="mdb-order-css">
      so the brand cell is 189 wide and its words sit 5px in. */
   acColsVar=function(){
     const H="var(--ac-h)";
-    const w={ams:"150px",team:"var(--ac-t)",strategy:H,plan:H,posts:H,tasks:H,promos:H,adopt:"minmax(var(--ac-ad),1.5fr)",
+    const w={ams:"156px",team:"96px",strategy:H,plan:H,posts:H,tasks:H,promos:"84px",adopt:"minmax(70px,1.5fr)",
       tm_cr:"minmax(120px,2fr)",tm_pm:"minmax(92px,1fr)",tm_pf:"minmax(92px,1fr)",see:"56px",muted:"74px",hidden:"56px",
-      clients:AC.tab==="people"?"minmax(60px,.6fr)":"minmax(120px,1fr)"};
-    return ["3px","189px"].concat(acColsNow().filter(([k])=>!AC_HIDE.has(k)).map(([k])=>w[k]||H)).concat(["18px"]).join(" ");
+      clients:AC.tab==="people"?"minmax(60px,.6fr)":"minmax(70px,1fr)"};
+    return ["3px",(acxBW()+13)+"px"].concat(acColsNow().filter(([k])=>!AC_HIDE.has(k)).map(([k])=>w[k]||H)).concat(["18px"]).join(" ");
   };
   /* Services */
   acxSoColsVar=function(){
-    return ["180px"].concat(ACX_SOCOLS.filter(([k])=>!AC_HIDE.has(k)).map(([k])=>k==="so_am"?"150px":"minmax(104px,1fr)")).concat(["20px"]).join(" ");
+    return [(acxBW()+4)+"px"].concat(ACX_SOCOLS.filter(([k])=>!AC_HIDE.has(k)).map(([k])=>k==="so_am"?"154px":"minmax(104px,1fr)")).concat(["20px"]).join(" ");
   };
   /* Deliveries; Productions falls through to what it had */
   const baseCV=acxColsVar;
   acxColsVar=function(t){
-    if(t!=="dl") return baseCV.apply(this,arguments);
+    if(t!=="dl"){
+      /* V119.13 — Productions: only its first column's width and where the spare room goes. Its content is untouched. */
+      const P={pr_ams:"152px",pr_since:"56px",pr_mo:"minmax(380px,470px)",pr_com:"74px",pr_done:"48px",pr_bal:"minmax(70px,1fr)"};
+      return [(acxBW()+2)+"px"].concat(ACX_PRCOLS.filter(([k])=>!AC_HIDE.has(k)).map(([k])=>P[k])).concat(["14px"]).join(" ");
+    }
     const W={dl_am:"150px",dl_by:"84px",dl_time:"66px",dl_task:"minmax(100px,.8fr)",dl_dlv:"minmax(240px,2.2fr)",dl_st:"132px"};
-    /* 176 + this list's 14px gap puts Account manager where Services' 180 + 10 does */
-    return ["176px"].concat(ACX_DCOLS.filter(([k])=>!AC_HIDE.has(k)).map(([k])=>W[k])).concat(["14px"]).join(" ");
+    return [acxBW()+"px"].concat(ACX_DCOLS.filter(([k])=>!AC_HIDE.has(k)).map(([k])=>W[k])).concat(["14px"]).join(" ");
   };
 
   /* the tabs: words only, in his order */
@@ -58910,6 +58913,29 @@ document.head.insertAdjacentHTML("beforeend",`<style id="mdb-order-css">
     lens.innerHTML=T.map(([k,l])=>`<span class="${AC.tab===k?"on":""}" data-tab="${k}" onclick="acTab('${k}')">${l}</span>`).join("");
   };
 })();
+
+/* ── V119.13 · THE FIRST TWO COLUMNS ARE ONE STRUCTURE ON ALL FIVE TABS ──
+   Chirag, 27 Nov, on the live page: "when you move between the tabs, the
+   first column should remain… it should feel like a same structure with
+   slightly different content from column three onwards."
+   V119.12 lined them up only at one screen width (the Team and Preview
+   rows change their gap at a breakpoint), left Productions out, and drew
+   the brand, the header and the account manager in two different styles.
+   Now: one brand width (acxBW) that every tab reads, each list's own gap
+   allowed for so Account manager starts at the same x; one row height, one
+   header, one brand style, and one account-manager cell (acxAmCell). */
+function acxBW(){
+  const g=document.getElementById("ac-list"), w=g?g.clientWidth:1400;
+  /* Productions needs 1106px with a 176px brand; below that the brand gives way, on every tab alike */
+  return Math.round(Math.max(118,Math.min(176,176-(1106-w))));
+}
+function acxAmCell(bid){
+  const ams=acAMsOf(bid);
+  if(!ams.length) return `<span class="acx-na">—</span>`;
+  return `<span class="ac-ams acx-amx" title="${escAttr(ams.map(t=>acName(t.user_id)).join(", "))}">${ams.slice(0,1).map(t=>{ const p=acPerson(t.user_id);
+    return `<span class="ac-who${t.user_id===ME.id?" me":""}"><span class="e">${acEmoji(p)}</span>${escHtml(p?p.name:"Someone")}</span>`; }).join("")}${ams.length>1?`<b class="acx-more">+${ams.length-1}</b>`:""}</span>`;
+}
+(function(){ let t=null; window.addEventListener("resize",()=>{ clearTimeout(t); t=setTimeout(()=>{ try{ if(view==="accounts") acList(); }catch(e){} },160); }); })();
 
 /* Team: one profile's people on a brand, by name */
 function acxTmCell(bid,k){
@@ -58981,7 +59007,7 @@ acxDlHtml=function(){
     const open=O.has(g.k);
     h+=`<div class="acx-r acx-click${open?" isopen":""}" data-dlk="${escAttr(g.k)}" onclick="acxDlFlip('${escAttr(g.k)}')">
       <span class="acx-c acx-b">${escHtml((brands[g.brand_id]||{}).name||"")}</span>
-      ${X("dl_am",`<span class="acx-c acx-m" title="${escAttr(ams)}">${escHtml(ams)}</span>`)}
+      ${X("dl_am",`<span class="acx-c" title="${escAttr(ams)}">${acxAmCell(g.brand_id)}</span>`)}
       ${X("dl_by",`<span class="acx-c acx-m" title="${escAttr(by.join(", "))}">${escHtml(by[0]||"")}${by.length>1?" +"+(by.length-1):""}</span>`)}
       ${X("dl_time",`<span class="acx-m">${escHtml(tm(g.last))}</span>`)}
       ${X("dl_task",`<span class="acx-c" title="${escAttr(task)}">${escHtml(task)}</span>`)}
@@ -58993,7 +59019,16 @@ acxDlHtml=function(){
 };
 document.head.insertAdjacentHTML("beforeend",`<style id="acx-tabs-12-css">
 /* Team and Preview: the brand's words start where the other tabs' do */
+.acl.brl .brl-hd,.acl.brl .brl-tr{gap:8px!important}
+.brl.acl{border-radius:14px}
 .acl .brl-hd>span:nth-child(2),.acl .brl-tr>.ac-bn{padding-left:7px}
+/* one header, one row, one brand, one account manager on every tab */
+.acl.brl .brl-hd{height:40px!important;min-height:40px;box-sizing:border-box;padding-top:0!important;padding-bottom:0!important;font-size:10.5px;letter-spacing:.07em;background:transparent;border-bottom:0}
+.acl.brl .brl-tr,.acl.hx.brl .brl-tr{height:46px!important;box-sizing:border-box;border-bottom:0;border-top:1px solid #EFEDE8}
+.acx-list .acx-r:not(.hd):not(.acx-sodet){min-height:46px}
+.acl .ac-bn,.acx-list .acx-b{font-size:14px;font-weight:700;letter-spacing:-.01em;color:var(--text)}
+.acx-amx{font-size:12.5px;color:var(--text)}
+.acx-list .acx-r .ac-who{font-weight:600}
 .acx-tm{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;white-space:nowrap;font-size:12.5px}
 .acx-tm.z{color:#c4c1ba}
 .acx-tm .nm{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden}
