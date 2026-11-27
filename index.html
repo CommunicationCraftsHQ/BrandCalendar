@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.11 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.12 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14856,7 +14856,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.11 Cappadocia";
+const TOOL_VERSION="V119.12 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -43618,6 +43618,7 @@ function acRowHtml(bid){
       const mm=AC.migr&&canManagePeople(bid);
       return `<span class="ac-team${mm?" may":""}" ${mm?`onclick="acMenuOpen(event,'${bid}','team')"`:""}>${t.length?`<span class="ac-stack">${em}</span>`:""}${t.length}${mm?`<b class="brl-sgcar">▾</b>`:""}</span>`;
     }
+    if(k==="tm_cr"||k==="tm_pm"||k==="tm_pf") return acxTmCell(bid,k);
     if(k==="adopt"){
       const p=acAdoption(bid);
       if(p==null){ const v=acCell(bid,"adopt"), dead=v.s==="n"||v.s==="w";
@@ -54862,7 +54863,7 @@ function xaSheet(k,b,again){
         return `<button class="${on?"on":""}" onclick="xaFlt('${fd.k}',${j})">${escHtml(o[1])}${o[2]!=null?`<small>${o[2]}</small>`:""}</button>`; }).join(""); };
     h=`<div class="hd">Filter<button onclick="fltReset(null,'accounts');AC.q='';acRefresh()">Clear</button></div>
       <input class="xb-q" placeholder="Search brands…" value="${escAttr(AC.q)}" oninput="AC.q=this.value;acList();xaDress()">
-      <h4>View</h4><div class="xa-seg"><button class="${AC.tab==="people"?"on":""}" onclick="acTab('people')"><i class="ti ti-users"></i> People</button><button class="${AC.tab==="health"?"on":""}" onclick="acTab('health')"><i class="ti ti-heart-rate-monitor"></i> Health</button></div>`+
+      <h4>View</h4><div class="xa-seg"><button class="${AC.tab==="people"?"on":""}" onclick="acTab('people')">Team</button><button class="${AC.tab==="health"?"on":""}" onclick="acTab('health')">Preview</button></div>`+
       AC_FIELDS.map(fd=>{ const c=chips(fd); return c?`<h4>${escHtml(fd.label)}</h4><div class="xa-chips">${c}</div>`:""; }).join("");
   } else return;
   const sh=xtSheet("xa-sh",h);
@@ -58044,7 +58045,7 @@ async function acxDlLoad(){
     const rows=r.data||[];
     const dids=[...new Set(rows.map(x=>x.deliverable_id))], tids=[...new Set(rows.map(x=>x.task_id).filter(Boolean))];
     const [dv,dd,tt]=await Promise.all([
-      dids.length?sb.from("deliverable_versions").select("deliverable_id,version,status").in("deliverable_id",dids).is("deleted_at",null):{data:[]},
+      dids.length?sb.from("deliverable_versions").select("id,deliverable_id,version,status,created_at").in("deliverable_id",dids).is("deleted_at",null):{data:[]},
       dids.length?sb.from("task_deliverables").select("id,name").in("id",dids):{data:[]},
       tids.length?sb.from("branding_tasks").select("id,title").in("id",tids):{data:[]}]);
     ACX.dl.rows=rows; ACX.dl.vers=dv.data||[];
@@ -58851,5 +58852,173 @@ document.head.insertAdjacentHTML("beforeend",`<style id="mdb-order-css">
 </style>`);
 </script>
 
+
+<script id="acx-tabs-12">
+/* ══ V119.12 CAPPADOCIA · AC MGMT: TAB NAMES, TEAM BY PROFILE, ONE ROW PER TASK ══
+   Chirag, 27 Nov 2026 (mockups "Ac Mgmt tabs, team and deliveries" 01 and 02,
+   tag style B):
+   · no icons on the tabs, the same as Client Centre
+   · the tabs read Services · Team · Preview · Productions · Deliveries
+     (the keys stay dlb · people · health · prod · dlv)
+   · Brand, then Account manager, lead every tab, in the same place and the
+     same width (180px and 150px). PRODUCTIONS IS NOT TOUCHED: "the content
+     inside the production tab was already finalised and was perfect".
+   · Team: the people by name, one column per profile
+   · Deliveries: one row per task. Everything sent on the day picked is one
+     solid tag whose colour is what the client said; earlier days stay grey. */
+(function(){
+  /* the column lists, changed in place so every reader sees the same order */
+  const mv=(a,k)=>{ const i=a.findIndex(c=>c[0]===k); if(i>0){ const x=a.splice(i,1)[0]; a.unshift(x); } };
+  mv(AC_COLS,"ams"); AC_COLS.forEach(c=>{ if(c[0]==="ams") c[1]="Account manager"; });
+  AC_PCOLS.forEach(c=>{ if(c[0]==="ams") c[1]="Account manager"; if(c[0]==="muted") c[1]="Notif. off"; });
+  const ti=AC_PCOLS.findIndex(c=>c[0]==="team");
+  if(ti>-1) AC_PCOLS.splice(ti,1,["tm_cr","Creators"],["tm_pm","Production"],["tm_pf","Performance"]);
+  ACX_DCOLS.splice(0,ACX_DCOLS.length,["dl_am","Account manager"],["dl_by","Sent by"],["dl_time","Time"],["dl_task","Task"],["dl_dlv","Delivery"],["dl_st","Client says"]);
+
+  /* Brand 180 and Account manager 150 on Team and Preview. Their rows start
+     with a 3px bar and a 10px gap where the other tabs have 18px of padding,
+     so the brand cell is 189 wide and its words sit 5px in. */
+  acColsVar=function(){
+    const H="var(--ac-h)";
+    const w={ams:"150px",team:"var(--ac-t)",strategy:H,plan:H,posts:H,tasks:H,promos:H,adopt:"minmax(var(--ac-ad),1.5fr)",
+      tm_cr:"minmax(120px,2fr)",tm_pm:"minmax(92px,1fr)",tm_pf:"minmax(92px,1fr)",see:"56px",muted:"74px",hidden:"56px",
+      clients:AC.tab==="people"?"minmax(60px,.6fr)":"minmax(120px,1fr)"};
+    return ["3px","189px"].concat(acColsNow().filter(([k])=>!AC_HIDE.has(k)).map(([k])=>w[k]||H)).concat(["18px"]).join(" ");
+  };
+  /* Services */
+  acxSoColsVar=function(){
+    return ["180px"].concat(ACX_SOCOLS.filter(([k])=>!AC_HIDE.has(k)).map(([k])=>k==="so_am"?"150px":"minmax(104px,1fr)")).concat(["20px"]).join(" ");
+  };
+  /* Deliveries; Productions falls through to what it had */
+  const baseCV=acxColsVar;
+  acxColsVar=function(t){
+    if(t!=="dl") return baseCV.apply(this,arguments);
+    const W={dl_am:"150px",dl_by:"84px",dl_time:"66px",dl_task:"minmax(100px,.8fr)",dl_dlv:"minmax(240px,2.2fr)",dl_st:"132px"};
+    /* 176 + this list's 14px gap puts Account manager where Services' 180 + 10 does */
+    return ["176px"].concat(ACX_DCOLS.filter(([k])=>!AC_HIDE.has(k)).map(([k])=>W[k])).concat(["14px"]).join(" ");
+  };
+
+  /* the tabs: words only, in his order */
+  const baseBar=acBar;
+  acBar=function(){
+    baseBar.apply(this,arguments);
+    const bar=document.getElementById("ac-bar"); if(!bar) return;
+    const lens=bar.querySelector(".ac-tabs"); if(!lens) return;
+    const T=[]; if(acxMay()&&acxSoMay()) T.push(["dlb","Services"]);
+    T.push(["people","Team"],["health","Preview"]);
+    if(acxMay()) T.push(["prod","Productions"],["dlv","Deliveries"]);
+    lens.innerHTML=T.map(([k,l])=>`<span class="${AC.tab===k?"on":""}" data-tab="${k}" onclick="acTab('${k}')">${l}</span>`).join("");
+  };
+})();
+
+/* Team: one profile's people on a brand, by name */
+function acxTmCell(bid,k){
+  const role={tm_cr:"creator",tm_pm:"production_manager",tm_pf:"performance_marketer"}[k];
+  const t=acTeamOf(bid).filter(x=>x.team_role===role), cap=k==="tm_cr"?2:1;
+  if(!t.length) return `<span class="acx-tm z">·</span>`;
+  const who=t.slice(0,cap).map(x=>{ const p=acPerson(x.user_id);
+    return `<span class="ac-who${x.user_id===ME.id?" me":""}"><span class="e">${acEmoji(p)}</span>${escHtml(p?p.name:"Someone")}</span>`; }).join("");
+  const all=t.map(x=>{ const p=acPerson(x.user_id); return p?p.name:"Someone"; }).join(", ");
+  return `<span class="acx-tm" title="${escAttr(all)}"><span class="nm">${who}</span>${t.length>cap?`<b class="acx-more">+${t.length-cap}</b>`:""}</span>`;
+}
+
+/* Deliveries: one row per task (per day, when the window is longer than a day) */
+function acxDlGroups(){
+  const rs=acxDlRows(), multi=ACX.win!=="today"&&ACX.win!=="yest";
+  const dk=s=>{ const d=new Date(s); return d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate(); };
+  const map=new Map(), out=[];
+  rs.forEach(r=>{
+    const k=(multi?dk(r.created_at)+"|":"")+r.brand_id+"|"+(r.task_id||"d:"+r.deliverable_id);
+    let g=map.get(k);
+    if(!g){ g={k,brand_id:r.brand_id,task_id:r.task_id,last:r.created_at,first:r.created_at,rows:[]}; map.set(k,g); out.push(g); }
+    g.rows.push(r); if(r.created_at<g.first) g.first=r.created_at;
+  });
+  return out;   /* the rows arrive newest first, so each group sits at its newest delivery */
+}
+function acxDlFlip(k){ const o=ACX.dl.open=ACX.dl.open||new Set(); o.has(k)?o.delete(k):o.add(k); acList(); }
+acxDlHtml=function(){
+  if(ACX.dl.err) return `<div class="acx-list"><div class="acx-empty">Could not load deliveries — ${escHtml(ACX.dl.err)}</div></div>`;
+  if(ACX.dl.key===null) return `<div class="acx-list"><div class="acx-empty">Loading…</div></div>`;
+  const X=acxX, ST=`style="--acx-cols:${acxColsVar("dl")}"`, O=ACX.dl.open=ACX.dl.open||new Set();
+  const hd=`<div class="acx-r hd"><span>Brand</span>${X("dl_am","<span>Account manager</span>")}${X("dl_by","<span>Sent by</span>")}${X("dl_time","<span>Time</span>")}${X("dl_task","<span>Task</span>")}${X("dl_dlv","<span>Delivery</span>")}${X("dl_st","<span>Client says</span>")}<span></span></div>`;
+  const gs=acxDlGroups();
+  if(!gs.length) return `<div class="acx-list acx-dl" ${ST}>${hd}<div class="acx-empty">Nothing delivered ${escHtml(acxWinLabel().toLowerCase())}.</div></div>`;
+  const multi=ACX.win!=="today"&&ACX.win!=="yest";
+  const tm=s=>new Date(s).toLocaleTimeString("en-GB",{hour:"numeric",minute:"2-digit",hour12:true}).replace(" "," ");
+  const dk=s=>{ const d=new Date(s); return d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate(); };
+  const dn=s=>new Date(s).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"short"});
+  const ds=s=>new Date(s).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
+  const stOf=v=>v.status==="approved"?"ok":v.status==="changes"?"chg":"";
+  const WORD={"":"waiting for client",ok:"approved",chg:"changes asked"};
+  const tag=v=>`<span class="dvv ${v.when} ${v.st}">v${v.version}${v.st==="ok"?" ✓":v.st==="chg"?" ↺":""}</span>`;
+  let h=hd, last="";
+  gs.forEach(g=>{
+    if(multi&&dk(g.last)!==last){ last=dk(g.last); h+=`<div class="acx-day">${escHtml(dn(g.last))}</div>`; }
+    const inIds=new Set(g.rows.map(r=>r.id));
+    const dels=[...new Set(g.rows.map(r=>r.deliverable_id))].map(did=>{
+      const mine=g.rows.filter(r=>r.deliverable_id===did), minV=Math.min.apply(null,mine.map(r=>r.version));
+      const seen=new Set(), vs=[];
+      ACX.dl.vers.filter(v=>v.deliverable_id===did).concat(mine).sort((a,b)=>a.version-b.version).forEach(v=>{
+        if(seen.has(v.version)) return;
+        const today=v.id?inIds.has(v.id):mine.some(r=>r.version===v.version);
+        const before=v.created_at?v.created_at<g.first:v.version<minV;
+        if(!today&&!before) return;                      /* sent after this row's day: not this row's story */
+        seen.add(v.version);
+        const full=mine.find(r=>r.version===v.version)||v;
+        vs.push({version:v.version,when:today?"t":"e",st:stOf(full),at:full.created_at||null,id:full.id||""});
+      });
+      const lt=vs.filter(v=>v.when==="t").pop()||vs[vs.length-1];
+      return {did,name:ACX.dl.dels[did]||"Delivery",vs,latest:lt};
+    });
+    const n={ok:0,"":0,chg:0}; dels.forEach(d=>{ n[d.latest.st]++; });
+    const cls=n.chg?"changes":n[""]?"sent":"approved";
+    const says=dels.length===1?{ok:"Approved ✓","":"Waiting for client",chg:"Changes asked"}[dels[0].latest.st]
+      :[n.ok?n.ok+" ✓":"",n[""]?n[""]+" waiting":"",n.chg?n.chg+" changes":""].filter(Boolean).join(" · ");
+    const task=ACX.dl.tasks[g.task_id]||"", by=[...new Set(g.rows.map(r=>acxPerson(r.created_by)))];
+    const ams=acAMsOf(g.brand_id).map(t=>acxPerson(t.user_id)).join(", ");
+    const go=d=>`event.stopPropagation();acxGoDelivery('${escAttr(g.brand_id)}','${escAttr(g.task_id||"")}','${escAttr(d.did||"")}','${escAttr(d.latest.id||"")}')`;
+    const pill=d=>`<span class="dvbox" title="${escAttr(d.name)}" onclick="${go(d)}"><span class="n">${escHtml(d.name)}</span>${d.vs.map(tag).join("")}</span>`;
+    const open=O.has(g.k);
+    h+=`<div class="acx-r acx-click${open?" isopen":""}" data-dlk="${escAttr(g.k)}" onclick="acxDlFlip('${escAttr(g.k)}')">
+      <span class="acx-c acx-b">${escHtml((brands[g.brand_id]||{}).name||"")}</span>
+      ${X("dl_am",`<span class="acx-c acx-m" title="${escAttr(ams)}">${escHtml(ams)}</span>`)}
+      ${X("dl_by",`<span class="acx-c acx-m" title="${escAttr(by.join(", "))}">${escHtml(by[0]||"")}${by.length>1?" +"+(by.length-1):""}</span>`)}
+      ${X("dl_time",`<span class="acx-m">${escHtml(tm(g.last))}</span>`)}
+      ${X("dl_task",`<span class="acx-c" title="${escAttr(task)}">${escHtml(task)}</span>`)}
+      ${X("dl_dlv",`<span class="acx-dls">${dels.slice(0,2).map(pill).join("")}${dels.length>2?`<b class="acx-more">+${dels.length-2}</b>`:""}</span>`)}
+      ${X("dl_st",`<span class="acx-st ${cls}">${escHtml(says)}</span>`)}<span class="acx-car">›</span></div>`;
+    if(open) h+=`<div class="acx-dldet">${dels.map(d=>`<div class="ln" onclick="${go(d)}"><b>${escHtml(d.name)}</b><span class="vv">${d.vs.map(v=>`<span>${tag(v)} ${v.at?escHtml((v.when==="t"&&!multi?"":ds(v.at)+" ")+tm(v.at))+" · ":""}${WORD[v.st]}</span>`).join("")}</span></div>`).join("")}</div>`;
+  });
+  return `<div class="acx-list acx-dl" ${ST}>${h}</div>`;
+};
+document.head.insertAdjacentHTML("beforeend",`<style id="acx-tabs-12-css">
+/* Team and Preview: the brand's words start where the other tabs' do */
+.acl .brl-hd>span:nth-child(2),.acl .brl-tr>.ac-bn{padding-left:7px}
+.acx-tm{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;white-space:nowrap;font-size:12.5px}
+.acx-tm.z{color:#c4c1ba}
+.acx-tm .nm{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden}
+.acx-tm .ac-who{flex:none}
+.acx-more{font-weight:700;color:var(--muted);flex:none;margin-left:2px}
+/* Deliveries: one row per task */
+.acx-dl .acx-dls{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden}
+.acx-dl .acx-dls .dvbox{flex:0 1 auto;min-width:0;cursor:pointer}
+.acx-dl .dvbox .n{min-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
+.acx-dl .dvv,.acx-dldet .dvv{border:0;height:20px;padding:0 6px;border-radius:5px;font-size:11px;font-weight:800;flex:none}
+.acx-dl .dvv.t,.acx-dldet .dvv.t{background:#2B5FB0;color:#fff}
+.acx-dl .dvv.t.ok,.acx-dldet .dvv.t.ok{background:#1E6B2E}
+.acx-dl .dvv.t.chg,.acx-dldet .dvv.t.chg{background:var(--acc)}
+.acx-dl .dvv.e,.acx-dldet .dvv.e{background:#F1EFEA;color:#aaa69c}
+.acx-dl .acx-st.changes{color:var(--acc)}
+.acx-dl .acx-r .acx-car{transition:transform .15s;display:inline-block}
+.acx-dl .acx-r.isopen .acx-car{transform:rotate(90deg)}
+.acx-dl .acx-r.isopen{background:#FAF9F6}
+.acx-dldet{background:#FAF9F6;border-top:1px solid #EFEDE8;padding:8px 18px 12px 362px}
+.acx-dldet .ln{display:grid;grid-template-columns:minmax(120px,220px) 1fr;gap:4px 14px;align-items:center;padding:4px 0;cursor:pointer}
+.acx-dldet .ln:hover b{text-decoration:underline}
+.acx-dldet .vv{display:flex;flex-wrap:wrap;gap:6px 16px;color:#444}
+.acx-dldet .vv>span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+@media(max-width:1100px){ .acx-dldet{padding-left:18px} }
+</style>`);
+</script>
 </body>
 </html>
