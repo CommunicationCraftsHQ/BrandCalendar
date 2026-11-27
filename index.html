@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.15 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.17 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14856,7 +14856,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.15 Cappadocia";
+const TOOL_VERSION="V119.17 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -58982,7 +58982,7 @@ function acxTmFit(){
     const it=[...c.querySelectorAll(".nm>.ac-who")], more=c.querySelector(".acx-more"), W=c.clientWidth, open=AC.px===c.dataset.bid;
     it.forEach(x=>x.style.display="");
     let used=0, k=0;
-    for(const x of it){ const w=x.offsetWidth+(k?8:0); if(used+w+(k+1<it.length&&!open?34:0)>W&&k>0) break; used+=w; k++; }
+    for(const x of it){ const w=x.offsetWidth-(x.classList.contains("acx-pmb")?10:0)+(k?8:0); if(used+w+(k+1<it.length?34:0)>W&&k>0) break;   /* V119.16 — the same names open or closed, so the row does not move */ used+=w; k++; }
     it.forEach((x,i)=>{ if(i>=k) x.style.display="none"; });
     if(more){ if(it.length>k&&!open){ more.textContent="+"+(it.length-k); more.style.display=""; } else more.style.display="none"; }
     if(open){ const d=document.querySelector(`#ac-list .acx-tmdet .acx-stk[data-k="${c.dataset.fit}"]`);
@@ -59143,7 +59143,7 @@ document.head.insertAdjacentHTML("beforeend",`<style id="acx-tabs-12-css">
 .acx-tmdet .acx-mg{text-align:center}
 .acx-add{font:600 11.5px/1 inherit;font-family:inherit;color:var(--muted);background:#fff;border:1px solid var(--div);border-radius:7px;padding:5px 8px;cursor:pointer;white-space:nowrap}
 .acx-add:hover,.acx-add.on{color:var(--text);border-color:var(--text)}
-.acx-pmb{cursor:pointer;border-radius:6px;margin-left:-5px;padding:3px 5px}
+.acx-pmb{cursor:pointer;border-radius:6px;margin:0 -5px;padding:3px 5px}
 .acx-pmb:hover{background:rgba(13,13,13,.06)}
 .acx-mut{font-size:12px;color:var(--subtle);margin-left:4px}
 .brl-menu.acx-pm{position:fixed;right:auto;width:224px;z-index:900;padding:12px;display:flex;flex-direction:column;gap:10px}
@@ -59174,6 +59174,300 @@ document.head.insertAdjacentHTML("beforeend",`<style id="acx-tabs-12-css">
 .acx-dldet .vv{display:flex;flex-wrap:wrap;gap:6px 16px;color:#444}
 .acx-dldet .vv>span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 @media(max-width:1100px){ .acx-dldet{padding-left:18px} }
+</style>`);
+</script>
+<script id="acx-alloc-review-17">
+/* ══ V119.17 CAPPADOCIA · ALLOCATION (Ac Mgmt) AND REVIEW (main header) ══
+   Chirag, 27 Nov 2026.
+   ALLOCATION — mockup "01 - Ac Mgmt occupancy tab", option A, without "Due
+   this week" and "Overdue"; he named the tab Allocation. One line per person:
+   profile, how many brands, which brands, open tasks, delivered in 7 days.
+   An opened row lists the same per brand, in the list's own columns.
+   Administrators only for now, like Health.
+   REVIEW — mockup "01 - Review tab", option C (one list, grouped by brand),
+   with every extra: mentions, new tasks, deliveries, the client's answer,
+   your tasks due, posts not yet approved, shoots, renewals due.
+   A PREVIEW: administrators only until he releases it (acxRvMay). */
+function acxAlMay(){ return acxHlMay(); }
+function acxRvMay(){ return acxHlMay(); }
+ACX.al={ok:false,busy:false,err:"",tasks:[],dels:[],open:new Set(),sort:"brands"};
+const ACX_ALCOLS=[["al_pf","Profile"],["al_n","Brands"],["al_b","Brand names"],["al_t","Open tasks"],["al_d","Delivered · 7 days"]];
+async function acxAlLoad(){
+  if(ACX.al.busy||ACX.al.ok) return;
+  ACX.al.busy=true; ACX.al.err="";
+  try{
+    const since=new Date(Date.now()-7*864e5).toISOString();
+    const [t,d]=await Promise.all([
+      sb.from("branding_tasks").select("id,brand_id,owner_id,status").is("deleted_at",null).is("archived_at",null).not("status","in","(closed,cancelled)").limit(5000),
+      sb.from("deliverable_versions").select("id,brand_id,created_by,created_at").is("deleted_at",null).gte("created_at",since).limit(5000)]);
+    if(t.error) throw t.error; if(d.error) throw d.error;
+    ACX.al.tasks=t.data||[]; ACX.al.dels=d.data||[]; ACX.al.ok=true;
+  }catch(e){ ACX.al.err=String(e&&e.message||e); }
+  ACX.al.busy=false;
+  if(view==="accounts"&&AC.tab==="alloc") acList();
+}
+function acxAlRows(){
+  const S=new Set(acInScope()), q=AC.q.trim().toLowerCase();
+  const nm=b=>String((brands[b]||{}).name||"");
+  const by=new Map();
+  AC.team.forEach(t=>{ if(!S.has(t.brand_id)||!brands[t.brand_id]) return; if(!by.has(t.user_id)) by.set(t.user_id,[]); by.get(t.user_id).push(t); });
+  const tk=new Map(), dl=new Map(), key=(u,b)=>u+"|"+b;
+  ACX.al.tasks.forEach(x=>{ if(x.owner_id&&S.has(x.brand_id)) tk.set(key(x.owner_id,x.brand_id),(tk.get(key(x.owner_id,x.brand_id))||0)+1); });
+  ACX.al.dels.forEach(x=>{ if(x.created_by&&S.has(x.brand_id)) dl.set(key(x.created_by,x.brand_id),(dl.get(key(x.created_by,x.brand_id))||0)+1); });
+  const all=AC.am&&AC.am!=="all";   /* a narrowed side list shows only people on those brands */
+  const rows=acStaff().filter(p=>!all||by.has(p.id)).map(p=>{
+    const bs=(by.get(p.id)||[]).slice().sort((a,b)=>nm(a.brand_id).localeCompare(nm(b.brand_id),undefined,{sensitivity:"base"}));
+    const ids=new Set(bs.map(x=>x.brand_id)); let ot=0, od=0; const extra=new Set();
+    tk.forEach((n,k)=>{ const [u,b]=k.split("|"); if(u===p.id){ ot+=n; if(!ids.has(b)) extra.add(b); } });
+    dl.forEach((n,k)=>{ const [u,b]=k.split("|"); if(u===p.id){ od+=n; if(!ids.has(b)) extra.add(b); } });
+    return {p,bs,ot,od,extra:[...extra].sort((a,b)=>nm(a).localeCompare(nm(b))),t:b=>tk.get(key(p.id,b))||0,d:b=>dl.get(key(p.id,b))||0};
+  }).filter(r=>!q||String(r.p.name||"").toLowerCase().includes(q)||r.bs.some(x=>nm(x.brand_id).toLowerCase().includes(q)));
+  const pn=r=>String(r.p.name||r.p.email||""), cn=(a,b)=>pn(a).localeCompare(pn(b),undefined,{sensitivity:"base"}), so=ACX.al.sort;
+  return rows.sort((a,b)=>so==="name"?cn(a,b):so==="tasks"?(b.ot-a.ot)||cn(a,b):so==="dels"?(b.od-a.od)||cn(a,b):(b.bs.length-a.bs.length)||cn(a,b));
+}
+function acxAlFlip(id){ const o=ACX.al.open; o.has(id)?o.delete(id):o.add(id); acList(); }
+function acxAlHtml(){
+  if(ACX.al.err) return `<div class="acx-list"><div class="acx-empty">Could not load the allocation — ${escHtml(ACX.al.err)}</div></div>`;
+  if(!ACX.al.ok||!AC.ok) return `<div class="acx-list"><div class="acx-empty">Loading…</div></div>`;
+  const X=acxX, W={al_pf:"150px",al_n:"60px",al_b:"minmax(240px,1fr)",al_t:"92px",al_d:"132px"};
+  const ST=`style="--acx-cols:${[acxBW()+"px"].concat(ACX_ALCOLS.filter(([k])=>!AC_HIDE.has(k)).map(([k])=>W[k])).concat(["14px"]).join(" ")}"`;
+  const hd=`<div class="acx-r hd"><span>Person</span>${X("al_pf","<span>Profile</span>")}${X("al_n",'<span class="acx-nc">Brands</span>')}${X("al_b","<span>Brand names</span>")}${X("al_t",'<span class="acx-nc">Open tasks</span>')}${X("al_d",'<span class="acx-nc">Delivered · 7 days</span>')}<span></span></div>`;
+  const rs=acxAlRows();
+  if(!rs.length) return `<div class="acx-list acx-al" ${ST}>${hd}<div class="acx-empty">Nobody here.</div></div>`;
+  const num=n=>`<span class="acx-n${n?"":" z"}">${n}</span>`;
+  const body=rs.map(r=>{
+    const open=ACX.al.open.has(r.p.id), nm=b=>escHtml((brands[b]||{}).name||"");
+    const chips=r.bs.length?`<span class="acx-fit" data-all="${r.bs.length}">${r.bs.map(x=>`<span class="acx-bc">${nm(x.brand_id)}</span>`).join("")}<b class="acx-more" style="display:none"></b></span>`:`<span class="acx-na">Not on any brand</span>`;
+    let h=`<div class="acx-r acx-click${open?" isopen":""}" onclick="acxAlFlip('${escAttr(r.p.id)}')"><span class="acx-c acx-b acx-pn"><span class="e">${acEmoji(r.p)}</span>${escHtml(r.p.name||r.p.email||"")}</span>
+      ${X("al_pf",`<span class="acx-c acx-m">${escHtml(AC_TOOLROLE_LBL[r.p.toolRole]||"No Calendar role")}</span>`)}${X("al_n",num(r.bs.length))}${X("al_b",chips)}${X("al_t",num(r.ot))}${X("al_d",num(r.od))}<span class="acx-car">›</span></div>`;
+    if(open){
+      const line=(b,role,i,n)=>`<div class="acx-r acx-alx${i===0?" f":""}${i===n-1?" l":""}" onclick="event.stopPropagation()"><span></span>
+        ${X("al_pf",`<span class="acx-m">${escHtml(role)}</span>`)}${X("al_n","<span></span>")}${X("al_b",`<span class="acx-c"><b>${nm(b)}</b><span class="acx-m"> · ${escHtml(acAMsOf(b).map(t=>acName(t.user_id)).join(", ")||"no account manager")}</span></span>`)}${X("al_t",num(r.t(b)))}${X("al_d",num(r.d(b)))}<span></span></div>`;
+      const L=r.bs.map(x=>[x.brand_id,AC_ROLE_LBL[x.team_role]||"On the team"]).concat(r.extra.map(b=>[b,"Not on the team"]));
+      h+=L.length?L.map(([b,role],i)=>line(b,role,i,L.length)).join(""):`<div class="acx-r acx-alx f l"><span></span><span class="acx-m" style="grid-column:2/-1">Not on any brand, no open tasks, nothing delivered in 7 days.</span></div>`;
+    }
+    return h;
+  }).join("");
+  return `<div class="acx-list acx-al" ${ST}>${hd}${body}</div>`;
+}
+/* as many chips as the cell holds, then +N */
+function acxFitChips(root){
+  (root||document).querySelectorAll(".acx-fit").forEach(c=>{
+    const it=[...c.querySelectorAll(".acx-bc")], more=c.querySelector(".acx-more"), W=c.clientWidth;
+    it.forEach(x=>x.style.display="");
+    let used=0, k=0;
+    for(const x of it){ const w=x.offsetWidth+(k?6:0); if(used+w+(k+1<it.length?34:0)>W&&k>0) break; used+=w; k++; }
+    it.forEach((x,i)=>{ if(i>=k) x.style.display="none"; });
+    if(more){ if(it.length>k){ more.textContent="+"+(it.length-k); more.style.display=""; } else more.style.display="none"; }
+  });
+}
+(function(){
+  const bt=acTab;
+  acTab=function(t){ if(t==="alloc"){ if(!acxAlMay()) return; AC.tab=t; acPopClose(); acMenuClose(); acRefresh(); return; } return bt.apply(this,arguments); };
+  const bc=acColsNow;
+  acColsNow=function(){ if(AC.tab==="alloc") return ACX_ALCOLS; return bc.apply(this,arguments); };
+  const bb=acBar;
+  acBar=function(){
+    if(AC.tab==="alloc"&&!acxAlMay()) AC.tab=acxSoMay()?"dlb":"people";
+    const was=AC.tab; if(was==="alloc") AC.tab="people";       /* the older bar code only knows its own tabs */
+    try{ bb.apply(this,arguments); } finally { AC.tab=was; }
+    const bar=document.getElementById("ac-bar"); if(!bar) return;
+    const lens=bar.querySelector(".ac-tabs");
+    if(lens){ if(acxAlMay()&&!lens.querySelector('[data-tab="alloc"]')) lens.insertAdjacentHTML("beforeend",`<span data-tab="alloc" onclick="acTab('alloc')">Allocation</span>`);
+      lens.querySelectorAll("span[data-tab]").forEach(s=>s.classList.toggle("on",s.dataset.tab===AC.tab)); }
+    if(AC.tab==="alloc"){
+      const q=bar.querySelector(".fb-q"); if(q) q.placeholder="Search people…";
+      const so=bar.querySelector(".fb-end .fb-sortw"), S=[["brands","Most brands"],["tasks","Open tasks"],["dels","Delivered"],["name","Name"]];
+      if(so) so.outerHTML=fltSortHtml("accounts",S,ACX.al.sort,"brands","acxAlSort");
+    }
+  };
+  const bl=acList;
+  acList=function(){
+    if(AC.tab==="alloc"&&!acxAlMay()) AC.tab=acxSoMay()?"dlb":"people";
+    if(AC.tab==="alloc"){
+      const g=document.getElementById("ac-list"); if(!g) return;
+      acxAlLoad(); g.innerHTML=acxAlHtml(); acxFitChips(g);
+      const d=document.getElementById("acx-dash"); if(d) d.innerHTML="";
+      return;
+    }
+    return bl.apply(this,arguments);
+  };
+})();
+function acxAlSort(k){ ACX.al.sort=k; acRefresh(); }
+
+/* ── REVIEW ─────────────────────────────────────────────────────────── */
+var RVW={ok:false,busy:false,err:"",at:0,items:[],q:"",f:"all"};
+function rvDoneSet(){ try{ return new Set(JSON.parse(localStorage.getItem("cc-rv-done-"+(ME.id||""))||"[]")); }catch(e){ return new Set(); } }
+function rvDone(ev,id){ if(ev) ev.stopPropagation(); const s=rvDoneSet(); s.add(id); try{ localStorage.setItem("cc-rv-done-"+(ME.id||""),JSON.stringify([...s].slice(-600))); }catch(e){} rvPaint(); try{ renderBnTabs(); }catch(e){} }
+function rvGo(){
+  if(!acxRvMay()) return;
+  closeAllPops(); try{ acPopClose(); }catch(e){}
+  const sel=document.getElementById("brand-sel"); if(sel) sel.value="";
+  if(activeBrand){ activeBrand=""; try{ applyLayerDefaults(); }catch(e){} }
+  setView("review");
+  const m=document.getElementById("main"); if(m) m.scrollTop=0;
+}
+async function rvLoad(force){
+  if(RVW.busy) return;
+  if(RVW.ok&&!force&&Date.now()-RVW.at<120000) return;
+  RVW.busy=true; RVW.err="";
+  try{
+    const me=ME.id, now=new Date(), since=new Date(Date.now()-7*864e5).toISOString();
+    const ymd=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+    const today=ymd(now);
+    const ub=await sb.from("user_brands").select("brand_id,team_role").eq("user_id",me);
+    if(ub.error) throw ub.error;
+    let mine=(ub.data||[]).filter(x=>x.team_role&&brands[x.brand_id]).map(x=>x.brand_id);
+    const amOf=new Set((ub.data||[]).filter(x=>x.team_role==="account_manager").map(x=>x.brand_id));
+    RVW.team=mine.length>0;
+    if(!mine.length) mine=Object.keys(brands).filter(b=>brands[b]&&!brands[b].archived);   /* on no team: every brand you can see */
+    const B=[...new Set(mine)];
+    const d3=new Date(now.getTime()+3*864e5), d7=new Date(now.getTime()+7*864e5);
+    const yms=[...new Set([now,d3].map(d=>d.getFullYear()+"|"+(d.getMonth()+1)))].map(s=>s.split("|").map(Number));
+    const none={data:[]};
+    const [nt,due,sent,ans,sh,...po]=await Promise.all([
+      B.length?sb.from("branding_tasks").select("id,brand_id,title,owner_id,created_by,created_at").in("brand_id",B).is("deleted_at",null).is("archived_at",null).gte("created_at",since).order("created_at",{ascending:false}).limit(400):none,
+      sb.from("branding_tasks").select("id,brand_id,title,delivery_date,status").eq("owner_id",me).is("deleted_at",null).is("archived_at",null).not("status","in","(closed,cancelled)").not("delivery_date","is",null).lte("delivery_date",today).limit(300),
+      B.length?sb.from("deliverable_versions").select("id,deliverable_id,task_id,brand_id,version,status,created_by,created_at").in("brand_id",B).is("deleted_at",null).gte("created_at",since).order("created_at",{ascending:false}).limit(1000):none,
+      B.length?sb.from("deliverable_versions").select("id,deliverable_id,task_id,brand_id,version,status,answered_by,answered_at").in("brand_id",B).is("deleted_at",null).in("status",["changes","approved"]).gte("answered_at",since).order("answered_at",{ascending:false}).limit(600):none,
+      B.length?sb.from("productions").select("id,brand_id,date_year,date_month,date_day,status,shoot_type,requested_by,created_at").in("brand_id",B).is("deleted_at",null).is("withdrawn_at",null).eq("status","scheduled").in("date_year",[now.getFullYear(),d7.getFullYear()]).limit(400):none
+    ].concat(yms.map(([y,m])=>B.length?sb.from("social_posts").select("id,brand_id,year,month,date,format,status").in("brand_id",B).eq("year",y).eq("month",m).is("deleted_at",null).is("archived_at",null).in("status",["not_started","drafting","approved_internally"]).limit(1000):none)));
+    for(const r of [nt,due,sent,ans,sh].concat(po)) if(r.error) throw r.error;
+    const tids=[...new Set((sent.data||[]).concat(ans.data||[]).map(x=>x.task_id).filter(Boolean))], dids=[...new Set((ans.data||[]).map(x=>x.deliverable_id).filter(Boolean))];
+    const [tt,dd]=await Promise.all([tids.length?sb.from("branding_tasks").select("id,title").in("id",tids):none, dids.length?sb.from("task_deliverables").select("id,name").in("id",dids):none]);
+    const TT=Object.fromEntries((tt.data||[]).map(x=>[x.id,x.title])), DD=Object.fromEntries((dd.data||[]).map(x=>[x.id,x.name]));
+    try{ if(amOf.size&&typeof acxSoLoad==="function"&&!ACX.so.ok) await acxSoLoad(); }catch(e){}
+    const items=[], E=escHtml, A=escAttr;
+    (nt.data||[]).forEach(t=>{ if(t.created_by===me) return;
+      items.push({id:"nt:"+t.id,kind:"New task",cls:"tk",bid:t.brand_id,what:`<b>${E(t.title||"Task")}</b>${t.owner_id?` · owner ${E(acxPerson(t.owner_id))}`:""}`,from:acxPerson(t.created_by),at:t.created_at,act:false,go:`notifOpen('${A(t.brand_id)}','task','${A(t.id)}')`}); });
+    (due.data||[]).forEach(t=>{ const days=Math.round((new Date(today)-new Date(t.delivery_date))/864e5);
+      items.push({id:"du:"+t.id+":"+t.delivery_date,kind:"Task due",cls:"tk",bid:t.brand_id,what:`<b>${E(t.title||"Task")}</b> · <span class="rv-red">${days>0?"overdue by "+days+(days===1?" day":" days"):"due today"}</span>`,from:"Your task",at:t.delivery_date+"T00:00:00",act:true,over:days>0,go:`notifOpen('${A(t.brand_id)}','task','${A(t.id)}')`}); });
+    const grp=new Map();
+    (sent.data||[]).forEach(v=>{ if(v.created_by===me) return; const k=v.brand_id+"|"+(v.task_id||v.deliverable_id)+"|"+String(v.created_at).slice(0,10)+"|"+v.created_by;
+      let g=grp.get(k); if(!g){ g={v,n:0}; grp.set(k,g); } g.n++; });
+    grp.forEach((g,k)=>{ const v=g.v;
+      items.push({id:"dl:"+k,kind:"Delivery",cls:"dl",bid:v.brand_id,what:`<b>${E(TT[v.task_id]||"Delivery")}</b> · ${g.n} ${g.n===1?"delivery":"deliveries"} sent`,from:acxPerson(v.created_by),at:v.created_at,act:false,go:`acxGoDelivery('${A(v.brand_id)}','${A(v.task_id||"")}','${A(v.deliverable_id||"")}','${A(v.id)}')`}); });
+    (ans.data||[]).forEach(v=>{ const ch=v.status==="changes";
+      items.push({id:"an:"+v.id+":"+v.status,kind:"Client says",cls:"cl",bid:v.brand_id,what:`<b>${E(DD[v.deliverable_id]||TT[v.task_id]||"Delivery")}</b> · v${v.version} · ${ch?'<span class="rv-red">changes asked</span>':"approved"}`,from:v.answered_by?acxPerson(v.answered_by):"Client",at:v.answered_at,act:ch,chg:ch,go:`acxGoDelivery('${A(v.brand_id)}','${A(v.task_id||"")}','${A(v.deliverable_id||"")}','${A(v.id)}')`}); });
+    const PW={not_started:"not started",drafting:"in progress",approved_internally:"approved internally, not yet by the client"};
+    po.forEach(r=>(r.data||[]).forEach(p=>{ const d=new Date(p.year,p.month-1,p.date||1); if(ymd(d)<today||d>d3) return;
+      items.push({id:"po:"+p.id+":"+p.status,kind:"Post",cls:"po",bid:p.brand_id,what:`<b>${E(d.toLocaleDateString("en-GB",{day:"numeric",month:"short"}))}${p.format?" · "+E(String(p.format)):""}</b> · ${PW[p.status]||E(p.status)}`,from:"Goes out "+(ymd(d)===today?"today":d.toLocaleDateString("en-GB",{weekday:"short"})),at:d.toISOString(),act:true,go:`notifOpen('${A(p.brand_id)}','post','${A(p.id)}')`}); }));
+    (sh.data||[]).forEach(s=>{ if(!s.date_year||!s.date_month) return; const d=new Date(s.date_year,s.date_month-1,s.date_day||1); if(ymd(d)<today||d>d7) return;
+      items.push({id:"sh:"+s.id+":"+ymd(d),kind:"Shoot",cls:"sh",bid:s.brand_id,what:`<b>${E(s.shoot_type||"Shoot")}</b> · scheduled for ${E(d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"}))}`,from:s.requested_by?acxPerson(s.requested_by):"Production",at:s.created_at||d.toISOString(),act:false,go:`openProdInPlanner('${A(s.id)}')`}); });
+    if(amOf.size&&ACX.so.ok) (ACX.so.rows||[]).forEach(r=>{ try{ if(!amOf.has(r.brand_id)||acxSoState(r)!=="due") return;
+      items.push({id:"rn:"+r.brand_id+":"+r.title+":"+(r.term_end||""),kind:"Renewal",cls:"rn",bid:r.brand_id,what:`<b>${E(r.title||"Service")}</b> · <span class="rv-red">renewal due</span>${r.term_end?" · ended "+E(engDate(r.term_end)):""}`,from:"Client Centre",at:(r.term_end||today)+"T00:00:00",act:true,go:`acTab('dlb');acGo()`}); }catch(e){} });
+    RVW.items=items; RVW.ok=true; RVW.at=Date.now();
+  }catch(e){ RVW.err=String(e&&e.message||e); }
+  RVW.busy=false;
+  if(view==="review") rvPaint(); try{ renderBnTabs(); }catch(e){}
+}
+function rvAll(){
+  const done=rvDoneSet(), out=[];
+  try{ notifItems().filter(i=>i.mention).forEach(it=>{
+    const base=notifRowHtml(it,it.brandId,{}), m=base.match(/onclick="(notifOpen\([^"]*\))"/), tmp=document.createElement("div");
+    tmp.innerHTML=notifDestHtml(it,it.brandId,true);
+    const where=(tmp.textContent||"").replace(/\s+/g," ").trim(), q=notifExcerpt(it);
+    out.push({id:"me:"+(it.c.id||it.c.created_at),kind:"@ Mention",cls:"me",bid:it.brandId,what:`<b>${escHtml(where||"Mention")}</b>${q&&q.text?` · “${escHtml(q.text)}”`:""}`,from:nameShow(it.c.author_name,it.c.author_email,it.c.author_kind)||"",at:it.c.created_at,act:true,men:true,go:m?m[1].replace(/&#39;/g,"'").replace(/&quot;/g,'"'):""});
+  }); }catch(e){}
+  return out.concat(RVW.items).filter(x=>!done.has(x.id)&&brands[x.bid]);
+}
+function rvCount(){ try{ return rvAll().filter(x=>x.act).length; }catch(e){ return 0; } }
+function renderReview(){
+  const mc=document.getElementById("main");
+  mc.innerHTML=`<div style="padding:0 var(--pg-x) 26px;"><div id="rv-dash"></div><div class="fb" id="rv-bar"></div><div id="rv-list"></div></div>`;
+  rvLoad(); rvPaint();
+}
+const RVW_F=[["all","Everything","·"],["act","Needs action","!"],["me","Mentions","@"],["tk","Tasks","✓"],["dl","Deliveries","↗"],["po","Posts","▣"],["sh","Shoots","◉"],["rn","Renewals","↻"]];
+function rvIs(x,f){ return f==="all"||(f==="act"?x.act:f==="dl"?(x.cls==="dl"||x.cls==="cl"):x.cls===f); }
+function rvSidebar(){
+  const st=document.getElementById("sb-stats"); if(st) st.innerHTML="";
+  const sm=document.getElementById("sb-months"); if(!sm) return;
+  const all=rvAll();
+  sm.innerHTML=`<div class="s-lbl">Show</div>`+RVW_F.map(([k,l,e])=>`<div class="mdb-trow${RVW.f===k?" on":""}" onclick="RVW.f='${k}';rvPaint()"><span class="ac-sbe">${e}</span><span class="nm">${l}</span><span class="ct">${all.filter(x=>rvIs(x,k)).length}</span></div>`).join("");
+}
+function rvWhen(iso){ const d=new Date(iso), n=new Date(), day=x=>new Date(x.getFullYear(),x.getMonth(),x.getDate()).getTime(), k=Math.round((day(n)-day(d))/864e5);
+  if(k===0) return d.toLocaleTimeString("en-GB",{hour:"numeric",minute:"2-digit",hour12:true});
+  if(k===1) return "Yesterday"; return d.toLocaleDateString("en-GB",{day:"numeric",month:"short"}); }
+function rvPaint(){
+  const g=document.getElementById("rv-list"), bar=document.getElementById("rv-bar"), dash=document.getElementById("rv-dash"); if(!g||!bar) return;
+  const all=rvAll(), act=all.filter(x=>x.act);
+  if(dash) dash.innerHTML=`<div class="fin-stats rv-stats">${acxCard(act.length,"Needs your action","on "+new Set(act.map(x=>x.bid)).size+" brands",act.length?"rd":"")}${acxCard(all.filter(x=>x.men).length,"Mentions","waiting for you")}${acxCard(all.filter(x=>x.over).length,"Tasks overdue","that you own")}${acxCard(all.filter(x=>x.chg).length,"Changes asked","by clients, last 7 days")}${acxCard(all.length-act.length,"For information","last 7 days","bl")}</div>`;
+  try{ rvSidebar(); }catch(e){}
+  const had=document.activeElement&&document.activeElement.id==="rv-q", at=had?document.activeElement.selectionStart:null;
+  bar.innerHTML=`<input class="fi fb-q" id="rv-q" placeholder="Search…" value="${escAttr(RVW.q)}" oninput="RVW.q=this.value;rvPaint()">
+    <span class="fb-end">
+    <span class="fb-w"><button class="fb-chip" onclick="rvLoad(true)"><i class="ti ti-refresh"></i>Refresh</button></span></span>`;
+  if(had){ const n=document.getElementById("rv-q"); if(n){ n.focus(); try{ n.setSelectionRange(at,at); }catch(e){} } }
+  if(RVW.err){ g.innerHTML=`<div class="acx-list"><div class="acx-empty">Could not load your review list — ${escHtml(RVW.err)}</div></div>`; return; }
+  const q=RVW.q.trim().toLowerCase(), f=RVW.f, strip=h=>String(h).replace(/<[^>]+>/g,"");
+  const list=all.filter(x=>rvIs(x,f)&&(!q||(String((brands[x.bid]||{}).name)+" "+strip(x.what)+" "+x.from+" "+x.kind).toLowerCase().includes(q)));
+  const hd=`<div class="acx-r hd"><span>Kind</span><span>Brand</span><span>What</span><span>From</span><span>When</span><span></span><span></span></div>`;
+  const ST=`style="--acx-cols:112px ${acxBW()}px minmax(260px,1fr) 150px 96px 62px 14px"`;
+  if(!list.length){ g.innerHTML=`<div class="acx-list acx-rv" ${ST}>${hd}<div class="acx-empty">${!RVW.ok?"Loading…":all.length?"Nothing matches.":"Nothing is waiting on you."}</div></div>`; return; }
+  const by=new Map(); list.forEach(x=>{ if(!by.has(x.bid)) by.set(x.bid,[]); by.get(x.bid).push(x); });
+  const nm=b=>String((brands[b]||{}).name||""), na=xs=>xs.filter(x=>x.act).length;
+  const gs=[...by.entries()].sort((a,b)=>(na(b[1])-na(a[1]))||(b[1].length-a[1].length)||nm(a[0]).localeCompare(nm(b[0])));
+  let h=hd;
+  gs.forEach(([bid,xs])=>{ const n=na(xs);
+    h+=`<div class="acx-day">${escHtml(nm(bid))} · ${n?n+(n===1?" needs":" need")+" your action":"for your information"}</div>`;
+    xs.sort((a,b)=>(b.act-a.act)||(new Date(b.at)-new Date(a.at))).forEach(x=>{
+      h+=`<div class="acx-r${x.act?"":" rv-info"}" onclick="${escAttr(x.go||"")}"><span><span class="rv-k ${x.cls}">${escHtml(x.kind)}</span></span><span class="acx-c acx-b">${escHtml(nm(bid))}</span><span class="acx-c rv-w">${x.what}</span><span class="acx-c acx-m">${escHtml(x.from||"")}</span><span class="acx-m">${escHtml(rvWhen(x.at))}</span><span><button class="acx-add" onclick="rvDone(event,'${escAttr(x.id)}')">Done</button></span><span class="acx-car">›</span></div>`; });
+  });
+  g.innerHTML=`<div class="acx-list acx-rv" ${ST}>${h}</div>`;
+}
+(function(){
+  const base=viewRoute;
+  viewRoute=function(v){ if(v==="review") return {render:renderReview,sidebar:rvSidebar}; return base(v); };
+  try{ PAGE_NAME.review="Review"; }catch(e){}
+  const baseTabs=renderBnTabs;
+  renderBnTabs=function(){
+    const out=baseTabs.apply(this,arguments);
+    try{
+      const el=document.getElementById("bn-tabs");
+      if(!el||el.style.display==="none"||(activeBrand&&brands[activeBrand])) return out;
+      let t=el.querySelector('[data-ac="rvw"]');
+      if(!acxRvMay()){ if(t) t.remove(); return out; }
+      if(!t){ el.insertAdjacentHTML("beforeend",`<button class="bntab" data-ac="rvw" onclick="rvGo()"></button>`); t=el.querySelector('[data-ac="rvw"]'); }
+      const on=view==="review", n=RVW.ok?rvCount():0;
+      t.classList.toggle("on",on); t.setAttribute("aria-current",on?"page":"false");
+      const want=`<i class="ti ti-checklist"></i> Review${n?`<span class="rv-n">${n>99?"99+":n}</span>`:""}<span class="pvt"><i class="ti ti-lock"></i>Preview</span>`;
+      if(t.innerHTML!==want) t.innerHTML=want;
+    }catch(e){}
+    return out;
+  };
+  const baseRender=render;
+  render=function(){
+    if(view==="review"&&activeBrand&&brands[activeBrand]) view="mplan";
+    if(view==="review"&&!acxRvMay()) view="year";
+    return baseRender.apply(this,arguments);
+  };
+  window.addEventListener("resize",()=>{ try{ if(view==="review") rvPaint(); }catch(e){} });
+  try{ if(typeof ME==="object"&&ME&&ME.id){ renderBnTabs(); if(acxRvMay()) rvLoad(); } }catch(e){}
+})();
+document.head.insertAdjacentHTML("beforeend",`<style id="acx-alloc-review-17-css">
+.acx-list.acx-al .acx-r,.acx-list.acx-rv .acx-r{grid-template-columns:var(--acx-cols)}
+.acx-al .acx-pn{display:flex;align-items:center;gap:7px}.acx-al .acx-pn .e{flex:none}
+.acx-nc{text-align:center}.acx-al .acx-n{text-align:center;font-weight:700}.acx-al .acx-n.z{color:#c4c1ba;font-weight:500}
+.acx-fit{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;white-space:nowrap}
+.acx-bc{font-size:12px;font-weight:600;background:#F3F1EC;border-radius:6px;padding:3px 8px;flex:none}
+.acx-list.acx-al .acx-r.acx-alx{min-height:0!important;background:#FAF9F6;border-top:0;padding-top:5px;padding-bottom:5px;cursor:default}
+.acx-list.acx-al .acx-r.acx-alx.f{border-top:1px solid #EFEDE8;padding-top:12px}
+.acx-list.acx-al .acx-r.acx-alx.l{padding-bottom:14px}
+.acx-alx b{font-weight:700;font-size:13px}
+.rv-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;padding-top:20px}
+#rv-dash .fin-sc{background:#fff;border:1px solid var(--div);border-radius:10px;padding:11px 13px}
+#rv-dash .fin-sc .n{font-size:21px;font-weight:800;line-height:1.15;color:var(--text)}
+#rv-dash .fin-sc .k{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+#rv-dash .fin-sc .s{font-size:11.5px;color:var(--subtle);margin-top:2px}
+#rv-dash .fin-sc.bl .n{color:#2B6CB0}#rv-dash .fin-sc.rd .n{color:var(--acc)}
+#rv-dash + .fb{margin-top:14px}
+.rv-k{font-size:11px;font-weight:800;border-radius:6px;padding:3px 8px;white-space:nowrap;background:#F3F1EC;color:#555}
+.rv-k.me{background:#FBE1E1;color:#B01E1E}.rv-k.tk{background:#E3EBF8;color:#2B5FB0}.rv-k.dl{background:#E6F1E4;color:#1D6B2A}.rv-k.cl{background:#FBF0D2;color:#8A6508}.rv-k.po{background:#EFE6F7;color:#6B3AA0}.rv-k.rn{background:#FBE1E1;color:#B01E1E}
+.rv-w b{font-weight:600}.rv-red{color:var(--acc);font-weight:700}
+.acx-rv .acx-r.rv-info .rv-w,.acx-rv .acx-r.rv-info .acx-b{color:#555}
+.acx-rv .acx-day{color:#555}
+.rv-n{background:var(--acc);color:#fff;border-radius:9px;font-size:10.5px;font-weight:800;padding:1px 6px;margin-left:6px}
+@media(max-width:1100px){ .rv-stats{grid-template-columns:repeat(2,minmax(0,1fr))} }
 </style>`);
 </script>
 </body>
