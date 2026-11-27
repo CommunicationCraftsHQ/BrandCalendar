@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.14 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.15 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14856,7 +14856,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.14 Cappadocia";
+const TOOL_VERSION="V119.15 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -58905,12 +58905,17 @@ document.head.insertAdjacentHTML("beforeend",`<style id="mdb-order-css">
   /* the tabs: words only, in his order */
   const baseBar=acBar;
   acBar=function(){
+    if(AC.tab==="health"&&!acxHlMay()) AC.tab=acxSoMay()?"dlb":"people";
     baseBar.apply(this,arguments);
     const bar=document.getElementById("ac-bar"); if(!bar) return;
+    /* V119.15 — Services and Productions get a sort that works */
+    if(AC.tab==="dlb"||AC.tab==="prod"){ const so=bar.querySelector(".fb-end .fb-sortw"), S=acxSorts();
+      if(so) so.outerHTML=fltSortHtml("accounts",S,acxSortNow(),S[0][0],"acxPickSort"); }
     const lens=bar.querySelector(".ac-tabs"); if(!lens) return;
     const T=[]; if(acxMay()&&acxSoMay()) T.push(["dlb","Services"]);
-    T.push(["people","Team"],["health","Preview"]);
+    T.push(["people","Team"]);
     if(acxMay()) T.push(["prod","Productions"],["dlv","Deliveries"]);
+    if(acxHlMay()) T.push(["health","Health"]);   /* V119.15 — last, and only administrators see it for now */
     lens.innerHTML=T.map(([k,l])=>`<span class="${AC.tab===k?"on":""}" data-tab="${k}" onclick="acTab('${k}')">${l}</span>`).join("");
   };
 })();
@@ -58925,6 +58930,22 @@ document.head.insertAdjacentHTML("beforeend",`<style id="mdb-order-css">
    Now: one brand width (acxBW) that every tab reads, each list's own gap
    allowed for so Account manager starts at the same x; one row height, one
    header, one brand style, and one account-manager cell (acxAmCell). */
+function acxHlMay(){ return !!ME&&ME.role!=="client"&&(ME.toolRole==="super_admin"||ME.toolRole==="admin"); }
+function acxSorts(){ return AC.tab==="prod"?[["owe","Most owed"],["name","Brand"]]:[["name","Brand"],["am","Account manager"],["due","Renewal due"]]; }
+function acxSortNow(){ return AC.tab==="prod"?(ACX.pr.sort||"owe"):(ACX.so.sort||"name"); }
+function acxPickSort(k){ if(AC.tab==="prod") ACX.pr.sort=k; else ACX.so.sort=k; acRefresh(); }
+(function(){
+  const nm=b=>String((brands[b]||{}).name||""), cmp=(a,b)=>nm(a).localeCompare(nm(b),undefined,{sensitivity:"base"});
+  const bs=acxSoBrands;
+  acxSoBrands=function(){ const r=bs.apply(this,arguments), k=ACX.so.sort||"name";
+    if(k==="am"){ const a=b=>{ const t=acAMsOf(b)[0]; return t?acName(t.user_id).toLowerCase():"\uffff"; }; return r.sort((x,y)=>a(x.b).localeCompare(a(y.b))||cmp(x.b,y.b)); }
+    if(k==="due"){ const d=x=>x.ss.some(q=>acxSoState(q)==="due")?0:1; return r.sort((x,y)=>(d(x)-d(y))||cmp(x.b,y.b)); }
+    return r; };
+  const bp=acxPrBrands;
+  acxPrBrands=function(){ const r=bp.apply(this,arguments); return ACX.pr.sort==="name"?r.sort((x,y)=>cmp(x.bid,y.bid)):r; };
+  const bl=acList;
+  acList=function(){ if(AC.tab==="health"&&!acxHlMay()) AC.tab=acxSoMay()?"dlb":"people"; bl.apply(this,arguments); try{ if(AC.tab==="people") acxTmFit(); }catch(e){} };
+})();
 function acxBW(){
   const g=document.getElementById("ac-list"), w=g?g.clientWidth:1400;
   /* Productions needs 1106px with a 176px brand; below that the brand gives way, on every tab alike */
@@ -58948,13 +58969,25 @@ function acxTmWho(bid,x,may){ const p=acPerson(x.user_id), pr=p?acPrefOf(bid,p):
   return `<span class="ac-who${x.user_id===ME.id?" me":""}${may?" acx-pmb":""}" ${may?`onclick="acxPmOpen(event,'${escAttr(x.user_id)}','${escAttr(bid)}')"`:""}><span class="e">${acEmoji(p)}</span>${escHtml(p?p.name:"Someone")}${pr.muted?`<i class="ti ti-bell-off acx-mut"></i>`:""}</span>`; }
 function acxTmCell(bid,k){
   const role={tm_cr:"creator",tm_pm:"production_manager",tm_pf:"performance_marketer"}[k];
-  const t=acTeamOf(bid).filter(x=>x.team_role===role), cap=k==="tm_cr"?2:1, open=AC.px===bid;
+  const t=acTeamOf(bid).filter(x=>x.team_role===role), open=AC.px===bid;
   if(!t.length) return `<span class="acx-tm z">·</span>`;
   const may=open&&AC.migr&&canManagePeople(bid);
-  const who=t.slice(0,cap).map(x=>open?acxTmWho(bid,x,may):(()=>{ const p=acPerson(x.user_id);
-    return `<span class="ac-who${x.user_id===ME.id?" me":""}"><span class="e">${acEmoji(p)}</span>${escHtml(p?p.name:"Someone")}</span>`; })()).join("");
+  /* V119.15 — every name is drawn; acxTmFit keeps as many as the column holds */
+  const who=t.map(x=>acxTmWho(bid,x,may)).join("");
   const all=t.map(x=>{ const p=acPerson(x.user_id); return p?p.name:"Someone"; }).join(", ");
-  return `<span class="acx-tm" title="${escAttr(all)}"><span class="nm">${who}</span>${t.length>cap&&!open?`<b class="acx-more">+${t.length-cap}</b>`:""}</span>`;
+  return `<span class="acx-tm" data-fit="${k}" data-bid="${escAttr(bid)}" title="${escAttr(all)}"><span class="nm">${who}</span><b class="acx-more" style="display:none"></b></span>`;
+}
+function acxTmFit(){
+  document.querySelectorAll("#ac-list .acx-tm[data-fit]").forEach(c=>{
+    const it=[...c.querySelectorAll(".nm>.ac-who")], more=c.querySelector(".acx-more"), W=c.clientWidth, open=AC.px===c.dataset.bid;
+    it.forEach(x=>x.style.display="");
+    let used=0, k=0;
+    for(const x of it){ const w=x.offsetWidth+(k?8:0); if(used+w+(k+1<it.length&&!open?34:0)>W&&k>0) break; used+=w; k++; }
+    it.forEach((x,i)=>{ if(i>=k) x.style.display="none"; });
+    if(more){ if(it.length>k&&!open){ more.textContent="+"+(it.length-k); more.style.display=""; } else more.style.display="none"; }
+    if(open){ const d=document.querySelector(`#ac-list .acx-tmdet .acx-stk[data-k="${c.dataset.fit}"]`);
+      if(d) [...d.querySelectorAll(".ac-who")].forEach((x,i)=>{ x.style.display=i<k?"none":""; }); }
+  });
 }
 /* V119.14 — Team, opened row (mockup "01 - Ac Mgmt opened rows", option B):
    the rest of each profile's people sit under their own column; a name opens
@@ -58963,8 +58996,8 @@ function acxTmDet(bid){
   const cols=acColsNow().filter(([k])=>!AC_HIDE.has(k)), may=AC.migr&&canManagePeople(bid);
   const R={ams:"account_manager",tm_cr:"creator",tm_pm:"production_manager",tm_pf:"performance_marketer"}, F={see:"all",muted:"muted",hidden:"hidden"};
   const cell=k=>{
-    if(R[k]){ const cap=k==="tm_cr"?2:1, t=acTeamOf(bid).filter(x=>x.team_role===R[k]).slice(cap);
-      return `<span class="acx-stk">${t.map(x=>acxTmWho(bid,x,may)).join("")}${may?`<button class="acx-add" onclick="acxAddOpen(event,'${escAttr(bid)}','${R[k]}')">+ Add</button>`:""}</span>`; }
+    if(R[k]){ const t=acTeamOf(bid).filter(x=>x.team_role===R[k]).slice(k==="ams"?1:0);
+      return `<span class="acx-stk w" data-k="${k}">${t.map(x=>acxTmWho(bid,x,may)).join("")}${may?`<button class="acx-add" onclick="acxAddOpen(event,'${escAttr(bid)}','${R[k]}')">+ Add</button>`:""}</span>`; }
     if(F[k]){ const fs=cols.map(([c])=>c).filter(c=>F[c]); if(fs[0]!==k) return "";
       return `<span class="acx-mg" style="grid-column:span ${fs.length}"><button class="acx-add${AC.pxFull?" on":""}" onclick="acxPxFull(event,'${escAttr(bid)}','all')">${may?"Manage":"View"}</button></span>`; }
     return `<span></span>`; };
@@ -59058,13 +59091,23 @@ acxDlHtml=function(){
     const open=O.has(g.k);
     h+=`<div class="acx-r acx-click${open?" isopen":""}" data-dlk="${escAttr(g.k)}" onclick="acxDlFlip('${escAttr(g.k)}')">
       <span class="acx-c acx-b">${escHtml((brands[g.brand_id]||{}).name||"")}</span>
-      ${X("dl_am",`<span class="acx-c" title="${escAttr(ams)}">${acxAmCell(g.brand_id)}</span>`)}
+      ${X("dl_am",`<span class="acx-c" title="${escAttr(ams)}">${acxAmCell(g.brand_id,open)}</span>`)}
       ${X("dl_by",`<span class="acx-c acx-m" title="${escAttr(by.join(", "))}">${escHtml(by[0]||"")}${by.length>1?" +"+(by.length-1):""}</span>`)}
       ${X("dl_time",`<span class="acx-m">${escHtml(tm(g.last))}</span>`)}
       ${X("dl_task",`<span class="acx-c" title="${escAttr(task)}">${escHtml(task)}</span>`)}
       ${X("dl_dlv",`<span class="acx-dls">${dels.slice(0,2).map(pill).join("")}${dels.length>2?`<b class="acx-more">+${dels.length-2}</b>`:""}</span>`)}
       ${X("dl_st",`<span class="acx-st ${cls}">${escHtml(says)}</span>`)}<span class="acx-car">›</span></div>`;
-    if(open) h+=`<div class="acx-dldet">${dels.map(d=>`<div class="ln" onclick="${go(d)}"><b>${escHtml(d.name)}</b><span class="vv">${d.vs.map(v=>`<span>${tag(v)} ${v.at?escHtml((v.when==="t"&&!multi?"":ds(v.at)+" ")+tm(v.at))+" · ":""}${WORD[v.st]}</span>`).join("")}</span></div>`).join("")}</div>`;
+    if(open){ /* V119.15 — the opened part sits in the list's own columns, one line per delivery */
+      const rest=acAMsOf(g.brand_id).slice(1), n=Math.max(dels.length,rest.length), SW={ok:"Approved ✓","":"Waiting for client",chg:"Changes asked"}, SC={ok:"approved","":"sent",chg:"changes"};
+      for(let i=0;i<n;i++){ const d=dels[i], a=rest[i], p=a?acPerson(a.user_id):null;
+        h+=`<div class="acx-r acx-dlx${i===0?" f":""}${i===n-1?" l":""}" ${d?`onclick="${go(d)}"`:`onclick="event.stopPropagation()"`}><span></span>
+          ${X("dl_am",a?`<span class="ac-ams acx-amx"><span class="ac-who"><span class="e">${acEmoji(p)}</span>${escHtml(p?p.name:"Someone")}</span></span>`:"<span></span>")}
+          ${X("dl_by",`<span class="acx-m">${i===0?escHtml(by.slice(1).join(", ")):""}</span>`)}
+          ${X("dl_time",`<span class="acx-m">${d&&d.latest.at?escHtml(tm(d.latest.at)):""}</span>`)}
+          ${X("dl_task",`<span class="tk">${i===0?escHtml(task):""}</span>`)}
+          ${X("dl_dlv",d?`<span class="dv"><b>${escHtml(d.name)}</b><span class="vv">${d.vs.map(v=>`<span>${tag(v)} ${v.at?escHtml((v.when==="t"&&!multi?"":ds(v.at)+" ")+tm(v.at))+" · ":""}${WORD[v.st]}</span>`).join("")}</span></span>`:"<span></span>")}
+          ${X("dl_st",d?`<span class="acx-st ${SC[d.latest.st]}">${SW[d.latest.st]}</span>`:"<span></span>")}<span></span></div>`; }
+    }
   });
   return `<div class="acx-list acx-dl" ${ST}>${h}</div>`;
 };
@@ -59083,6 +59126,18 @@ document.head.insertAdjacentHTML("beforeend",`<style id="acx-tabs-12-css">
 .acx-tm{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;white-space:nowrap;font-size:12.5px}
 .acx-stk{display:flex;flex-direction:column;align-items:flex-start;gap:9px;min-width:0;font-size:12.5px}
 .acx-stk .ac-who{white-space:nowrap}
+.acx-stk.w{flex-direction:row;flex-wrap:wrap;align-items:center;gap:9px 8px}
+.acx-list.acx-dl .acx-r.acx-dlx{min-height:0!important;align-items:start;background:#FAF9F6;border-top:0;padding-top:5px;padding-bottom:5px}
+.acx-list.acx-dl .acx-r.acx-dlx.f{border-top:1px solid #EFEDE8;padding-top:12px}
+.acx-list.acx-dl .acx-r.acx-dlx.l{padding-bottom:14px}
+.acx-dlx>span{white-space:normal;overflow:visible;min-width:0}
+.acx-dlx .tk{font-weight:600;font-size:13px;line-height:1.35}
+.acx-dlx .dv{display:flex;flex-direction:column;gap:5px}
+.acx-dlx .dv b{font-size:13px}
+.acx-dlx:hover .dv b{text-decoration:underline}
+.acx-dlx .vv{display:flex;flex-wrap:wrap;gap:6px 16px;color:#444;font-size:12.5px}
+.acx-dlx .vv>span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.acx-dlx .dvv{border:0;height:20px;padding:0 6px;border-radius:5px;font-size:11px;font-weight:800;flex:none;display:inline-flex;align-items:center}
 .acl.brl .brl-tr.acx-tmdet{height:auto!important;min-height:0;align-items:start;padding-top:10px;padding-bottom:14px;background:#FAF9F6;border-top:0;cursor:default}
 .acl.brl .brl-tr.acx-tmdet:hover{background:#FAF9F6}
 .acx-tmdet .acx-mg{text-align:center}
