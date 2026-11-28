@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.19 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.20 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -10289,7 +10289,8 @@ function brandRowHtml(k,b,indent){
     eye?act(hid?"mut":"", hid?`Put ${escAttr(b.name)} back in your list`
                              :`Hide ${escAttr(b.name)} from your list — just for you`,
         `brandHide('${k}',${hid?0:1})`, `ti-eye${hid?"-off":""}`):"",
-    canEdit()?act("", "Who is on this brand", `openBrandPeople('${k}')`, "ti-users"):""
+    canEdit()?act("", "Who is on this brand", `openBrandPeople('${k}')`, "ti-users"):"",
+    (typeof rvdBrandAct==="function")?rvdBrandAct(k,b):""      /* V119.20 — track this brand in Review */
   ].join("");
   return `<div class="brow${activeBrand===k?" on":""}${mut?" bmuted":""}${hid?" bhid":""}"${indent?` style="padding-left:26px;"`:""} onclick="pickBrand('${k}')">
         <span class="bnm">${escAttr(b.name)}</span>${b.past?`<span class="br-past">Past</span>`:""}
@@ -12402,6 +12403,7 @@ function brOpenPanelHtml(t){
       ${canEdit()&&!cv?`<button class="br-ico" onclick="brOpenTask('${t.id}')" title="Edit details" aria-label="Edit details"><i class="ti ti-pencil"></i></button>`:""}
       ${can("task_create")&&!cv?`<button class="br-ico" onclick="brDuplicateTask('${t.id}')" title="Duplicate this task" aria-label="Duplicate"><i class="ti ti-copy"></i></button>`:""}
       <button class="br-ico" onclick="taskCopyLink('${t.id}')" title="Copy a link that opens this task" aria-label="Copy link"><i class="ti ti-link"></i></button>
+      ${(!cv&&typeof rvdTaskStarBtn==="function")?rvdTaskStarBtn(t.id):""}
       ${TASK_SEEN[t.id]&&!cv?`<button class="br-ico" onclick="taskMarkUnread('${t.id}')" title="Put this task back in your bell" aria-label="Mark unread"><i class="ti ti-bell-plus"></i></button>`:""}
       ${brCanArchive(t)?`<button class="br-ico" onclick="brSetArchived('${t.id}',${t.archived_at?0:1})"
          title="${t.archived_at?"Put it back in the working list, with the status it has":"Put it out of the way — the status it has is kept"}"
@@ -14910,7 +14912,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.19 Cappadocia";
+const TOOL_VERSION="V119.20 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -59537,7 +59539,8 @@ function rvPaint(){
     return baseRender.apply(this,arguments);
   };
   window.addEventListener("resize",()=>{ try{ if(view==="review") rvPaint(); }catch(e){} });
-  try{ if(typeof ME==="object"&&ME&&ME.id){ renderBnTabs(); if(acxRvMay()) rvLoad(); } }catch(e){}
+  /* V119.20 — the list is no longer read at boot; Review reads when it is opened */
+  try{ if(typeof ME==="object"&&ME&&ME.id){ renderBnTabs(); } }catch(e){}
 })();
 document.head.insertAdjacentHTML("beforeend",`<style id="acx-alloc-review-17-css">
 .acx-list.acx-al .acx-r,.acx-list.acx-rv .acx-r{grid-template-columns:var(--acx-cols)}
@@ -59563,6 +59566,320 @@ document.head.insertAdjacentHTML("beforeend",`<style id="acx-alloc-review-17-css
 .acx-rv .acx-day{color:#555}
 .rv-n{background:var(--acc);color:#fff;border-radius:9px;font-size:10.5px;font-weight:800;padding:1px 6px;margin-left:6px}
 @media(max-width:1100px){ .rv-stats{grid-template-columns:repeat(2,minmax(0,1fr))} }
+</style>`);
+</script>
+<script id="rv-dash-20">
+/* ══ V119.20 CAPPADOCIA · REVIEW IS A DASHBOARD OF SECTIONS ═════════════
+   Chirag, 28 Nov, on the V119.17 list: "not very useful because it has
+   jumbled up all the things ... it should look like a dashboard with
+   multiple sections", each tracking one kind of thing with a jump to the
+   item, and "the person who is the reviewer can decide which sections he
+   want to keep". Locked on mockup "05 - Review tab": boxes in three
+   columns; Mentions, Tasks I track, Brands I track, Deliveries (the Brand
+   and Delivery columns of Ac Mgmt › Deliveries), Posts this week,
+   Followers (one line per brand, a short tag per tracked platform, growth
+   in the calendar month), and — for account managers only, off until they
+   turn them on — Renewals due and Payments due, with no amounts.
+
+   LIGHT ON PURPOSE (the outage of 27 Nov): nothing here is read at boot,
+   every read is bounded to the person's own brands or stars, and nothing
+   asks the database to count. The old list read seven tables for every
+   administrator on every page load; that call is gone.
+
+   What a person keeps (sections, order, stars) is one row in
+   review_prefs (SQL file 127). Without that file it is kept in the
+   browser, and Payments due is not offered. */
+var RVD={ok:false,busy:false,at:0,err:"",db:false,loaded:false,
+  p:{sections:[],tasks:[],brands:[]}, d:{}, more:{}, amB:[], team:[], payOk:false};
+const RVD_SECS=[["me","Mentions"],["tk","Tasks I track"],["br","Brands I track"],["dl","Deliveries"],["po","Posts this week"],["fo","Followers"],["rn","Renewals due"],["pay","Payments due"]];
+const RVD_AMONLY={rn:1,pay:1};
+function rvdKey(){ return "cc-rvd-"+((ME&&ME.id)||""); }
+function rvdNorm(p){
+  p=p||{}; const have=new Set(), secs=[];
+  (Array.isArray(p.sections)?p.sections:[]).forEach(s=>{ if(s&&RVD_SECS.some(([k])=>k===s.k)&&!have.has(s.k)){ have.add(s.k); secs.push({k:s.k,on:!!s.on}); } });
+  RVD_SECS.forEach(([k])=>{ if(!have.has(k)) secs.push({k,on:!RVD_AMONLY[k]}); });
+  return {sections:secs,tasks:[...new Set((p.tasks||[]).filter(Boolean))],brands:[...new Set((p.brands||[]).filter(Boolean))]};
+}
+async function rvdPrefsLoad(){
+  if(RVD.loaded) return;
+  let local=null; try{ local=JSON.parse(localStorage.getItem(rvdKey())||"null"); }catch(e){}
+  try{
+    const r=await sb.from("review_prefs").select("sections,tasks,brands").eq("user_id",ME.id).maybeSingle();
+    if(!r.error){ RVD.db=true; RVD.p=rvdNorm(r.data||local); RVD.loaded=true; return; }
+  }catch(e){}
+  RVD.db=false; RVD.p=rvdNorm(local); RVD.loaded=true;
+}
+function rvdPrefsSave(){
+  try{ localStorage.setItem(rvdKey(),JSON.stringify(RVD.p)); }catch(e){}
+  if(!RVD.db) return;
+  try{ sb.from("review_prefs").upsert({user_id:ME.id,sections:RVD.p.sections,tasks:RVD.p.tasks,brands:RVD.p.brands,updated_at:new Date().toISOString()},{onConflict:"user_id"}).then(()=>{},()=>{}); }catch(e){}
+}
+function rvdIsAm(){ return RVD.amB.length>0; }
+function rvdShown(){ return RVD.p.sections.filter(s=>s.on&&(!RVD_AMONLY[s.k]||(rvdIsAm()&&(s.k!=="pay"||RVD.payOk)))); }
+
+/* ── stars ── */
+function rvdTaskOn(id){ return RVD.p.tasks.indexOf(id)>-1; }
+function rvdBrandOn(id){ return RVD.p.brands.indexOf(id)>-1; }
+async function rvdStarTask(ev,id){
+  if(ev) ev.stopPropagation(); await rvdPrefsLoad();
+  const on=rvdTaskOn(id); RVD.p.tasks=on?RVD.p.tasks.filter(x=>x!==id):RVD.p.tasks.concat(id).slice(-200);
+  rvdPrefsSave(); toast(on?"Task no longer tracked":"Task tracked in Review");
+  document.querySelectorAll(`[data-rvd-task="${id}"]`).forEach(b=>{ b.classList.toggle("on",!on); const i=b.querySelector("i"); if(i) i.className="ti "+(!on?"ti-star-filled":"ti-star"); });
+  if(view==="review"){ RVD.at=0; rvdLoad(true); }
+}
+async function rvdStarBrand(ev,id){
+  if(ev) ev.stopPropagation(); await rvdPrefsLoad();
+  const on=rvdBrandOn(id), nm=(brands[id]||{}).name||"Brand"; RVD.p.brands=on?RVD.p.brands.filter(x=>x!==id):RVD.p.brands.concat(id).slice(-60);
+  rvdPrefsSave(); toast(on?`${nm} no longer tracked`:`${nm} tracked in Review`);
+  try{ buildBrandPanel(); }catch(e){}
+  if(view==="review"){ RVD.at=0; rvdLoad(true); }
+}
+/* the stars are drawn before the person's choices have been read on a
+   cold start; read them once, then put the drawn stars right */
+function rvdKick(){
+  if(RVD.loaded||RVD.kicked||!(ME&&ME.id)) return; RVD.kicked=true;
+  rvdPrefsLoad().then(()=>{ try{ buildBrandPanel(); }catch(e){}
+    document.querySelectorAll("[data-rvd-task]").forEach(b=>{ const on=rvdTaskOn(b.dataset.rvdTask); b.classList.toggle("on",on); const i=b.querySelector("i"); if(i) i.className="ti "+(on?"ti-star-filled":"ti-star"); }); });
+}
+/* the star inside an open task, and beside a brand in the switcher */
+function rvdTaskStarBtn(id){
+  if(!acxRvMay()) return ""; rvdKick();
+  const on=rvdTaskOn(id);
+  return `<button class="br-ico rvd-star${on?" on":""}" data-rvd-task="${escAttr(id)}" onclick="rvdStarTask(event,'${escAttr(id)}')" title="Track this task in Review" aria-label="Track in Review"><i class="ti ${on?"ti-star-filled":"ti-star"}"></i></button>`;
+}
+function rvdBrandAct(k,b){
+  if(!acxRvMay()) return ""; rvdKick();
+  const on=rvdBrandOn(k);
+  return `<button class="bact rvd-star${on?" on":""}" title="${on?"Stop tracking":"Track"} ${escAttr(b.name)} in Review" onclick="rvdStarBrand(event,'${escAttr(k)}')"><i class="ti ${on?"ti-star-filled":"ti-star"}"></i></button>`;
+}
+
+/* ── the read ── */
+async function rvdLoad(force){
+  if(RVD.busy) return;
+  if(RVD.ok&&!force&&Date.now()-RVD.at<120000) return;
+  RVD.busy=true; RVD.err="";
+  try{
+    await rvdPrefsLoad();
+    const me=ME.id, now=new Date(), none={data:[]};
+    const ymd=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+    const today=ymd(now), d7=new Date(now.getTime()+7*864e5), since=new Date(Date.now()-7*864e5).toISOString();
+    const ub=await sb.from("user_brands").select("brand_id,team_role").eq("user_id",me);
+    if(ub.error) throw ub.error;
+    const live=b=>!!brands[b];
+    RVD.team=(ub.data||[]).filter(x=>x.team_role&&live(x.brand_id)).map(x=>x.brand_id);
+    RVD.amB=(ub.data||[]).filter(x=>x.team_role==="account_manager"&&live(x.brand_id)).map(x=>x.brand_id);
+    const SB=RVD.p.brands.filter(live), TK=RVD.p.tasks.slice(0,200);
+    const B=[...new Set(RVD.team.concat(SB))];                /* my team's brands and my starred brands */
+    const yms=[...new Set([now,d7].map(d=>d.getFullYear()+"|"+(d.getMonth()+1)))].map(s=>s.split("|").map(Number));
+    const prevEnd=ymd(new Date(now.getFullYear(),now.getMonth(),0));   /* the last day of last month */
+    const on=k=>RVD.p.sections.some(s=>s.k===k&&s.on);
+    const [tk,bt,dv,fs,fr,pay,...po]=await Promise.all([
+      on("tk")&&TK.length?sb.from("branding_tasks").select("id,brand_id,title,status,delivery_date").in("id",TK).is("deleted_at",null).limit(200):none,
+      on("br")&&SB.length?sb.from("branding_tasks").select("id,brand_id,delivery_date,status").in("brand_id",SB).is("deleted_at",null).is("archived_at",null).not("status","in","(closed,cancelled)").limit(2000):none,
+      on("dl")&&B.length?sb.from("deliverable_versions").select("id,deliverable_id,task_id,brand_id,version,status,created_at").in("brand_id",B).is("deleted_at",null).gte("created_at",since).order("created_at",{ascending:false}).limit(600):none,
+      on("fo")&&SB.length?sb.from("brand_follower_state").select("brand_id,platform,followers,check_state").in("brand_id",SB):none,
+      on("fo")&&SB.length?sb.from("brand_follower_readings").select("brand_id,platform,read_on,followers").in("brand_id",SB).gte("read_on",prevEnd).order("read_on",{ascending:true}).limit(3000):none,
+      RVD.amB.length?sb.rpc("review_payments_due"):none
+    ].concat(yms.map(([y,m])=>(on("po")||on("br"))&&B.length?sb.from("social_posts").select("id,brand_id,year,month,date,format,status").in("brand_id",B).eq("year",y).eq("month",m).is("deleted_at",null).is("archived_at",null).limit(1000):none)));
+    for(const r of [tk,bt,dv].concat(po)) if(r.error) throw r.error;
+    RVD.payOk=!!RVD.amB.length&&!pay.error;
+    /* every version of the deliveries that moved this week, and their names */
+    const dids=[...new Set((dv.data||[]).map(x=>x.deliverable_id).filter(Boolean))].slice(0,300);
+    const [allv,dn]=await Promise.all([
+      dids.length?sb.from("deliverable_versions").select("id,deliverable_id,task_id,brand_id,version,status,created_at").in("deliverable_id",dids).is("deleted_at",null).limit(2000):none,
+      dids.length?sb.from("task_deliverables").select("id,name").in("id",dids):none]);
+    try{ if(RVD.amB.length&&on("rn")&&typeof acxSoLoad==="function"&&!ACX.so.ok) await acxSoLoad(); }catch(e){}
+    const D={};
+    /* tasks I track */
+    const late=t=>t.delivery_date&&t.delivery_date<today&&CC_STATUS.task.settled.indexOf(t.status)<0;
+    D.tk=(tk.data||[]).filter(t=>live(t.brand_id)).sort((a,b)=>(late(b)-late(a))||String(a.delivery_date||"9").localeCompare(String(b.delivery_date||"9")))
+      .map(t=>({id:t.id,bid:t.brand_id,title:t.title||"Task",status:t.status,due:t.delivery_date,late:late(t)?Math.round((new Date(today)-new Date(t.delivery_date))/864e5):0}));
+    /* posts in the next seven days */
+    const posts=[]; po.forEach(r=>(r.data||[]).forEach(p=>{ const d=new Date(p.year,p.month-1,p.date||1); if(ymd(d)<today||d>d7) return; posts.push({id:p.id,bid:p.brand_id,d,format:p.format,status:p.status}); }));
+    posts.sort((a,b)=>a.d-b.d);
+    const TB=new Set(RVD.team.length?RVD.team:SB);
+    D.po=posts.filter(p=>TB.has(p.bid)||SB.indexOf(p.bid)>-1);
+    /* brands I track */
+    const men={}; try{ notifItems().filter(i=>i.mention).forEach(i=>{ men[i.brandId]=(men[i.brandId]||0)+1; }); }catch(e){}
+    const d3=ymd(new Date(now.getTime()+3*864e5));
+    D.br=SB.map(b=>{ const ts=(bt.data||[]).filter(t=>t.brand_id===b), l=ts.filter(t=>t.delivery_date&&t.delivery_date<today).length, soon=ts.filter(t=>t.delivery_date&&t.delivery_date>=today&&t.delivery_date<=d3).length;
+      return {bid:b,tasks:ts.length,late:l,posts:posts.filter(p=>p.bid===b).length,tags:men[b]||0,tone:l?"r":soon?"a":"g"}; })
+      .sort((a,b)=>(b.late-a.late)||String((brands[a.bid]||{}).name).localeCompare(String((brands[b.bid]||{}).name)));
+    /* deliveries: one row per brand, the newest delivery first */
+    const NM=Object.fromEntries((dn.data||[]).map(x=>[x.id,x.name])), byD=new Map();
+    (allv.data||[]).forEach(v=>{ let g=byD.get(v.deliverable_id); if(!g){ g={did:v.deliverable_id,bid:v.brand_id,tid:v.task_id,name:NM[v.deliverable_id]||"Delivery",vs:[],last:""}; byD.set(v.deliverable_id,g); } g.vs.push(v); if(v.created_at>g.last) g.last=v.created_at; });
+    const byB=new Map();
+    [...byD.values()].filter(g=>live(g.bid)).sort((a,b)=>a.last<b.last?1:-1).forEach(g=>{ g.vs.sort((a,b)=>a.version-b.version); if(!byB.has(g.bid)) byB.set(g.bid,[]); byB.get(g.bid).push(g); });
+    D.dl=[...byB.entries()].map(([bid,ds])=>({bid,ds})); D.dlN=byD.size;
+    /* followers: the platforms that are being read, and the change since the month began */
+    const base={}; (fr.data||[]).forEach(r=>{ const k=r.brand_id+"|"+r.platform; if(!(k in base)&&r.followers!=null) base[k]=Number(r.followers); });
+    const ORD={instagram:0,facebook:1,linkedin:2,youtube:3};
+    D.fo=SB.map(b=>({bid:b,ps:(fs.data||[]).filter(s=>s.brand_id===b&&s.check_state==="ok"&&s.followers!=null)
+        .map(s=>({p:s.platform,n:Number(s.followers),g:(b+"|"+s.platform in base)?Number(s.followers)-base[b+"|"+s.platform]:null}))
+        .sort((x,y)=>(ORD[x.p]??9)-(ORD[y.p]??9))})).filter(x=>x.ps.length);
+    /* renewals, for the brands I am the account manager of */
+    const AM=new Set(RVD.amB), dd=s=>Math.round((new Date(s+"T00:00:00")-new Date(today+"T00:00:00"))/864e5);
+    D.rn=[]; if(AM.size&&ACX.so&&ACX.so.ok) (ACX.so.rows||[]).forEach(r=>{ try{ if(!AM.has(r.brand_id)) return; const st=acxSoState(r); if(st!=="due"&&st!=="soon") return;
+      D.rn.push({bid:r.brand_id,title:acxSoShort(r.title),days:r.term_end?dd(r.term_end):null,due:st==="due"}); }catch(e){} });
+    D.rn.sort((a,b)=>(b.due-a.due)||((a.days??0)-(b.days??0)));
+    /* payments, the same brands — days only, never an amount */
+    D.pay=RVD.payOk?(pay.data||[]).filter(r=>live(r.brand_id)).map(r=>({bid:r.brand_id,n:r.invoices,days:dd(r.oldest_due)})).sort((a,b)=>a.days-b.days):[];
+    RVD.d=D; RVD.ok=true; RVD.at=Date.now(); RVW.ok=true;
+  }catch(e){ RVD.err=String(e&&e.message||e); }
+  RVD.busy=false;
+  if(view==="review") rvdPaint(); try{ renderBnTabs(); }catch(e){}
+}
+function rvdMentions(){
+  const out=[];
+  try{ notifItems().filter(i=>i.mention).forEach(it=>{
+    const base=notifRowHtml(it,it.brandId,{}), m=base.match(/onclick="(notifOpen\([^"]*\))"/), tmp=document.createElement("div");
+    tmp.innerHTML=notifDestHtml(it,it.brandId,true);
+    let where=(tmp.textContent||"").replace(/\s+/g," ").trim(); const bn=String((brands[it.brandId]||{}).name||"");
+    if(bn&&where.indexOf(bn)===0) where=where.slice(bn.length).replace(/^[\s·›-]+/,"");
+    const q=notifExcerpt(it);
+    out.push({bid:it.brandId,where:where||"Mention",text:q&&q.text||"",at:it.c.created_at,go:m?m[1].replace(/&#39;/g,"'").replace(/&quot;/g,'"'):""});
+  }); }catch(e){}
+  return out.filter(x=>brands[x.bid]).sort((a,b)=>new Date(b.at)-new Date(a.at));
+}
+
+/* ── the page ── */
+function rvdShort(n){ n=Number(n)||0; if(n<1000) return String(n); if(n<100000) return (Math.round(n/100)/10).toFixed(1).replace(/\.0$/,"")+"K"; if(n<10000000) return (Math.round(n/10000)/10).toFixed(1).replace(/\.0$/,"")+"L"; return (Math.round(n/1000000)/10).toFixed(1).replace(/\.0$/,"")+"Cr"; }
+function rvdSigned(n){ if(n==null) return ""; if(n===0) return `<i class="fl">0</i>`; return `<i class="${n>0?"up":"dn"}">${n>0?"+":"−"}${Math.abs(n).toLocaleString("en-IN")}</i>`; }
+const RVD_PT={instagram:["IG",""],facebook:["FB","fb"],linkedin:["LI","li"],youtube:["YT","yt"]};
+function rvdDay(d){ return new Date(d).toLocaleDateString("en-GB",{day:"numeric",month:"short"}); }
+function rvdSec(k){
+  const D=RVD.d||{}, E=escHtml, A=escAttr, nm=b=>E(String((brands[b]||{}).name||"")), open=!!RVD.more[k], cut=xs=>open?xs.slice(0,60):xs.slice(0,5);
+  const head=(title,n,red,link,extra)=>`<div class="rvd-h"><b>${title}</b>${extra||""}${n!=null?`<span class="rvd-n${red&&n?" r":""}">${n}</span>`:""}<span class="sp"></span>${link||""}</div>`;
+  const all=n=>n>5?`<a onclick="rvdMore('${k}')">${open?"Show less":"See all"}</a>`:"";
+  const empty=t=>`<div class="rvd-e">${t}</div>`;
+  if(k==="me"){ const xs=rvdMentions();
+    return head("Mentions",xs.length,true,all(xs.length))+(xs.length?cut(xs).map(x=>`<div class="rvd-r" onclick="${A(x.go)}"><span class="b">${nm(x.bid)}</span><span class="x">${E(x.where)}${x.text?` · “${E(x.text)}”`:""}</span><span class="m">${E(rvWhen(x.at))}</span><span class="go">›</span></div>`).join(""):empty("Nobody is waiting on you.")); }
+  if(k==="tk"){ const xs=D.tk||[], W=CC_STATUS.task.word, T={not_started:"n",drafting:"b",with_client:"g",approved_by_client:"g",closed:"g",cancelled:"n"};
+    return head("Tasks I track",xs.length,false,all(xs.length))+(xs.length?cut(xs).map(t=>`<div class="rvd-r" onclick="notifOpen('${A(t.bid)}','task','${A(t.id)}')"><span class="rvd-st on" onclick="rvdStarTask(event,'${A(t.id)}')" title="Stop tracking"><i class="ti ti-star-filled"></i></span><span class="b">${nm(t.bid)}</span><span class="x">${E(t.title)}</span><span class="rvd-p t-${t.late?"r":T[t.status]||"n"}">${t.late?"Late "+t.late+" d":E(W[t.status]||t.status)}</span><span class="m">${t.due?E(rvdDay(t.due+"T00:00:00")):""}</span><span class="go">›</span></div>`).join(""):empty("Star a task to track it here.")); }
+  if(k==="br"){ const xs=D.br||[];
+    return head("Brands I track",xs.length,false,all(xs.length))+(xs.length?`<div class="rvd-tiles">${(open?xs:xs.slice(0,4)).map(b=>`<div class="rvd-tile" onclick="pickBrand('${A(b.bid)}')"><div class="nm"><span class="dot ${b.tone}"></span><span>${nm(b.bid)}</span></div><div class="f"><span><b>${b.tasks}</b>tasks</span><span class="${b.late?"rd":""}"><b>${b.late}</b>late</span><span><b>${b.posts}</b>posts</span><span><b>${b.tags}</b>tags</span></div></div>`).join("")}</div>`:empty("Star a brand in the brand list to track it here.")); }
+  if(k==="dl"){ const xs=D.dl||[];
+    const tag=(g)=>g.vs.map((v,i)=>{ const lastOne=i===g.vs.length-1, c=!lastOne?"old":v.status==="approved"?"ok":v.status==="changes"?"ch":"w"; return `<span class="rvd-v ${c}">v${v.version}</span>`; }).join("");
+    const box=g=>{ const v=g.vs[g.vs.length-1]||{}; return `<span class="rvd-dv" title="${A(g.name)}" onclick="event.stopPropagation();acxGoDelivery('${A(g.bid)}','${A(g.tid||"")}','${A(g.did)}','${A(v.id||"")}')"><span class="nn">${E(g.name)}</span>${tag(g)}</span>`; };
+    return head("Deliveries",D.dlN||0,false,`<a onclick="acTab('dlv');acGo()">Open in Ac Mgmt</a>`)
+      +(xs.length?`<div class="rvd-r hd"><span class="b">Brand</span><span>Delivery</span></div>`+cut(xs).map(r=>`<div class="rvd-r" onclick="acTab('dlv');acGo()"><span class="b">${nm(r.bid)}</span><span class="rvd-dls">${r.ds.slice(0,2).map(box).join("")}${r.ds.length>2?`<b class="rvd-more">+${r.ds.length-2}</b>`:""}</span><span class="go">›</span></div>`).join("")+(xs.length>5?`<div class="rvd-foot"><a onclick="rvdMore('dl')">${open?"Show less":"See all"}</a></div>`:"")
+        :empty("Nothing delivered in the last 7 days.")); }
+  if(k==="po"){ const xs=D.po||[], W=CC_STATUS.post.word, T={not_started:"n",drafting:"b",approved_internally:"a",approved:"g",posted:"g"};
+    return head("Posts this week",xs.length,false,all(xs.length))+(xs.length?cut(xs).map(p=>`<div class="rvd-r" onclick="notifOpen('${A(p.bid)}','post','${A(p.id)}')"><span class="b">${nm(p.bid)}</span><span class="x">${E(rvdDay(p.d))}${p.format?" · "+E(String(p.format)):""}</span><span class="rvd-p t-${T[p.status]||"n"}">${E(W[p.status]||p.status)}</span><span class="go">›</span></div>`).join(""):empty("No posts in the next 7 days.")); }
+  if(k==="fo"){ const xs=D.fo||[];
+    return head("Followers",null,false,all(xs.length),`<span class="mo">${E(new Date().toLocaleDateString("en-GB",{month:"long"}))}</span>`)
+      +(xs.length?cut(xs).map(f=>`<div class="rvd-r" onclick="pickBrand('${A(f.bid)}')"><span class="b grow">${nm(f.bid)}</span>${f.ps.map(p=>{ const t=RVD_PT[p.p]||[String(p.p).slice(0,2).toUpperCase(),""]; return `<span class="rvd-pt" title="${A(p.p)} · ${p.n.toLocaleString("en-IN")}"><em class="${t[1]}">${t[0]}</em><b>${rvdShort(p.n)}</b>${rvdSigned(p.g)}</span>`; }).join("")}</div>`).join("")
+        :empty(RVD.p.brands.length?"No follower counts are being read for your starred brands.":"Star a brand in the brand list to see its followers.")); }
+  if(k==="rn"){ const xs=D.rn||[];
+    return head("Renewals due",xs.length,false,all(xs.length))+(xs.length?cut(xs).map(r=>{ const w=r.days==null?"Renewal due":r.days<0?"Ended "+(-r.days)+" d ago":r.days===0?"Ends today":"Ends in "+r.days+" d", c=r.due||(r.days!=null&&r.days<0)?"r":(r.days!=null&&r.days<=30)?"a":"n";
+      return `<div class="rvd-r" onclick="acTab('dlb');acGo()"><span class="b">${nm(r.bid)}</span><span class="x">${E(r.title)}</span><span class="rvd-p t-${c}">${w}</span><span class="go">›</span></div>`; }).join(""):empty("No renewals are due.")); }
+  if(k==="pay"){ const xs=D.pay||[];
+    return head("Payments due",xs.length,true,`<a href="https://communicationcraftshq.github.io/BrandCalendar/portfolio/#finance" target="_blank" rel="noopener">Client Centre</a>`)+(xs.length?cut(xs).map(r=>{ const w=r.days<0?(-r.days)+" d late":r.days===0?"Due today":"Due in "+r.days+" d", c=r.days<0?"r":r.days<=7?"a":"n";
+      return `<a class="rvd-r" href="https://communicationcraftshq.github.io/BrandCalendar/portfolio/#finance" target="_blank" rel="noopener"><span class="b">${nm(r.bid)}</span><span class="x">${r.n} ${r.n===1?"invoice":"invoices"}</span><span class="rvd-p t-${c}">${w}</span><span class="go">›</span></a>`; }).join(""):empty("No payments are due.")); }
+  return "";
+}
+function rvdMore(k){ RVD.more[k]=!RVD.more[k]; rvdPaint(); }
+function rvdPaint(){
+  const g=document.getElementById("rvd-grid"), bar=document.getElementById("rv-bar"); if(!g||!bar) return;
+  bar.innerHTML=`<span class="fb-end"><span class="fb-w"><button class="fb-chip" onclick="rvdLoad(true)"><i class="ti ti-refresh"></i>Refresh</button></span>
+    <span class="fb-w"><button class="fb-chip rvd-cb" id="rvd-cb" onclick="rvdCust(event)"><i class="ti ti-adjustments-horizontal"></i>Customise</button></span></span>`;
+  try{ rvSidebar(); }catch(e){}
+  if(RVD.err){ g.innerHTML=`<div class="rvd-c w3"><div class="rvd-e">Could not load Review — ${escHtml(RVD.err)}</div></div>`; return; }
+  if(!RVD.ok){ g.innerHTML=`<div class="rvd-c w3"><div class="rvd-e">Loading…</div></div>`; return; }
+  const secs=rvdShown();
+  g.innerHTML=secs.length?secs.map(s=>`<div class="rvd-c${s.k==="dl"?" w2":""}" id="rvd-s-${s.k}">${rvdSec(s.k)}</div>`).join("")
+    :`<div class="rvd-c w3"><div class="rvd-e">Every section is switched off. Use Customise to turn one on.</div></div>`;
+}
+/* ── Customise: a switch per section, drag to reorder ── */
+function rvdCustClose(){ const m=document.getElementById("rvd-cust"); if(m) m.remove(); }
+function rvdCustHtml(){
+  const L=Object.fromEntries(RVD_SECS);
+  const rows=RVD.p.sections.filter(s=>!RVD_AMONLY[s.k]||(rvdIsAm()&&(s.k!=="pay"||RVD.payOk)));
+  return `<div class="ph">Customise Review<span onclick="rvdCustClose()">Done</span></div>`+rows.map(s=>`<div class="sr" draggable="true" data-k="${s.k}"><i class="ti ti-grip-vertical g"></i><span class="nm">${escHtml(L[s.k])}</span><span class="tg${s.on?" on":""}" onclick="rvdToggle('${s.k}')"></span></div>`).join("");
+}
+function rvdCust(ev){
+  if(ev) ev.stopPropagation();
+  if(document.getElementById("rvd-cust")){ rvdCustClose(); return; }
+  const m=document.createElement("div"); m.id="rvd-cust"; m.className="rvd-cust"; m.innerHTML=rvdCustHtml();
+  m.addEventListener("click",e=>e.stopPropagation());
+  let drag=null;
+  m.addEventListener("dragstart",e=>{ const r=e.target.closest(".sr"); if(!r) return; drag=r.dataset.k; r.classList.add("dg"); try{ e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",drag); }catch(x){} });
+  m.addEventListener("dragover",e=>{ if(drag) e.preventDefault(); });
+  m.addEventListener("drop",e=>{ e.preventDefault(); const r=e.target.closest(".sr"); if(!drag||!r||r.dataset.k===drag){ drag=null; return; }
+    const S=RVD.p.sections, from=S.findIndex(s=>s.k===drag), it=S.splice(from,1)[0], to=S.findIndex(s=>s.k===r.dataset.k), box=r.getBoundingClientRect();
+    S.splice(e.clientY>box.top+box.height/2?to+1:to,0,it); drag=null; rvdPrefsSave(); m.innerHTML=rvdCustHtml(); rvdPaint(); });
+  m.addEventListener("dragend",()=>{ drag=null; m.querySelectorAll(".dg").forEach(x=>x.classList.remove("dg")); });
+  document.body.appendChild(m);
+  const a=document.getElementById("rvd-cb"), b=a?a.getBoundingClientRect():null;
+  if(b){ m.style.top=(b.bottom+6)+"px"; m.style.left=Math.max(8,Math.min(b.right-320,window.innerWidth-328))+"px"; }
+}
+function rvdToggle(k){
+  const s=RVD.p.sections.find(x=>x.k===k); if(!s) return; s.on=!s.on; rvdPrefsSave();
+  const m=document.getElementById("rvd-cust"); if(m) m.innerHTML=rvdCustHtml();
+  if(s.on){ RVD.at=0; rvdLoad(true); } rvdPaint();
+}
+document.addEventListener("click",()=>rvdCustClose());
+window.addEventListener("resize",()=>rvdCustClose());
+
+/* ── the old list steps aside ── */
+renderReview=function(){
+  const mc=document.getElementById("main");
+  mc.innerHTML=`<div style="padding:0 var(--pg-x) 26px;"><div class="fb rvd-bar" id="rv-bar"></div><div class="rvd-grid" id="rvd-grid"></div></div>`;
+  rvdLoad(); rvdPaint();
+};
+rvPaint=function(){ rvdPaint(); };
+rvLoad=function(force){ return rvdLoad(force); };
+rvCount=function(){ try{ return notifItems().filter(i=>i.mention).length; }catch(e){ return 0; } };
+rvSidebar=function(){
+  const st=document.getElementById("sb-stats"); if(st) st.innerHTML="";
+  const sm=document.getElementById("sb-months"); if(!sm) return;
+  const L=Object.fromEntries(RVD_SECS);
+  sm.innerHTML=`<div class="s-lbl">Sections</div>`+rvdShown().map(s=>`<div class="mdb-trow" onclick="(document.getElementById('rvd-s-${s.k}')||{scrollIntoView(){}}).scrollIntoView({behavior:'smooth',block:'start'})"><span class="nm">${escHtml(L[s.k])}</span></div>`).join("");
+};
+(function(){
+  const base=viewRoute;
+  viewRoute=function(v){ if(v==="review") return {render:renderReview,sidebar:rvSidebar}; return base(v); };
+  /* the stars need the person's choices before a task or the brand list is drawn */
+  try{ if(typeof ME==="object"&&ME&&ME.id&&acxRvMay()) rvdPrefsLoad().then(()=>{ try{ renderBnTabs(); }catch(e){} }); }catch(e){}
+})();
+document.head.insertAdjacentHTML("beforeend",`<style id="rv-dash-20-css">
+.rvd-bar{margin-top:18px}
+.rvd-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start;margin-top:14px;grid-auto-flow:dense}
+.rvd-c{background:#fff;border:1px solid var(--div);border-radius:14px;overflow:hidden;min-width:0}
+.rvd-c.w2{grid-column:span 2}.rvd-c.w3{grid-column:1/-1}
+.rvd-h{display:flex;align-items:center;gap:8px;padding:13px 16px 9px}.rvd-h b{font-size:13.5px;font-weight:700}.rvd-h .sp{flex:1}
+.rvd-h a,.rvd-foot a{color:var(--acc);font-weight:700;font-size:12px;cursor:pointer;text-decoration:none}.rvd-h .mo{color:var(--subtle);font-size:12px;font-weight:600}
+.rvd-n{font-size:11.5px;font-weight:800;background:#F4F2EE;border-radius:7px;padding:1px 7px;color:#555}.rvd-n.r{background:#FDE8E8;color:#C62828}
+.rvd-r{display:flex;align-items:center;gap:10px;padding:0 16px;min-height:38px;border-top:1px solid #F1EEEA;white-space:nowrap;cursor:pointer;color:inherit;text-decoration:none;font-size:13px}
+.rvd-r:hover{background:#FAF9F7}.rvd-r.hd{min-height:30px;cursor:default;color:#aaa;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;font-weight:700}.rvd-r.hd:hover{background:none}
+.rvd-r .b{font-weight:700;flex:none;width:118px;overflow:hidden;text-overflow:ellipsis}.rvd-r .b.grow{flex:1;width:auto;min-width:0}.rvd-c.w2 .rvd-r .b{width:150px}
+.rvd-r .x{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;color:#444}.rvd-r .m{color:var(--subtle);font-size:12px;flex:none}.rvd-r .go{color:#bbb;flex:none}
+.rvd-e{padding:14px 16px 16px;color:var(--subtle);font-size:12.5px;border-top:1px solid #F1EEEA}
+.rvd-foot{padding:9px 16px 11px;border-top:1px solid #F1EEEA;text-align:right}
+.rvd-p{display:inline-block;padding:2px 8px;border-radius:6px;font-weight:700;font-size:11.5px;flex:none}
+.rvd-p.t-r{background:#FDE8E8;color:#C62828}.rvd-p.t-a{background:#FBF0D2;color:#8A6508}.rvd-p.t-g{background:#E2F1E5;color:#1E6B2E}.rvd-p.t-b{background:#E3EBF8;color:#2B5FB0}.rvd-p.t-n{background:#F1EEEA;color:#666}
+.rvd-st{color:#c9c5bd;flex:none;cursor:pointer;font-size:14px;display:inline-flex}.rvd-st.on,.rvd-star.on{color:#E0A100}
+.rvd-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:2px 16px 14px}
+.rvd-tile{background:#F6F5F2;border-radius:10px;padding:10px 12px;cursor:pointer;min-width:0}.rvd-tile:hover{background:#F0EEE9}
+.rvd-tile .nm{font-weight:800;font-size:12.5px;display:flex;gap:6px;align-items:center;min-width:0}.rvd-tile .nm span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rvd-tile .f{display:flex;gap:12px;margin-top:6px;font-size:11.5px;color:#666}.rvd-tile .f b{color:var(--text);font-size:14px;display:block}.rvd-tile .f .rd b{color:#C62828}
+.rvd-tile .dot{width:9px;height:9px;border-radius:50%;flex:none}.rvd-tile .dot.g{background:#2E9E48}.rvd-tile .dot.a{background:#E0A100}.rvd-tile .dot.r{background:#D62828}
+.rvd-dls{display:flex;gap:6px;flex:1;min-width:0;overflow:hidden;align-items:center}
+.rvd-dv{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--div);border-radius:8px;padding:3px 5px 3px 9px;font-size:12px;font-weight:600;flex:0 1 auto;min-width:0;max-width:300px;background:#FAF9F7}
+.rvd-dv:hover{border-color:#999}.rvd-dv .nn{overflow:hidden;text-overflow:ellipsis;min-width:40px}
+.rvd-v{font-size:10.5px;font-weight:800;border-radius:5px;padding:1px 6px;color:#fff;flex:none}.rvd-v.w{background:#2B5FB0}.rvd-v.ok{background:#1E6B2E}.rvd-v.ch{background:#C62828}.rvd-v.old{background:#E6E2DB;color:#777}
+.rvd-more{font-size:11.5px;font-weight:800;color:var(--muted);flex:none}
+.rvd-pt{display:inline-flex;align-items:baseline;gap:4px;font-size:12px;flex:none}.rvd-pt em{font-style:normal;font-weight:800;font-size:10px;color:#fff;background:#0D0D0D;border-radius:4px;padding:0 4px}
+.rvd-pt em.fb{background:#2B5FB0}.rvd-pt em.li{background:#1E6B2E}.rvd-pt em.yt{background:#C62828}.rvd-pt b{font-variant-numeric:tabular-nums;font-weight:700}
+.rvd-pt i{font-style:normal;font-size:11.5px;font-weight:800}.rvd-pt i.up{color:#1E6B2E}.rvd-pt i.dn{color:#C62828}.rvd-pt i.fl{color:#999}
+.rvd-cust{position:fixed;z-index:4000;width:320px;background:#fff;border:1px solid var(--div);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.16);overflow:hidden}
+.rvd-cust .ph{padding:13px 16px;font-weight:800;border-bottom:1px solid #eee;display:flex;font-size:13.5px}.rvd-cust .ph span{margin-left:auto;color:var(--acc);font-size:12.5px;cursor:pointer}
+.rvd-cust .sr{display:flex;align-items:center;gap:10px;padding:0 16px;height:40px;border-top:1px solid #F4F2EE;font-size:13px;background:#fff}.rvd-cust .sr.dg{opacity:.4}
+.rvd-cust .sr .g{color:#ccc;cursor:grab}.rvd-cust .sr .nm{flex:1;font-weight:600}
+.rvd-cust .tg{width:34px;height:20px;border-radius:10px;background:#D9D5CD;position:relative;flex:none;cursor:pointer}.rvd-cust .tg:after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .12s}
+.rvd-cust .tg.on{background:#0D0D0D}.rvd-cust .tg.on:after{left:16px}
+@media(max-width:1180px){ .rvd-grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media(max-width:760px){ .rvd-grid{grid-template-columns:minmax(0,1fr)} .rvd-c.w2{grid-column:auto} }
 </style>`);
 </script>
 </body>
