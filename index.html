@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.24 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.25 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14929,7 +14929,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.24 Cappadocia";
+const TOOL_VERSION="V119.25 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -49536,8 +49536,16 @@ function v44LinkWord(url){
   brBriefPin=function(t){
     const h=base.apply(this,arguments);
     if(!h||BR_BRIEF_OPEN||(t&&t._promo)) return h;   /* V118.86 — a promotion's brief is a fact card, never clamped */
-    const words=String(wPlain((t&&t.brief)||"")).replace(/https?:\/\/[^\s<>"]+/g,u=>"["+v44LinkWord(u.replace(/[.,;:)\]]+$/,""))+"]").trim();
-    const txt=escHtml(words).replace(/\n{2,}/g,"\n").replace(/\n/g,"<br>");
+    /* V119.25 — a link in a closed brief stays a link you can click */
+    const lk=[]; let src=String((t&&t.brief)||"");
+    if(wIsRich(src)){ try{
+      const d=new DOMParser().parseFromString("<div id=r>"+wClean(src)+"</div>","text/html"), r=d.getElementById("r");
+      r.querySelectorAll("a[href]").forEach(a=>{ lk.push(a.outerHTML); a.replaceWith(d.createTextNode("\u0001"+(lk.length-1)+"\u0002")); });
+      src="<div>"+r.innerHTML+"</div>";
+    }catch(e){} }
+    const words=String(wPlain(src)).replace(/https?:\/\/[^\s<>"\u0001]+/g,u=>{ const c=u.replace(/[.,;:)\]]+$/,""); lk.push(wEsc(c)); return "\u0001"+(lk.length-1)+"\u0002"+u.slice(c.length); }).trim();
+    const txt=escHtml(words).replace(/\n{2,}/g,"\n").replace(/\n/g,"<br>")
+      .replace(/\u0001(\d+)\u0002/g,(m,i)=>{ try{ return `<span onclick="event.stopPropagation()">${wLinkify(lk[+i])}</span>`; }catch(e){ return ""; } });
     return h.replace(/<div class="bx">[\s\S]*?<\/div><\/div><div class="br-start">/,()=>`<div class="bx v44-cl">${txt}</div></div><div class="br-start">`);
   };
 })();
