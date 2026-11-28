@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.17 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.18 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -1678,6 +1678,7 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .npmore{padding:10px 15px;text-align:center;font-size:12px;font-weight:600;color:var(--acc);
   cursor:pointer;border-top:1px solid var(--div);}
 .npmore:hover{background:rgba(214,40,40,.04);}
+.npend{padding:10px 15px;text-align:center;font-size:11.5px;color:var(--subtle);border-top:1px solid var(--div);}
 .npmuted{border-top:1px solid rgba(13,13,13,.07);background:rgba(13,13,13,.02);}
 .npmh{padding:9px 14px 4px;font-size:11px;font-weight:700;letter-spacing:.07em;
   text-transform:uppercase;color:var(--subtle);}
@@ -5369,7 +5370,7 @@ select.pr-fv.cc-stsel{height:34px;padding:0 28px 0 10px;background-color:#fff;}
   .xn-r .p .at{flex:none;font-size:11.5px;font-weight:800;color:#D7262B;background:#FDECEC;border-radius:99px;padding:1px 7px;margin-left:auto;}
   .xn-r.seen{opacity:.55;}
   .xn-empty{padding:40px 16px;text-align:center;color:var(--muted);font-size:14px;}
-  #notif-panel.xn .nptrunc,#notif-panel.xn .npmore{margin:12px;}
+  #notif-panel.xn .nptrunc,#notif-panel.xn .npmore,#notif-panel.xn .npend{margin:12px;}
   .xn-sh{position:fixed;left:0;right:0;bottom:0;z-index:2010;background:#fff;border-radius:18px 18px 0 0;padding:16px 16px calc(22px + var(--mf-safe,0px));box-shadow:0 -14px 44px rgba(13,13,13,.25);max-height:80vh;overflow:auto;}
   .xn-scrim{position:fixed;inset:0;background:rgba(13,13,13,.38);z-index:2000;}
   .xn-sh .li{display:flex;align-items:center;gap:10px;width:100%;padding:14px 4px;border:0;border-bottom:1px solid #EFEDE8;background:none;font:inherit;font-size:15px;font-weight:600;text-align:left;color:var(--text);cursor:pointer;}
@@ -10271,14 +10272,14 @@ function brandRowHtml(k,b,indent){
      about the brand that must be readable at a glance: a muted brand
      (the crossed bell is the whole signal, per Lucern) and a hidden one
      turned up by a search (the crossed eye says why it is greyed). */
-  const mut=brandMuted(k);
+  const mut=bellOff(k);            /* V119.18 — off by your own mute, or off because you are not on its team */
   const hid=prefFor(k).hidden;
   const eye=(k!==activeBrand);
   const act=(cls,title,onclick,icon)=>
     `<button class="bact${cls?" "+cls:""}" title="${title}"
        onclick="event.stopPropagation();${onclick}"><i class="ti ${icon}"></i></button>`;
   const acts=[
-    act(mut?"mut":"", mut?`Muted — turn notifications back on for ${escAttr(b.name)}`
+    act(mut?"mut":"", mut?`Bell off — turn notifications on for ${escAttr(b.name)}`
                          :`Mute ${escAttr(b.name)} — just for you`,
         `notifMute('${k}',${mut?0:1})`, `ti-bell${mut?"-off":""}`),
     eye?act(hid?"mut":"", hid?`Put ${escAttr(b.name)} back in your list`
@@ -10628,12 +10629,46 @@ async function loadPrefs(){
     if(r.error) return;
     (r.data||[]).forEach(x=>{ PREFS[x.brand_id]={
       layer_social:x.layer_social, layer_branding:x.layer_branding, muted:!!x.muted,
-      hidden:!!x.hidden, muted_by_eye:!!x.muted_by_eye}; });
+      hidden:!!x.hidden, muted_by_eye:!!x.muted_by_eye, bell_on:!!x.bell_on}; });
     PREFS_OK=true;
   }catch(e){}
+  await loadBellTeam();
+}
+/* ══ V119.18 CAPPADOCIA · THE BELL IS YOUR TEAM'S BRANDS ═══════════════
+   Chirag, 28 Nov, after the outage: 83 people carried 6,330 unread items
+   each, and 4 in 100 were on a brand that person works on. The bell is
+   now ON for a brand you have a role on (Ac Mgmt, Team) and OFF for the
+   rest, with the same bell button to turn one on. A message that tags
+   you reaches you from any brand. A brand you muted stays silent.
+
+   The database does the leaving-out (SQL file 126), so the pile is never
+   read at all. BELL_OK is false until that file is run: the function
+   below is then missing, and every bell here behaves as V119.17 did.
+   A client's bell is not changed, so BELL_TEAM is false for a client. */
+let BELL_OK=false, BELL_TEAM=false, MY_TEAM={}, BELL_TRIMMED=false;
+async function loadBellTeam(){
+  BELL_OK=false; BELL_TEAM=false; MY_TEAM={};
+  try{
+    const r=await sb.rpc("my_team_brand_ids");
+    if(r.error) return;
+    (r.data||[]).forEach(x=>{ const id=(x&&typeof x==="object")?(x.my_team_brand_ids||x.brand_id):x; if(id) MY_TEAM[id]=true; });
+    BELL_OK=true; BELL_TEAM=(ME.role!=="client");
+  }catch(e){}
+}
+/* is this brand's bell off for me, whatever the reason */
+function bellOff(bid){
+  const p=prefFor(bid);
+  if(p.muted) return true;
+  if(!BELL_TEAM) return false;
+  return !(MY_TEAM[bid]||p.bell_on);
+}
+/* the brands I am not on the team of, whose bell I turned on */
+function bellOnBrandIds(){
+  if(!BELL_TEAM) return [];
+  return Object.keys(brands||{}).filter(b=>{ const p=prefFor(b); return p.bell_on&&!p.muted&&!MY_TEAM[b]; });
 }
 function prefFor(bid){
-  return (bid&&PREFS[bid])||{layer_social:null,layer_branding:null,muted:false,hidden:false,muted_by_eye:false};
+  return (bid&&PREFS[bid])||{layer_social:null,layer_branding:null,muted:false,hidden:false,muted_by_eye:false,bell_on:false};
 }
 /* THE SCREEN ANSWERS FIRST AND THE DATABASE CATCHES UP. A switch that
    waits for a round trip before it moves is a switch people press twice
@@ -10645,9 +10680,12 @@ async function savePref(bid,patch){
   const me=(ME.email||"").toLowerCase();
   if(!me||!PREFS_OK) return;
   try{
+    /* bell_on is sent only once file 126 is in: a column the database
+       does not have would refuse the whole row, mute and eye included */
     await sb.from("brand_prefs").upsert({user_email:me,brand_id:bid,
       layer_social:next.layer_social, layer_branding:next.layer_branding,
       muted:!!next.muted, hidden:!!next.hidden, muted_by_eye:!!next.muted_by_eye,
+      ...(BELL_OK?{bell_on:!!next.bell_on}:{}),
       updated_at:new Date().toISOString()},
       {onConflict:"user_email,brand_id"});
   }catch(e){}
@@ -14856,7 +14894,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.17 Cappadocia";
+const TOOL_VERSION="V119.18 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -17743,21 +17781,37 @@ function notifDrop(commentId){
    Now the count comes back with the rows, the panel says which 200 it is
    holding, and there is a way to ask for more. NOTIF_WANT is the size of
    the window, not a cap: pressing "load more" widens it and refetches. */
-let NOTIF_TOTAL=0;          // what the database says exists, muted included
-let NOTIF_WANT=200;         // how many we have asked for
+let NOTIF_TOTAL=0;          // how many are held (kept for the code that still reads it)
+/* V119.18 CAPPADOCIA — 50 AT A TIME, 200 AT MOST, AND NO FULL COUNT.
+   Chirag, 28 Nov: "You can load only 50 for now, and you can do plus
+   plus plus up to 200 and after that, they will be permanently lost."
+   The exact count was the heavy half of every bell check: it made the
+   database walk the whole pile to return a number nobody reads past
+   "99+". One row more than wanted is asked for, and that one row is the
+   whole answer to "is there more". */
+const NOTIF_STEP=50, NOTIF_MAX=200;
+let NOTIF_WANT=NOTIF_STEP;  // how many we have asked for
+let NOTIF_MORE=false;       // the database holds more than we asked for
 let NOTIF_TAB="mention";    // mention | all  (V118.182 — Mentions first; Clients hidden until clients join)
 const NOTIF_CLIENTS_TAB=false;   /* switch back on when clients are added */
 async function loadNotifications(){
   try{
+    /* messages that tag you come first, so the Mentions tab is whole
+       however deep the rest of the pile goes */
     const r=await sb.from("unread_notifications")
-      .select("*",{count:"exact"})
-      .order("created_at",{ascending:false}).limit(NOTIF_WANT);
-    if(r.error){ NOTIF=[]; NOTIF_TOTAL=0; return; }
-    NOTIF=r.data||[];
-    /* A null count means the database did not answer that question — it
-       is NOT zero, and it must not be reported as "showing 200 of 0". */
-    NOTIF_TOTAL=(typeof r.count==="number")?r.count:NOTIF.length;
-  }catch(e){ NOTIF=[]; NOTIF_TOTAL=0; }
+      .select("*")
+      .order("mentions_me",{ascending:false})
+      .order("created_at",{ascending:false}).limit(NOTIF_WANT+1);
+    if(r.error){ NOTIF=[]; NOTIF_TOTAL=0; NOTIF_MORE=false; return; }
+    const rows=r.data||[];
+    NOTIF_MORE=rows.length>NOTIF_WANT;
+    /* back in newest-first order, which the rest of the panel expects */
+    NOTIF=rows.slice(0,NOTIF_WANT).sort((x,y)=>new Date(y.created_at)-new Date(x.created_at));
+    NOTIF_TOTAL=NOTIF.length;
+    /* once a session: the database notes where my latest 200 end, and
+       anything older leaves the bell for good */
+    if(NOTIF_MORE&&BELL_OK&&!BELL_TRIMMED){ BELL_TRIMMED=true; try{ sb.rpc("bell_trim").then(()=>{},()=>{}); }catch(e){} }
+  }catch(e){ NOTIF=[]; NOTIF_TOTAL=0; NOTIF_MORE=false; }
   await loadSeenMentions();          // V114.0 — alongside, never instead
 }
 /* ══ V114.0 TBILISI · THE @MENTIONS YOU HAVE ALREADY SEEN ═══════════
@@ -17814,7 +17868,8 @@ async function notifReread(){
   try{ buildNotifPanel(); }catch(e){}
 }
 async function notifMore(){
-  NOTIF_WANT+=200;
+  if(NOTIF_WANT>=NOTIF_MAX) return;
+  NOTIF_WANT=Math.min(NOTIF_MAX,NOTIF_WANT+NOTIF_STEP);
   await loadNotifications();
   buildNotifPanel(); syncBell();
 }
@@ -18765,13 +18820,15 @@ function notifItems(){
                   (new Date(b.c.created_at)-new Date(a.c.created_at)));
 }
 function notifCount(){ return notifItems().length; }
+/* V119.18 — the number stops at "50+": past the first 50 nobody counts */
+function notifCountWord(n){ return (NOTIF_MORE||n>NOTIF_STEP)?(NOTIF_STEP+"+"):String(n); }
 function notifMentions(){ return notifItems().filter(i=>i.mention); }
 function notifClients(){ return notifItems().filter(i=>i.c.author_kind==="client"); }
 function syncBell(){
   const b=document.getElementById("bell-badge"); if(!b) return;
   const n=notifCount();
-  b.textContent=n>99?"99+":String(n);
-  b.classList.toggle("zero",n===0);
+  b.textContent=notifCountWord(n);
+  b.classList.toggle("zero",n===0&&!NOTIF_MORE);
 }
 /* ══ LUCERN · MUTING A BRAND ════════════════════════════════════════
    Chirag chose the placement: "What if the bell lives in the
@@ -18843,20 +18900,42 @@ function notifMailBlock(){
     }</select></div>`;
 }
 function notifMutedBlock(){
+  /* V119.18 — the brands you are not on the team of, whose bell you
+     turned on. Listed for the same reason the muted ones are: turning
+     one on must never be a thing you cannot find again to undo. */
+  const on=bellOnBrandIds().filter(b=>brands[b]);
+  const onBlock=on.length?`<div class="npmuted">
+    <div class="npmh">Bell on · ${on.length===1?"a brand":"brands"} you are not on the team of</div>
+    ${on.map(b=>`<div class="npmr">
+        <span class="bdot" style="background:${(brands[b]||{}).color||"#6B6B6B"}"></span>
+        <span class="nm">${escAttr((brands[b]||{}).name||"")}</span>
+        <button class="nmute" title="Turn notifications off"
+          onclick="notifMute('${b}',1)"><i class="ti ti-bell"></i></button>
+      </div>`).join("")}</div>`:"";
   const ids=mutedBrandIds().filter(b=>brands[b]);
-  if(!ids.length) return "";
-  return `<div class="npmuted">
+  if(!ids.length) return onBlock;
+  return onBlock+`<div class="npmuted">
     <div class="npmh">Muted · no bell from ${ids.length===1?"this brand":"these brands"}, just for you</div>
     ${ids.map(b=>`<div class="npmr">
         <span class="bdot" style="background:${(brands[b]||{}).color||"#6B6B6B"}"></span>
         <span class="nm">${escAttr((brands[b]||{}).name||"")}</span>
         <button class="nmute" title="Turn notifications back on"
-          onclick="notifMute('${b}',0)"><i class="ti ti-bell"></i></button>
+          onclick="notifMute('${b}',0)"><i class="ti ti-bell-off"></i></button>
       </div>`).join("")}</div>`;
 }
 async function notifMute(bid,on){
   const name=(brands[bid]||{}).name||"this brand";
-  await savePref(bid,{muted:!!on});
+  /* V119.18 — one button, two reasons a bell is off. On a brand you are
+     on the team of it is your own mute, as before. On any other brand
+     "on" is the mark bell_on, and "off" takes that mark away again; a
+     brand that was already off and is switched off is muted outright,
+     which also silences the messages that tag you there. */
+  const team=!BELL_TEAM||!!MY_TEAM[bid];
+  const was=prefFor(bid);
+  await savePref(bid, on ? {muted:team||!was.bell_on, bell_on:false}
+                         : {muted:false, bell_on:!team});
+  /* the database leaves the brand out now, so the list is read again */
+  if(BELL_OK) try{ await loadNotifications(); }catch(e){}
   /* BRUGES — the switcher is now a SECOND place this state is drawn, so
      it has to be repainted too. It is safe to call with the panel shut:
      buildBrandPanel writes innerHTML and does not open anything. Miss
@@ -18977,12 +19056,9 @@ function notifExcerpt(it){
    this panel was breaking it above 200. Drawn ONLY when the window is
    genuinely narrower than what exists, so a quiet inbox stays quiet. */
 function notifTruncHtml(){
-  const held=(NOTIF||[]).length;
-  if(!NOTIF_TOTAL || NOTIF_TOTAL<=held) return "";
-  return `<div class="nptrunc"><i class="ti ti-alert-circle"></i>
-      <span><b>Showing the newest ${held} of ${NOTIF_TOTAL}.</b>
-      The ${NOTIF_TOTAL-held} oldest are not loaded — open a brand to see all of its messages.</span></div>
-    <div class="npmore" onclick="notifMore()">Load the next 200</div>`;
+  if(!NOTIF_MORE) return "";
+  if(NOTIF_WANT>=NOTIF_MAX) return `<div class="npend">The latest ${NOTIF_MAX}. Older ones have left the bell.</div>`;
+  return `<div class="npmore" onclick="notifMore()">Load ${NOTIF_STEP} more</div>`;
 }
 
 function buildNotifPanel(){
@@ -19004,7 +19080,7 @@ function buildNotifPanel(){
      appears and disappears depending on the week. The tabs are the
      panel's structure, not a reward for having the right data. */
   const tabs=[["mention","Mentions",mentions.length],
-              ["all","All",all.length]].concat(NOTIF_CLIENTS_TAB?[["client","Clients",clients.length]]:[]);
+              ["all","All",all.length,notifCountWord(all.length)]].concat(NOTIF_CLIENTS_TAB?[["client","Clients",clients.length]]:[]);
   if(!tabs.some(t=>t[0]===NOTIF_TAB)) NOTIF_TAB="mention";
   const head=`<div class="nphead"><b>Notifications</b>
       ${all.length?`<span class="mark" onclick="notifMarkAll()">Mark all read</span>`:""}</div>`;
@@ -19022,8 +19098,8 @@ function buildNotifPanel(){
     return;
   }
 
-  const tabBar=`<div class="ntabs">${tabs.map(([k,label,n])=>
-      `<span class="ntab${NOTIF_TAB===k?" on":""}${n?"":" zero"}" onclick="notifSetTab('${k}')">${label} <span class="c">${n}</span></span>`
+  const tabBar=`<div class="ntabs">${tabs.map(([k,label,n,word])=>
+      `<span class="ntab${NOTIF_TAB===k?" on":""}${(n||word)?"":" zero"}" onclick="notifSetTab('${k}')">${label} <span class="c">${word||n}</span></span>`
     ).join("")}</div>`;
 
   /* ── a filtered tab is a flat list; there is nothing to group by ── */
@@ -19182,6 +19258,8 @@ async function notifMarkAll(){
   for(const tid of tasks) await taskMarkSeen(tid);
   for(const c of crs) await crMarkSeen(c.creativeId,c.brandId);
   for(const m of meets) await meetMarkSeen(m.meetingId,m.brandId);
+  /* V119.18 — only 50 are held, so what was behind them is read in now */
+  if(NOTIF_MORE) try{ await loadNotifications(); }catch(e){}
   closeAllPops(); syncBell(); renderSocial();
 }
 
@@ -42045,7 +42123,7 @@ function xnTiles(nAll,nMen){
   return `<div class="xn-tl">
     <button class="mft" onclick="xnSearch(true)"><i class="ti ti-search"></i><span>Search</span></button>
     <button class="mft${NOTIF_TAB==="mention"?" on":""}" onclick="notifSetTab('mention')"><i class="ti ti-at"></i><span>Mentions</span>${nMen?`<em class="xn-n">${nMen}</em>`:""}</button>
-    <button class="mft${NOTIF_TAB!=="mention"?" on":""}" onclick="notifSetTab('all')"><i class="ti ti-bell"></i><span>All</span>${nAll?`<em class="xn-n">${nAll>99?"99+":nAll}</em>`:""}</button>
+    <button class="mft${NOTIF_TAB!=="mention"?" on":""}" onclick="notifSetTab('all')"><i class="ti ti-bell"></i><span>All</span>${(nAll||NOTIF_MORE)?`<em class="xn-n">${notifCountWord(nAll)}</em>`:""}</button>
     <button class="mft" onclick="notifReadAllAsk(event)"><i class="ti ti-checks"></i><span>Read all</span></button>
     <button class="mft" onclick="xnSheet('alerts')"><i class="ti ti-settings"></i><span>Alerts</span></button></div>`;
 }
