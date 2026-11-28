@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.18 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.19 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -1678,6 +1678,10 @@ select#brand-sel option, select#year-sel option{color:#111;background:#fff;}
 .npmore{padding:10px 15px;text-align:center;font-size:12px;font-weight:600;color:var(--acc);
   cursor:pointer;border-top:1px solid var(--div);}
 .npmore:hover{background:rgba(214,40,40,.04);}
+.npset{padding:11px 14px 7px;font-size:13px;font-weight:800;color:var(--ink,#0d0d0d);border-top:1px solid rgba(13,13,13,.07);}
+.npmr .nword{flex:none;font:inherit;font-size:12px;font-weight:700;padding:4px 10px;border-radius:6px;
+  border:1px solid var(--div,#e3dfd8);background:var(--surface,#fff);color:inherit;cursor:pointer;}
+.npmr .nword:hover{color:var(--acc);}
 .npend{padding:10px 15px;text-align:center;font-size:11.5px;color:var(--subtle);border-top:1px solid var(--div);}
 .npmuted{border-top:1px solid rgba(13,13,13,.07);background:rgba(13,13,13,.02);}
 .npmh{padding:9px 14px 4px;font-size:11px;font-weight:700;letter-spacing:.07em;
@@ -10279,8 +10283,8 @@ function brandRowHtml(k,b,indent){
     `<button class="bact${cls?" "+cls:""}" title="${title}"
        onclick="event.stopPropagation();${onclick}"><i class="ti ${icon}"></i></button>`;
   const acts=[
-    act(mut?"mut":"", mut?`Bell off — turn notifications on for ${escAttr(b.name)}`
-                         :`Mute ${escAttr(b.name)} — just for you`,
+    /* V119.19 — four plain words, the same ones the bell's Settings use */
+    act(mut?"mut":"", `${bellWord(k)} ${escAttr(b.name)}`,
         `notifMute('${k}',${mut?0:1})`, `ti-bell${mut?"-off":""}`),
     eye?act(hid?"mut":"", hid?`Put ${escAttr(b.name)} back in your list`
                              :`Hide ${escAttr(b.name)} from your list — just for you`,
@@ -10661,6 +10665,18 @@ function bellOff(bid){
   if(p.muted) return true;
   if(!BELL_TEAM) return false;
   return !(MY_TEAM[bid]||p.bell_on);
+}
+/* V119.19 CAPPADOCIA — FOUR WORDS FOR THE BELL, USED EVERYWHERE.
+   Chirag, 28 Nov, on "Muted · no bell from this brand, just for you":
+   "the language is complicated to understand, and we are making a
+   simple thing more difficult." Follow and Unfollow are for a brand you
+   are not on the team of; Mute and Unmute are for silencing a brand
+   outright. bellWord() is what one click on that brand's bell will do. */
+function bellWord(bid){
+  const p=prefFor(bid);
+  if(p.muted) return "Unmute";
+  if(!BELL_TEAM||MY_TEAM[bid]) return "Mute";
+  return p.bell_on?"Unfollow":"Follow";
 }
 /* the brands I am not on the team of, whose bell I turned on */
 function bellOnBrandIds(){
@@ -14894,7 +14910,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.18 Cappadocia";
+const TOOL_VERSION="V119.19 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -18893,35 +18909,34 @@ async function saveNotifyPref(v){
 function notifMailBlock(){
   if(!NOTIFY_OK) return "";
   return `<div class="npmail">
-    <i class="ti ti-mail"></i><span class="nm">Email my mentions</span>
+    <i class="ti ti-mail"></i><span class="nm">Email me when tagged</span>
     <select onchange="saveNotifyPref(this.value)">${
       NOTIFY_EVERY.map(([v,label])=>
         `<option value="${v}"${NOTIFY_MIN===v?" selected":""}>${label}</option>`).join("")
     }</select></div>`;
 }
-function notifMutedBlock(){
+function notifMutedBlock(bare){
   /* V119.18 — the brands you are not on the team of, whose bell you
      turned on. Listed for the same reason the muted ones are: turning
      one on must never be a thing you cannot find again to undo. */
   const on=bellOnBrandIds().filter(b=>brands[b]);
+  const row=(b,word,to)=>`<div class="npmr">
+        <span class="bdot" style="background:${(brands[b]||{}).color||"#6B6B6B"}"></span>
+        <span class="nm">${escAttr((brands[b]||{}).name||"")}</span>
+        <button class="nword" onclick="notifMute('${b}',${to})">${word}</button>
+      </div>`;
+  /* V119.19 — one heading over everything below the list, two plain
+     list names, and a button that says what the click does. The mobile
+     sheet has its own heading and asks for the lists alone. */
+  const head=bare?"":`<div class="npset">Settings</div>`;
   const onBlock=on.length?`<div class="npmuted">
-    <div class="npmh">Bell on · ${on.length===1?"a brand":"brands"} you are not on the team of</div>
-    ${on.map(b=>`<div class="npmr">
-        <span class="bdot" style="background:${(brands[b]||{}).color||"#6B6B6B"}"></span>
-        <span class="nm">${escAttr((brands[b]||{}).name||"")}</span>
-        <button class="nmute" title="Turn notifications off"
-          onclick="notifMute('${b}',1)"><i class="ti ti-bell"></i></button>
-      </div>`).join("")}</div>`:"";
+    <div class="npmh">Brands you follow</div>
+    ${on.map(b=>row(b,"Unfollow",1)).join("")}</div>`:"";
   const ids=mutedBrandIds().filter(b=>brands[b]);
-  if(!ids.length) return onBlock;
-  return onBlock+`<div class="npmuted">
-    <div class="npmh">Muted · no bell from ${ids.length===1?"this brand":"these brands"}, just for you</div>
-    ${ids.map(b=>`<div class="npmr">
-        <span class="bdot" style="background:${(brands[b]||{}).color||"#6B6B6B"}"></span>
-        <span class="nm">${escAttr((brands[b]||{}).name||"")}</span>
-        <button class="nmute" title="Turn notifications back on"
-          onclick="notifMute('${b}',0)"><i class="ti ti-bell-off"></i></button>
-      </div>`).join("")}</div>`;
+  const muBlock=ids.length?`<div class="npmuted">
+    <div class="npmh">Muted brands</div>
+    ${ids.map(b=>row(b,"Unmute",0)).join("")}</div>`:"";
+  return head+onBlock+muBlock;
 }
 async function notifMute(bid,on){
   const name=(brands[bid]||{}).name||"this brand";
@@ -18932,6 +18947,8 @@ async function notifMute(bid,on){
      which also silences the messages that tag you there. */
   const team=!BELL_TEAM||!!MY_TEAM[bid];
   const was=prefFor(bid);
+  /* V119.19 — the toast names what this click did, in the same four words */
+  const saidWord=on?((!team&&was.bell_on)?"Unfollowed":"Muted"):(was.muted?"Unmuted":(team?"Unmuted":"Following"));
   await savePref(bid, on ? {muted:team||!was.bell_on, bell_on:false}
                          : {muted:false, bell_on:!team});
   /* the database leaves the brand out now, so the list is read again */
@@ -18945,7 +18962,7 @@ async function notifMute(bid,on){
   /* BRUGES — this used to name an internal batch at the person. It is a
      sentence about what will happen to them, not about our week. */
   if(!PREFS_OK){ toast("Muted for now — but this will come back when you reload","err"); return; }
-  toast(on?`Muted ${name} — just for you`:`Notifications back on for ${name}`);
+  toast(`${saidWord}: ${name}`);
 }
 /* ══ V114.0 TBILISI · WHERE A ROW TAKES YOU ═════════════════════════
    Chirag, 10 Oct: "Notifications with @mentions do not tell you which
@@ -19143,7 +19160,7 @@ function buildNotifPanel(){
        are looking at, and there is nothing to read to work it out. */
     return `<div class="ngh"><span class="bdot" style="background:${(brands[bid]||{}).color||"#6B6B6B"}"></span>
       ${escAttr(g.name)}
-      <button class="nmute" title="Mute ${escAttr(g.name)} — just for you"
+      <button class="nmute" title="${bellWord(bid)} ${escAttr(g.name)}"
         onclick="notifMute('${bid}',1)"><i class="ti ti-bell-off"></i></button>
       <span class="ngn">${g.rows.length}</span></div>${rows}`;
   }).join("");
@@ -39861,7 +39878,7 @@ async function pushForget(){
 }
 function pushRow(){
   if(!pushCan()) return "";
-  const lab=mfNarrow()?"Alerts on this phone":"Alerts on this computer";
+  const lab="Pop-up alerts";
   return `<div class="npmail nppush">
     <i class="ti ti-device-mobile"></i><span class="nm">${lab}</span>
     <select onchange="pushSet(this.value)"${PUSH_BUSY?" disabled":""}>
@@ -40555,7 +40572,7 @@ async function pushReadMode(){
 pushRow=function(){
   if(!pushCan()) return "";
   if(PUSH_ON&&!PUSH_MODE_READ){ PUSH_MODE_READ=true; pushReadMode().then(()=>{ try{ buildNotifPanel(); }catch(e){} }); }
-  const lab=mfNarrow()?"Alerts on this phone":"Alerts on this computer";
+  const lab="Pop-up alerts";
   const v=PUSH_ON?(PUSH_MODE==="mentions"?"mentions":"all"):"off";
   const o=(k,t)=>`<option value="${k}"${v===k?" selected":""}>${t}</option>`;
   return `<div class="npmail nppush">
@@ -42163,8 +42180,8 @@ function xnSheet(which){
     const inBell=[...new Set(notifItems().map(i=>i.brandId))].filter(b=>brands[b]&&!brandMuted(b));
     h=`<div class="hd">Alerts<button onclick="xnSheetClose()">Done</button></div>
       <div class="xn-set">${notifMailBlock()}</div>
-      ${inBell.length?`<h4>Mute a brand · just for you</h4><div class="row">${inBell.map(b=>`<button class="ch" onclick="notifMute('${b}',1);xnSheetClose()"><i class="ti ti-bell-off"></i> ${escHtml(brands[b].name||"")}</button>`).join("")}</div>`:""}
-      ${notifMutedBlock()}`;
+      ${inBell.length?`<h4>Mute a brand</h4><div class="row">${inBell.map(b=>`<button class="ch" onclick="notifMute('${b}',1);xnSheetClose()"><i class="ti ti-bell-off"></i> ${escHtml(brands[b].name||"")}</button>`).join("")}</div>`:""}
+      ${notifMutedBlock(true)}`;
   }
   document.body.insertAdjacentHTML("beforeend",`<div class="xn-scrim" onclick="event.stopPropagation();xnSheetClose()"></div><div class="xn-sh mfs" onclick="event.stopPropagation()">${h}</div>`);
   const sh=document.querySelector(".xn-sh");
