@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.23 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.24 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14929,7 +14929,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.23 Cappadocia";
+const TOOL_VERSION="V119.24 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -57307,7 +57307,7 @@ function stuWowRender(mc){
       <div class="pic" onclick="stuWowOpen('${x.id}')" title="Open the ${x.source_kind}"${x.thumb_path?` data-sign="${escAttr(x.thumb_path)}"`:""}>${x.thumb_path?"":`<i class="ti ti-photo"></i>`}</div>
       ${mayEdit?`<button class="rm" title="Remove the nomination" onclick="stuWowRemove('${x.id}')"><i class="ti ti-x"></i></button>`:""}
       <button class="star${x.picked?" on":""}${sup?" may":""}" data-pick="${x.id}" title="${x.picked?"Picked for WOW":"Nominated"}${sup?(x.picked?" — click to unpick":" — click to pick"):""}" ${sup?`onclick="stuWowSet('${x.id}',{picked:${!x.picked}})"`:""}><i class="ti ${x.picked?"ti-star-filled":"ti-star"}"></i></button>
-      <div class="cap"><b title="${escAttr(x.title)}">${escHtml(x.title||"Untitled")}</b><span class="mu">${escHtml(x.brand_id&&brands[x.brand_id]?brands[x.brand_id].name:"")} · ${x.source_kind==="post"?"Post":"Creative"}</span>
+      <div class="cap"><b title="${escAttr(x.title)}">${escHtml(x.title||"Untitled")}</b><span class="mu">${escHtml(x.brand_id&&brands[x.brand_id]?brands[x.brand_id].name:"")} · ${x.source_kind==="post"?"Post":x.source_kind==="delivery"?"Delivery":"Creative"}</span>
         <div class="who"><span class="av" style="display:none"></span>${who}</div></div></div>`;
   };
   const empty=!STU.wowOk?(STU.wowErr?"Could not load — "+escHtml(STU.wowErr):"Loading…")
@@ -57343,6 +57343,10 @@ async function stuWowOpen(id){
   const x=STU.wow.find(w=>w.id===id); if(!x) return;
   const base=location.origin+location.pathname;
   if(x.source_kind==="post"){ window.open(base+"?post="+encodeURIComponent(x.source_id),"_blank"); return; }
+  if(x.source_kind==="delivery"){   /* V119.24 — a nominated delivery opens in its task */
+    const r=await sb.from("deliverable_versions").select("id,deliverable_id,task_id,brand_id").eq("id",x.source_id).maybeSingle();
+    const v=r&&r.data; if(!v){ toast("That delivery is no longer there","err"); return; }
+    try{ acxGoDelivery(v.brand_id,v.task_id,v.deliverable_id,v.id); }catch(e){} return; }
   const w=window.open("","_blank");
   const r=await sb.from("ad_creatives").select("id,promotion_id,brand_id").eq("id",x.source_id).maybeSingle();
   const c=r&&r.data&&(Array.isArray(r.data)?r.data.find(y=>y.id===x.source_id):r.data);
@@ -59628,7 +59632,7 @@ document.head.insertAdjacentHTML("beforeend",`<style id="acx-alloc-review-17-css
    review_prefs (SQL file 127). Without that file it is kept in the
    browser, and Payments due is not offered. */
 var RVD={ok:false,busy:false,at:0,err:"",db:false,loaded:false,
-  p:{sections:[],tasks:[],brands:[]}, d:{}, more:{}, amB:[], team:[], payOk:false};
+  p:{sections:[],tasks:[],brands:[],jumps:[]}, d:{}, more:{}, amB:[], team:[], payOk:false, jumpsCol:false, escOk:false, box:null};
 const RVD_SECS=[["me","Mentions"],["tk","Tasks I track"],["br","Brands I track"],["dl","Deliveries"],["po","Posts this week"],["fo","Followers"],["rn","Renewals due"],["pay","Payments due"]];
 const RVD_AMONLY={rn:1,pay:1};
 function rvdKey(){ return "cc-rvd-"+((ME&&ME.id)||""); }
@@ -59636,21 +59640,26 @@ function rvdNorm(p){
   p=p||{}; const have=new Set(), secs=[];
   (Array.isArray(p.sections)?p.sections:[]).forEach(s=>{ if(s&&RVD_SECS.some(([k])=>k===s.k)&&!have.has(s.k)){ have.add(s.k); secs.push({k:s.k,on:!!s.on}); } });
   RVD_SECS.forEach(([k])=>{ if(!have.has(k)) secs.push({k,on:!RVD_AMONLY[k]}); });
-  return {sections:secs,tasks:[...new Set((p.tasks||[]).filter(Boolean))],brands:[...new Set((p.brands||[]).filter(Boolean))]};
+  return {sections:secs,tasks:[...new Set((p.tasks||[]).filter(Boolean))],brands:[...new Set((p.brands||[]).filter(Boolean))],
+    jumps:(Array.isArray(p.jumps)?p.jumps:[]).filter(j=>j&&j.b&&j.p).map(j=>({b:String(j.b),p:String(j.p)})).slice(0,30)};
 }
 async function rvdPrefsLoad(){
   if(RVD.loaded) return;
   let local=null; try{ local=JSON.parse(localStorage.getItem(rvdKey())||"null"); }catch(e){}
   try{
-    const r=await sb.from("review_prefs").select("sections,tasks,brands").eq("user_id",ME.id).maybeSingle();
-    if(!r.error){ RVD.db=true; RVD.p=rvdNorm(r.data||local); RVD.loaded=true; return; }
+    /* V119.24 — the quick jump list rides in the same row once file 128 is in */
+    let r=await sb.from("review_prefs").select("sections,tasks,brands,jumps").eq("user_id",ME.id).maybeSingle();
+    RVD.jumpsCol=!r.error;
+    if(r.error) r=await sb.from("review_prefs").select("sections,tasks,brands").eq("user_id",ME.id).maybeSingle();
+    if(!r.error){ RVD.db=true; const d=r.data||local; RVD.p=rvdNorm(d&&!RVD.jumpsCol&&local?{...d,jumps:local.jumps}:d); RVD.loaded=true; return; }
   }catch(e){}
   RVD.db=false; RVD.p=rvdNorm(local); RVD.loaded=true;
 }
 function rvdPrefsSave(){
   try{ localStorage.setItem(rvdKey(),JSON.stringify(RVD.p)); }catch(e){}
   if(!RVD.db) return;
-  try{ sb.from("review_prefs").upsert({user_id:ME.id,sections:RVD.p.sections,tasks:RVD.p.tasks,brands:RVD.p.brands,updated_at:new Date().toISOString()},{onConflict:"user_id"}).then(()=>{},()=>{}); }catch(e){}
+  try{ sb.from("review_prefs").upsert({user_id:ME.id,sections:RVD.p.sections,tasks:RVD.p.tasks,brands:RVD.p.brands,
+    ...(RVD.jumpsCol?{jumps:RVD.p.jumps}:{}),updated_at:new Date().toISOString()},{onConflict:"user_id"}).then(()=>{},()=>{}); }catch(e){}
 }
 function rvdIsAm(){ return RVD.amB.length>0; }
 function rvdShown(){ return RVD.p.sections.filter(s=>s.on&&(!RVD_AMONLY[s.k]||(rvdIsAm()&&(s.k!=="pay"||RVD.payOk)))); }
@@ -59723,9 +59732,12 @@ async function rvdLoad(force){
     RVD.payOk=!!RVD.amB.length&&!pay.error;
     /* every version of the deliveries that moved this week, and their names */
     const dids=[...new Set((dv.data||[]).map(x=>x.deliverable_id).filter(Boolean))].slice(0,300);
-    const [allv,dn]=await Promise.all([
-      dids.length?sb.from("deliverable_versions").select("id,deliverable_id,task_id,brand_id,version,status,created_at").in("deliverable_id",dids).is("deleted_at",null).limit(2000):none,
-      dids.length?sb.from("task_deliverables").select("id,name").in("id",dids):none]);
+    const [allv,dn,pj,es]=await Promise.all([
+      dids.length?sb.from("deliverable_versions").select("id,deliverable_id,task_id,brand_id,version,status,created_at,message_id,filed_at").in("deliverable_id",dids).is("deleted_at",null).limit(2000):none,
+      dids.length?sb.from("task_deliverables").select("id,name").in("id",dids):none,
+      B.length?sb.from("branding_projects").select("id,brand_id").in("brand_id",B).is("deleted_at",null).limit(2000):none,
+      sb.from("brand_escalations").select("id,brand_id,reason,raised_by,raised_at").is("cleared_at",null).order("raised_at",{ascending:true}).limit(200)]);
+    RVD.escOk=!es.error;
     try{ if(RVD.amB.length&&on("rn")&&typeof acxSoLoad==="function"&&!ACX.so.ok) await acxSoLoad(); }catch(e){}
     const D={};
     /* tasks I track */
@@ -59749,6 +59761,12 @@ async function rvdLoad(force){
     const byB=new Map();
     [...byD.values()].filter(g=>live(g.bid)).sort((a,b)=>a.last<b.last?1:-1).forEach(g=>{ g.vs.sort((a,b)=>a.version-b.version); if(!byB.has(g.bid)) byB.set(g.bid,[]); byB.get(g.bid).push(g); });
     D.dl=[...byB.entries()].map(([bid,ds])=>({bid,ds})); D.dlN=byD.size;
+    D.dlAll=[...byD.values()].filter(g=>live(g.bid)).sort((a,b)=>a.last<b.last?1:-1);
+    /* V119.24 — the three boxes on top */
+    const pjB=new Map(); (pj.data||[]).filter(x=>live(x.brand_id)).forEach(x=>pjB.set(x.brand_id,(pjB.get(x.brand_id)||0)+1));
+    D.pj=[...pjB.entries()].map(([bid,n])=>({bid,n})).sort((a,b)=>b.n-a.n); D.pjN=(pj.data||[]).filter(x=>live(x.brand_id)).length;
+    const mineB=new Set(B), adm=ME.role==="admin";
+    D.es=RVD.escOk?(es.data||[]).filter(x=>live(x.brand_id)&&(adm||mineB.has(x.brand_id))):[];
     /* followers: the platforms that are being read, and the change since the month began */
     const base={}; (fr.data||[]).forEach(r=>{ const k=r.brand_id+"|"+r.platform; if(!(k in base)&&r.followers!=null) base[k]=Number(r.followers); });
     const ORD={instagram:0,facebook:1,linkedin:2,youtube:3};
@@ -59824,7 +59842,16 @@ function rvdPaint(){
   try{ rvSidebar(); }catch(e){}
   if(RVD.err){ g.innerHTML=`<div class="rvd-c w3"><div class="rvd-e">Could not load Review — ${escHtml(RVD.err)}</div></div>`; return; }
   if(!RVD.ok){ g.innerHTML=`<div class="rvd-c w3"><div class="rvd-e">Loading…</div></div>`; return; }
-  const secs=rvdShown();
+  const secs=rvdShown(), D=RVD.d||{}, dash=document.getElementById("rvd-dash");
+  if(dash){
+    const card=(k,n,t,sub,red)=>`<div class="rvd-dc${red&&n?" rd":""}${RVD.box===k?" on":""}" onclick="rvdBox('${k}')"><div class="big">${n}</div><div class="k">${t}</div><div class="s">${sub}</div></div>`;
+    const nb=(D.pj||[]).length;
+    dash.innerHTML=card("pj",D.pjN||0,"Projects","you are part of, on "+nb+(nb===1?" brand":" brands"))
+      +card("dl",D.dlN||0,"Deliveries","on your brands, last 7 days")
+      +(RVD.escOk?card("es",(D.es||[]).length,"Under escalation",ME.role==="admin"?"across all brands":"brands you are part of",true):"");
+  }
+  const boxHtml=RVD.box&&(RVD.box!=="es"||RVD.escOk)?`<div class="rvd-c w3" id="rvd-box">${rvdBoxHtml(RVD.box)}</div>`:"";
+  if(boxHtml){ g.innerHTML=boxHtml+secs.map(s=>`<div class="rvd-c${s.k==="dl"?" w2":""}" id="rvd-s-${s.k}">${rvdSec(s.k)}</div>`).join(""); return; }
   g.innerHTML=secs.length?secs.map(s=>`<div class="rvd-c${s.k==="dl"?" w2":""}" id="rvd-s-${s.k}">${rvdSec(s.k)}</div>`).join("")
     :`<div class="rvd-c w3"><div class="rvd-e">Every section is switched off. Use Customise to turn one on.</div></div>`;
 }
@@ -59833,7 +59860,7 @@ function rvdCustClose(){ const m=document.getElementById("rvd-cust"); if(m) m.re
 function rvdCustHtml(){
   const L=Object.fromEntries(RVD_SECS);
   const rows=RVD.p.sections.filter(s=>!RVD_AMONLY[s.k]||(rvdIsAm()&&(s.k!=="pay"||RVD.payOk)));
-  return `<div class="ph">Customise Review<span onclick="rvdCustClose()">Done</span></div>`+rows.map(s=>`<div class="sr" draggable="true" data-k="${s.k}"><i class="ti ti-grip-vertical g"></i><span class="nm">${escHtml(L[s.k])}</span><span class="tg${s.on?" on":""}" onclick="rvdToggle('${s.k}')"></span></div>`).join("");
+  return `<div class="cph">Customise Review<span onclick="rvdCustClose()">Done</span></div>`+rows.map(s=>`<div class="sr" draggable="true" data-k="${s.k}"><i class="ti ti-grip-vertical g"></i><span class="nm">${escHtml(L[s.k])}</span><span class="tg${s.on?" on":""}" onclick="rvdToggle('${s.k}')"></span></div>`).join("");
 }
 function rvdCust(ev){
   if(ev) ev.stopPropagation();
@@ -59859,10 +59886,148 @@ function rvdToggle(k){
 document.addEventListener("click",()=>rvdCustClose());
 window.addEventListener("resize",()=>rvdCustClose());
 
+/* ══ V119.24 CAPPADOCIA · QUICK JUMP, AND THREE BOXES ON TOP ═══════════
+   Chirag, 28 Nov, mockup "06 - Review tab" (approved): a quick jump
+   list in the left panel — a brand and one of its pages, one click to
+   go there, add and remove as you like — and three small boxes above
+   the sections: the projects you are part of, the deliveries on your
+   brands (each can be sent to backup or nominated for a WOW card), and
+   the brands under escalation.
+
+   "Your brands" is the same everywhere on this page: the brands you
+   have a team role on, plus the brands you starred. An administrator
+   sees every brand under escalation.
+   Backup IS Final deliveries: the place an approved version is filed
+   in already (V118.124), so there is one backup and not two.
+   Escalation and WOW for a delivery need SQL file 128; without it the
+   escalation box is not drawn and the WOW button is left off. */
+function rvdPages(){ try{ return BN_TABS.map(t=>[t.k,t.label]); }catch(e){ return []; } }
+function rvdPageWord(k){ const t=rvdPages().find(x=>x[0]===k); return t?t[1]:k; }
+function rvdJumpsHtml(){
+  const js=RVD.p.jumps.filter(j=>brands[j.b]);
+  return `<div class="s-lbl rvd-jl">Quick jump<span onclick="rvdJumpAdd(event)" id="rvd-ja">+ Add</span></div>`
+    +js.map(j=>{ const i=RVD.p.jumps.indexOf(j);
+      return `<div class="mdb-trow rvd-j" onclick="rvdJump(${i})"><span class="bdot" style="background:${(brands[j.b]||{}).color||"#6B6B6B"}"></span><span class="nm">${escHtml((brands[j.b]||{}).name||"")}</span><em>${escHtml(rvdPageWord(j.p))}</em><b onclick="rvdJumpDel(event,${i})" title="Remove">✕</b></div>`; }).join("")
+    +`<div style="height:14px"></div>`;
+}
+function rvdJump(i){
+  const j=RVD.p.jumps[i]; if(!j||!brands[j.b]) return;
+  let t=null; try{ t=BN_TABS.find(x=>x.k===j.p); }catch(e){}
+  pickBrand(j.b);
+  if(t&&t.go) setTimeout(()=>{ try{ (new Function(t.go))(); }catch(e){} },0);
+}
+function rvdJumpDel(ev,i){ if(ev) ev.stopPropagation(); RVD.p.jumps.splice(i,1); rvdPrefsSave(); try{ rvSidebar(); }catch(e){} }
+/* the small picker: a brand, then (for a quick jump) one of its pages */
+var RVD_PK=null;
+function rvdPickClose(){ const m=document.getElementById("rvd-pick"); if(m) m.remove(); RVD_PK=null; }
+function rvdPickHtml(){
+  const P=RVD_PK, q=P.q.trim().toLowerCase();
+  const list=Object.keys(brands).filter(b=>brands[b]&&!brands[b].archived&&(!P.only||P.only.has(b))&&(!q||String(brands[b].name||"").toLowerCase().includes(q)))
+    .sort((a,b)=>String(brands[a].name).localeCompare(String(brands[b].name))).slice(0,8);
+  return `<div class="ph2">${P.mode==="jump"?"Add a quick jump":"Escalate a brand"}</div>
+    <input class="f" id="rvd-pq" placeholder="Search brands" value="${escAttr(P.q)}" oninput="RVD_PK.q=this.value;rvdPickPaint(true)">
+    <div class="ol">${list.map(b=>`<div class="o${P.b===b?" on":""}" onclick="RVD_PK.b='${escAttr(b)}';rvdPickPaint()">${escHtml(brands[b].name||"")}</div>`).join("")||`<div class="o mu">No brand matches.</div>`}</div>
+    ${P.mode==="jump"?`<div class="pg">${rvdPages().map(([k,l])=>`<span class="${P.p===k?"on":""}" onclick="RVD_PK.p='${escAttr(k)}';rvdPickPaint()">${escHtml(l)}</span>`).join("")}</div>`
+      :`<input class="f" id="rvd-pr" placeholder="Reason" maxlength="140" value="${escAttr(P.r||"")}" oninput="RVD_PK.r=this.value">`}
+    <div class="add${P.b&&(P.mode!=="jump"||P.p)?"":" off"}" onclick="rvdPickGo()">${P.mode==="jump"?"Add":"Escalate"}</div>`;
+}
+function rvdPickPaint(keep){
+  const m=document.getElementById("rvd-pick"); if(!m||!RVD_PK) return;
+  const at=keep&&document.activeElement&&document.activeElement.id==="rvd-pq"?document.activeElement.selectionStart:null;
+  m.innerHTML=rvdPickHtml();
+  if(at!=null){ const n=document.getElementById("rvd-pq"); if(n){ n.focus(); try{ n.setSelectionRange(at,at); }catch(e){} } }
+}
+function rvdPickOpen(ev,mode,only){
+  if(ev) ev.stopPropagation();
+  if(document.getElementById("rvd-pick")){ rvdPickClose(); return; }
+  RVD_PK={mode,q:"",b:null,p:mode==="jump"?"content":null,r:"",only:only||null};
+  const m=document.createElement("div"); m.id="rvd-pick"; m.className="rvd-pick"; m.innerHTML=rvdPickHtml();
+  m.addEventListener("click",e=>e.stopPropagation());
+  document.body.appendChild(m);
+  const a=ev&&ev.currentTarget?ev.currentTarget.getBoundingClientRect():null;
+  if(a){ const H=m.getBoundingClientRect().height; m.style.top=Math.max(8,Math.min(a.bottom+6,window.innerHeight-H-8))+"px"; m.style.left=Math.max(8,Math.min(a.left,window.innerWidth-268))+"px"; }
+  const n=document.getElementById("rvd-pq"); if(n) n.focus();
+}
+function rvdJumpAdd(ev){ rvdPickOpen(ev,"jump"); }
+async function rvdPickGo(){
+  const P=RVD_PK; if(!P||!P.b) return;
+  if(P.mode==="jump"){
+    if(!P.p) return;
+    if(!RVD.p.jumps.some(j=>j.b===P.b&&j.p===P.p)) RVD.p.jumps.push({b:P.b,p:P.p});
+    rvdPrefsSave(); rvdPickClose(); try{ rvSidebar(); }catch(e){} return;
+  }
+  const reason=String(P.r||"").trim(); if(!reason){ toast("Write the reason","err"); return; }
+  const r=await sb.from("brand_escalations").insert([{brand_id:P.b,reason,raised_by:ME.id}]);
+  if(r.error){ toast(/duplicate|unique/i.test(r.error.message)?"That brand is already under escalation":"Not saved — "+escHtml(r.error.message),"err"); return; }
+  rvdPickClose(); toast(`${(brands[P.b]||{}).name||"Brand"} · under escalation`); RVD.at=0; rvdLoad(true);
+}
+document.addEventListener("click",()=>rvdPickClose());
+/* who may raise or clear an escalation: an administrator, or the brand's account manager */
+function rvdEscMay(b){ return ME.role==="admin"||RVD.amB.indexOf(b)>-1; }
+async function rvdEscClear(ev,id){
+  if(ev) ev.stopPropagation();
+  const x=(RVD.d.es||[]).find(e=>e.id===id); if(!x||!rvdEscMay(x.brand_id)) return;
+  if(!confirm(`Take ${(brands[x.brand_id]||{}).name||"this brand"} out of escalation?`)) return;
+  const r=await sb.from("brand_escalations").update({cleared_at:new Date().toISOString(),cleared_by:ME.id}).eq("id",id).select("id");
+  if(r.error||!(r.data||[]).length){ toast("Not saved"+(r.error?" — "+escHtml(r.error.message):""),"err"); return; }
+  RVD.d.es=RVD.d.es.filter(e=>e.id!==id); rvdPaint();
+}
+function rvdBox(k){ RVD.box=RVD.box===k?null:k; rvdPaint(); if(RVD.box==="dl"){ try{ if(stuNomMay()&&!STU.wowOk&&!STU.wowLoading) stuWowLoad().then(()=>{ if(view==="review") rvdPaint(); }); }catch(e){} } }
+/* a delivery to backup: the approved version is filed in Final deliveries */
+async function rvdBackup(ev,vid){
+  if(ev) ev.stopPropagation();
+  const g=(RVD.d.dlAll||[]).find(x=>x.vs.some(v=>v.id===vid)), v=g&&g.vs.find(x=>x.id===vid); if(!v) return;
+  try{ const r=await dlvCall("file_final",{version_id:vid}); v.filed_at=r.filed_at||new Date().toISOString(); toast(`${g.name} v${v.version} · in backup`); rvdPaint(); }
+  catch(e){ toast("Not added to backup — "+escHtml(String(e.message||e)),"err"); }
+}
+/* a delivery for a WOW card: the Studio's own nomination, with a delivery as its source */
+function rvdWow(ev,did){
+  if(ev) ev.stopPropagation();
+  const g=(RVD.d.dlAll||[]).find(x=>x.did===did); if(!g) return;
+  const v=g.vs[g.vs.length-1];
+  const people=(PEOPLE||[]).filter(p=>p&&p.id).map(p=>[p.id,p.name||String(p.email||"").split("@")[0]||"Someone"]).sort((a,b)=>a[1].localeCompare(b[1]));
+  RVD.wowFor={g,v};
+  stuModal(`<h3>Nominate for WOW</h3>
+    <div class="r"><span>Delivery</span><div style="font-weight:700">${escHtml(g.name)} · v${v.version}</div></div>
+    <div class="r"><span>Brand</span><div>${escHtml((brands[g.bid]||{}).name||"")}</div></div>
+    <div class="r"><span>Who made it</span><select class="cc-stsel stu-sel" id="rvd-wow-who"><option value="">Pick a person</option>${people.map(([pid,n])=>`<option value="${pid}">${escHtml(n)}</option>`).join("")}</select></div>
+    <div class="ft"><button class="btn btn-s" onclick="stuModalClose()">Cancel</button><button class="btn btn-p" onclick="rvdWowGo()"><i class="ti ti-star"></i> Nominate</button></div>`);
+}
+async function rvdWowGo(){
+  const N=RVD.wowFor; if(!N) return;
+  const who=(document.getElementById("rvd-wow-who")||{}).value||null, n=new Date();
+  const row={id:crypto.randomUUID(),month:n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-01",source_kind:"delivery",source_id:String(N.v.id),brand_id:N.g.bid,
+    title:N.g.name+" · v"+N.v.version,thumb_path:null,made_by:who,nominated_by:ME.id,picked:false};
+  const r=await sb.from("studio_wow").insert([row]);
+  if(r.error){ toast("Not nominated — "+escHtml(r.error.message),"err"); return; }
+  try{ STU.wow.unshift({...row,created_at:n.toISOString()}); }catch(e){}
+  RVD.wowFor=null; stuModalClose(); toast("Nominated for WOW"); rvdPaint();
+}
+function rvdBoxHtml(k){
+  const D=RVD.d||{}, E=escHtml, A=escAttr, nm=b=>E(String((brands[b]||{}).name||""));
+  const head=(t,n,red,link)=>`<div class="rvd-h"><b>${t}</b><span class="rvd-n${red&&n?" r":""}">${n}</span><span class="sp"></span>${link||""}<a onclick="rvdBox('${k}')">Close</a></div>`;
+  const empty=t=>`<div class="rvd-e">${t}</div>`;
+  if(k==="pj"){ const xs=D.pj||[];
+    return head("Projects you are part of",D.pjN||0)+(xs.length?xs.map(x=>`<div class="rvd-r" onclick="pickBrand('${A(x.bid)}');setTimeout(()=>{try{navTasks()}catch(e){}},0)"><span class="b grow">${nm(x.bid)}</span><span class="m">${x.n} ${x.n===1?"project":"projects"}</span><span class="go">›</span></div>`).join(""):empty("No projects on your brands.")); }
+  if(k==="dl"){ const xs=(D.dlAll||[]).slice(0,40);
+    let wowOk=false; try{ wowOk=RVD.escOk&&stuNomMay()&&STU.wowOk; }catch(e){}
+    const mayFile=(typeof dlvMayFile==="function")&&dlvMayFile();
+    const row=g=>{ const v=g.vs[g.vs.length-1], ap=g.vs.filter(x=>x.status==="approved").pop();
+      const tags=g.vs.map((x,i)=>`<span class="rvd-v ${i<g.vs.length-1?"old":x.status==="approved"?"ok":x.status==="changes"?"ch":"w"}">v${x.version}</span>`).join("");
+      const bk=!mayFile?"":ap&&ap.filed_at?`<span class="rvd-ab done">In backup ✓</span>`:ap&&ap.message_id?`<span class="rvd-ab" onclick="rvdBackup(event,'${A(ap.id)}')">Backup</span>`:`<span class="rvd-ab off" title="Goes to backup once the client approves it">Backup</span>`;
+      let ww=""; if(wowOk){ const w=stuWowOf("delivery",v.id)||g.vs.map(x=>stuWowOf("delivery",x.id)).find(Boolean); ww=w?`<span class="rvd-ab done">${w.picked?"Picked ✓":"Nominated ✓"}</span>`:`<span class="rvd-ab wow" onclick="rvdWow(event,'${A(g.did)}')">WOW</span>`; }
+      return `<div class="rvd-r" onclick="acxGoDelivery('${A(g.bid)}','${A(g.tid||"")}','${A(g.did)}','${A(v.id)}')"><span class="b">${nm(g.bid)}</span><span class="rvd-dls"><span class="rvd-dv" title="${A(g.name)}"><span class="nn">${E(g.name)}</span>${tags}</span></span>${bk}${ww}</div>`; };
+    return head("Deliveries on your brands",D.dlN||0,false,`<a onclick="acTab('dlv');acGo()" style="margin-right:14px">Open in Ac Mgmt</a>`)+(xs.length?xs.map(row).join(""):empty("Nothing delivered in the last 7 days.")); }
+  if(k==="es"){ const xs=D.es||[], mayAny=ME.role==="admin"||RVD.amB.length>0;
+    const days=s=>{ const n=Math.max(0,Math.round((Date.now()-new Date(s).getTime())/864e5)); return n===0?"today":n+" d"; };
+    return head("Brands under escalation",xs.length,true,mayAny?`<a onclick="rvdPickOpen(event,'esc',${ME.role==="admin"?"null":"new Set(RVD.amB)"})" style="margin-right:14px">Escalate a brand</a>`:"")
+      +(xs.length?xs.map(x=>`<div class="rvd-r" onclick="pickBrand('${A(x.brand_id)}')"><span class="b">${nm(x.brand_id)}</span><span class="x">${E(x.reason)}</span><span class="m">${E(days(x.raised_at))}</span>${rvdEscMay(x.brand_id)?`<span class="rvd-ab" onclick="rvdEscClear(event,'${A(x.id)}')">Clear</span>`:""}<span class="go">›</span></div>`).join(""):empty("No brand is under escalation.")); }
+  return "";
+}
 /* ── the old list steps aside ── */
 renderReview=function(){
   const mc=document.getElementById("main");
-  mc.innerHTML=`<div style="padding:0 var(--pg-x) 26px;"><div class="fb rvd-bar" id="rv-bar"></div><div class="rvd-grid" id="rvd-grid"></div></div>`;
+  mc.innerHTML=`<div style="padding:0 var(--pg-x) 26px;"><div class="fb rvd-bar" id="rv-bar"></div><div class="rvd-dash" id="rvd-dash"></div><div class="rvd-grid" id="rvd-grid"></div></div>`;
   rvdLoad(); rvdPaint();
 };
 rvPaint=function(){ rvdPaint(); };
@@ -59872,7 +60037,7 @@ rvSidebar=function(){
   const st=document.getElementById("sb-stats"); if(st) st.innerHTML="";
   const sm=document.getElementById("sb-months"); if(!sm) return;
   const L=Object.fromEntries(RVD_SECS);
-  sm.innerHTML=`<div class="s-lbl">Sections</div>`+rvdShown().map(s=>`<div class="mdb-trow" onclick="(document.getElementById('rvd-s-${s.k}')||{scrollIntoView(){}}).scrollIntoView({behavior:'smooth',block:'start'})"><span class="nm">${escHtml(L[s.k])}</span></div>`).join("");
+  sm.innerHTML=rvdJumpsHtml()+`<div class="s-lbl">Sections</div>`+rvdShown().map(s=>`<div class="mdb-trow" onclick="(document.getElementById('rvd-s-${s.k}')||{scrollIntoView(){}}).scrollIntoView({behavior:'smooth',block:'start'})"><span class="nm">${escHtml(L[s.k])}</span></div>`).join("");
 };
 (function(){
   const base=viewRoute;
@@ -59911,12 +60076,28 @@ document.head.insertAdjacentHTML("beforeend",`<style id="rv-dash-20-css">
 .rvd-pt em.fb{background:#2B5FB0}.rvd-pt em.li{background:#1E6B2E}.rvd-pt em.yt{background:#C62828}.rvd-pt b{font-variant-numeric:tabular-nums;font-weight:700}
 .rvd-pt i{font-style:normal;font-size:11.5px;font-weight:800}.rvd-pt i.up{color:#1E6B2E}.rvd-pt i.dn{color:#C62828}.rvd-pt i.fl{color:#999}
 .rvd-cust{position:fixed;z-index:4000;width:320px;background:#fff;border:1px solid var(--div);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.16);overflow:hidden}
-.rvd-cust .ph{padding:13px 16px;font-weight:800;border-bottom:1px solid #eee;display:flex;font-size:13.5px}.rvd-cust .ph span{margin-left:auto;color:var(--acc);font-size:12.5px;cursor:pointer}
+.rvd-cust .cph{padding:13px 16px;font-weight:800;border-bottom:1px solid #eee;display:flex;font-size:13.5px;line-height:1.3}.rvd-cust .cph span{margin-left:auto;color:var(--acc);font-size:12.5px;cursor:pointer}
 .rvd-cust .sr{display:flex;align-items:center;gap:10px;padding:0 16px;height:40px;border-top:1px solid #F4F2EE;font-size:13px;background:#fff}.rvd-cust .sr.dg{opacity:.4}
 .rvd-cust .sr .g{color:#ccc;cursor:grab}.rvd-cust .sr .nm{flex:1;font-weight:600}
 .rvd-cust .tg{width:34px;height:20px;border-radius:10px;background:#D9D5CD;position:relative;flex:none;cursor:pointer}.rvd-cust .tg:after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .12s}
 .rvd-cust .tg.on{background:#0D0D0D}.rvd-cust .tg.on:after{left:16px}
+.rvd-dash{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
+.rvd-dc{background:#fff;border:1px solid var(--div);border-radius:12px;padding:12px 14px;cursor:pointer}.rvd-dc:hover{border-color:#bbb}.rvd-dc.on{border-color:#0D0D0D;box-shadow:0 0 0 1px #0D0D0D}
+.rvd-dc .big{font-size:22px;font-weight:800;line-height:1.1;color:var(--text)}.rvd-dc.rd .big{color:var(--acc)}
+.rvd-dc .k{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:3px}.rvd-dc .s{font-size:11.5px;color:var(--subtle);margin-top:2px}
+.rvd-ab{padding:3px 9px;border-radius:7px;border:1px solid var(--div);font-weight:700;font-size:11.5px;flex:none;background:#fff;cursor:pointer}
+.rvd-ab:hover{border-color:#999}.rvd-ab.wow{border-color:#E9C877;background:#FFF8E6;color:#8A6508}.rvd-ab.done{background:#E2F1E5;border-color:#BFE0C6;color:#1E6B2E;cursor:default}.rvd-ab.off{opacity:.45;cursor:default}
+.rvd-jl{display:flex;align-items:center}.rvd-jl span{margin-left:auto;color:var(--acc);letter-spacing:0;text-transform:none;font-size:12px;cursor:pointer}
+.rvd-j em{font-style:normal;color:var(--subtle);font-size:12px;margin-left:auto;flex:none}.rvd-j b{display:none;color:#bbb;font-weight:500;margin-left:6px;flex:none}.rvd-j:hover b{display:inline}.rvd-j b:hover{color:var(--acc)}
+.rvd-j .nm{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rvd-pick{position:fixed;z-index:4100;width:260px;background:#fff;border:1px solid var(--div);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.16);overflow:hidden;font-size:12.5px}
+.rvd-pick .ph2{padding:10px 12px;font-weight:800;border-bottom:1px solid #eee}
+.rvd-pick .f{display:block;width:calc(100% - 24px);margin:10px 12px 6px;padding:7px 10px;border:1px solid var(--div);border-radius:8px;font:inherit;font-size:12.5px;outline:none;background:#fff;color:inherit}
+.rvd-pick .ol{max-height:232px;overflow:auto}.rvd-pick .o{padding:7px 12px;font-weight:600;cursor:pointer}.rvd-pick .o:hover,.rvd-pick .o.on{background:#F4F2EE}.rvd-pick .o.mu{color:var(--subtle);font-weight:500;cursor:default}
+.rvd-pick .pg{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px 10px;border-top:1px solid #eee}.rvd-pick .pg span{padding:4px 9px;border-radius:7px;background:#F4F2EE;font-weight:700;cursor:pointer}.rvd-pick .pg span.on{background:#0D0D0D;color:#fff}
+.rvd-pick .add{margin:4px 12px 12px;padding:8px;border-radius:8px;background:#0D0D0D;color:#fff;font-weight:700;text-align:center;cursor:pointer}.rvd-pick .add.off{opacity:.35;cursor:default}
 @media(max-width:1180px){ .rvd-grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media(max-width:760px){ .rvd-dash{grid-template-columns:minmax(0,1fr)} }
 @media(max-width:760px){ .rvd-grid{grid-template-columns:minmax(0,1fr)} .rvd-c.w2{grid-column:auto} }
 </style>`);
 </script>
