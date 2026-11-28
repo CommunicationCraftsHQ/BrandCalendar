@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.25 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.26 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -14929,7 +14929,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.25 Cappadocia";
+const TOOL_VERSION="V119.26 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -45970,8 +45970,17 @@ async function cplSave(){
       const fmt=String(r.format||"post"); const what=fmt.charAt(0).toUpperCase()+fmt.slice(1);
       const when=(r.year&&r.month&&r.date)?day(r.year,r.month,r.date):"";
       return {title:[what,when].filter(Boolean).join(", "),sub:withBrand("Post",r.brand_id)}; }
-    if(s.kind==="mood"){ const r=await one("mood_tags","name,brand_id",s.id);
-      return r&&{title:r.name||"Mood board",sub:withBrand("Mood board",r.brand_id)}; }
+    if(s.kind==="mood"){
+      /* V119.26 — a link to a whole board or to one reference is named too */
+      const bd=s.mb?await one("mood_boards","name",s.mb):null;
+      const where=bd&&bd.name?"Mood board · "+bd.name:"";
+      if(s.tag||(!s.item&&!s.mb)){ const r=await one("mood_tags","name,brand_id",s.tag||s.id);
+        return r&&{title:r.name||"Mood board",sub:where||withBrand("Mood board",r.brand_id)}; }
+      if(s.item){ const r=await one("mood_items","title,brand_id",s.item);
+        if(r&&String(r.title||"").trim()) return {title:String(r.title).trim(),sub:where||withBrand("Mood board",r.brand_id||s.brand)};
+        return bd&&bd.name?{title:bd.name,sub:"Mood board"}:null; }
+      return bd&&bd.name?{title:bd.name,sub:"Mood board"}:null;
+    }
     if(s.kind==="shoot"){ const r=await one("productions","shoot_type,shoot_types,date_year,date_month,date_day,brand_id",s.id);
       if(!r) return null;
       const what=(Array.isArray(r.shoot_types)&&r.shoot_types.length?r.shoot_types.join(", "):r.shoot_type)||"Shoot";
@@ -54319,7 +54328,8 @@ async function mbgSendGo(){
     try{
       const x=new URL(u), q=x.searchParams;
       if(q.get("p")==="mood"&&(q.get("item")||q.get("mb"))&&(!s||s.kind==="page"||s.kind==="tool"||s.kind==="mood"))
-        return {kind:"mood",id:q.get("tag")||q.get("item")||q.get("mb"),brand:q.get("b")||"",tool:"Marketing Calendar"};
+        return {kind:"mood",id:q.get("tag")||q.get("item")||q.get("mb"),brand:q.get("b")||"",tool:"Marketing Calendar",
+                tag:q.get("tag")||"",item:q.get("item")||"",mb:q.get("mb")||""};   /* V119.26 — which of the three it is */
     }catch(e){}
     return s;
   };
