@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.22 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.23 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -13810,6 +13810,21 @@ async function taskDeleteMsg(id){
   const r=await sb.from("post_comments").update({deleted_at:now,updated_at:now}).eq("id",id);
   if(r.error){ dbErr(r); await loadThread(TASK.id); render(); return; }
   syncBell();
+  /* V119.23 — A CHANGE NOTE DELETED TAKES ITS CHANGE REQUEST WITH IT.
+     Chirag, 28 Nov: he deleted the client's changes he had recorded and
+     "the two buttons which were there, changes and approved, from the
+     delivery panel are gone now" — the version still said "change
+     request", with no note left to explain it. If no other note is
+     still asking for changes on that version, it goes back to waiting
+     for the client, which is what brings the two buttons back. */
+  try{
+    const ch=taskReplyOf(m.body).chg;
+    if(ch&&ch.vid&&typeof dlvUndo==="function"){
+      const v=DLV.vers.find(x=>x.id===ch.vid);
+      const still=TASK.msgs.some(x=>{ const c=taskReplyOf(x.body).chg; return c&&c.vid===ch.vid; });
+      if(v&&v.status==="changes"&&!still){ await dlvUndo(ch.vid); render(); }
+    }
+  }catch(e){}
 }
 
 function fmtWhen(iso){
@@ -14914,7 +14929,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.22 Cappadocia";
+const TOOL_VERSION="V119.23 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
