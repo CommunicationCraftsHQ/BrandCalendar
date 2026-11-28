@@ -45,7 +45,7 @@
      guessed the Calendar's version from a comment ("v81.7 → v82.1", 2 Sep).
      Keep it in step with TOOL_VERSION on every batch — dotted, always:
      a bare "vNN" is invisible to the guard's parser. -->
-<meta name="cc-tool-version" content="V119.20 Cappadocia"/>
+<meta name="cc-tool-version" content="V119.22 Cappadocia"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
@@ -7982,7 +7982,7 @@ function fbPanelHtml(p){
       <div style="flex:1;display:flex;gap:7px;">
         <textarea id="fb-new-${p.id}" class="fi ta" rows="1" style="min-height:34px;font-size:13px;flex:1;resize:vertical;"
           placeholder="Add a comment…  (Enter to post, Shift+Enter for a new line)"
-          onkeydown="if(mentionKeyNav(event))return;if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();fbAddComment('${p.id}',null);}"
+          onkeydown="if(mentionKeyNav(event))return;if(rtEnterPosts(event,this)){event.preventDefault();closeMentionBox();fbAddComment('${p.id}',null);}"
           oninput="fbMentionKey(event,'fb-new-${p.id}','${p.brand_id||activeBrand}')"
           onblur="setTimeout(closeMentionBox,150)"></textarea>
         <button class="btn btn-sm" style="background:#0D0D0D;color:#fff;border-color:#0D0D0D;" onclick="fbAddComment('${p.id}',null)">Post</button>
@@ -12330,7 +12330,7 @@ function thComposerHtml(t,aud,picked){
         ${brFace(ME.id,"ccm-av",brIsClient())}
         <div id="th-in" class="ccw rt" contenteditable="true" data-ph="Write a message" data-att="${aud==="client"&&!brIsClient()?"taskc":"task"}"
           data-draft="th-${escAttr(t.id)}${aud==="client"?"-c":""}"
-          onkeydown="if(mentionKeyNav(event))return;if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();taskPost();}"
+          onkeydown="if(mentionKeyNav(event))return;if(rtEnterPosts(event,this)){event.preventDefault();closeMentionBox();taskPost();}"
           oninput="fbMentionKey(event,'th-in',activeBrand,true)"
           onfocus="rtFocus(this)" onblur="mpBarHide();setTimeout(closeMentionBox,150)"></div>
         <button class="ccm-send" onclick="taskPost()" title="Post"><i class="ti ti-arrow-up"></i></button>
@@ -13545,7 +13545,7 @@ function msgHtml(m,o){
   /* Edit and Delete on your OWN message only, and fbIsMine is the same
      test the post chat uses — one answer to "is this mine", so the two
      threads cannot come to disagree about it. */
-  const own=fbIsMine(m)?`<button onclick="taskStartEdit('${escAttr(m.id)}')">Edit</button>
+  const own=taskMsgMine(m)?`<button onclick="taskStartEdit('${escAttr(m.id)}')">Edit</button>
       <button onclick="taskDeleteMsg('${escAttr(m.id)}')">Delete</button>`:"";
   /* LYON — the same Download the post chat has, on the same terms. A task
      thread is where a creative reaches the client for approval, so leaving
@@ -13778,9 +13778,11 @@ function taskCancelEdit(){ TASK_EDITING=null; render(); }
 async function taskSaveEdit(id){
   const el=document.getElementById("th-edit-"+id); if(!el) return;
   const typed=rtValue(el); if(!typed) return;
-  const m=TASK.msgs.find(x=>x.id===id); if(!m||!fbIsMine(m)) return;
+  const m=TASK.msgs.find(x=>x.id===id); if(!m||!taskMsgMine(m)) return;
   const rp0=taskReplyOf(m.body);
-  const body=(rp0.aid?"[[file:"+rp0.aid+"]]":rp0.mid?"[[msg:"+rp0.mid+"]]":"")+typed;
+  /* V119.22 — whatever marker the message began with is kept whole: a
+     change note edited used to lose "Changes on … v2" */
+  const was=String(m.body==null?"":m.body), body=was.slice(0,was.length-String(rp0.rest).length)+typed;
   const now=new Date().toISOString();
   m.body=body; m.edited_at=now; TASK_EDITING=null; render();
   /* THE MENTIONS ARE READ AGAIN. Editing a message to add "@pranav" and
@@ -13798,7 +13800,7 @@ async function taskSaveEdit(id){
    cleaning up. The files stay, findable by the storage sweep. The
    confirm says so rather than implying everything went. */
 async function taskDeleteMsg(id){
-  const m=TASK.msgs.find(x=>x.id===id); if(!m||!fbIsMine(m)) return;
+  const m=TASK.msgs.find(x=>x.id===id); if(!m||!taskMsgMine(m)) return;
   const files=assetsFor("message",id).length;
   if(!confirm(files
     ? `Delete this message? The ${files} file${files===1?"":"s"} on it stay in storage.`
@@ -14912,7 +14914,7 @@ function closeCsvLoad(){document.getElementById("ov-csv-load").classList.remove(
    actually shipped. THE RULE: never write a version number into a
    comment before that version is released. The body of the file is
    evidence the deploy guard reads. */
-const TOOL_VERSION="V119.20 Cappadocia";
+const TOOL_VERSION="V119.22 Cappadocia";
 function showDiag(){
   let base=0;for(let m=1;m<=12;m++)base+=(RAW[m]||[]).length;
   let cust=0;for(let m=1;m<=12;m++)cust+=(evs[m]||[]).filter(e=>e._custom).length;
@@ -17972,6 +17974,26 @@ function fbRich(text){
   out+=escAttr(raw.slice(last));
   return fbHighlightMentions(out.replace(/\n/g,"<br>"));
 }
+/* ══ V119.22 CAPPADOCIA · ENTER INSIDE A BULLET LIST ══════════════════
+   Chirag, 28 Nov, typing a client's changes as bullets: "I cannot type
+   the second bullet point ... the moment I press enter it gets
+   published." Enter posted from anywhere in the box, so a list could
+   never get a second line of its own. Inside a bullet Enter now starts
+   the next bullet (and, on an empty bullet, leaves the list, as every
+   editor does); outside a list Enter posts as before. Cmd or Ctrl with
+   Enter posts from anywhere, and so does the arrow button. */
+function rtInList(el){
+  try{ const sel=window.getSelection(); if(!sel||!sel.rangeCount||!el||!el.contains) return false;
+    let n=sel.anchorNode; if(n&&n.nodeType===3) n=n.parentNode;
+    const li=n&&n.closest?n.closest("li"):null; return !!(li&&el.contains(li)); }catch(e){ return false; }
+}
+function rtEnterPosts(e,el){ return e.key==="Enter"&&!e.shiftKey&&(e.metaKey||e.ctrlKey||!rtInList(el)); }
+/* V119.22 — WHO MAY EDIT OR DELETE A TASK MESSAGE. A client's words
+   typed in by a CC person carry the client's name, so the person who
+   typed them could never correct them (Chirag, 28 Nov: "they are
+   incomplete and they've gotten posted. How do I edit it or delete
+   them"). The one who recorded it may. */
+function taskMsgMine(m){ return fbIsMine(m)||(!!m&&!!m.entered_by&&!!ME.id&&m.entered_by===ME.id&&!(typeof brIsClient==="function"&&brIsClient())); }
 function fbIsMine(c){
   const me=(ME.email||"").toLowerCase();
   return !!me && (String(c.author_email||"").toLowerCase()===me
@@ -22983,7 +23005,7 @@ function fbPanelHtml(p){
   const composer=canComment()?`<div class="comp46" data-drop="comment:${p.id}">
       <div class="ccm"><span class="ccm-av">${av(actorName(),actorKind())}</span>
         <div id="fb-new-${p.id}" class="ccw rt" contenteditable="true" data-ph="Write a comment" data-att="comment" data-post="${p.id}"
-          onkeydown="if(mentionKeyNav(event))return;if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();fbAddComment('${p.id}',null);}"
+          onkeydown="if(mentionKeyNav(event))return;if(rtEnterPosts(event,this)){event.preventDefault();closeMentionBox();fbAddComment('${p.id}',null);}"
           oninput="fbMentionKey(event,'fb-new-${p.id}','${p.brand_id||activeBrand}')"
           onfocus="rtFocus(this)"
           onblur="mpBarHide();setTimeout(closeMentionBox,150)"></div>
@@ -41693,7 +41715,7 @@ function mdbDrawer(){
               ${brFace(ME.id,"ccm-av")}
               <div id="mdbc-in" class="ccw rt" contenteditable="true" data-ph="Write a message" data-att="mood"
                 data-draft="mdbc-${escAttr(x.id)}"
-                onkeydown="if(mentionKeyNav(event))return;if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeMentionBox();mdbPost();}"
+                onkeydown="if(mentionKeyNav(event))return;if(rtEnterPosts(event,this)){event.preventDefault();closeMentionBox();mdbPost();}"
                 oninput="fbMentionKey(event,'mdbc-in',activeBrand,true)"
                 onfocus="rtFocus(this)" onblur="mpBarHide();setTimeout(closeMentionBox,150)"></div>
               <button class="ccm-send" onclick="mdbPost()" title="Post"><i class="ti ti-arrow-up"></i></button>
@@ -49130,7 +49152,7 @@ function hdComposer(id,ph,send){
   return `<div class="ccm-wrap" data-drop="hd:${id}">
       <div class="ccm">${brFace(ME.id,"ccm-av")}
         <div id="${id}" class="ccw rt" contenteditable="true" data-ph="${escAttr(ph)}" data-att="hd" data-nodraft="1"
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey&&${send?"true":"false"}){event.preventDefault();${send||""}}"
+          onkeydown="if(rtEnterPosts(event,this)&&${send?"true":"false"}){event.preventDefault();${send||""}}"
           onfocus="rtFocus(this)" onblur="mpBarHide()"></div>
         ${send?`<button class="ccm-send" onclick="${send}" title="Post"><i class="ti ti-arrow-up"></i></button>`:""}
       </div>${hdStagedHtml()}</div>`;
@@ -54882,7 +54904,8 @@ let XA_SHEET=null, XB_SHEET=null;
 function xaOn(){ return typeof mfNarrow==="function"&&mfNarrow()&&view==="accounts"&&!!document.getElementById("ac-list"); }
 function xbOn(){ return typeof mfNarrow==="function"&&mfNarrow()&&view==="mood"&&!!document.getElementById("mdb-grid"); }
 function xtTile(ic,label,act,n){ return `<button class="mft" onclick="${act}">${n?`<span class="xt-n">${n}</span>`:""}<i class="ti ${ic}"></i><span>${label}</span></button>`; }
-function xtSheet(cls,h){
+/* V119.21 — was also called xtSheet, which replaced the task pop-ups on a phone */
+function xaShOpen(cls,h){
   xnSheetClose();
   document.body.insertAdjacentHTML("beforeend",`<div class="xn-scrim" onclick="event.stopPropagation();xnSheetClose()"></div><div class="xn-sh mfs ${cls}" onclick="event.stopPropagation()">${h}</div>`);
   return document.querySelector(".xn-sh."+cls);
@@ -54964,7 +54987,7 @@ function xaSheet(k,b,again){
       <h4>View</h4><div class="xa-seg"><button class="${AC.tab==="people"?"on":""}" onclick="acTab('people')">Team</button><button class="${AC.tab==="health"?"on":""}" onclick="acTab('health')">Preview</button></div>`+
       AC_FIELDS.map(fd=>{ const c=chips(fd); return c?`<h4>${escHtml(fd.label)}</h4><div class="xa-chips">${c}</div>`:""; }).join("");
   } else return;
-  const sh=xtSheet("xa-sh",h);
+  const sh=xaShOpen("xa-sh",h);
   XA_SHEET={k,b};
   if(sh&&keep) sh.scrollTop=keep;
   if(k==="filter"&&again){ const q=sh.querySelector(".xb-q"); }
@@ -55036,7 +55059,7 @@ function xbSheet(k,again){
     const p=document.getElementById("export-panel");
     h=`<div class="hd">Export</div><div class="xb-exp" onclick="if(event.target.closest('button,.brow,[onclick]'))setTimeout(xnSheetClose,0)">${p?p.innerHTML:""}</div>`;
   } else return;
-  const sh=xtSheet("xb-sh",h);
+  const sh=xaShOpen("xb-sh",h);
   XB_SHEET=k;
   if(sh&&keep) sh.scrollTop=keep;
   if(k==="search"&&!again){ const q=document.getElementById("xb-q"); if(q) setTimeout(()=>{ try{ q.focus(); }catch(e){} },30); }
